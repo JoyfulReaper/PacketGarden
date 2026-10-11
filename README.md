@@ -73,15 +73,15 @@ Initial prototype goals:
 - gradual local-time lighting changes;
 - no gardening controls or game economy.
 
-## Possible stack
+## Chosen stack
 
-Current direction:
+PacketGarden will be a .NET web app using:
 
-- ASP.NET Core / .NET host;
-- lightweight browser frontend;
+- ASP.NET Core / .NET for the application host and backend;
+- a lightweight browser frontend;
 - HTML/CSS plus Canvas for the garden;
 - vanilla JavaScript initially unless a framework becomes useful;
-- NATS consumer in the backend when live sensors are connected;
+- a NATS consumer in the backend when live sensors are connected;
 - SSE, SignalR, or another simple stream from backend to browser.
 
 The visual simulation is the interesting part. Avoid building infrastructure before the garden itself is fun to watch.
