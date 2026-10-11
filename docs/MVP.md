@@ -107,9 +107,11 @@ Sparse environmental features such as rocks, logs, puddles, or small structures 
 
 Long-lived terrain changes can be added later and may evolve over days rather than minutes.
 
-## Technical direction
+## Chosen technical direction
 
-The first visual prototype can remain mostly frontend code:
+PacketGarden will be an ASP.NET Core / .NET web application.
+
+The first visual prototype can still keep most of the interesting logic in the browser:
 
 ```text
 fake event generator
@@ -127,7 +129,7 @@ garden state / ecology
 Canvas renderer
 ```
 
-ASP.NET Core can host the app from the beginning if convenient. When real events are introduced, the backend subscribes to NATS and forwards normalized garden changes to the browser using SSE, SignalR, or another simple streaming mechanism.
+The .NET backend hosts the application and will later subscribe to NATS for real sensor input. It can forward normalized garden changes to the browser using SSE, SignalR, or another simple streaming mechanism.
 
 The backend should not be allowed to become the project before the visual garden is fun to watch.
 
