@@ -10,29 +10,108 @@ PacketGarden should feel more like a living screensaver or terrarium than a moni
 
 ## Core experience
 
+PacketGarden is primarily something to watch.
+
 The intended experience is:
 
 1. open PacketGarden in a browser;
-2. leave it running;
-3. watch events gradually change the scene;
-4. occasionally inspect an interesting specimen;
-5. discover uncommon growth when unusual events occur.
+2. see the entire garden at once;
+3. leave it running while real network events arrive;
+4. watch the ecosystem visibly change over tens of minutes;
+5. occasionally inspect an interesting specimen to see what kind of event produced it.
 
-There is no requirement to constantly interact with it.
+There is no requirement to manage the garden. No watering, pruning, resource economy, combat, or optimization loop is planned.
 
-## Game-ness
+## Visual direction
 
-PacketGarden should be mostly passive, with light collection / discovery elements.
+The chosen visual direction is:
 
-Possible lightweight interactions:
+- top-down;
+- fixed-size garden visible as a whole on one screen;
+- subtle underlying square grid rather than an obvious game-board grid;
+- stylized painted/cartoon 2D sprites;
+- mostly natural and cozy under ordinary traffic;
+- increasingly strange, luminous, mutated, or unnatural growth as unusual traffic appears.
 
-- click a plant to inspect what created it;
-- discover named species or variants;
-- keep a simple specimen log;
-- notice rare mutations or environmental events;
-- optionally reset or start a new garden.
+The grid should simplify placement and ecology without dominating the art. It can be suggested through faint soil seams, terrain patches, edging, or other subtle structure.
 
-Avoid turning the project into a resource-management game, idle-economy game, or competitive system unless that direction becomes genuinely fun later.
+## Event-driven ecology
+
+Meaningful garden changes should be mostly or completely driven by incoming events.
+
+Plants may continue an animation or lifecycle transition between events, but the garden should not invent lots of unrelated activity merely to stay busy. A quiet network should produce a genuinely quieter garden.
+
+The target real event source is NATS, fed by existing sensors. PacketGarden should consume normalized, privacy-safe event summaries rather than tightly coupling the renderer to any one sensor implementation.
+
+A fake-event generator remains useful as a development and demo source, but it should feed the same normalized event pipeline as real sensor data.
+
+## Shared ecosystem
+
+Events from all participating sensors and hosts feed one shared ecosystem rather than separate host-specific garden regions.
+
+The event type primarily determines the species or garden effect. The event source may influence subtle visual variation such as markings, tint, shape, or mutation traits, but should not divide the garden into dashboard-like host zones.
+
+## Placement and growth
+
+Growth should be cluster-first with only light randomness.
+
+New growth should generally prefer cells near the same or related species, avoid obviously overcrowded locations, and occasionally seed a nearby new patch. Unusual events or mutations may break these rules more dramatically.
+
+When the garden is crowded, an event does not need to create a new permanent object. It may instead:
+
+- make an existing specimen grow or bloom;
+- strengthen or spread an existing patch;
+- mutate nearby growth;
+- replace weak or decaying growth;
+- create a new specimen only when there is sensible space.
+
+This lets event pressure shape the ecosystem without turning high-volume traffic into thousands of indistinguishable plants.
+
+## Lifecycles, persistence, and competition
+
+The garden is persistent and should eventually survive browser/server restarts.
+
+Organisms have lifecycles such as:
+
+```text
+sprout -> mature -> age -> wilt/decay -> disappear or leave a trace
+```
+
+Different species may operate on very different timescales. Common growth may change over minutes, while larger or rarer specimens can remain for hours or days.
+
+The garden should change noticeably during roughly a 30-minute active session when events are arriving, while still retaining longer-lived traces of earlier activity.
+
+There is light ecological competition rather than explicit game combat. Weeds may crowd out fragile flowers, vines may overtake nearby cells, large growth may suppress nearby spawning, and fungi may favor decaying areas. There are no health bars or loss states.
+
+## Terrain and long-term history
+
+Most of the bounded garden remains available for event-driven growth, but sparse environmental features can add structure and long-term history.
+
+Examples include rocks, logs, puddles, ponds, fallen branches, or small garden structures. These features may appear, persist, become overgrown, and disappear over periods measured in days rather than minutes.
+
+They should change slowly enough to feel consequential rather than flickering in and out.
+
+## Real-time lighting
+
+Lighting follows the viewer's real local time.
+
+Morning, daytime, sunset, and night should transition gradually. This changes presentation rather than ecology: time of day should not create arbitrary growth or kill plants.
+
+Night should remain readable, with darker ambience and more visible glows rather than realistic darkness that hides the garden.
+
+## Inspection
+
+Interaction is deliberately minimal.
+
+Hovering or clicking a specimen may reveal information such as:
+
+- event type or protocol;
+- source/sensor;
+- specimen age;
+- safe coarse tags or traits;
+- mutation or variant information.
+
+PacketGarden is watch-first and inspect-second.
 
 ## Visual metaphor
 
@@ -52,31 +131,33 @@ Examples:
 
 The mappings do not need to be scientifically or technically literal. They should be visually memorable and internally consistent.
 
-## Fake first
+## Data architecture
 
-The first prototype should use generated events.
+The intended real-data path is conceptually:
 
-This keeps the initial question focused:
+```text
+sensors / Mission Control / protocol services
+                  |
+                  v
+                 NATS
+                  |
+                  v
+      PacketGarden backend consumer
+                  |
+                  v
+       normalized GardenEvent model
+                  |
+                  v
+      garden state / ecology rules
+                  |
+                  v
+        browser renderer via SSE,
+         SignalR, or similar
+```
 
-> Is it enjoyable to watch network-shaped events turn into a garden?
+The browser should not need direct NATS access.
 
-Real integrations only matter after the answer is yes.
-
-## Real data later
-
-When real event sources are added, PacketGarden should prefer sanitized event summaries rather than raw packet capture.
-
-A useful event might contain:
-
-- event type;
-- protocol or service;
-- timestamp;
-- severity/intensity;
-- source category;
-- duration;
-- a small amount of safe metadata.
-
-The renderer should not need IP addresses, payloads, credentials, or other sensitive details to make the garden interesting.
+A normalized event should contain only the data needed to influence the garden, such as event type, source, timestamp, intensity, duration, and safe tags.
 
 ## Relationship to monitoring
 
