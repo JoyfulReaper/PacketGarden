@@ -1,58 +1,96 @@
 # PacketGarden
 
-PacketGarden is a browser-based ambient network garden where protocol and network events grow plants, flowers, fungi, weeds, and other strange things instead of appearing only as ordinary telemetry.
+PacketGarden is a browser-based ambient network garden where real or simulated protocol/network events grow plants, flowers, fungi, weeds, terrain, and other strange things instead of appearing only as ordinary telemetry.
 
-The core idea is deliberately playful: a DNS lookup might grow a small flower, a Gopher request might sprout a mushroom, an SSH connection might produce a thorny vine, and unusual traffic might mutate the garden in unexpected ways.
+The core idea is deliberately playful: a DNS lookup might strengthen a flower patch, a Gopher request might sprout a mushroom, an SSH connection might grow a thorny vine, and unusual traffic might mutate the garden in increasingly weird ways.
 
 ## Direction
 
-PacketGarden is primarily a passive / idle experience with light collection and inspection elements, not a conventional management or combat game.
+PacketGarden is primarily a passive / idle experience with light inspection, not a conventional management or combat game.
 
-Open it in a browser, leave it running, and let activity shape the garden over time.
+The current design is:
 
-The first version should be a web app and should prove the visual idea before integrating real network data.
+- top-down;
+- fixed-size garden visible as a whole on one screen;
+- subtle square grid for placement and ecology;
+- stylized painted/cartoon 2D sprites;
+- mostly cozy/natural under ordinary traffic;
+- stranger mutations and effects as unusual traffic appears;
+- persistent growth with aging and decay;
+- light ecological competition;
+- cluster-first growth with very light randomness;
+- real local-time day/night lighting;
+- meaningful changes driven mostly or completely by network events.
+
+The garden should visibly evolve over roughly a 30-minute active session when events are arriving, while larger or rarer growth can remain much longer.
+
+## Event input
+
+The eventual real input is NATS, using existing sensors and related services as event sources.
+
+All sources feed one shared ecosystem rather than separate host-specific plots. Event type determines the main species/effect while source identity may influence subtle visual variation.
+
+Conceptually:
+
+```text
+sensors / services
+       |
+       v
+      NATS
+       |
+       v
+PacketGarden backend
+       |
+       v
+normalized GardenEvent
+       |
+       v
+garden state / ecology
+       |
+       v
+browser renderer
+```
+
+The browser should not connect directly to NATS. The backend can stream normalized changes to the frontend over SSE, SignalR, or another simple mechanism.
+
+A fake-event generator remains useful for development and demos and should feed the same normalized event model.
 
 ## First prototype
 
 The first useful milestone is intentionally small:
 
-> Open PacketGarden in a browser and watch fake network events grow a weird little garden.
+> Open PacketGarden in a browser and watch network-shaped events grow and reshape a weird little garden.
 
 Initial prototype goals:
 
-- browser-based UI;
-- a canvas-based garden renderer;
-- fake network events generated every few seconds;
+- Canvas-based top-down garden renderer;
+- subtle logical grid;
+- fake event source using the same event model intended for real NATS input;
 - several event types mapped to distinct growth/effects;
-- plants persist long enough for the garden to visibly evolve;
-- clicking or hovering a specimen can reveal what event created it;
-- no real packet capture or telemetry integration required yet.
+- clustered placement with light randomness;
+- simple growth, aging, decay, and light competition;
+- click or hover a specimen to inspect what created it;
+- gradual local-time lighting changes;
+- no gardening controls or game economy.
 
 ## Possible stack
 
 Current direction:
 
-- ASP.NET Core / .NET host when a backend is useful;
-- a lightweight browser frontend;
+- ASP.NET Core / .NET host;
+- lightweight browser frontend;
 - HTML/CSS plus Canvas for the garden;
 - vanilla JavaScript initially unless a framework becomes useful;
-- fake events first;
-- later, real events may arrive through SSE, SignalR, or another simple streaming interface.
+- NATS consumer in the backend when live sensors are connected;
+- SSE, SignalR, or another simple stream from backend to browser.
 
 The visual simulation is the interesting part. Avoid building infrastructure before the garden itself is fun to watch.
 
-## Real-data ideas for later
+## Privacy
 
-PacketGarden could eventually consume sanitized events from sources such as:
+PacketGarden should consume sanitized event summaries rather than raw packet payloads or sensitive telemetry.
 
-- Mission Control;
-- web/service request logs;
-- protocol servers such as Gopher or Gemini;
-- connection summaries;
-- DNS activity;
-- synthetic/demo event streams.
-
-It should consume event summaries rather than requiring invasive packet inspection by default.
+The renderer should not need raw IP addresses, credentials, request payloads, or secrets to make the garden interesting.
 
 ## Planning docs
 
