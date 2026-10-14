@@ -28,7 +28,7 @@ browser garden as the starting point.
 - Shared specimen placement path for fake events and normalized real growth.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
-- Separate fast-growing grass beneath specimens, seeded/refreshed by successful fake DNS/HTTP spawns. Mature healthy turf can spread locally without blocking cells or contributing to specimen counts.
+- Separate fast-growing grass beneath specimens, seeded/refreshed by successful fake DNS/HTTP spawns. Mature healthy turf spreads locally with a bounded number of population-scaled attempts; fading turf also gets one bounded final seed opportunity per influence cycle. Grass never blocks cells or contributes to specimen counts.
 - Elapsed-time lifecycles with growth, maturity, wilting/fading/drying, and removal. Red blooms appear immediately and have only a fresh and wilting stage.
 - Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
@@ -45,9 +45,14 @@ reloading clears it. Detailed lifecycle thresholds and fake-traffic defaults are
 in the [README](../README.md).
 Grass cells separately hold `column`, `row`, `createdAt`, and `lastInfluencedAt`.
 They expand automatically from sparse seeds to mature turf over 30 seconds.
-Probabilistic adjacent spread is bounded across the whole garden. Without refresh,
-turf fades after 20 minutes, gradually yellows/browns and thins, and expires after
-35 minutes. Re-influence revives the existing cell and refreshes its lifetime.
+Healthy mature coverage receives 1–4 spread attempts every 4 seconds depending
+on population, with a 50% success chance per attempt. On entering fading, turf
+gets one 40% final seed opportunity per influence cycle; at most six newly-fading
+cells are checked per spread tick to smooth synchronized aging. Natural spread
+creates a new generation without refreshing the parent. Without refresh, turf
+fades after 20 minutes, gradually yellows/browns and thins, and expires after
+35 minutes. Re-influence revives the existing cell, refreshes its lifetime, and
+allows a later fade cycle to earn another final seed opportunity.
 
 ## Remaining MVP work
 

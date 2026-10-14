@@ -122,11 +122,15 @@ the usual target and has a 35% chance to also affect a distinct adjacent cell ne
 the new specimen, for at most two grass cells per event. Real TCPNoise growth does
 not directly seed or refresh grass. Grass does not occupy specimen slots or affect
 specimen counts. Once seeded, sparse grass expands into ragged, near-full turf
-over 30 seconds without further traffic. Healthy mature grass occasionally seeds
-an immediate neighbor; spread is capped across the whole garden to prevent
-runaway filling. Neglected turf begins fading after 20 minutes, becomes
-brown/dead-looking by 32 minutes, and disappears after 35. Re-influence restores
-health and refreshes that timer without duplicating cells.
+over 30 seconds without further traffic. Healthy mature grass now receives 1–4
+bounded spread attempts every 4 seconds as active mature coverage grows; each
+attempt has a 50% chance to seed an immediate empty neighbor. When neglected turf
+first enters fading, it gets one 40% final seed opportunity per influence cycle,
+processed in small batches to avoid synchronized bursts. Natural spreading never
+refreshes the parent, so old turf still ages out. Neglected turf begins fading
+after 20 minutes, becomes brown/dead-looking by 32 minutes, and disappears after
+35. Re-influence restores health, refreshes that timer, and allows a later fading
+cycle to earn another final seed opportunity.
 
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
@@ -204,8 +208,9 @@ the app starts normally with discrete input disabled. Garden events are transien
 with no replay after reconnection; fake controls remain available in either mode.
 See [Real data](docs/REAL-DATA.md) for validation, mapping, and fleet inventory.
 
-Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Checks`
-and browser-path checks with `node tests/garden-events.cjs`.
+Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Checks`,
+browser-path checks with `node tests/garden-events.cjs`, and focused grass ecology
+checks with `node tests/grass-ecology.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.
