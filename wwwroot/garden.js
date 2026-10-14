@@ -4,6 +4,7 @@ const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
 const fakeSshButton = document.querySelector("#fake-ssh");
+const fakeFailedAuthButton = document.querySelector("#fake-failed-auth");
 const gardenStatus = document.querySelector("#garden-status");
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
@@ -39,22 +40,28 @@ const vineTimings = {
   dryingAfterMs: 45_000,
   expiredAfterMs: 60_000
 };
+const redbloomTimings = {
+  wiltingAfterMs: 4_000,
+  expiredAfterMs: 10_000
+};
 const updateEveryMs = 250;
 
 const eventSpecimenTypes = new Map([
   ["dns", "flower"],
   ["gopher", "mushroom"],
   ["http", "broadleaf"],
-  ["ssh", "vine"]
+  ["ssh", "vine"],
+  ["failed-auth", "redbloom"]
 ]);
 const speciesConfig = new Map([
   ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
   ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }],
-  ["vine", { timings: vineTimings, render: drawVine, plural: "vines" }]
+  ["vine", { timings: vineTimings, render: drawVine, plural: "vines" }],
+  ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }]
 ]);
 
-/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" }} GardenEvent */
+/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" }} GardenEvent */
 const gardenState = { specimens: [] };
 
 /** @param {GardenEvent} event */
@@ -121,6 +128,7 @@ function updateGardenStatus() {
   fakeGopherButton.disabled = count === columns * rows;
   fakeHttpButton.disabled = count === columns * rows;
   fakeSshButton.disabled = count === columns * rows;
+  fakeFailedAuthButton.disabled = count === columns * rows;
 }
 
 function updateGarden(now = Date.now()) {
@@ -155,6 +163,12 @@ fakeHttpButton.addEventListener("click", () => {
 fakeSshButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
   const event = { type: "ssh" };
+  handleGardenEvent(event);
+});
+
+fakeFailedAuthButton.addEventListener("click", () => {
+  /** @type {GardenEvent} */
+  const event = { type: "failed-auth" };
   handleGardenEvent(event);
 });
 
@@ -324,6 +338,45 @@ function drawVine(specimen, now) {
     context.closePath();
     context.fill();
   }
+  context.restore();
+}
+
+function drawRedbloom(specimen, now) {
+  const ageMs = Math.max(0, now - specimen.createdAt);
+  if (ageMs >= redbloomTimings.expiredAfterMs) return;
+  const wilting = ageMs >= redbloomTimings.wiltingAfterMs;
+
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  context.strokeStyle = wilting ? "#897052" : "#6d8445";
+  context.lineWidth = 2;
+  context.beginPath();
+  context.moveTo(0, 10);
+  context.quadraticCurveTo(wilting ? 7 : 1, 5, wilting ? 3 : 0, wilting ? 4 : 0);
+  context.stroke();
+
+  context.translate(wilting ? 3 : 0, wilting ? 4 : 0);
+  context.scale(wilting ? 0.65 : 1, wilting ? 0.45 : 1);
+  context.rotate(wilting ? Math.PI / 7 : 0);
+  context.fillStyle = wilting ? "#90404b" : "#d52c4a";
+  context.strokeStyle = wilting ? "#b56864" : "#f27785";
+  context.lineWidth = 1;
+  context.beginPath();
+  for (let point = 0; point < 12; point++) {
+    const angle = point * Math.PI / 6 - Math.PI / 2;
+    const radius = point % 2 === 0 ? 10 : 4;
+    const x = Math.cos(angle) * radius;
+    const y = Math.sin(angle) * radius;
+    if (point === 0) context.moveTo(x, y);
+    else context.lineTo(x, y);
+  }
+  context.closePath();
+  context.fill();
+  context.stroke();
+  context.fillStyle = wilting ? "#8b6653" : "#ffd0a0";
+  context.beginPath();
+  context.arc(0, 0, 2, 0, Math.PI * 2);
+  context.fill();
   context.restore();
 }
 
