@@ -29,7 +29,7 @@ assert.equal(sources.length, 1); assert.equal(sources[0].url, '/api/garden/event
 const source = sources[0];
 assert.equal(run('gardenState.grassCells.length'), 5, 'garden starts with exactly five grass seeds');
 assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`)).size'), 5, 'initial grass seeds are distinct');
-assert.deepEqual(run('gardenState.grassCells.map(g => [g.column, g.row])'), [[0,0],[0,4],[0,8],[0,12],[0,16]]);
+assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.row]))'), '[[0,0],[0,4],[0,8],[0,12],[0,16]]');
 assert(run('gardenState.grassCells.every(g => g.createdAt === 1000 && g.lastInfluencedAt === 1000)'));
 
 for (const [port, type] of [[443,'broadleaf'],[22,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
