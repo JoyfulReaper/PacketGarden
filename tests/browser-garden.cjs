@@ -4,6 +4,11 @@ const fs = require('node:fs'), vm = require('node:vm');
 function createGarden() {
   const html = fs.readFileSync('wwwroot/index.html', 'utf8');
   const clock = { now: 10_000 }, elements = new Map(), intervals = [], frames = new Map(), drawing = [];
+  const documentHandlers = new Map(), windowHandlers = new Map();
+  const addHandler = (handlers, name, handler) => {
+    if (!handlers.has(name)) handlers.set(name, []);
+    handlers.get(name).push(handler);
+  };
   let nextFrame = 0;
   let rect = { left: 40, top: 70, width: 992, height: 632 };
   const context = new Proxy({}, {
@@ -14,6 +19,7 @@ function createGarden() {
     if (!elements.has(selector)) elements.set(selector, {
       hidden: selector === '#specimen-card' || selector === '#collection-message',
       textContent: selector === '#garden-score' ? html.match(/id="garden-score"[^>]*>([^<]*)</)[1] : '',
+      checked: selector === '#show-recent-activity' && /id="show-recent-activity"[^>]*\bchecked\b/.test(html),
       style: {}, offsetWidth: 280, offsetHeight: 240,
       value: selector === '#weather-source' ? 'live' : selector === '#weather-level' ? 'quiet'
         : selector === '#sound-volume' ? '12' : '1200',
@@ -43,9 +49,13 @@ function createGarden() {
   let audioContexts = 0;
   const sandbox = {
     Date: { now: () => clock.now }, performance: { now: () => clock.now }, Math: Object.create(Math),
-    document: { querySelector: element }, EventSource: Source, ResizeObserver: class { observe() {} },
+    document: { querySelector: element, hidden: false,
+      createElement: () => ({ getContext: () => context }),
+      addEventListener(name, handler) { addHandler(documentHandlers, name, handler); }
+    }, EventSource: Source, ResizeObserver: class { observe() {} },
     window: {
-      innerWidth: 1200, innerHeight: 900, devicePixelRatio: 2, addEventListener() {},
+      innerWidth: 1200, innerHeight: 900, devicePixelRatio: 2,
+      addEventListener(name, handler) { addHandler(windowHandlers, name, handler); },
       setInterval(handler, delay) { intervals.push({ handler, delay }); return intervals.length; },
       setTimeout() { throw new Error('Browser features must reuse the existing tick'); }, clearTimeout() {},
       requestAnimationFrame(handler) { frames.set(++nextFrame, handler); return nextFrame; },
@@ -76,8 +86,15 @@ function createGarden() {
   };
   const fill = vigor => run(`gardenState.specimens = Array.from({length:640}, (_,i) =>
     ({type:'broadleaf',column:i%columns,row:Math.floor(i/columns),createdAt:Date.now(),vigor:${vigor}}))`);
-  return { run, element, sources, clock, intervals, frames, drawing, sandbox, forceRoll, emit, tick, click, fill,
-    resize(value) { rect = value; }, audioContexts: () => audioContexts };
+  return { run, element, sources, clock, intervals, frames, drawing, sandbox, documentHandlers, windowHandlers,
+    forceRoll, emit, tick, click, fill,
+    resize(value) { rect = value; for (const handler of windowHandlers.get('resize') ?? []) handler(); },
+    setHidden(hidden) { sandbox.document.hidden = hidden; for (const handler of documentHandlers.get('visibilitychange')) handler(); },
+    frame(now) {
+      clock.now = now;
+      const pending = [...frames]; frames.clear();
+      for (const [, handler] of pending) handler(now);
+    }, audioContexts: () => audioContexts };
 }
 
 module.exports = createGarden;

@@ -1,5 +1,5 @@
 const canvas = document.querySelector("canvas");
-const context = canvas.getContext("2d");
+let context = canvas.getContext("2d");
 const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
@@ -135,14 +135,24 @@ function updateWeatherAnimation() {
     weatherAnimationFrame = null;
   }
   drawGarden();
-  if (weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0) {
-    weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
-  }
 }
 
-function animateWeather() {
-  drawGarden();
-  weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
+function animateWeather(frameTime = performance.now()) {
+  weatherAnimationFrame = null;
+  if (document.hidden) return;
+  drawGardenOverlay(false, Date.now(), frameTime);
+  syncWeatherAnimation();
+}
+
+function syncWeatherAnimation() {
+  const needed = !document.hidden && gardenView !== null && ((weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0)
+    || animatedSpecimens.length > 0);
+  if (!needed && weatherAnimationFrame !== null) {
+    window.cancelAnimationFrame(weatherAnimationFrame);
+    weatherAnimationFrame = null;
+  } else if (needed && weatherAnimationFrame === null) {
+    weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
+  }
 }
 
 weatherLevelControl.addEventListener("change", () => {
@@ -444,13 +454,18 @@ function updateGarden(now = Date.now()) {
   });
   if (remaining.length !== gardenState.specimens.length) {
     gardenState.specimens = remaining;
+    gardenBaseDirty = true;
     updateGardenStatus();
   }
-  if (typeof updateSpecimenMutations === "function") updateSpecimenMutations(now);
+  if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) gardenBaseDirty = true;
+  const grassCount = gardenState.grassCells.length;
   gardenState.grassCells = gardenState.grassCells.filter(
     grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
   );
+  if (gardenState.grassCells.length !== grassCount) gardenBaseDirty = true;
+  const remainingGrassCount = gardenState.grassCells.length;
   if (gardenState.grassCells.length > 0) spreadGrass(now);
+  if (gardenState.grassCells.length !== remainingGrassCount) gardenBaseDirty = true;
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -1011,59 +1026,116 @@ function drawRain(now) {
   context.restore();
 }
 
-function drawGarden() {
-  const { width, height } = canvas.getBoundingClientRect();
-  if (width <= 0 || height <= 0) return;
+// One visible canvas preserves the existing hit testing. Only the slow scene is cached.
+const rendererConfig = { animationFps: 30, maxPixelRatio: 2 };
+const gardenBaseCanvas = document.createElement("canvas");
+const gardenBaseContext = gardenBaseCanvas.getContext("2d");
+let gardenBaseDirty = true;
+let gardenView = null;
+let lastOverlayAt = -Infinity;
+const animatedSpecimens = [];
 
-  const pixelRatio = window.devicePixelRatio || 1;
-  canvas.width = Math.round(width * pixelRatio);
-  canvas.height = Math.round(height * pixelRatio);
-  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  context.clearRect(0, 0, width, height);
+function resizeCanvasBacking(target, width, height) {
+  if (target.width !== width) target.width = width;
+  if (target.height !== height) target.height = height;
+}
+
+function rebuildGardenBase(now) {
+  const { width, height } = canvas.getBoundingClientRect();
+  if (width <= 0 || height <= 0) { gardenView = null; return false; }
+
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, rendererConfig.maxPixelRatio);
+  const pixelWidth = Math.round(width * pixelRatio);
+  const pixelHeight = Math.round(height * pixelRatio);
+  resizeCanvasBacking(canvas, pixelWidth, pixelHeight);
+  resizeCanvasBacking(gardenBaseCanvas, pixelWidth, pixelHeight);
 
   const scale = Math.min(
     width / (gardenWidth + margin * 2),
     height / (gardenHeight + margin * 2)
   );
-  context.translate(
-    (width - gardenWidth * scale) / 2,
-    (height - gardenHeight * scale) / 2
-  );
-  context.scale(scale, scale);
+  gardenView = { width, height, pixelRatio, scale, offsetX: (width - gardenWidth * scale) / 2,
+    offsetY: (height - gardenHeight * scale) / 2 };
+  const visibleContext = context;
+  context = gardenBaseContext;
+  try {
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    context.translate(gardenView.offsetX, gardenView.offsetY);
+    context.scale(scale, scale);
 
-  context.fillStyle = "#685b45";
-  context.fillRect(0, 0, gardenWidth, gardenHeight);
+    context.fillStyle = "#685b45";
+    context.fillRect(0, 0, gardenWidth, gardenHeight);
 
-  drawWeatherSoil();
+    drawWeatherSoil();
 
-  context.beginPath();
-  for (let x = cellSize; x < gardenWidth; x += cellSize) {
-    context.moveTo(x, 0);
-    context.lineTo(x, gardenHeight);
-  }
-  for (let y = cellSize; y < gardenHeight; y += cellSize) {
-    context.moveTo(0, y);
-    context.lineTo(gardenWidth, y);
-  }
-  context.strokeStyle = "rgba(225, 214, 183, 0.09)";
-  context.lineWidth = 1;
-  context.stroke();
-
-  context.strokeStyle = "#9a9871";
-  context.lineWidth = 6;
-  context.strokeRect(0, 0, gardenWidth, gardenHeight);
-
-  const now = Date.now();
-  for (const grass of gardenState.grassCells) {
-    drawGrass(grass, now);
-  }
-  for (const specimen of gardenState.specimens) {
-    if (typeof drawSpecimenMutation !== "function" || !drawSpecimenMutation(specimen, now)) {
-      speciesConfig.get(specimen.type).render(specimen, now);
+    context.beginPath();
+    for (let x = cellSize; x < gardenWidth; x += cellSize) {
+      context.moveTo(x, 0);
+      context.lineTo(x, gardenHeight);
     }
+    for (let y = cellSize; y < gardenHeight; y += cellSize) {
+      context.moveTo(0, y);
+      context.lineTo(gardenWidth, y);
+    }
+    context.strokeStyle = "rgba(225, 214, 183, 0.09)";
+    context.lineWidth = 1;
+    context.stroke();
+
+    context.strokeStyle = "#9a9871";
+    context.lineWidth = 6;
+    context.strokeRect(0, 0, gardenWidth, gardenHeight);
+
+    for (const grass of gardenState.grassCells) {
+      drawGrass(grass, now);
+    }
+    animatedSpecimens.length = 0;
+    for (const specimen of gardenState.specimens) {
+      if (specimen.mutation && typeof drawSpecimenMutation === "function") {
+        animatedSpecimens.push(specimen);
+      } else {
+        speciesConfig.get(specimen.type).render(specimen, now);
+      }
+    }
+  } finally {
+    context = visibleContext;
   }
+  gardenBaseDirty = false;
+  return true;
+}
+
+function drawGardenOverlay(force = false, now = Date.now(), frameTime = performance.now()) {
+  if (document.hidden) return false;
+  // Share the cap with the actor RAF loop so simultaneous rain/gnomes cannot double it.
+  if (!force && frameTime - lastOverlayAt + 0.001 < 1000 / rendererConfig.animationFps) return false;
+  if (gardenBaseDirty && !rebuildGardenBase(now)) return false;
+  if (!gardenView) return false;
+  lastOverlayAt = frameTime;
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(gardenBaseCanvas, 0, 0);
+  const { pixelRatio, scale, offsetX, offsetY } = gardenView;
+  context.setTransform(pixelRatio * scale, 0, 0, pixelRatio * scale, offsetX * pixelRatio, offsetY * pixelRatio);
+  for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
   if (typeof drawGardenActors === "function") drawGardenActors(now);
   drawRain(now);
+  return true;
+}
+
+// Ecology changes and the 250 ms lifecycle tick invalidate the slow scene.
+function drawGarden() {
+  gardenBaseDirty = true;
+  drawGardenOverlay(true);
+  syncWeatherAnimation();
+}
+
+function resizeGarden() {
+  if (document.hidden) { gardenBaseDirty = true; return; }
+  const { width, height } = canvas.getBoundingClientRect();
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, rendererConfig.maxPixelRatio);
+  // Window resize and ResizeObserver can report the same change; rebuild once.
+  if (!gardenView || width !== gardenView.width || height !== gardenView.height
+    || pixelRatio !== gardenView.pixelRatio) drawGarden();
 }
 
 function seedInitialGrass(count = 5, now = Date.now()) {
@@ -1078,8 +1150,16 @@ function seedInitialGrass(count = 5, now = Date.now()) {
 }
 
 seedInitialGrass();
-new ResizeObserver(drawGarden).observe(canvas);
-window.addEventListener("resize", drawGarden);
+new ResizeObserver(resizeGarden).observe(canvas);
+window.addEventListener("resize", resizeGarden);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) syncWeatherAnimation();
+  else drawGarden(); // Refresh once at current time, never replay missed frames.
+});
+window.addEventListener("pagehide", () => {
+  if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);
+  weatherAnimationFrame = null;
+});
 drawGarden();
 
 // Clean up before drawing, including the tick that removes the final specimen or tuft.

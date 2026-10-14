@@ -21,7 +21,7 @@ function createGarden() {
     addEventListener(name,handler){this.handlers[name]=handler;}
   }
   const sandbox={Date:{now:()=>clock.now},performance:{now:()=>clock.now},Math:Object.create(Math),
-    document:{querySelector:element},EventSource:Source,ResizeObserver:class{observe(){}},
+    document:{querySelector:element,createElement:()=>({getContext:()=>context}),addEventListener(){}},EventSource:Source,ResizeObserver:class{observe(){}},
     window:{addEventListener(name,handler){windowHandlers.set(name,handler);},
       setInterval(handler,delay){intervals.set(intervals.size+1,{handler,delay});},setTimeout(){},clearTimeout(){},
       requestAnimationFrame(handler){frames.set(++nextFrame,handler);return nextFrame;},

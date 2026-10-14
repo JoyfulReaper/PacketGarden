@@ -35,7 +35,7 @@ function startGnomeIncident(now, random = Math.random) {
       });
     }
   }
-  actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
+  if (!document.hidden) actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
   return true;
 }
 
@@ -44,7 +44,7 @@ function finishGnomeIncident() {
   gnomeIncident = null;
   if (actorAnimationFrame !== null) window.cancelAnimationFrame(actorAnimationFrame);
   actorAnimationFrame = null;
-  drawGarden();
+  drawGardenOverlay(true);
 }
 
 function advanceGnomeIncident(now, random = Math.random) {
@@ -85,10 +85,11 @@ function advanceGnomeIncident(now, random = Math.random) {
   }
 }
 
-function animateGnomes() {
+function animateGnomes(frameTime = performance.now()) {
   actorAnimationFrame = null;
+  if (document.hidden) return;
   advanceGnomeIncident(Date.now());
-  drawGarden();
+  drawGardenOverlay(false, Date.now(), frameTime);
   if (gnomeIncident) actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
 }
 
@@ -160,4 +161,13 @@ function drawGardenActors(now) {
   }
 }
 
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && actorAnimationFrame !== null) {
+    window.cancelAnimationFrame(actorAnimationFrame);
+    actorAnimationFrame = null;
+  } else if (!document.hidden && gnomeIncident && actorAnimationFrame === null) {
+    advanceGnomeIncident(Date.now());
+    if (gnomeIncident) actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
+  }
+});
 window.addEventListener("pagehide", finishGnomeIncident);

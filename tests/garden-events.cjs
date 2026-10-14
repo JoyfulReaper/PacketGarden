@@ -27,7 +27,7 @@ class Source {
 }
 const sandbox = { Date: { now: () => 1000 }, Math: Object.create(Math), EventSource: Source,
   performance: { now: () => 1000 },
-  document: { querySelector: element }, ResizeObserver: class { observe() {} },
+  document: { querySelector: element, createElement: () => ({getContext:()=>context}), addEventListener() {} }, ResizeObserver: class { observe() {} },
   window: { addEventListener() {}, setInterval() {},
     requestAnimationFrame(handler) { animationFrames.set(++nextFrame,handler); return nextFrame; },
     cancelAnimationFrame(id) { animationFrames.delete(id); },

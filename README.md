@@ -166,7 +166,10 @@ cycle to earn another final seed opportunity.
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
-not affect organisms or grass.
+not affect organisms or grass. Animated weather, gnomes, and mutations reuse a
+cached ecology scene and share a roughly 30 FPS visual limit; lifecycle updates
+still refresh the slow scene every 250 ms. Hidden tabs pause animation, and Canvas
+backing resolution is capped at DPR 2.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
 listening ports to visual families without asserting protocol/authentication
@@ -284,7 +287,8 @@ broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 `node tests/grass-ecology.cjs`. Collectible integration checks run with
 `node tests/garden-collectibles.cjs`, and ambient actor checks with
 `node tests/gnome-events.cjs`. Atomic live growth and Recent activity are covered by
-`node tests/garden-activity.cjs`.
+`node tests/garden-activity.cjs`. Cache/animation and dense-garden structural
+performance checks run with `node tests/render-performance.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.

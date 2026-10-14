@@ -60,7 +60,11 @@ function activateSpecimenMutation(specimen, now = Date.now()) {
 
 // Called by updateGarden after expired specimens are removed, before drawing.
 function updateSpecimenMutations(now) {
-  for (const specimen of gardenState.specimens) activateSpecimenMutation(specimen, now);
+  let changed = false;
+  for (const specimen of gardenState.specimens) {
+    if (activateSpecimenMutation(specimen, now)) changed = true;
+  }
+  return changed;
 }
 
 function specimenMutationLabel(specimen, now = Date.now()) {
@@ -98,6 +102,10 @@ function drawSpecimenMutation(specimen, now) {
   return true;
 }
 
+const collectibleWeedLeaves = [
+  [-4, 2, 0.5, "#aab557"], [4, -1, -0.5, "#c2b66a"], [-3, -5, 0.4, "#8e9e46"]
+];
+
 function drawCollectibleWeed(specimen, now) {
   const phase = (now - specimen.mutation.createdAt) / 800;
   context.save();
@@ -109,9 +117,7 @@ function drawCollectibleWeed(specimen, now) {
   context.moveTo(-4, 10); context.lineTo(0, 7); context.lineTo(4, 10);
   context.moveTo(0, 7); context.lineTo(Math.sin(phase) * 0.4, -9);
   context.stroke();
-  for (const [x, y, angle, color] of [
-    [-4, 2, 0.5, "#aab557"], [4, -1, -0.5, "#c2b66a"], [-3, -5, 0.4, "#8e9e46"]
-  ]) {
+  for (const [x, y, angle, color] of collectibleWeedLeaves) {
     context.fillStyle = color;
     context.beginPath();
     context.ellipse(x, y, 4.5, 2.2, angle, 0, Math.PI * 2);

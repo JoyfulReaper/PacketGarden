@@ -49,7 +49,7 @@ function createGarden(options = {}) {
     emit(data){this.handlers.garden({data:typeof data==='string'?data:JSON.stringify(data)});}
   }
   const sandbox={Date:{now:()=>state.now}, performance:{now:()=>state.now}, Math:Object.create(Math),
-    EventSource:Source,document:{querySelector:element},ResizeObserver:class{observe(){}},
+    EventSource:Source,document:{querySelector:element,createElement:()=>({getContext:()=>canvas}),addEventListener(){}},ResizeObserver:class{observe(){}},
     window:{addEventListener(){},setInterval(){},setTimeout(){},clearTimeout(){},requestAnimationFrame(){},cancelAnimationFrame(){}}
   };
   if (options.supported!==false) sandbox.window.AudioContext=AudioContext;
