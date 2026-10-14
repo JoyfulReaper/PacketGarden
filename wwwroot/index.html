@@ -26,9 +26,12 @@
     </nav>
   </header>
   <main aria-label="Garden">
-    <canvas aria-label="An empty rectangular soil garden with a subtle square grid" role="img">
-      An empty rectangular soil garden with a subtle square grid.
-    </canvas>
+    <div class="garden-stage">
+      <canvas id="garden-canvas" aria-label="An empty rectangular soil garden with a subtle square grid" role="img">
+        An empty rectangular soil garden with a subtle square grid.
+      </canvas>
+      <canvas id="garden-overlay" aria-hidden="true"></canvas>
+    </div>
     <div id="collection-message" class="collection-message" role="status" hidden></div>
     <section id="recent-activity" class="recent-activity" aria-label="Recent activity">
       <h2>Recent activity</h2>

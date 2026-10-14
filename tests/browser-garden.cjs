@@ -11,10 +11,17 @@ function createGarden() {
   };
   let nextFrame = 0;
   let rect = { left: 40, top: 70, width: 992, height: 632 };
-  const context = new Proxy({}, {
-    get: (_, method) => (...args) => drawing.push([method, ...args]),
-    set: (_, name, value) => { drawing.push([name, value]); return true; }
-  });
+  const makeContext = surface => {
+    const record = command => {
+      Object.defineProperty(command, 'surface', { value: surface });
+      drawing.push(command);
+    };
+    return new Proxy({}, {
+      get: (_, method) => (...args) => record([method, ...args]),
+      set: (_, name, value) => { record([name, value]); return true; }
+    });
+  };
+  const context = makeContext('base'), overlayContext = makeContext('overlay');
   const element = selector => {
     if (!elements.has(selector)) elements.set(selector, {
       hidden: selector === '#specimen-card' || selector === '#collection-message',
@@ -29,7 +36,7 @@ function createGarden() {
         this.handlers.get(name).push(handler);
       },
       setAttribute(name, value) { this.attributes[name] = value; },
-      getContext: () => context, getBoundingClientRect: () => rect
+      getContext: () => selector === '#garden-overlay' ? overlayContext : context, getBoundingClientRect: () => rect
     });
     return elements.get(selector);
   };

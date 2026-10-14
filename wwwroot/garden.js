@@ -134,23 +134,24 @@ function weatherIntensity() {
 
 function updateWeatherAnimation() {
   if (typeof updatePuddleWeather === "function") updatePuddleWeather(Date.now());
-  if (weatherAnimationFrame !== null) {
-    window.cancelAnimationFrame(weatherAnimationFrame);
-    weatherAnimationFrame = null;
-  }
-  drawGarden();
+  if (weatherSoilDarkening() !== lastBaseSoilDarkening) gardenBaseDirty = true;
+  paintGardenBase();
+  drawGardenOverlay(true);
+  syncWeatherAnimation();
 }
 
 function animateWeather(frameTime = performance.now()) {
   weatherAnimationFrame = null;
   if (document.hidden) return;
-  drawGardenOverlay(false, Date.now(), frameTime);
+  const now = Date.now();
+  if (gardenState.actors.length && typeof advanceGnomeIncident === "function") advanceGnomeIncident(now);
+  drawGardenOverlay(false, now, frameTime);
   syncWeatherAnimation();
 }
 
 function syncWeatherAnimation() {
   const needed = !document.hidden && gardenView !== null && ((weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0)
-    || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0);
+    || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0 || gardenState.actors.length > 0);
   if (!needed && weatherAnimationFrame !== null) {
     window.cancelAnimationFrame(weatherAnimationFrame);
     weatherAnimationFrame = null;
@@ -405,9 +406,13 @@ function grassNeighbors(column, row) {
 function influenceGrassCell(column, row, now) {
   const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
   if (grass) {
-    grass.lastInfluencedAt = now;
+    if (grass.lastInfluencedAt !== now) {
+      grass.lastInfluencedAt = now;
+      gardenBaseDirty = true;
+    }
   } else {
     gardenState.grassCells.push({ column, row, createdAt: now, lastInfluencedAt: now });
+    gardenBaseDirty = true;
   }
 }
 
@@ -669,22 +674,20 @@ function drawVine(specimen, now) {
   context.lineCap = "round";
 
   if (stage !== "sprout") {
-    for (const neighbor of gardenState.specimens) {
-      if (neighbor === specimen || neighbor.type !== "vine") continue;
-      const neighborAge = now - neighbor.createdAt;
-      if (neighborAge < vineTimings.growingAfterMs || neighborAge >= vineTimings.expiredAfterMs) continue;
-      const dx = neighbor.column - specimen.column;
-      const dy = neighbor.row - specimen.row;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== 1) continue;
-
-      // Each cell draws half the connection. Both halves meet at the same midpoint.
-      const endX = dx * cellSize / 2;
-      const endY = dy * cellSize / 2;
-      const bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
-      context.beginPath();
-      context.moveTo(0, 0);
-      context.quadraticCurveTo(endX / 2 - dy * bend, endY / 2 + dx * bend, endX, endY);
-      context.stroke();
+    // Base rendering shares one lookup; direct drawing helpers can build a current one.
+    const lookup = vineCellLookup ?? buildVineCellLookup(now);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if ((dx === 0 && dy === 0) || !vineNeighborAt(lookup, specimen.column + dx, specimen.row + dy)) continue;
+        // Each cell draws half the connection. Both halves meet at the same midpoint.
+        const endX = dx * cellSize / 2;
+        const endY = dy * cellSize / 2;
+        const bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
+        context.beginPath();
+        context.moveTo(0, 0);
+        context.quadraticCurveTo(endX / 2 - dy * bend, endY / 2 + dx * bend, endX, endY);
+        context.stroke();
+      }
     }
   }
 
@@ -992,13 +995,18 @@ function drawGrass(grass, now) {
   context.restore();
 }
 
-function drawWeatherSoil() {
+function weatherSoilDarkening() {
   const intensity = weatherIntensity();
   const weather = weatherLevels.get(weatherState.level);
-  if (weather.darkening === 0 || intensity === 0) return;
+  return intensity === 0 ? 0 : weather.darkening * (0.5 + intensity * 0.5);
+}
+
+function drawWeatherSoil() {
+  const darkening = weatherSoilDarkening();
+  if (darkening === 0) return;
   context.save();
   context.fillStyle = "#172c28";
-  context.globalAlpha = weather.darkening * (0.5 + intensity * 0.5);
+  context.globalAlpha = darkening;
   context.fillRect(0, 0, gardenWidth, gardenHeight);
   context.restore();
 }
@@ -1030,14 +1038,37 @@ function drawRain(now) {
   context.restore();
 }
 
-// One visible canvas preserves the existing hit testing. Only the slow scene is cached.
-const rendererConfig = { animationFps: 30, maxPixelRatio: 2 };
-const gardenBaseCanvas = document.createElement("canvas");
-const gardenBaseContext = gardenBaseCanvas.getContext("2d");
+// The browser composites a persistent ecology canvas and a transparent animation canvas.
+const rendererConfig = { animationFps: 30, maxPixelRatio: 2, slowVisualRefreshMs: 1_000 };
+const gardenBaseCanvas = canvas;
+const gardenBaseContext = context;
+const gardenOverlayCanvas = document.querySelector("#garden-overlay");
+const gardenOverlayContext = gardenOverlayCanvas.getContext("2d");
 let gardenBaseDirty = true;
+let gardenOverlayDirty = false;
 let gardenView = null;
 let lastOverlayAt = -Infinity;
+let nextBaseVisualAt = 0;
+let lastBaseSoilDarkening = null;
+let vineCellLookup = null;
 const animatedSpecimens = [];
+
+function buildVineCellLookup(now) {
+  const lookup = new Map();
+  for (const specimen of gardenState.specimens) {
+    if (specimen.type !== "vine") continue;
+    const age = now - specimen.createdAt;
+    if (age >= vineTimings.growingAfterMs && age < vineTimings.expiredAfterMs) {
+      lookup.set(specimen.row * columns + specimen.column, specimen);
+    }
+  }
+  return lookup;
+}
+
+function vineNeighborAt(lookup, column, row) {
+  if (column < 0 || column >= columns || row < 0 || row >= rows) return null;
+  return lookup.get(row * columns + column) ?? null;
+}
 
 function resizeCanvasBacking(target, width, height) {
   if (target.width !== width) target.width = width;
@@ -1051,8 +1082,8 @@ function rebuildGardenBase(now) {
   const pixelRatio = Math.min(window.devicePixelRatio || 1, rendererConfig.maxPixelRatio);
   const pixelWidth = Math.round(width * pixelRatio);
   const pixelHeight = Math.round(height * pixelRatio);
-  resizeCanvasBacking(canvas, pixelWidth, pixelHeight);
   resizeCanvasBacking(gardenBaseCanvas, pixelWidth, pixelHeight);
+  resizeCanvasBacking(gardenOverlayCanvas, pixelWidth, pixelHeight);
 
   const scale = Math.min(
     width / (gardenWidth + margin * 2),
@@ -1062,6 +1093,8 @@ function rebuildGardenBase(now) {
     offsetY: (height - gardenHeight * scale) / 2 };
   const visibleContext = context;
   context = gardenBaseContext;
+  vineCellLookup = buildVineCellLookup(now);
+  const previousAnimated = animatedSpecimens.slice();
   try {
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.clearRect(0, 0, width, height);
@@ -1104,33 +1137,49 @@ function rebuildGardenBase(now) {
     }
   } finally {
     context = visibleContext;
+    vineCellLookup = null;
   }
+  if (previousAnimated.length !== animatedSpecimens.length
+    || previousAnimated.some((specimen, index) => specimen !== animatedSpecimens[index])) gardenOverlayDirty = true;
   gardenBaseDirty = false;
+  nextBaseVisualAt = now + rendererConfig.slowVisualRefreshMs;
+  lastBaseSoilDarkening = weatherSoilDarkening();
   return true;
+}
+
+function paintGardenBase(now = Date.now()) {
+  if (document.hidden || !gardenBaseDirty) return false;
+  return rebuildGardenBase(now);
 }
 
 function drawGardenOverlay(force = false, now = Date.now(), frameTime = performance.now()) {
   if (document.hidden) return false;
-  // Share the cap with the actor RAF loop so simultaneous rain/gnomes cannot double it.
+  // Weather, actors, mutations, and curiosities all use the same scheduler and FPS budget.
   if (!force && frameTime - lastOverlayAt + 0.001 < 1000 / rendererConfig.animationFps) return false;
-  if (gardenBaseDirty && !rebuildGardenBase(now)) return false;
   if (!gardenView) return false;
   lastOverlayAt = frameTime;
-  context.setTransform(1, 0, 0, 1, 0, 0);
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(gardenBaseCanvas, 0, 0);
-  const { pixelRatio, scale, offsetX, offsetY } = gardenView;
-  context.setTransform(pixelRatio * scale, 0, 0, pixelRatio * scale, offsetX * pixelRatio, offsetY * pixelRatio);
-  for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
-  if (typeof drawGardenActors === "function") drawGardenActors(now);
-  if (typeof drawFirstSeenCuriosities === "function") drawFirstSeenCuriosities(now);
-  drawRain(now);
+  const previousContext = context;
+  context = gardenOverlayContext;
+  try {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, gardenOverlayCanvas.width, gardenOverlayCanvas.height);
+    const { pixelRatio, scale, offsetX, offsetY } = gardenView;
+    context.setTransform(pixelRatio * scale, 0, 0, pixelRatio * scale, offsetX * pixelRatio, offsetY * pixelRatio);
+    for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
+    if (typeof drawGardenActors === "function") drawGardenActors(now);
+    if (typeof drawFirstSeenCuriosities === "function") drawFirstSeenCuriosities(now);
+    drawRain(now);
+  } finally {
+    context = previousContext;
+  }
+  gardenOverlayDirty = false;
   return true;
 }
 
-// Ecology changes and the 250 ms lifecycle tick invalidate the slow scene.
+// Actual ecology changes repaint immediately. Routine logical ticks do not call this.
 function drawGarden() {
   gardenBaseDirty = true;
+  paintGardenBase();
   drawGardenOverlay(true);
   syncWeatherAnimation();
 }
@@ -1163,28 +1212,31 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) syncWeatherAnimation();
   else {
     if (typeof updateFirstSeenCuriosities === "function") updateFirstSeenCuriosities(Date.now());
+    updateGarden();
+    if (typeof advanceGnomeIncident === "function") advanceGnomeIncident(Date.now(), undefined, false);
     drawGarden(); // Refresh once at current time, never replay missed frames.
   }
 });
 window.addEventListener("pagehide", () => {
   if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);
   weatherAnimationFrame = null;
+  if (typeof finishGnomeIncident === "function") finishGnomeIncident(false);
 });
 drawGarden();
 
-// Clean up before drawing, including the tick that removes the final specimen or tuft.
+// Logical cleanup stays at 250 ms; otherwise age-driven ecology paints at most once a second.
 window.setInterval(() => {
-  const puddlesChanged = typeof updateGardenPuddles === "function" && updateGardenPuddles(Date.now());
-  const curiositiesChanged = typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(Date.now());
-  const messageChanged = typeof updateCollectionMessage === "function" && updateCollectionMessage(Date.now());
-  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0 || gardenState.puddles.length > 0
-    || puddlesChanged || messageChanged) {
-    updateGarden();
-    drawGarden();
-  } else if (curiositiesChanged) {
-    drawGardenOverlay(true);
-    syncWeatherAnimation();
+  const now = Date.now();
+  if (typeof updateGardenPuddles === "function" && updateGardenPuddles(now)) gardenBaseDirty = true;
+  if (typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(now)) gardenOverlayDirty = true;
+  if (typeof updateCollectionMessage === "function") updateCollectionMessage(now);
+  updateGarden(now);
+  if (now >= nextBaseVisualAt && (gardenState.specimens.length || gardenState.grassCells.length || gardenState.puddles.length)) {
+    gardenBaseDirty = true;
   }
-  if (typeof updateAmbientEvents === "function") updateAmbientEvents(Date.now());
-  if (typeof updateRecentActivity === "function") updateRecentActivity(Date.now());
+  paintGardenBase(now);
+  if (typeof updateAmbientEvents === "function") updateAmbientEvents(now);
+  if (gardenOverlayDirty) drawGardenOverlay(true, now);
+  syncWeatherAnimation();
+  if (typeof updateRecentActivity === "function") updateRecentActivity(now);
 }, updateEveryMs);

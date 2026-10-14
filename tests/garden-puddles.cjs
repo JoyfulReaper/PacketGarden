@@ -208,6 +208,9 @@ const start = layers.clock.now;
 for (let index=1; index<=120; index++) { layers.frame(start+index*1000/120); layers.drawing.length=0; }
 assert.equal(order.filter(name=>name==='rain').length,30);
 assert(!order.includes('water') && !order.includes('grass') && !order.includes('specimen'), 'RAF does not redraw cached water/ecology');
-layers.clock.now+=250; layers.tick(); assert.equal(order.filter(name=>name==='water').length,1, 'drainage refreshes at slow tick only');
+layers.run('drawGarden()'); order.length=0;
+for(let index=0;index<3;index++){layers.clock.now+=250;layers.tick()}
+assert.equal(order.filter(name=>name==='water').length,0,'water does not repaint on unchanged quarter-second ticks');
+layers.clock.now+=250;layers.tick();assert.equal(order.filter(name=>name==='water').length,1,'drainage ages at the one-second visual cadence');
 
 console.log('PASS: severe-only 15s cadence and 35/60/85% boundaries, cap8/nearby pools/60% refresh, smooth bounded growth and 30s+8min drainage, applied Manual/Live weather, hidden/no catch-up, state/occupancy/provenance/grass/activity/score/click isolation, resize/no timers, cached grass-water-specimen order. Water+rain: 120 RAF callbacks -> 30 overlay paints, zero water/ecology redraws.');

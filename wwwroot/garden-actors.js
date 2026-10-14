@@ -10,7 +10,6 @@ const ambientEventConfig = {
 };
 let nextAmbientCheckAt = Date.now() + ambientEventConfig.checkEveryMs;
 let gnomeIncident = null;
-let actorAnimationFrame = null;
 
 function livingSpecimenCount(now) {
   return gardenState.specimens.filter(specimen =>
@@ -35,23 +34,25 @@ function startGnomeIncident(now, random = Math.random) {
       });
     }
   }
-  if (!document.hidden) actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
+  drawGardenOverlay(true, now);
+  syncWeatherAnimation();
   return true;
 }
 
-function finishGnomeIncident() {
+function finishGnomeIncident(repaint = true) {
   gardenState.actors = [];
   gnomeIncident = null;
-  if (actorAnimationFrame !== null) window.cancelAnimationFrame(actorAnimationFrame);
-  actorAnimationFrame = null;
-  drawGardenOverlay(true);
+  if (repaint) {
+    drawGardenOverlay(true);
+    syncWeatherAnimation();
+  }
 }
 
-function advanceGnomeIncident(now, random = Math.random) {
+function advanceGnomeIncident(now, random = Math.random, repaintCompletion = true) {
   if (!gnomeIncident) return;
   const age = Math.max(0, now - gnomeIncident.createdAt);
   if (age >= ambientEventConfig.finishedAfterMs) {
-    finishGnomeIncident();
+    finishGnomeIncident(repaintCompletion);
     return;
   }
   const phase = age < ambientEventConfig.battleAfterMs ? "approach"
@@ -83,14 +84,6 @@ function advanceGnomeIncident(now, random = Math.random) {
       }
     }
   }
-}
-
-function animateGnomes(frameTime = performance.now()) {
-  actorAnimationFrame = null;
-  if (document.hidden) return;
-  advanceGnomeIncident(Date.now());
-  drawGardenOverlay(false, Date.now(), frameTime);
-  if (gnomeIncident) actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
 }
 
 function updateAmbientEvents(now, random = Math.random) {
@@ -160,14 +153,3 @@ function drawGardenActors(now) {
     context.restore();
   }
 }
-
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden && actorAnimationFrame !== null) {
-    window.cancelAnimationFrame(actorAnimationFrame);
-    actorAnimationFrame = null;
-  } else if (!document.hidden && gnomeIncident && actorAnimationFrame === null) {
-    advanceGnomeIncident(Date.now());
-    if (gnomeIncident) actorAnimationFrame = window.requestAnimationFrame(animateGnomes);
-  }
-});
-window.addEventListener("pagehide", finishGnomeIncident);

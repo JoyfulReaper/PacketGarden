@@ -185,10 +185,14 @@ cycle to earn another final seed opportunity.
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
-not affect organisms or grass. Animated weather, gnomes, mutations, and curiosities
-reuse a cached ecology scene and share a roughly 30 FPS visual limit; lifecycle updates
-still refresh the slow scene every 250 ms. Hidden tabs pause animation, and Canvas
-backing resolution is capped at DPR 2.
+not affect organisms or grass. A base ecology Canvas repaints on actual state
+changes and at a bounded one-second cadence for visual aging; logical cleanup
+still runs every 250 ms. A separate transparent overlay Canvas handles weather,
+gnomes, mutations, and curiosities through one roughly 30 FPS scheduler, without
+copying the base bitmap. Dense vines share one local cell lookup per base repaint.
+Hidden tabs pause painting and resume once at current time, without catch-up.
+Both canvases resize together, with backing resolution capped at DPR 2; the
+overlay lets pointer events reach the existing base-canvas click handling.
 
 Severe weather now leaves temporary standing water: only heavy rain, botnet
 thunderstorm, and botnet hurricane form/refresh puddles. The existing tick checks
@@ -322,6 +326,8 @@ broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 `node tests/gnome-events.cjs`. Atomic live growth and Recent activity are covered by
 `node tests/garden-activity.cjs`. Cache/animation and dense-garden structural
 performance checks run with `node tests/render-performance.cjs`.
+Local vine-neighbor work and connection/lifecycle correctness checks run with
+`node tests/vine-rendering.cjs`.
 First-seen trigger, bounded visitors, clicking, and overlay performance checks run
 with `node tests/garden-curiosities.cjs`.
 Storm-water lifecycle, isolation, and cached rendering checks run with
