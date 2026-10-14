@@ -264,7 +264,7 @@ A compact presentation might look like:
 ```text
 Recent activity
 wurstcase-public · :443 · broadleaf · seen 1 · now
-scopecreep-ygg · :23 · vine · seen 7 · 4s
+scopecreep-ygg · :23 · wirefern · seen 7 · 4s
 noisemaker · :22 · redbloom · seen 2 · 9s
 ```
 

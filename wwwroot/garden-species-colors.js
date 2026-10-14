@@ -32,6 +32,16 @@ const speciesColorVariants = new Map([
     commonWeights: [70, 15, 10, 5],
     rare: { name: "silvervine", filter: "grayscale(0.75) sepia(0.12) hue-rotate(155deg) saturate(1.5) brightness(1.35)", glow: "#e7fbff" }
   }],
+  ["wirefern", {
+    rareChance: 0.01,
+    common: [
+      { name: "phosphor", filter: "none" },
+      { name: "moss", filter: "saturate(0.65) brightness(0.8)" },
+      { name: "cyan", filter: "hue-rotate(55deg) saturate(1.2) brightness(1.05)" },
+      { name: "amber", filter: "hue-rotate(-60deg) saturate(1.15) brightness(1.08)" }
+    ],
+    rare: { name: "afterglow", filter: "hue-rotate(35deg) saturate(0.6) brightness(1.4)", glow: "#caffec" }
+  }],
   ["redbloom", {
     rareChance: 0.01,
     common: [

@@ -74,7 +74,8 @@ rarity roll:
 | 22 | redbloom (always; bypasses rarity) |
 | 2222 | redbloom (base; normal rarity) |
 | 80, 443, 445, 8080, 8443 | broadleaf |
-| 23, 2323, 3389, 5900 | vine |
+| 23, 2323 | wirefern |
+| 3389, 5900 | vine |
 | 21, 70 | mushroom |
 | 25, 53, 420, 42069, 5432, 6379, 9200 | flower |
 | Any other valid port (1–65535) | flower |
@@ -86,6 +87,17 @@ normally expose them. The planning inventory is in
 The narrower mushroom set keeps noisy scan ports in ordinary background
 vegetation; mushrooms remain a normal base species. These are aesthetic choices,
 not claims about application protocol use.
+
+Wirefern is a compact terminal-like fern for observed connections to listening
+port 23 or 2323. It does not prove Telnet negotiation, credentials, authentication,
+payload/banner content, or malicious intent. It is an ordinary species: normal
+rolls select wirefern, while existing weed/true-rare overrides apply unchanged.
+It occupies one cell, clusters normally, and has no vine neighbor connections.
+Growing starts at 18 seconds, maturity at 50 seconds, fading at five minutes,
+and removal at six minutes. Bounded vigor detail adds fronds, small side branches,
+terminal tips, and stem thickness; recurrence/fullness is not threat.
+The ordinary base-canvas renderer updates through slow ecology aging, with no
+wirefern RAF or overlay animation. Real growth never directly seeds grass.
 
 ## TCPNoise rarity
 
@@ -251,6 +263,7 @@ Other species use four common palettes plus one rare cosmetic scheme:
 | Flower | moonflower |
 | Mushroom | bioluminescent |
 | Vine | silvervine |
+| Wirefern | afterglow |
 | Redbloom | solar |
 | Weed | toxic |
 | Ghostbloom | spectral |
@@ -267,6 +280,12 @@ or security meaning, and olive remains an ordinary cosmetic rather than backend 
 Rare color schemes are decoration only. A rare-colored ordinary plant does not
 become a backend rare species, does not gain protection, and does not imply more
 severe traffic.
+
+Wirefern common palettes are **phosphor**, **moss**, **cyan**, and **amber**, following
+live vigor 0–3 through the existing color system; phosphor green is the default.
+Direct simulated test spawns vary across the same palettes. The separate 1%
+**afterglow** cosmetic is pale mint/cyan with a subtle ordinary Canvas glow.
+Colors persist and add no backend rarity, protection, or security meaning.
 
 ## Temporary storm water
 

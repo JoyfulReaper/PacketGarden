@@ -46,7 +46,7 @@ static string WithPort(string json, int port) => json.Replace("\"listenPort\":44
 foreach (var (port, type) in new (int Port, string Type)[]
 {
     (80, "broadleaf"), (443, "broadleaf"), (445, "broadleaf"), (8080, "broadleaf"), (8443, "broadleaf"),
-    (22, "redbloom"), (2222, "redbloom"), (23, "vine"), (2323, "vine"), (3389, "vine"), (5900, "vine"),
+    (22, "redbloom"), (2222, "redbloom"), (23, "wirefern"), (2323, "wirefern"), (3389, "vine"), (5900, "vine"),
     (21, "mushroom"), (70, "mushroom"),
     (25, "flower"), (420, "flower"), (42069, "flower"), (53, "flower"),
     (5432, "flower"), (6379, "flower"), (9200, "flower"), (1, "flower"), (65535, "flower")
@@ -59,9 +59,21 @@ foreach (var (port, type) in new (int Port, string Type)[]
 Check(Parse(WithPort(good, 2222), 9799)?.SpecimenType == "redbloom", "Port 2222 has a redbloom base");
 Check(Parse(WithPort(good, 2222), 9800)?.SpecimenType == "weed", "Port 2222 retains normal weed rarity");
 Check(Parse(WithPort(good, 2222), 9999, 2)?.SpecimenType == "blackthorn", "Port 2222 retains normal rare growth");
+foreach (var port in new[] { 23, 2323 })
+{
+    var input = WithPort(good, port);
+    Check(Parse(input, 9799)?.SpecimenType == "wirefern", $"Port {port} normal roll stays wirefern");
+    Check(Parse(input, 9800)?.SpecimenType == "weed", $"Port {port} weed boundary unchanged");
+    Check(Parse(input, 9949)?.SpecimenType == "weed", $"Port {port} weed upper boundary unchanged");
+    foreach (var (choice, rare) in new[] { (0, "ghostbloom"), (1, "crystalfungus"), (2, "blackthorn") })
+        Check(Parse(input, 9950, choice)?.SpecimenType == rare, $"Port {port} existing true rare choice {choice}");
+    var wireJson = JsonSerializer.Serialize(Parse(input), new JsonSerializerOptions(JsonSerializerDefaults.Web));
+    Check(wireJson == $"{{\"specimenType\":\"wirefern\",\"listenPort\":{port},\"vigor\":0}}",
+        "Wirefern uses the existing compact SSE schema");
+}
 
 // Check the complete discrete roll space, as well as exact transition boundaries.
-foreach (var port in new[] { 443, 445, 2222, 21, 70, 53, 5432, 6379, 9200, 12345 })
+foreach (var port in new[] { 443, 445, 2222, 23, 2323, 21, 70, 53, 5432, 6379, 9200, 12345 })
 foreach (var ipv6 in new[] { false, true })
 foreach (var (sensor, bonus) in new[] { ("public", 0), ("overlay-dn42", 50), ("overlay-ygg", 100) })
 {
@@ -146,7 +158,7 @@ foreach (var (count, vigor) in vigorCases)
 }
 
 // Vigor and inspection metadata must not affect base mappings or any normal/weed/rare boundary outcome.
-foreach (var port in new[] { 22, 2222, 443, 5432, 53, 12345 })
+foreach (var port in new[] { 22, 2222, 23, 2323, 443, 5432, 53, 12345 })
 foreach (var ip in new[] { "4", "6" })
 foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
 {

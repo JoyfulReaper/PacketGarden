@@ -199,6 +199,12 @@ const broadleafTimings = {
   fadingAfterMs: 300_000,
   expiredAfterMs: 360_000
 };
+const wirefernTimings = {
+  growingAfterMs: 18_000,
+  matureAfterMs: 50_000,
+  fadingAfterMs: 300_000,
+  expiredAfterMs: 360_000
+};
 const vineTimings = {
   growingAfterMs: 20_000,
   matureAfterMs: 60_000,
@@ -259,6 +265,7 @@ const speciesConfig = new Map([
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
   ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }],
   ["vine", { timings: vineTimings, render: drawVine, plural: "vines" }],
+  ["wirefern", { timings: wirefernTimings, render: drawWirefern, singular: "wirefern", plural: "wireferns" }],
   ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }],
   ["weed", { timings: weedTimings, render: drawWeed, plural: "weeds" }],
   ["ghostbloom", { timings: ghostbloomTimings, render: drawGhostbloom, plural: "ghostblooms" }],
@@ -590,6 +597,50 @@ function drawFlower(specimen, now) {
   context.fill();
 }
 
+// Compact upright fronds; no neighbor lookups, connections, or per-frame motion.
+function drawWirefern(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
+  const age = Math.max(0, now - specimen.createdAt);
+  const frondPairs = age < wirefernTimings.growingAfterMs ? 1 + Math.floor(vigor / 2)
+    : age < wirefernTimings.matureAfterMs ? 2 + vigor : 3 + vigor;
+  drawVariant(specimen, now, fading => {
+    context.strokeStyle = fading ? "#827b52" : "#65b975";
+    context.lineWidth = 1.1 + vigor * 0.2;
+    context.beginPath();
+    context.moveTo(-3, 12); context.lineTo(0, 9); context.lineTo(3, 12);
+    // Slightly offset short segments keep the central wire-like stem organic.
+    context.moveTo(0, 10);
+    for (let segment = 0; segment < 5; segment++) {
+      context.lineTo(segment % 2 ? -0.4 : 0.4, 6 - segment * 4);
+    }
+    context.lineTo(0, -12);
+    for (let pair = 0; pair < frondPairs; pair++) {
+      const y = frondPairs === 1 ? 0 : 5 - pair * 14 / (frondPairs - 1);
+      const reach = 7 + pair % 2 * 2;
+      for (let side = -1; side <= 1; side += 2) {
+        context.moveTo(0, y);
+        context.lineTo(side * 3, y - 0.5);
+        context.lineTo(side * reach, y - 3);
+        context.lineTo(side * (reach + 2), y - 2);
+        if (vigor >= 2) {
+          context.moveTo(side * (reach - 2), y - 2);
+          context.lineTo(side * (reach - 1), y - 5);
+        }
+      }
+    }
+    context.stroke();
+    context.fillStyle = fading ? "#ad9e6f" : "#b5df9b";
+    // Tiny phosphor-like terminal tips, rather than broad leaves or vine curls.
+    for (let pair = 0; pair < frondPairs; pair++) {
+      const y = frondPairs === 1 ? 0 : 5 - pair * 14 / (frondPairs - 1);
+      const reach = 9 + pair % 2 * 2;
+      context.fillRect(-reach - 0.6, y - 2.6, 1.2, 1.2);
+      context.fillRect(reach - 0.6, y - 2.6, 1.2, 1.2);
+    }
+    context.fillRect(-0.7, -12.7, 1.4, 1.4);
+  });
+}
+
 function drawMushroom(specimen, now) {
   const vigor = specimen.vigor ?? 0;
   const ageMs = Math.max(0, now - specimen.createdAt);
@@ -728,7 +779,7 @@ function drawVine(specimen, now) {
   context.restore();
 }
 
-// Shared drawing setup for the four variants; no rarity decisions in the browser.
+// Shared lifecycle drawing setup; no species rarity decisions in the browser.
 function drawVariant(specimen, now, paint) {
   const timings = speciesConfig.get(specimen.type).timings;
   const age = Math.max(0, now - specimen.createdAt);

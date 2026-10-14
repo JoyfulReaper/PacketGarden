@@ -8,7 +8,7 @@ const context = new Proxy({}, {
   set: (_, property, value) => { drawing.push([property, value]); return true; }
 });
 const state = { redraws: 0, renders: [], spawns: [] };
-const types = ['flower','mushroom','vine','redbloom','weed','ghostbloom','crystalfungus','blackthorn'];
+const types = ['flower','mushroom','vine','wirefern','redbloom','weed','ghostbloom','crystalfungus','blackthorn'];
 const speciesConfig = new Map(types.map(type => [type, {
   render(specimen, now) {
     state.renders.push([type, specimen.colorVariant, now]);
@@ -97,7 +97,7 @@ for (const age of [1000,20000,60000,300000]) {
 const createGarden = require('./browser-garden.cjs');
 const garden = createGarden();
 garden.sandbox.Math.random = () => 0.5;
-garden.emit(23,'vine',0); garden.emit(23,'vine',3);
+garden.emit(3389,'vine',0); garden.emit(3389,'vine',3);
 garden.run("handleGardenEvent({type:'ssh'})");
 const vines = garden.run('gardenState.specimens.slice()');
 assert(vines.every(specimen => specimen.colorVariant === 'aqua'));

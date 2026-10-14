@@ -264,6 +264,18 @@ TCPNoise mushrooms now have the narrower base-port set **21 and 70**. Port 445
 has a broadleaf base; 5432, 6379, and 9200 have flower bases. These mappings are
 aesthetic, without asserting application protocols; rarity odds are unchanged.
 
+Listening ports **23 and 2323** now use an ordinary **wirefern** base; **3389 and
+5900** remain vines, and fake SSH still creates a vine. Wirefern is a compact
+upright terminal-like fern with a segmented stem, angular fronds, and tiny tips.
+It says only that a connection was observed on the listening port, not that Telnet
+negotiation, authentication, credentials, payloads, or malicious activity occurred.
+Existing weed/true-rare overrides still apply normally. Vigor adds bounded fronds,
+side branches, tips, and stem thickness as artistic recurrence/fullness, not threat.
+Common palettes are phosphor green, moss, cyan, and amber; the separate 1% afterglow
+cosmetic adds pale mint/cyan glow. The chosen color persists. Wireferns occupy one
+ordinary cell, cluster and compete normally, never connect to vine neighbors, and
+age on the base canvas without a RAF animation or direct grass influence.
+
 Natural expiry remains the normal way space opens in the bounded 32×20 garden.
 When full, incoming vigor must be strictly greater than an eligible occupant's:
 choose the lowest eligible vigor, then its oldest specimen, and reuse that exact
@@ -365,6 +377,7 @@ Lifecycle thresholds below are elapsed time since creation:
 | Mushroom | 12 seconds | 40 seconds | Decays at 4 minutes | 5 minutes |
 | Broad-leaf plant | 20 seconds | 1 minute | Fades at 5 minutes | 6 minutes |
 | Vine | 20 seconds | 1 minute | Dries at 8 minutes | 10 minutes |
+| Wirefern | 18 seconds | 50 seconds | Fades at 5 minutes | 6 minutes |
 | Red bloom | Blooms immediately | — | Wilts at 10 seconds | 30 seconds |
 | Weed | 20 seconds | 1 minute | Fades at 5 minutes | 6 minutes |
 | Ghostbloom | 15 seconds | 45 seconds | Fades at 5 minutes | 6 minutes |
@@ -372,3 +385,6 @@ Lifecycle thresholds below are elapsed time since creation:
 | Blackthorn | 20 seconds | 1 minute | Fades at 10 minutes | 12 minutes |
 
 State is held only in browser memory; reloading starts an empty garden.
+
+Focused wirefern mapping/rendering integration and structural performance checks
+run with `node tests/wirefern.cjs` and the backend checks project.

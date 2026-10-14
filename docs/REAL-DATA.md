@@ -143,7 +143,18 @@ history or persistence. It is ambient context, not a monitoring replacement; raw
 frames, remote endpoints, and payloads are never retained in it.
 
 Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
-They share placement, clustering, lifecycles, and occupancy with fake events, but
+Ports 23/2323 now have an ordinary wirefern base, a compact terminal-like fern for
+connections observed on those listeners. Ports 3389/5900 remain vines; no other
+mapping changes. Wirefern does not establish Telnet negotiation, authentication,
+credentials, payload/banner observation, or malicious intent. Normal rolls select
+wirefern; existing weed and true-rare overrides and vigor thresholds are unchanged.
+It has a six-minute ordinary lifecycle, normal one-cell clustering/competition,
+and bounded vigor fullness. Persistent phosphor/moss/cyan/amber palettes and 1%
+afterglow are browser cosmetics with no backend rarity or security meaning.
+It draws on the base canvas without neighbor connectivity or per-RAF work;
+generic inspection, Recent activity, and exact-count-one curiosity behavior apply.
+
+TCPNoise port hits share placement, clustering, lifecycles, and occupancy with fake events, but
 do not inherit fake DNS/HTTP grass effects. Real TCPNoise growth does not directly
 seed or refresh grass in this slice, including forced replacements.
 
