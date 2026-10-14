@@ -1,6 +1,7 @@
 const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
 const fakeDnsButton = document.querySelector("#fake-dns");
+const fakeGopherButton = document.querySelector("#fake-gopher");
 const gardenStatus = document.querySelector("#garden-status");
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
@@ -11,21 +12,28 @@ const margin = 16;
 const columns = gardenWidth / cellSize;
 const rows = gardenHeight / cellSize;
 
-// Short development timings, measured from each flower's creation.
+// Short development timings, measured from each specimen's creation.
 const flowerTimings = {
   growingAfterMs: 5_000,
   matureAfterMs: 12_000,
   wiltingAfterMs: 25_000,
-  expiredAfterMs: 35_000,
-  redrawEveryMs: 250
+  expiredAfterMs: 35_000
 };
+const mushroomTimings = {
+  growingAfterMs: 4_000,
+  matureAfterMs: 10_000,
+  decayingAfterMs: 30_000,
+  expiredAfterMs: 42_000
+};
+const updateEveryMs = 250;
 
-/** @typedef {{ type: "dns" }} GardenEvent */
+/** @typedef {{ type: "dns" | "gopher" }} GardenEvent */
 const gardenState = { specimens: [] };
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
-  if (event.type !== "dns") return;
+  if (event.type !== "dns" && event.type !== "gopher") return;
+  const specimenType = event.type === "dns" ? "flower" : "mushroom";
 
   updateGarden();
 
@@ -40,15 +48,16 @@ function handleGardenEvent(event) {
 
   const adjacentCells = [];
   const nearbyCells = [];
+  const sameSpecies = gardenState.specimens.filter(specimen => specimen.type === specimenType);
   for (const cell of emptyCells) {
     const column = cell % columns;
     const row = Math.floor(cell / columns);
     let distance = Infinity;
-    for (const flower of gardenState.specimens) {
+    for (const specimen of sameSpecies) {
       // Diagonals count as neighbors; coordinate distances never wrap at edges.
       distance = Math.min(distance, Math.max(
-        Math.abs(column - flower.column),
-        Math.abs(row - flower.row)
+        Math.abs(column - specimen.column),
+        Math.abs(row - specimen.row)
       ));
     }
     if (distance === 1) adjacentCells.push(cell);
@@ -63,7 +72,7 @@ function handleGardenEvent(event) {
     : alternateCells.length > 0 ? alternateCells : emptyCells;
   const cell = candidates[Math.floor(Math.random() * candidates.length)];
   gardenState.specimens.push({
-    type: "flower",
+    type: specimenType,
     column: cell % columns,
     row: Math.floor(cell / columns),
     createdAt: Date.now()
@@ -75,16 +84,21 @@ function handleGardenEvent(event) {
 
 function updateGardenStatus() {
   const count = gardenState.specimens.length;
-  const description = `${count} ${count === 1 ? "flower" : "flowers"}`;
+  const flowers = gardenState.specimens.filter(specimen => specimen.type === "flower").length;
+  const mushrooms = count - flowers;
+  const description = `${flowers} ${flowers === 1 ? "flower" : "flowers"}, ${mushrooms} ${mushrooms === 1 ? "mushroom" : "mushrooms"}`;
   gardenStatus.textContent = description;
   canvas.setAttribute("aria-label", `Rectangular soil garden with a subtle square grid and ${description}`);
   fakeDnsButton.disabled = count === columns * rows;
+  fakeGopherButton.disabled = count === columns * rows;
 }
 
 function updateGarden(now = Date.now()) {
-  const remaining = gardenState.specimens.filter(
-    specimen => now - specimen.createdAt < flowerTimings.expiredAfterMs
-  );
+  const remaining = gardenState.specimens.filter(specimen => {
+    const expiresAfterMs = specimen.type === "flower"
+      ? flowerTimings.expiredAfterMs : mushroomTimings.expiredAfterMs;
+    return now - specimen.createdAt < expiresAfterMs;
+  });
   if (remaining.length !== gardenState.specimens.length) {
     gardenState.specimens = remaining;
     updateGardenStatus();
@@ -94,6 +108,12 @@ function updateGarden(now = Date.now()) {
 fakeDnsButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
   const event = { type: "dns" };
+  handleGardenEvent(event);
+});
+
+fakeGopherButton.addEventListener("click", () => {
+  /** @type {GardenEvent} */
+  const event = { type: "gopher" };
   handleGardenEvent(event);
 });
 
@@ -139,6 +159,36 @@ function drawFlower(specimen, now) {
   context.fill();
 }
 
+function drawMushroom(specimen, now) {
+  const ageMs = Math.max(0, now - specimen.createdAt);
+  if (ageMs >= mushroomTimings.expiredAfterMs) return;
+  const stage = ageMs < mushroomTimings.growingAfterMs ? "sprout"
+    : ageMs < mushroomTimings.matureAfterMs ? "growing"
+    : ageMs < mushroomTimings.decayingAfterMs ? "mature" : "decaying";
+  const decaying = stage === "decaying";
+  const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : decaying ? 0.65 : 1;
+
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  context.scale(size, size);
+
+  context.fillStyle = decaying ? "#93816b" : "#d9c9a6";
+  context.fillRect(-2, 2, 4, 8);
+  context.fillStyle = decaying ? "#76614f" : "#b86b48";
+  context.beginPath();
+  context.ellipse(0, 0, 10, decaying ? 4 : 8, 0, 0, Math.PI * 2);
+  context.fill();
+
+  if (stage !== "sprout") {
+    context.fillStyle = decaying ? "#99866c" : "#f0dfb9";
+    context.beginPath();
+    context.arc(-4, -2, 2, 0, Math.PI * 2);
+    context.arc(4, -1, 1.5, 0, Math.PI * 2);
+    context.fill();
+  }
+  context.restore();
+}
+
 function drawGarden() {
   const { width, height } = canvas.getBoundingClientRect();
   if (width <= 0 || height <= 0) return;
@@ -181,7 +231,8 @@ function drawGarden() {
 
   const now = Date.now();
   for (const specimen of gardenState.specimens) {
-    drawFlower(specimen, now);
+    if (specimen.type === "flower") drawFlower(specimen, now);
+    else if (specimen.type === "mushroom") drawMushroom(specimen, now);
   }
 }
 
@@ -189,10 +240,10 @@ new ResizeObserver(drawGarden).observe(canvas);
 window.addEventListener("resize", drawGarden);
 drawGarden();
 
-// Clean up before drawing, including the tick that removes the final flower.
+// Clean up before drawing, including the tick that removes the final specimen.
 window.setInterval(() => {
   if (gardenState.specimens.length > 0) {
     updateGarden();
     drawGarden();
   }
-}, flowerTimings.redrawEveryMs);
+}, updateEveryMs);
