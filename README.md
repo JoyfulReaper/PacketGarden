@@ -119,6 +119,14 @@ Open http://localhost:5080 in a browser and click **Generate fake DNS event** to
 add a flower, **Generate fake Gopher event** to add a mushroom,
 **Generate fake HTTP event** to add a broad-leaf plant, **Generate fake SSH event**
 to add a vine, or **Generate fake failed-auth event** to add a red bloom.
+Click **Start automatic fake traffic** to leave the garden running, and
+**Stop automatic fake traffic** to pause arrivals without resetting the garden.
+Manual buttons remain available while automatic traffic runs.
+
+Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
+with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and failed auth 2.
+Tune the delays and weights together in `fakeTrafficConfig` in `wwwroot/garden.js`.
+
 The whole garden scales to fit the window, and specimens survive
 resizing. Development lifecycles last
 35 seconds for flowers, 42 seconds for mushrooms, 50 seconds for broad-leaf

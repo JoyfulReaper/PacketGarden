@@ -5,6 +5,7 @@ const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
 const fakeSshButton = document.querySelector("#fake-ssh");
 const fakeFailedAuthButton = document.querySelector("#fake-failed-auth");
+const automaticTrafficButton = document.querySelector("#automatic-traffic");
 const gardenStatus = document.querySelector("#garden-status");
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
@@ -45,6 +46,21 @@ const redbloomTimings = {
   expiredAfterMs: 10_000
 };
 const updateEveryMs = 250;
+
+// Browser-only development traffic: about 30 events per minute at these defaults.
+const fakeTrafficConfig = {
+  minDelayMs: 1_200,
+  maxDelayMs: 2_800,
+  eventWeights: [
+    { type: "dns", weight: 55 },
+    { type: "http", weight: 28 },
+    { type: "ssh", weight: 10 },
+    { type: "gopher", weight: 5 },
+    { type: "failed-auth", weight: 2 }
+  ]
+};
+let automaticTrafficRunning = false;
+let automaticTrafficTimeout = null;
 
 const eventSpecimenTypes = new Map([
   ["dns", "flower"],
@@ -170,6 +186,42 @@ fakeFailedAuthButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
   const event = { type: "failed-auth" };
   handleGardenEvent(event);
+});
+
+function scheduleAutomaticEvent() {
+  if (!automaticTrafficRunning) return;
+  const delayMs = fakeTrafficConfig.minDelayMs
+    + Math.random() * (fakeTrafficConfig.maxDelayMs - fakeTrafficConfig.minDelayMs);
+  automaticTrafficTimeout = window.setTimeout(() => {
+    automaticTrafficTimeout = null;
+    if (!automaticTrafficRunning) return;
+
+    const totalWeight = fakeTrafficConfig.eventWeights.reduce((total, entry) => total + entry.weight, 0);
+    let choice = Math.random() * totalWeight;
+    for (const entry of fakeTrafficConfig.eventWeights) {
+      if (choice < entry.weight) {
+        /** @type {GardenEvent} */
+        const event = { type: entry.type };
+        handleGardenEvent(event);
+        break;
+      }
+      choice -= entry.weight;
+    }
+    scheduleAutomaticEvent();
+  }, delayMs);
+}
+
+automaticTrafficButton.addEventListener("click", () => {
+  automaticTrafficRunning = !automaticTrafficRunning;
+  if (automaticTrafficRunning) {
+    scheduleAutomaticEvent();
+  } else {
+    window.clearTimeout(automaticTrafficTimeout);
+    automaticTrafficTimeout = null;
+  }
+  automaticTrafficButton.textContent = automaticTrafficRunning
+    ? "Stop automatic fake traffic" : "Start automatic fake traffic";
+  automaticTrafficButton.setAttribute("aria-pressed", String(automaticTrafficRunning));
 });
 
 function drawFlower(specimen, now) {
