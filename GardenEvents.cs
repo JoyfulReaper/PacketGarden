@@ -1,8 +1,14 @@
+using System.Text.Json.Serialization;
 using System.Threading.Channels;
 
 namespace PacketGarden;
 
-public sealed record GardenGrowth(string SpecimenType, int ListenPort, int Vigor = 0);
+public sealed record GardenGrowth(
+    string SpecimenType,
+    int ListenPort,
+    int Vigor = 0,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Sensor = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? SeenCount = null);
 
 public sealed record GardenFrame(string Name, object Data);
 
