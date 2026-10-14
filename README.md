@@ -100,4 +100,16 @@ The renderer should not need raw IP addresses, credentials, request payloads, or
 
 ## Status
 
-Very early concept / prototype planning. No working garden yet.
+The first runnable slice displays an empty garden boundary and subtle grid.
+
+## Run the first slice
+
+Install the .NET 10 SDK, then run from the repository root:
+
+```sh
+dotnet run --project PacketGarden.csproj --urls http://localhost:5080
+```
+
+Open http://localhost:5080 in a browser. This first runnable slice displays only
+the empty garden boundary and subtle grid, with the whole garden scaled to fit
+the window.
