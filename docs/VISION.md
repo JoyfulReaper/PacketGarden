@@ -28,11 +28,14 @@ The intended experience is:
 3. leave it running while real network events arrive;
 4. watch the ecosystem visibly change over tens of minutes;
 5. occasionally notice something strange;
-6. inspect an interesting specimen when you want to know what produced it.
+6. inspect or click an interesting thing when curiosity wins.
 
 There is no requirement to manage the garden. No watering, pruning, resource
-economy, scoring, progression tree, optimization loop, or player-directed combat
-is planned.
+economy, meaningful accumulating score, progression tree, optimization loop, or
+player-directed combat is planned.
+
+A deliberately useless `Score: 0` that never changes is compatible with this
+vision because it parodies progression rather than creating it.
 
 Brief ambient nonsense is allowed and encouraged. Four tiny gnomes having a
 pointless territorial dispute is not a combat system.
@@ -98,7 +101,7 @@ object. It may instead:
 
 - make an existing specimen grow or bloom;
 - strengthen or spread an existing patch;
-- mutate nearby growth;
+- mutate nearby or existing growth;
 - replace weak or decaying growth;
 - create a new specimen only when there is sensible space.
 
@@ -130,7 +133,7 @@ Weeds may crowd out fragile flowers, vines may overtake nearby cells, large grow
 may suppress nearby spawning, and fungi may favor decaying areas. There are no
 health bars, unit stats, tactical factions, or loss states.
 
-## Ambient life and incidents
+## Ambient life, curiosities, and pointless collection
 
 The browser now has a transient actor layer, first used for **The Gnome Incident**.
 That layer is the preferred home for small visitors and temporary spectacles that
@@ -144,9 +147,27 @@ Ambient incidents should usually be:
 - harmless to the core ecology unless deliberately designed otherwise;
 - slightly inexplicable when that is funnier than explaining them.
 
-Possible future visitors and gnome nonsense are collected in [Ideas](IDEAS.md).
-The guiding principle is that seeing one unexpected frog after a long quiet period
-is more memorable than permanently filling the garden with decorative animals.
+The current collectible implementation lets rare live port-22 redblooms leave a
+short-lived weed sprig. A preferred future refinement is for the redbloom itself to
+mutate into a temporary collectible weed plant after first appearing normally, so
+port 22 remains visibly and semantically a redbloom before the browser-only joke
+mutation occurs.
+
+Collecting something should be optional and materially useless. A message such as
+`You collected some weed. +0 points` and a permanently unchanged `Score: 0` are
+appropriate. Inventory, achievements, currency, progression, high scores, and
+penalties for missing collectibles are not.
+
+Exact live `seenCount == "1"` may also drive a separate first-seen curiosity layer:
+a little critter or dropped object can briefly appear near the source specimen,
+with at most three active at once. If all three slots are occupied, skip the new
+curiosity rather than queueing it. This is a presentation of the source-provided
+count, not a claim of global uniqueness across all collectors or history.
+
+Possible future visitors, first-seen curiosities, collectibles, and gnome nonsense
+are collected in [Ideas](IDEAS.md). The guiding principle is that one unexpected
+frog or shiny rock is more memorable than permanently filling the garden with
+interactive clutter.
 
 ## Terrain and long-term history
 
@@ -204,6 +225,7 @@ Examples:
 - Gemini traffic -> crystalline fungi;
 - SSH connections -> thorny vines;
 - a TCP connection to listening port 22 -> a redbloom that quickly wilts, without implying SSH negotiation or authentication;
+- exact source-provided `seenCount == 1` -> optional short-lived first-seen curiosity;
 - long-lived connections -> slow-growing trees;
 - bursts of traffic -> rain, wind, spores, or pollen;
 - suspicious or noisy traffic -> invasive weeds only when backed by an appropriate higher-level signal;
