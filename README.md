@@ -1,8 +1,10 @@
 # PacketGarden
 
-PacketGarden is a browser-based ambient network garden where real or simulated protocol/network events grow plants, flowers, fungi, weeds, terrain, and other strange things instead of appearing only as ordinary telemetry.
+> **Composting the internet's shit into something pretty.**
 
-The core idea is deliberately playful: a DNS lookup might strengthen a flower patch, a Gopher request might sprout a mushroom, an SSH connection might grow a thorny vine, and unusual traffic might mutate the garden in increasingly weird ways.
+PacketGarden turns the background garbage of the internet into a living browser garden. Real or simulated network events grow plants, flowers, fungi, weeds, terrain, and other strange things instead of becoming yet another wall of ordinary telemetry.
+
+The core idea is deliberately playful: a DNS lookup might strengthen a flower patch, a Gopher request might sprout a mushroom, an SSH connection might grow a thorny vine, a port-22 probe might flash into a red bloom, and enough aggregate noise can turn the weather nasty.
 
 ## Direction
 
