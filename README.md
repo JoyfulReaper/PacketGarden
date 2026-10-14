@@ -105,6 +105,7 @@ Live click inspection deliberately receives a bounded sensor label and exact TCP
 - [MVP](docs/MVP.md)
 - [Initial event mappings](docs/EVENT-MAPPINGS.md)
 - [Real data](docs/REAL-DATA.md)
+- [Ideas and future directions](docs/IDEAS.md)
 
 ## Status
 
@@ -117,6 +118,12 @@ visually connect into creeping patches.
 Manual controls and automatic weighted fake traffic feed the same event handler.
 Lifecycles now retain several minutes of visual history, with vines lasting up to
 10 minutes and red blooms remaining brief. State is held only in browser memory.
+
+Specimens also have persistent cosmetic color variation. Live common palettes track
+coarse vigor while fake growth varies across the same common schemes. Each species
+has a small 1% browser-only rare-color chance; broadleaf can become rainbow, while
+other species have their own rare cosmetic schemes. These colors are decoration,
+not extra TCPNoise rarity or security meaning.
 
 Very occasionally, sufficiently overgrown gardens may experience a brief and
 completely unhelpful gnome territorial dispute. With at least 30 living specimens,
@@ -190,7 +197,7 @@ The browser-facing TCPNoise growth contract is `specimenType`, `listenPort`, and
 integer `vigor` (0–3), plus optional bounded `sensor` and exact decimal-string
 `seenCount` for inspection. Remote endpoint/IP and payload details remain excluded.
 Other discrete adapters, local-time lighting, persistence, and richer ecological
-competition remain planned work; see [MVP](docs/MVP.md).
+competition remain planned work; see [MVP](docs/MVP.md) and [Ideas](docs/IDEAS.md).
 
 ## Run the prototype
 
@@ -246,7 +253,9 @@ See [Real data](docs/REAL-DATA.md) for validation, mapping, and fleet inventory.
 
 Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Checks`,
 browser-path checks with `node tests/garden-events.cjs`, focused inspection checks
-with `node tests/garden-inspect.cjs`, and focused grass ecology checks with
+with `node tests/garden-inspect.cjs`, audio checks with `node tests/garden-audio.cjs`,
+broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
+`node tests/species-color-variants.cjs`, and focused grass ecology checks with
 `node tests/grass-ecology.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
