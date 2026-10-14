@@ -22,6 +22,7 @@ browser garden as the starting point.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to sanitized specimen growth on the same SSE stream.
 - Redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 retains normal vine/rarity behavior. The fake `port22-probe` control previews the same redbloom without grass influence.
 - Event-driven artistic TCPNoise rarity: weeds, pale ghostblooms, cyan/violet crystal fungi, and dark blackthorns, lasting 6, 6, 7, and 12 minutes. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).
+- Optional TCPNoise `seenCount` converted server-side to coarse visual vigor (0–1/missing/unusable -> 0, 2–3 -> 1, 4–9 -> 2, usable counts 10+ -> 3). This artistic recurrence trait affects appearance only, independently of species/rarity, and is not a threat score. Exact counts are never sent to the browser.
 - Shared specimen placement path for fake events and normalized real growth.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
@@ -31,11 +32,13 @@ browser garden as the starting point.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 
 Fake events are `{ type }`; live TCPNoise browser growth is
-`{ specimenType, listenPort }` after backend validation, mapping, and rarity.
+`{ specimenType, listenPort, vigor }` after backend validation, mapping, and rarity,
+plus independent vigor derivation. The browser requires integer vigor 0–3.
 The browser receives no sensor names or IP details and makes no rarity decisions.
 Every weed/rare spawn requires an accepted TCPNoise event, with no direct grass
 influence or timer-driven mutation. Specimens
-hold `type`, `column`, `row`, and `createdAt`. State is browser memory only;
+hold `type`, `column`, `row`, `createdAt`, and stable `vigor` (fake paths default to 0).
+Vigor does not alter lifetimes or ecology. State is browser memory only;
 reloading clears it. Detailed lifecycle thresholds and fake-traffic defaults are
 in the [README](../README.md).
 Grass cells separately hold `column`, `row`, `createdAt`, and `lastInfluencedAt`.

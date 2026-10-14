@@ -12,7 +12,7 @@ public sealed class TcpNoiseAdapter(
 {
     // Unknown envelope/payload fields are ignored, never retained or forwarded.
     private sealed record Envelope(string? EventType, string? Source, int? SchemaVersion, PortPayload? Payload);
-    private sealed record PortPayload(int? ListenPort, JsonElement IpVersion, JsonElement Sensor);
+    private sealed record PortPayload(int? ListenPort, JsonElement IpVersion, JsonElement Sensor, JsonElement SeenCount);
     private static readonly JsonSerializerOptions InputJson = new() { PropertyNameCaseInsensitive = true };
     private int unavailable;
 
@@ -43,13 +43,21 @@ public sealed class TcpNoiseAdapter(
                 && ipVersion.TryGetInt32(out var version) && version == 6;
             var sensor = envelope.Payload.Sensor.ValueKind == JsonValueKind.String
                 ? envelope.Payload.Sensor.GetString() : null;
-            return new GardenGrowth(TcpNoiseRarity.Resolve(port, isIpv6, sensor, roll, rareChoice), port);
+            var species = TcpNoiseRarity.Resolve(port, isIpv6, sensor, roll, rareChoice);
+            return new GardenGrowth(species, port, ResolveVigor(envelope.Payload.SeenCount));
         }
         catch (JsonException)
         {
             return null;
         }
     }
+
+    // Optional recurrence trait: no identity, rarity, lifetime, or threat semantics.
+    // Use the collector's unsigned 64-bit integer range; unusable/overflowing values default to 0.
+    private static int ResolveVigor(JsonElement seenCount) =>
+        seenCount.ValueKind == JsonValueKind.Number && seenCount.TryGetUInt64(out var count)
+            ? count switch { <= 1 => 0, <= 3 => 1, <= 9 => 2, _ => 3 }
+            : 0;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

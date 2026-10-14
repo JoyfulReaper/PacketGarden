@@ -104,9 +104,23 @@ crystal fungi cyan/violet facets; blackthorns dark purple with contrasting thorn
 Their lifetimes are 6, 6, 7, and 12 minutes respectively (stages in the README).
 
 All rarity is event-driven and resolved before SSE. The browser receives only
-`specimenType` and `listenPort`, never sensor names or IP details, and uses shared
+`specimenType`, `listenPort`, and coarse `vigor`, never sensor names or IP details, and uses shared
 placement/lifecycles without direct grass influence. Competition and mutations
 of existing specimens remain future ecology work.
+
+## TCPNoise visual vigor
+
+After species/rarity selection, the backend independently maps optional `seenCount`
+to vigor: **0** for counts 0–1 or missing/unusable values, **1** for 2–3, **2** for
+4–9, and **3** for usable integers 10 or more. Exact repeat counts stay server-side.
+Vigor is artistic recurrence, not a threat score, and never influences rarity or
+species selection (including the unconditional port-22 redbloom).
+
+Higher vigor adds fuller petals/leaves, broader mushroom caps and spots, stronger
+vine stems/leaves/thorns, redbloom spikes, weed branches, ghostbloom fullness/halo,
+crystal facets, and blackthorn branches/thorns within roughly the same cell.
+The plum broadleaf palette stays intact. Vigor is fixed at spawn; fake controls
+use 0. Lifetimes, placement, clustering, grass, and weather do not depend on vigor.
 
 ## First prototype subset
 

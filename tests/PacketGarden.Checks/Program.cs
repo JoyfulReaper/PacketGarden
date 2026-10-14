@@ -26,9 +26,10 @@ Check(Parse(good) == new GardenGrowth("broadleaf", 443), "Valid message normaliz
 var json = JsonSerializer.Serialize(Parse(good), new JsonSerializerOptions(JsonSerializerDefaults.Web));
 using (var document = JsonDocument.Parse(json))
 {
-    Check(document.RootElement.EnumerateObject().Count() == 2, "Only two sanitized fields");
+    Check(document.RootElement.EnumerateObject().Count() == 3, "Only three sanitized fields");
     Check(document.RootElement.GetProperty("specimenType").GetString() == "broadleaf", "Normalized specimen type");
     Check(document.RootElement.GetProperty("listenPort").GetInt32() == 443, "Normalized listen port");
+    Check(document.RootElement.GetProperty("vigor").GetInt32() == 0, "Missing seenCount defaults to vigor 0");
     Check(!json.Contains("sensitive-test-marker", StringComparison.Ordinal), "Sensitive source fields are not serialized");
 }
 foreach (var input in new[] { "", "{", "null", "[]", "{}", good.Replace("tcpnoise.connection", "other"),
@@ -97,8 +98,8 @@ Check(Parse(WithPort(Traits(good, "{}", "[]"), 22), 9999, 2) == new GardenGrowth
 Check(Parse(WithPort(good, 22).Replace("tcpnoise.connection", "other"), 9999, 2) is null,
     "Port 22 still requires a validated TCPNoise event");
 Check(JsonSerializer.Serialize(Parse(WithPort(Traits(good, "6", "\"private-sensor-ygg\""), 22), 9999, 2),
-    new JsonSerializerOptions(JsonSerializerDefaults.Web)) == """{"specimenType":"redbloom","listenPort":22}""",
-    "Port-22 SSE data has exactly the two safe fields, without sensor/IP/sensitive fields");
+    new JsonSerializerOptions(JsonSerializerDefaults.Web)) == """{"specimenType":"redbloom","listenPort":22,"vigor":0}""",
+    "Port-22 SSE data has exactly the three safe fields, without sensor/IP/sensitive fields");
 Check(Parse(Traits(good, "4", "\"public\""), 9750)?.SpecimenType == "broadleaf", "IPv4 public has base rates");
 Check(Parse(Traits(good, "6", "\"public\""), 9750)?.SpecimenType == "weed", "IPv6 increases unusual growth");
 Check(Parse(Traits(good, "4", "\"overlay-dn42\""), 9750)?.SpecimenType == "weed", "DN42 increases unusual growth");
@@ -117,14 +118,52 @@ foreach (var sensor in new[] { "null", "4", "true", "{}", "[]", "\"\"", "\" \"",
     Check(Parse(Traits(good, "6", sensor), 9750)?.SpecimenType == "weed", "Unusable sensor preserves IPv6 bonus");
 }
 Check(Parse(good, 9750)?.SpecimenType == "broadleaf", "Missing optional traits accepted without bonus");
+
+static string Seen(string json, string count) => json.Replace("\"Payload\":{", $"\"Payload\":{{\"seenCount\":{count},");
+var vigorCases = new (string Count, int Vigor)[]
+{
+    ("null", 0), ("\"10\"", 0), ("{}", 0), ("[]", 0), ("true", 0),
+    ("0", 0), ("-1", 0), ("-10", 0), ("1", 0), ("2", 1), ("3", 1),
+    ("4", 2), ("9", 2), ("10", 3), ("1000000000", 3), ("18446744073709551615", 3),
+    ("18446744073709551616", 0), ("1e1000", 0), ("9999999999999999999999999999999999999999", 0),
+    ("2.5", 0), ("10.0", 0), ("1e1", 0)
+};
+foreach (var (count, vigor) in vigorCases)
+{
+    Check(Parse(Seen(good, count)) == new GardenGrowth("broadleaf", 443, vigor), $"seenCount {count} -> vigor {vigor}");
+    Check(Parse(Seen(WithPort(good, 22), count), 9999, 2) == new GardenGrowth("redbloom", 22, vigor),
+        "Port 22 remains redbloom at every vigor/default case");
+}
+
+// Vigor must not affect base mappings or any normal/weed/rare boundary outcome.
+foreach (var port in new[] { 22, 2222, 443, 5432, 53, 12345 })
+foreach (var ip in new[] { "4", "6" })
+foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
+{
+    var input = WithPort(Traits(good, ip, JsonSerializer.Serialize(sensor)), port);
+    var (_, fallback) = TcpNoiseRarity.BaseSpecimen(port);
+    var (weed, rare) = TcpNoiseRarity.Chances(fallback, ip == "6", sensor);
+    var normalEnd = 10_000 - weed - rare;
+    var weedEnd = 10_000 - rare;
+    foreach (var roll in new[] { 0, normalEnd - 1, normalEnd, weedEnd - 1, weedEnd, 9999 })
+    for (var choice = 0; choice < 3; choice++)
+    foreach (var (count, vigor) in vigorCases)
+    {
+        var baseline = Parse(input, roll, choice)!;
+        Check(Parse(Seen(input, count), roll, choice) == baseline with { Vigor = vigor },
+            "seenCount affects only vigor, independently of port/species/rarity/traits");
+    }
+}
+
 foreach (var (roll, choice) in new[] { (0, 0), (9800, 0), (9999, 0), (9999, 1), (9999, 2) })
 {
-    var sanitized = JsonSerializer.Serialize(Parse(Traits(good, "6", "\"private-sensor-ygg\""), roll, choice),
+    var sanitized = JsonSerializer.Serialize(Parse(Seen(Traits(good, "6", "\"private-sensor-ygg\""), "1234567"), roll, choice),
         new JsonSerializerOptions(JsonSerializerDefaults.Web));
     using var document = JsonDocument.Parse(sanitized);
     Check(document.RootElement.EnumerateObject().Select(property => property.Name)
-        .Order().SequenceEqual(new[] { "listenPort", "specimenType" }), "All outcomes serialize only the two safe fields");
-    foreach (var secret in new[] { "private", "secret", "sensitive-test-marker", "sensor", "ipVersion", "remoteAddress", "remotePort", "banner", "payload" })
+        .Order().SequenceEqual(new[] { "listenPort", "specimenType", "vigor" }), "All outcomes serialize only the three safe fields");
+    Check(document.RootElement.GetProperty("vigor").GetInt32() == 3, "Only bounded vigor forwarded");
+    foreach (var secret in new[] { "private", "secret", "sensitive-test-marker", "sensor", "ipVersion", "seenCount", "1234567", "remoteAddress", "remotePort", "banner", "payload" })
         Check(!sanitized.Contains(secret, StringComparison.OrdinalIgnoreCase), "No sensor/IP/sensitive fields forwarded");
 }
 foreach (var (roll, choice) in new[] { (-1, 0), (10_000, 0), (0, -1), (0, 3) })
@@ -144,12 +183,12 @@ events.Publish(Parse(good)!);
 Check(first.Reader.TryRead(out var a) && second.Reader.TryRead(out var b) && a == b, "Each client gets the same event");
 Check(a is { Name: "garden", Data: GardenGrowth { SpecimenType: "broadleaf", ListenPort: 443 } }, "Fanout contains normalized growth");
 Check(!first.Reader.TryRead(out _) && !second.Reader.TryRead(out _), "Exactly once per client");
-events.Publish(Parse(WithPort(good, 22), 9999, 2)!);
+events.Publish(Parse(Seen(WithPort(good, 22), "10"), 9999, 2)!);
 Check(first.Reader.TryRead(out var redA) && second.Reader.TryRead(out var redB) && redA == redB
-    && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22 } },
+    && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 3 } },
     "Port-22 redbloom uses existing transient fanout");
 events.RemoveClient(first);
 events.Publish(new GardenGrowth("mushroom", 5432));
 Check(second.Reader.TryRead(out var c) && c.Data is GardenGrowth { SpecimenType: "mushroom", ListenPort: 5432 }, "Remaining client unaffected by disconnect");
 events.RemoveClient(second);
-Console.WriteLine("PASS: TCPNoise validation/mapping, port-22 rarity bypass, port-2222 vine/rarity, exact rarity probabilities/boundaries/traits, sanitized growth fields, fanout, no replay, disconnect cleanup.");
+Console.WriteLine("PASS: TCPNoise validation/mapping, optional bounded vigor independent of rarity, port-22 rarity bypass, port-2222 vine/rarity, exact rarity probabilities/boundaries/traits, sanitized growth fields, fanout, no replay, disconnect cleanup.");

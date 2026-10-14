@@ -37,24 +37,27 @@ assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.ro
 assert(run('gardenState.grassCells.every(g => g.createdAt === 1000 && g.lastInfluencedAt === 1000)'));
 
 for (const [port, type] of [[443,'broadleaf'],[22,'redbloom'],[2222,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
+  for (const vigor of [0, 1, 2, 3]) {
   reset(); sandbox.Math.random = () => 0;
-  source.emit('garden', { specimenType:type, listenPort:port });
+  source.emit('garden', { specimenType:type, listenPort:port, vigor });
   assert.equal(run('gardenState.specimens.length'), 1);
   assert.equal(run('gardenState.specimens[0].type'), type);
+  assert.equal(run('gardenState.specimens[0].vigor'), vigor, 'received vigor retained');
   assert.equal(run('gardenState.grassCells.length'), 0, 'real TCPNoise growth must not seed grass');
+  }
 }
 
 for (const [type, expires, color] of [['weed',360000,'#bec04c'],['ghostbloom',360000,'#e2f6ff'],
   ['crystalfungus',420000,'#71dce4'],['blackthorn',720000,'#281c39']]) {
   reset(); sandbox.Math.random = () => 0;
-  source.emit('garden', { specimenType:type, listenPort:443 });
-  source.emit('garden', { specimenType:type, listenPort:443 });
+  source.emit('garden', { specimenType:type, listenPort:443, vigor:0 });
+  source.emit('garden', { specimenType:type, listenPort:443, vigor:3 });
   assert.equal(run('gardenState.specimens.length'), 2);
   assert(run(`gardenState.specimens.every(s => s.type === '${type}')`));
   assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1, 'variants share clustered placement');
   assert.equal(run('gardenState.grassCells.length'), 0, 'real variants never seed grass');
   run('influenceGrassCell(0, 0, 500)');
-  source.emit('garden', { specimenType:type, listenPort:443 });
+  source.emit('garden', { specimenType:type, listenPort:443, vigor:3 });
   assert.equal(run('gardenState.grassCells.length'), 1);
   assert.equal(run('gardenState.grassCells[0].lastInfluencedAt'), 500, 'real variants never refresh grass');
   assert.equal(run(`speciesConfig.get('${type}').timings.expiredAfterMs`), expires);
@@ -76,15 +79,18 @@ for (const [type, expires, color] of [['weed',360000,'#bec04c'],['ghostbloom',36
 }
 
 reset(); sandbox.Math.random = () => 0;
-source.emit('garden', { specimenType:'vine', listenPort:2222 });
-source.emit('garden', { specimenType:'vine', listenPort:2222 });
+source.emit('garden', { specimenType:'vine', listenPort:2222, vigor:0 });
+source.emit('garden', { specimenType:'vine', listenPort:2222, vigor:3 });
 assert.equal(run('gardenState.specimens.length'), 2);
 assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1);
 
 reset();
-for (const bad of ['{','null',{specimenType:'nope',listenPort:443},{specimenType:'broadleaf',listenPort:0},
-  {specimenType:'broadleaf',listenPort:65536},{specimenType:'broadleaf',listenPort:443.5},
-  {specimenType:'broadleaf',listenPort:'443'},{type:'port-hit',port:443}]) source.emit('garden', bad);
+for (const bad of ['{','null',{specimenType:'nope',listenPort:443,vigor:0},{specimenType:'broadleaf',listenPort:0,vigor:0},
+  {specimenType:'broadleaf',listenPort:65536,vigor:0},{specimenType:'broadleaf',listenPort:443.5,vigor:0},
+  {specimenType:'broadleaf',listenPort:'443',vigor:0},{type:'port-hit',port:443}]) source.emit('garden', bad);
+source.emit('garden', {specimenType:'flower',listenPort:443});
+for (const vigor of [-1,4,1.5,'2',null,true,{},[],NaN,Infinity])
+  source.emit('garden', {specimenType:'flower',listenPort:443,vigor});
 assert.equal(run('gardenState.specimens.length'),0);
 
 for (const [event,type,grass] of [['dns','flower',true],['http','broadleaf',true],['ssh','vine',false],['gopher','mushroom',false],['port22-probe','redbloom',false]]) {
@@ -92,6 +98,7 @@ for (const [event,type,grass] of [['dns','flower',true],['http','broadleaf',true
   element(`#fake-${event}`).handlers.click();
   assert.equal(run('gardenState.specimens.length'), 1);
   assert.equal(run('gardenState.specimens[0].type'),type);
+  assert.equal(run('gardenState.specimens[0].vigor'),0,'fake controls default to vigor 0');
   assert.equal(run('gardenState.grassCells.length > 0'), grass);
 }
 
@@ -108,7 +115,7 @@ assert.equal(run('gardenState.grassCells.length'), 0);
 
 reset(); sandbox.Math.random = () => 0;
 run('influenceGrassCell(0, 0, 500)');
-source.emit('garden', {specimenType:'redbloom', listenPort:22});
+source.emit('garden', {specimenType:'redbloom', listenPort:22, vigor:3});
 element('#fake-port22-probe').handlers.click();
 assert.equal(run('gardenState.specimens.length'), 2);
 assert(run("gardenState.specimens.every(s => s.type === 'redbloom')"));
@@ -124,8 +131,64 @@ run('updateGarden(30999)'); assert.equal(run('gardenState.specimens.length'), 2)
 run('updateGarden(31000)'); assert.equal(run('gardenState.specimens.length'), 0);
 
 // The browser trusts the normalized species; it never derives a species from port 22.
-reset(); source.emit('garden', {specimenType:'flower', listenPort:22});
+reset(); source.emit('garden', {specimenType:'flower', listenPort:22, vigor:2});
 assert.equal(run('gardenState.specimens[0].type'), 'flower');
+
+// Deterministic Canvas command assertions, without pixel snapshots or extra random choices.
+const trace = (type, vigor, age) => {
+  drawing.length = 0;
+  sandbox.Math.random = () => { throw new Error('Rendering must not reroll vigor'); };
+  run(`speciesConfig.get('${type}').render({type:'${type}',column:0,row:0,createdAt:1000,vigor:${vigor}},${1000 + age})`);
+  return drawing.map(command => [...command]);
+};
+const commands = (trace, method) => trace.filter(command => command[0] === method);
+for (const type of run('Array.from(speciesConfig.keys())')) {
+  reset();
+  const timing = run(`speciesConfig.get('${type}').timings`);
+  const mature = timing.matureAfterMs ?? 0;
+  for (const vigor of [0, 3]) {
+    for (const age of [0, timing.growingAfterMs ?? 0, mature,
+      timing.fadingAfterMs ?? timing.wiltingAfterMs ?? timing.decayingAfterMs ?? timing.dryingAfterMs,
+      timing.expiredAfterMs - 1]) {
+      const painted = trace(type, vigor, age);
+      assert(painted.some(([method]) => method === 'fill' || method === 'stroke'));
+      assert.equal(commands(painted,'save').length, commands(painted,'restore').length, `${type} Canvas state balanced`);
+      assert(painted.every(([, ...args]) => args.every(value => typeof value !== 'number' || Number.isFinite(value))));
+      assert.deepEqual(trace(type, vigor, age), painted, `${type} vigor appearance stable`);
+    }
+    assert.equal(trace(type,vigor,timing.expiredAfterMs).length,0, `${type} vigor leaves expiry unchanged`);
+  }
+  const low = trace(type,0,mature), high = trace(type,3,mature);
+  assert.notDeepEqual(high,low, `${type} high vigor visibly changes drawing details`);
+  if (type !== 'crystalfungus') assert.deepEqual(commands(high,'scale'), commands(low,'scale'), 'vigor does not zoom the whole specimen');
+  if (type === 'flower' || type === 'ghostbloom')
+    assert(commands(high,type === 'flower' ? 'arc' : 'ellipse').length > commands(low,type === 'flower' ? 'arc' : 'ellipse').length, 'fuller petals');
+  if (type === 'mushroom') {
+    assert(commands(high,'arc').length > commands(low,'arc').length,'extra cap spots');
+    assert(commands(high,'ellipse')[0][3] > commands(low,'ellipse')[0][3],'broader cap');
+    assert(commands(high,'fillRect')[0][3] > commands(low,'fillRect')[0][3],'thicker stem');
+  }
+  if (type === 'broadleaf') {
+    assert(commands(high,'ellipse').length > commands(low,'ellipse').length,'additional broadleaf leaves');
+    assert(high.some(([,value])=>value==='#8d6f9f') && high.some(([,value])=>value==='#6f567f'),'plum palette preserved');
+  }
+  if (type === 'vine') assert(commands(high,'ellipse').length > commands(low,'ellipse').length,'extra vine leaf');
+  if (type === 'redbloom' || type === 'weed') assert(commands(high,'lineTo').length > commands(low,'lineTo').length,'extra spikes/branches');
+  if (type === 'crystalfungus' || type === 'blackthorn') assert(commands(high,'stroke').length > commands(low,'stroke').length,'extra facets/branches');
+  if (type === 'ghostbloom') assert(commands(high,'arc')[0][3] <= 15,'halo radius stays bounded');
+  sandbox.Math.random = () => 0;
+  source.emit('garden',{specimenType:type,listenPort:type==='redbloom'?22:443,vigor:3});
+  const before = run('JSON.stringify(gardenState.specimens[0])');
+  run(`drawGarden(); updateGarden(${1000 + timing.expiredAfterMs - 1})`);
+  assert.equal(run('JSON.stringify(gardenState.specimens[0])'),before,'vigor retained through redraw and aging');
+  assert.equal(run('gardenState.grassCells.length'),0,'every real species at high vigor remains grass-free');
+  run(`updateGarden(${1000 + timing.expiredAfterMs})`);
+  assert.equal(run('gardenState.specimens.length'),0,'high vigor leaves lifecycle removal unchanged');
+}
+reset();
+run("gardenState.specimens=[{type:'vine',column:0,row:0,createdAt:1000,vigor:3},{type:'vine',column:1,row:0,createdAt:1000,vigor:0}]");
+assert.deepEqual(commands(trace('vine',0,60000),'quadraticCurveTo'),commands(trace('vine',3,60000),'quadraticCurveTo'),'vigor leaves vine connectivity geometry unchanged');
+sandbox.Math.random = () => 0;
 
 for(const [eventType,chance] of [['dns',.45],['http',.65]]) {
   reset(); sandbox.Math.random=()=>chance;
@@ -163,4 +226,4 @@ assert.equal(run('gardenState.specimens.length'),1);
 assert.equal(run('gardenState.specimens[0].type'),'redbloom', 'weighted fake traffic now emits port22-probe');
 assert.equal(run('gardenState.grassCells.length'),0);
 element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
-console.log('PASS: five initial grass seeds, normalized growth, four variant renderers/lifecycles, shared clustering, validation, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');
+console.log('PASS: five initial grass seeds, normalized growth/vigor validation, stable species-specific vigor details/lifecycles, shared clustering/connectivity, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');

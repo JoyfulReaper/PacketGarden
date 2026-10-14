@@ -144,8 +144,13 @@ artistic weed or rare specimen.
 IPv6 and sensor suffixes `-dn42` / `-ygg` are coarse visual modifiers, not security
 classifications. Rarity stays event-driven; no timer creates mutations. See the
 [probability policy](docs/EVENT-MAPPINGS.md#tcpnoise-rarity).
-The browser receives only the resolved specimen type and listening port, with no
-sensor name or IP details. Other discrete adapters, inspection, local-time lighting,
+TCPNoise `seenCount` becomes coarse visual vigor server-side: 0 for missing/unusable
+values or counts 0–1, 1 for 2–3, 2 for 4–9, and 3 for valid counts of 10 or more.
+Vigor adds bounded species-specific fullness/detail, independently of species and
+rarity. It is artistic recurrence, not a threat score, and affects appearance only;
+lifetimes and ecology stay the same. Fake controls use vigor 0.
+The browser receives only `specimenType`, `listenPort`, and integer `vigor` (0–3),
+never exact repeat counts, sensor names, or IP details. Other discrete adapters, inspection, local-time lighting,
 persistence, and ecological competition remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype

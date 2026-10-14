@@ -67,7 +67,7 @@ work. Broker outages use normal client reconnection, with an initial-connect
 retry and one warning per outage. There is no persistence, replay, or coalescing.
 
 Only `EventType`, `Source`, `SchemaVersion`, `Payload.listenPort`,
-`Payload.ipVersion`, and `Payload.sensor` are
+`Payload.ipVersion`, `Payload.sensor`, and `Payload.seenCount` are
 deserialized. The adapter accepts `EventType == tcpnoise.connection`,
 `Source == tcpnoise`, schema version 1, and integer ports 1–65535;
 malformed/unsupported required input is ignored. Optional traits are lenient:
@@ -78,11 +78,17 @@ missing, nonstring, blank, or nonmatching names give no sensor bonus.
 No unrelated collector fields are required or retained. The backend resolves the
 port-22 redbloom special case or, for every other port, the base mapping and
 [artistic rarity roll](EVENT-MAPPINGS.md#tcpnoise-rarity)
-before anything is sent to the browser. SSE emits only:
+before independently converting `seenCount` to coarse visual vigor. Usable counts
+are unsigned 64-bit JSON integers: 0–1 give vigor 0, 2–3 give 1, 4–9 give 2, and
+10 through 18,446,744,073,709,551,615 give 3. Missing, null, strings, objects,
+negative, fractional/exponent representations, or overflowing numbers give vigor 0
+without rejecting a valid connection. No arithmetic on the raw count is needed.
+Vigor is artistic recurrence, not a threat score or rarity input; it affects only
+bounded rendering details. SSE emits only:
 
 ```text
 event: garden
-data: {"specimenType":"broadleaf","listenPort":443}
+data: {"specimenType":"broadleaf","listenPort":443,"vigor":0}
 
 ```
 
@@ -94,6 +100,12 @@ garden frames always reach the shared specimen placement path, while weather
 frames affect rendering only in Live mode. Manual weather remains the default.
 Switching modes can apply the latest cached live weather without reopening the
 stream.
+
+The browser requires integer vigor 0–3 and ignores growth frames with missing or
+invalid vigor. Each specimen retains its received vigor throughout its lifetime;
+fake controls default to 0. Exact `seenCount`, sensor names, and IP-version/address
+information are never forwarded. Species selection, rarity, placement, grass,
+weather, and decay timings are independent of vigor.
 
 Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
 They share placement, clustering, lifecycles, and occupancy with fake events, but
@@ -164,7 +176,7 @@ Normalized input may include only safe coarse fields useful to the garden:
 
 These fields describe possible future adapters, not a finalized schema. Current
 weather has only `level`/`eventsPerMinute`; TCPNoise browser growth has only
-`specimenType`/`listenPort`, and fake events still have only `type`.
+`specimenType`/`listenPort`/`vigor`, and fake events still have only `type`.
 Normalize and sanitize before sending data to the browser. Do not include private
 addresses, credentials, raw packets, payloads, or unnecessary infrastructure
 details. Network class describes coarse context without exposing endpoints or

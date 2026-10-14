@@ -2,7 +2,7 @@ using System.Threading.Channels;
 
 namespace PacketGarden;
 
-public sealed record GardenGrowth(string SpecimenType, int ListenPort);
+public sealed record GardenGrowth(string SpecimenType, int ListenPort, int Vigor = 0);
 
 public sealed record GardenFrame(string Name, object Data);
 

@@ -58,8 +58,9 @@ gardenEventSource.addEventListener("garden", message => {
   try {
     const event = JSON.parse(message.data);
     if (typeof event?.specimenType === "string" && speciesConfig.has(event.specimenType)
-      && Number.isInteger(event.listenPort) && event.listenPort >= 1 && event.listenPort <= 65535) {
-      spawnSpecimen(event.specimenType);
+      && Number.isInteger(event.listenPort) && event.listenPort >= 1 && event.listenPort <= 65535
+      && Number.isInteger(event.vigor) && event.vigor >= 0 && event.vigor <= 3) {
+      spawnSpecimen(event.specimenType, null, event.vigor);
     }
   } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
@@ -208,7 +209,7 @@ function handleGardenEvent(event) {
   spawnSpecimen(specimenType, event.type);
 }
 
-function spawnSpecimen(specimenType, grassEventType = null) {
+function spawnSpecimen(specimenType, grassEventType = null, vigor = 0) {
   if (!speciesConfig.has(specimenType)) return;
 
   updateGarden();
@@ -251,7 +252,8 @@ function spawnSpecimen(specimenType, grassEventType = null) {
     type: specimenType,
     column: cell % columns,
     row: Math.floor(cell / columns),
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    vigor
   };
   gardenState.specimens.push(specimen);
   if (grassEventType) influenceGrass(grassEventType, specimen);
@@ -429,6 +431,7 @@ automaticTrafficButton.addEventListener("click", () => {
 });
 
 function drawFlower(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   const x = (specimen.column + 0.5) * cellSize;
   const y = (specimen.row + 0.5) * cellSize;
   const ageMs = Math.max(0, now - specimen.createdAt);
@@ -441,8 +444,8 @@ function drawFlower(specimen, now) {
 
   context.fillStyle = wilting ? "#88764f" : "#75935b";
   context.beginPath();
-  context.ellipse(x - 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, -Math.PI / 4, 0, Math.PI * 2);
-  context.ellipse(x + 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x - 5 * leafSize, y + 5 * leafSize, (7 + vigor * 0.4) * leafSize, (3 + vigor * 0.3) * leafSize, -Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x + 5 * leafSize, y + 5 * leafSize, (7 + vigor * 0.4) * leafSize, (3 + vigor * 0.3) * leafSize, Math.PI / 4, 0, Math.PI * 2);
   context.fill();
 
   if (stage === "sprout") return;
@@ -457,10 +460,11 @@ function drawFlower(specimen, now) {
   const bloomSize = wilting ? 0.65 : 1;
   const bloomY = y + (wilting ? 3 : 0);
   context.fillStyle = wilting ? "#ab997b" : "#eedec3";
-  for (let petal = 0; petal < 5; petal++) {
-    const angle = petal * Math.PI * 2 / 5 - Math.PI / 2;
+  const petalCount = 5 + Math.floor(vigor / 2);
+  for (let petal = 0; petal < petalCount; petal++) {
+    const angle = petal * Math.PI * 2 / petalCount - Math.PI / 2;
     context.beginPath();
-    context.arc(x + Math.cos(angle) * 5 * bloomSize, bloomY + Math.sin(angle) * 5 * bloomSize, 4 * bloomSize, 0, Math.PI * 2);
+    context.arc(x + Math.cos(angle) * 5 * bloomSize, bloomY + Math.sin(angle) * 5 * bloomSize, (4 + vigor * 0.35) * bloomSize, 0, Math.PI * 2);
     context.fill();
   }
 
@@ -471,6 +475,7 @@ function drawFlower(specimen, now) {
 }
 
 function drawMushroom(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   const ageMs = Math.max(0, now - specimen.createdAt);
   if (ageMs >= mushroomTimings.expiredAfterMs) return;
   const stage = ageMs < mushroomTimings.growingAfterMs ? "sprout"
@@ -484,10 +489,10 @@ function drawMushroom(specimen, now) {
   context.scale(size, size);
 
   context.fillStyle = decaying ? "#93816b" : "#d9c9a6";
-  context.fillRect(-2, 2, 4, 8);
+  context.fillRect(-2 - vigor * 0.4, 2, 4 + vigor * 0.8, 8);
   context.fillStyle = decaying ? "#76614f" : "#b86b48";
   context.beginPath();
-  context.ellipse(0, 0, 10, decaying ? 4 : 8, 0, 0, Math.PI * 2);
+  context.ellipse(0, 0, 10 + vigor * 0.6, decaying ? 4 : 8, 0, 0, Math.PI * 2);
   context.fill();
 
   if (stage !== "sprout") {
@@ -496,11 +501,17 @@ function drawMushroom(specimen, now) {
     context.arc(-4, -2, 2, 0, Math.PI * 2);
     context.arc(4, -1, 1.5, 0, Math.PI * 2);
     context.fill();
+    for (let spot = 0; spot < vigor; spot++) {
+      context.beginPath();
+      context.arc(-5 + spot * 5, -5 + spot % 2, 1.2, 0, Math.PI * 2);
+      context.fill();
+    }
   }
   context.restore();
 }
 
 function drawBroadleaf(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   const ageMs = Math.max(0, now - specimen.createdAt);
   if (ageMs >= broadleafTimings.expiredAfterMs) return;
   const stage = ageMs < broadleafTimings.growingAfterMs ? "sprout"
@@ -508,7 +519,7 @@ function drawBroadleaf(specimen, now) {
     : ageMs < broadleafTimings.fadingAfterMs ? "mature" : "fading";
   const fading = stage === "fading";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.7 : 1;
-  const leafCount = stage === "sprout" ? 2 : stage === "growing" ? 4 : 6;
+  const leafCount = (stage === "sprout" ? 2 : stage === "growing" ? 4 : 6) + Math.floor(vigor * 2 / 3);
 
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
@@ -520,10 +531,10 @@ function drawBroadleaf(specimen, now) {
     context.rotate(angle);
     context.fillStyle = fading ? "#8f7a76" : leaf % 2 === 0 ? "#8d6f9f" : "#6f567f";
     context.beginPath();
-    context.ellipse(6, 0, 7, 4, 0, 0, Math.PI * 2);
+    context.ellipse(6, 0, 7 + vigor * 0.3, 4 + vigor * 0.4, 0, 0, Math.PI * 2);
     context.fill();
     context.strokeStyle = fading ? "#b29b92" : "#c4a9d3";
-    context.lineWidth = 1;
+    context.lineWidth = 1 + vigor * 0.2;
     context.beginPath();
     context.moveTo(1, 0);
     context.lineTo(11, 0);
@@ -534,6 +545,7 @@ function drawBroadleaf(specimen, now) {
 }
 
 function drawVine(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   const ageMs = Math.max(0, now - specimen.createdAt);
   if (ageMs >= vineTimings.expiredAfterMs) return;
   const stage = ageMs < vineTimings.growingAfterMs ? "sprout"
@@ -545,7 +557,7 @@ function drawVine(specimen, now) {
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
   context.strokeStyle = drying ? "#857454" : "#527943";
-  context.lineWidth = drying ? 1 : stage === "mature" ? 2.5 : 1.5;
+  context.lineWidth = (drying ? 1 : stage === "mature" ? 2.5 : 1.5) + vigor * 0.4;
   context.lineCap = "round";
 
   if (stage !== "sprout") {
@@ -575,21 +587,26 @@ function drawVine(specimen, now) {
 
   context.fillStyle = drying ? "#8c8056" : "#78934e";
   context.beginPath();
-  context.ellipse(-5 * size, 4 * size, 4 * size, 1.8 * size, -Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(-5 * size, 4 * size, (4 + vigor * 0.3) * size, (1.8 + vigor * 0.2) * size, -Math.PI / 4, 0, Math.PI * 2);
   context.fill();
   context.beginPath();
-  context.ellipse(6 * size, -4 * size, 4 * size, 1.8 * size, Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(6 * size, -4 * size, (4 + vigor * 0.3) * size, (1.8 + vigor * 0.2) * size, Math.PI / 4, 0, Math.PI * 2);
   context.fill();
+  if (vigor >= 2 && stage !== "sprout") {
+    context.beginPath();
+    context.ellipse(size, size, 4 * size, 2.2 * size, -Math.PI / 3, 0, Math.PI * 2);
+    context.fill();
+  }
 
   if (stage !== "sprout") {
     context.fillStyle = drying ? "#a08b67" : "#c3b080";
     context.beginPath();
     context.moveTo(-4 * size, 1 * size);
-    context.lineTo(-8 * size, -4 * size);
+    context.lineTo((-8 - vigor * 0.4) * size, (-4 - vigor * 0.4) * size);
     context.lineTo(-1 * size, 0);
     context.closePath();
     context.moveTo(3 * size, -1 * size);
-    context.lineTo(8 * size, 3 * size);
+    context.lineTo((8 + vigor * 0.4) * size, (3 + vigor * 0.4) * size);
     context.lineTo(5 * size, -3 * size);
     context.closePath();
     context.fill();
@@ -612,9 +629,10 @@ function drawVariant(specimen, now, paint) {
 }
 
 function drawWeed(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   drawVariant(specimen, now, fading => {
     context.strokeStyle = fading ? "#856343" : "#a88c39";
-    context.lineWidth = 1.8;
+    context.lineWidth = 1.8 + vigor * 0.2;
     context.beginPath();
     context.moveTo(-2, 11);
     context.lineTo(1, 3);
@@ -625,10 +643,19 @@ function drawWeed(specimen, now) {
     context.lineTo(7, -8);
     context.moveTo(-1, 7);
     context.lineTo(-10, 1);
+    for (let branch = 0; branch < vigor; branch++) {
+      const direction = branch % 2 === 0 ? 1 : -1;
+      const y = -7 + branch * 5;
+      context.moveTo(0, y);
+      context.lineTo(10 * direction, y - 3);
+      context.lineTo(11 * direction, y - 6);
+    }
     context.stroke();
     context.fillStyle = fading ? "#947345" : "#bec04c";
     // Uneven saw-toothed leaves, deliberately unlike turf blades or vine curls.
-    for (const [x, y, direction] of [[-3, -4, -1], [1, 3, 1], [-1, 7, -1]]) {
+    const leaves = [[-3, -4, -1], [1, 3, 1], [-1, 7, -1]];
+    leaves.push(...[[1, -6, 1], [-1, 1, -1], [2, 5, 1]].slice(0, vigor));
+    for (const [x, y, direction] of leaves) {
       context.beginPath();
       context.moveTo(x, y);
       context.lineTo(x + 10 * direction, y - 6);
@@ -645,25 +672,27 @@ function drawWeed(specimen, now) {
 }
 
 function drawGhostbloom(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   drawVariant(specimen, now, fading => {
     context.strokeStyle = fading ? "#71818a" : "#8fc9d8";
-    context.lineWidth = 1.5;
+    context.lineWidth = 1.5 + vigor * 0.2;
     context.beginPath();
     context.moveTo(0, 10);
     context.lineTo(0, -1);
     context.stroke();
     // Translucent halo and narrow star petals, rather than the cream flower's discs.
-    context.fillStyle = fading ? "rgba(150,180,200,0.06)" : "rgba(157,222,255,0.18)";
+    context.fillStyle = fading ? "rgba(150,180,200,0.06)" : `rgba(157,222,255,${0.18 + vigor * 0.03})`;
     context.beginPath();
-    context.arc(0, -2, 13, 0, Math.PI * 2);
+    context.arc(0, -2, 13 + vigor * 0.4, 0, Math.PI * 2);
     context.fill();
     context.fillStyle = fading ? "#92a7b5" : "#e2f6ff";
-    for (let petal = 0; petal < 6; petal++) {
+    const petals = 6 + vigor;
+    for (let petal = 0; petal < petals; petal++) {
       context.save();
       context.translate(0, -2);
-      context.rotate(petal * Math.PI / 3);
+      context.rotate(petal * Math.PI * 2 / petals);
       context.beginPath();
-      context.ellipse(0, -5, 2.5, 6, 0, 0, Math.PI * 2);
+      context.ellipse(0, -5, 2.5 + vigor * 0.15, 6 + vigor * 0.2, 0, 0, Math.PI * 2);
       context.fill();
       context.restore();
     }
@@ -675,10 +704,11 @@ function drawGhostbloom(specimen, now) {
 }
 
 function drawCrystalfungus(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   drawVariant(specimen, now, fading => {
     context.fillStyle = fading ? "#796c88" : "#9977cc";
     context.fillRect(-2, 2, 4, 9);
-    for (const [x, y, size] of [[-7, 3, 0.65], [7, 4, 0.55], [0, 0, 1]]) {
+    for (const [x, y, size] of [[-7, 3, 0.65 + vigor * 0.03], [7, 4, 0.55 + vigor * 0.03], [0, 0, 1]]) {
       context.save();
       context.translate(x, y);
       context.scale(size, size);
@@ -699,30 +729,48 @@ function drawCrystalfungus(specimen, now) {
       context.closePath();
       context.fill();
       context.strokeStyle = fading ? "#9aabb4" : "#c8ffff";
-      context.lineWidth = 1;
+      context.lineWidth = 1 + vigor * 0.2;
       context.beginPath();
       context.moveTo(-10, -2);
       context.lineTo(0, -12);
       context.lineTo(10, -2);
       context.stroke();
+      for (let facet = 0; facet < vigor; facet++) {
+        context.beginPath();
+        context.moveTo(0, -12);
+        context.lineTo(-7 + facet * 7, 4);
+        context.stroke();
+      }
       context.restore();
     }
   });
 }
 
 function drawBlackthorn(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   drawVariant(specimen, now, fading => {
     // A pale edge keeps the near-black stem legible on soil.
     for (const [color, width] of [[fading ? "#756374" : "#a17eb2", 4], [fading ? "#51424e" : "#281c39", 2.5]]) {
       context.strokeStyle = color;
-      context.lineWidth = width;
+      context.lineWidth = width + vigor * 0.3;
       context.beginPath();
       context.moveTo(-10, 9);
       context.bezierCurveTo(9, 8, -9, -8, 10, -10);
       context.stroke();
     }
+    for (let branch = 0; branch < vigor; branch++) {
+      const direction = branch % 2 === 0 ? 1 : -1;
+      const y = 5 - branch * 5;
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(8 * direction, y - 3);
+      context.lineTo(11 * direction, y - 6);
+      context.stroke();
+    }
     context.fillStyle = fading ? "#a38996" : "#e4a1d6";
-    for (const [x, y, direction] of [[-5, 7, -1], [0, 2, 1], [0, -4, -1], [5, -8, 1]]) {
+    const thorns = [[-5, 7, -1], [0, 2, 1], [0, -4, -1], [5, -8, 1]];
+    thorns.push(...[[0, 8, 1], [-5, -2, -1], [4, 0, 1]].slice(0, vigor));
+    for (const [x, y, direction] of thorns) {
       context.beginPath();
       context.moveTo(x, y + 2);
       context.lineTo(x + 7 * direction, y - 5);
@@ -734,6 +782,7 @@ function drawBlackthorn(specimen, now) {
 }
 
 function drawRedbloom(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   const ageMs = Math.max(0, now - specimen.createdAt);
   if (ageMs >= redbloomTimings.expiredAfterMs) return;
   const wilting = ageMs >= redbloomTimings.wiltingAfterMs;
@@ -741,7 +790,7 @@ function drawRedbloom(specimen, now) {
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
   context.strokeStyle = wilting ? "#897052" : "#6d8445";
-  context.lineWidth = 2;
+  context.lineWidth = 2 + vigor * 0.4;
   context.beginPath();
   context.moveTo(0, 10);
   context.quadraticCurveTo(wilting ? 7 : 1, 5, wilting ? 3 : 0, wilting ? 4 : 0);
@@ -754,9 +803,10 @@ function drawRedbloom(specimen, now) {
   context.strokeStyle = wilting ? "#b56864" : "#f27785";
   context.lineWidth = 1;
   context.beginPath();
-  for (let point = 0; point < 12; point++) {
-    const angle = point * Math.PI / 6 - Math.PI / 2;
-    const radius = point % 2 === 0 ? 10 : 4;
+  const points = 12 + vigor * 2;
+  for (let point = 0; point < points; point++) {
+    const angle = point * Math.PI * 2 / points - Math.PI / 2;
+    const radius = point % 2 === 0 ? 10 + vigor * 0.5 : 4 + vigor * 0.2;
     const x = Math.cos(angle) * radius;
     const y = Math.sin(angle) * radius;
     if (point === 0) context.moveTo(x, y);
