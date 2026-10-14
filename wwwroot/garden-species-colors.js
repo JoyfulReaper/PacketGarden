@@ -26,7 +26,7 @@ const speciesColorVariants = new Map([
       { name: "chartreuse", filter: "none" },
       { name: "lime", filter: "hue-rotate(-18deg) saturate(1.25) brightness(1.08)" },
       { name: "aqua", filter: "hue-rotate(75deg) saturate(1.25) brightness(1.08)" },
-      { name: "goldvine", filter: "hue-rotate(-55deg) saturate(1.35) brightness(1.08)" }
+      { name: "olive", filter: "hue-rotate(-8deg) saturate(0.8) brightness(0.98)" }
     ],
     rare: { name: "silvervine", filter: "grayscale(0.75) sepia(0.12) hue-rotate(155deg) saturate(1.5) brightness(1.35)", glow: "#e7fbff" }
   }],
