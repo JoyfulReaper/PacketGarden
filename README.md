@@ -100,9 +100,10 @@ The renderer should not need raw IP addresses, credentials, request payloads, or
 
 ## Status
 
-The first runnable slice displays an empty garden boundary and subtle grid.
+The prototype displays a fixed garden boundary and subtle grid. A temporary
+development control generates a fake DNS event that adds one simple flower.
 
-## Run the first slice
+## Run the prototype
 
 Install the .NET 10 SDK, then run from the repository root:
 
@@ -110,6 +111,6 @@ Install the .NET 10 SDK, then run from the repository root:
 dotnet run --project PacketGarden.csproj --urls http://localhost:5080
 ```
 
-Open http://localhost:5080 in a browser. This first runnable slice displays only
-the empty garden boundary and subtle grid, with the whole garden scaled to fit
-the window.
+Open http://localhost:5080 in a browser and click **Generate fake DNS event** to
+add a flower. The whole garden scales to fit the window, and flowers survive
+resizing. State is held only in browser memory; reloading starts an empty garden.

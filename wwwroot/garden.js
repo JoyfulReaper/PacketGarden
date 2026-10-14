@@ -1,11 +1,76 @@
 const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
+const fakeDnsButton = document.querySelector("#fake-dns");
+const gardenStatus = document.querySelector("#garden-status");
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
 const gardenWidth = 960;
 const gardenHeight = 600;
 const cellSize = 30;
 const margin = 16;
+const columns = gardenWidth / cellSize;
+const rows = gardenHeight / cellSize;
+
+/** @typedef {{ type: "dns" }} GardenEvent */
+const gardenState = { specimens: [] };
+
+/** @param {GardenEvent} event */
+function handleGardenEvent(event) {
+  if (event.type !== "dns") return;
+
+  const occupiedCells = new Set(
+    gardenState.specimens.map(specimen => specimen.row * columns + specimen.column)
+  );
+  const emptyCells = [];
+  for (let cell = 0; cell < columns * rows; cell++) {
+    if (!occupiedCells.has(cell)) emptyCells.push(cell);
+  }
+  if (emptyCells.length === 0) return;
+
+  const cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  gardenState.specimens.push({
+    type: "flower",
+    column: cell % columns,
+    row: Math.floor(cell / columns)
+  });
+
+  const count = gardenState.specimens.length;
+  const description = `${count} ${count === 1 ? "flower" : "flowers"}`;
+  gardenStatus.textContent = description;
+  canvas.setAttribute("aria-label", `Rectangular soil garden with a subtle square grid and ${description}`);
+  fakeDnsButton.disabled = count === columns * rows;
+  drawGarden();
+}
+
+fakeDnsButton.addEventListener("click", () => {
+  /** @type {GardenEvent} */
+  const event = { type: "dns" };
+  handleGardenEvent(event);
+});
+
+function drawFlower(specimen) {
+  const x = (specimen.column + 0.5) * cellSize;
+  const y = (specimen.row + 0.5) * cellSize;
+
+  context.fillStyle = "#75935b";
+  context.beginPath();
+  context.ellipse(x - 5, y + 5, 7, 3, -Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x + 5, y + 5, 7, 3, Math.PI / 4, 0, Math.PI * 2);
+  context.fill();
+
+  context.fillStyle = "#eedec3";
+  for (let petal = 0; petal < 5; petal++) {
+    const angle = petal * Math.PI * 2 / 5 - Math.PI / 2;
+    context.beginPath();
+    context.arc(x + Math.cos(angle) * 5, y + Math.sin(angle) * 5, 4, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  context.fillStyle = "#d6aa4e";
+  context.beginPath();
+  context.arc(x, y, 3, 0, Math.PI * 2);
+  context.fill();
+}
 
 function drawGarden() {
   const { width, height } = canvas.getBoundingClientRect();
@@ -46,6 +111,10 @@ function drawGarden() {
   context.strokeStyle = "#9a9871";
   context.lineWidth = 6;
   context.strokeRect(0, 0, gardenWidth, gardenHeight);
+
+  for (const specimen of gardenState.specimens) {
+    drawFlower(specimen);
+  }
 }
 
 new ResizeObserver(drawGarden).observe(canvas);

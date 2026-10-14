@@ -48,6 +48,38 @@ canvas {
   height: 100%;
 }
 
+footer {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding-top: 8px;
+  font-size: 13px;
+  color: #a9b5a2;
+}
+
+button {
+  font: inherit;
+  color: #e1e6d7;
+  background: #354337;
+  border: 1px solid #71816a;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+button:focus-visible {
+  outline: 2px solid #e1e6d7;
+  outline-offset: 3px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 @media (max-height: 320px) {
   header p {
     display: none;
