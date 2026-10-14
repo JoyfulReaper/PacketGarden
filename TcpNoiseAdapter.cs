@@ -12,11 +12,14 @@ public sealed class TcpNoiseAdapter(
 {
     // Unknown envelope/payload fields are ignored, never retained or forwarded.
     private sealed record Envelope(string? EventType, string? Source, int? SchemaVersion, PortPayload? Payload);
-    private sealed record PortPayload(int? ListenPort);
+    private sealed record PortPayload(int? ListenPort, JsonElement IpVersion, JsonElement Sensor);
     private static readonly JsonSerializerOptions InputJson = new() { PropertyNameCaseInsensitive = true };
     private int unavailable;
 
-    public static GardenGrowth? Normalize(ReadOnlySpan<byte> data)
+    public static GardenGrowth? Normalize(ReadOnlySpan<byte> data) =>
+        Normalize(data, Random.Shared.Next(10_000), Random.Shared.Next(3));
+
+    public static GardenGrowth? Normalize(ReadOnlySpan<byte> data, int roll, int rareChoice)
     {
         try
         {
@@ -33,22 +36,20 @@ public sealed class TcpNoiseAdapter(
             }
 
             var port = envelope.Payload.ListenPort.Value;
-            return new GardenGrowth(ResolveSpecimenType(port), port);
+            // Optional traits never invalidate a connection. Only numeric integer 6
+            // earns the IPv6 bonus; 4, missing, and unusable values have no bonus.
+            var ipVersion = envelope.Payload.IpVersion;
+            var isIpv6 = ipVersion.ValueKind == JsonValueKind.Number
+                && ipVersion.TryGetInt32(out var version) && version == 6;
+            var sensor = envelope.Payload.Sensor.ValueKind == JsonValueKind.String
+                ? envelope.Payload.Sensor.GetString() : null;
+            return new GardenGrowth(TcpNoiseRarity.Resolve(port, isIpv6, sensor, roll, rareChoice), port);
         }
         catch (JsonException)
         {
             return null;
         }
     }
-
-    private static string ResolveSpecimenType(int port) => port switch
-    {
-        80 or 443 or 8080 or 8443 => "broadleaf",
-        22 or 2222 or 23 or 2323 or 3389 or 5900 => "vine",
-        21 or 445 or 5432 or 6379 or 9200 or 70 => "mushroom",
-        25 or 420 or 42069 or 53 => "flower",
-        _ => "flower"
-    };
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

@@ -51,7 +51,7 @@ TCPNoise collector (`tcpnoise.connection`)
      ↓
 PacketGarden backend adapter
      ↓
-validate + destination port -> specimen type
+validate + destination port base + coarse rarity traits -> specimen type
      ↓
 normalized garden growth
      ↓
@@ -66,11 +66,18 @@ Without a URL, discrete input is disabled and the app/weather/fake controls stil
 work. Broker outages use normal client reconnection, with an initial-connect
 retry and one warning per outage. There is no persistence, replay, or coalescing.
 
-Only `EventType`, `Source`, `SchemaVersion`, and `Payload.listenPort` are
+Only `EventType`, `Source`, `SchemaVersion`, `Payload.listenPort`,
+`Payload.ipVersion`, and `Payload.sensor` are
 deserialized. The adapter accepts `EventType == tcpnoise.connection`,
 `Source == tcpnoise`, schema version 1, and integer ports 1–65535;
-malformed/unsupported input is ignored. The backend resolves the listening port
-to an aesthetic specimen before anything is sent to the browser. SSE emits only:
+malformed/unsupported required input is ignored. Optional traits are lenient:
+numeric integers 4 and 6 are accepted, with only 6 giving an IPv6 bonus; missing,
+null, nonnumeric, fractional, or unsupported versions give no bonus. Only string
+sensor values can match the case-insensitive `-dn42` / `-ygg` suffixes (no trimming);
+missing, nonstring, blank, or nonmatching names give no sensor bonus.
+No unrelated collector fields are required or retained. The backend resolves the
+base port mapping and [artistic rarity roll](EVENT-MAPPINGS.md#tcpnoise-rarity)
+before anything is sent to the browser. SSE emits only:
 
 ```text
 event: garden
@@ -120,10 +127,13 @@ and spreads locally through the browser update loop.
 TCPNoise destination ports deliberately select plant visual families, not
 protocol classifications. A hit on 22/2222 may grow a vine without claiming a
 genuine SSH session. Every valid port gets growth, with flowers as the unknown-port
-fallback. No port hit produces a red bloom: actual failed authentication still
-requires auth-aware telemetry. There is no separate TCPNoise weed category.
+fallback before rarity. No port hit produces a red bloom: actual failed authentication still
+requires auth-aware telemetry. Weeds and rare specimens are artistic outcomes.
+IPv6 / DN42 / Ygg and fallback ports are coarse visual modifiers, not security
+classifications or claims that any sensor/traffic class is malicious.
 Individual hits drive plants; aggregate activity continues driving weather
-separately through Noise Observatory. Unusual-port mutations remain future work.
+separately through Noise Observatory. Rare growth still requires an accepted event;
+there are no timed mutation events. Sensor names and IP details never reach SSE.
 
 ## TCPNoise fleet planning inventory
 
@@ -160,7 +170,8 @@ splitting the shared garden into network-specific plots.
 ## Scope
 
 Live aggregate weather and NATS-backed TCPNoise growth are implemented.
-Other protocol/auth-aware adapters, mutations, and richer specimen responses
+Event-driven weed/rare growth is implemented. Other protocol/auth-aware adapters,
+mutations of existing specimens, and richer specimen responses
 remain future work.
 Inspection, local-time lighting, persistence, and ecological competition remain
 separate unfinished MVP work; this plan does not imply they are implemented.

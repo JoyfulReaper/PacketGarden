@@ -20,6 +20,7 @@ browser garden as the starting point.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
 - Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the manual renderer.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to sanitized specimen growth on the same SSE stream.
+- Event-driven artistic TCPNoise rarity: weeds, pale ghostblooms, cyan/violet crystal fungi, and dark blackthorns, lasting 6, 6, 7, and 12 minutes. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).
 - Shared specimen placement path for fake events and normalized real growth.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
@@ -29,7 +30,10 @@ browser garden as the starting point.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 
 Fake events are `{ type }`; live TCPNoise browser growth is
-`{ specimenType, listenPort }` after backend validation and mapping. Specimens
+`{ specimenType, listenPort }` after backend validation, mapping, and rarity.
+The browser receives no sensor names or IP details and makes no rarity decisions.
+Every weed/rare spawn requires an accepted TCPNoise event, with no direct grass
+influence or timer-driven mutation. Specimens
 hold `type`, `column`, `row`, and `createdAt`. State is browser memory only;
 reloading clears it. Detailed lifecycle thresholds and fake-traffic defaults are
 in the [README](../README.md).
@@ -62,8 +66,8 @@ the prototype; painted/cartoon art, gradual lighting, and stranger mutations
 remain visual goals.
 
 All sources should contribute to one ecosystem, with no host-specific plots.
-Event type determines the main effect. Safe source traits may eventually affect
-visual variation, without turning the garden into a dashboard.
+Event type determines the main effect. Coarse TCPNoise traits now affect visual
+rarity server-side, without turning the garden into a dashboard.
 
 ## Real-data direction
 

@@ -135,8 +135,13 @@ not affect organisms or grass.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
 listening ports to visual families without asserting protocol/authentication
-semantics; a port-22 hit can grow a vine, and unknown ports grow flowers. The
-browser receives only the resolved specimen type and listening port. No port hit
+semantics; a port-22 hit has a vine base, and unknown ports have a flower base.
+Each accepted connection also rolls for an artistic weed or rare specimen.
+IPv6 and sensor suffixes `-dn42` / `-ygg` are coarse visual modifiers, not security
+classifications. Rarity stays event-driven; no timer creates mutations. See the
+[probability policy](docs/EVENT-MAPPINGS.md#tcpnoise-rarity).
+The browser receives only the resolved specimen type and listening port, with no
+sensor name or IP details. No port hit
 creates a red bloom. Other discrete adapters, inspection, local-time lighting,
 persistence, and ecological competition remain planned work; see [MVP](docs/MVP.md).
 
@@ -198,5 +203,9 @@ Lifecycle thresholds below are elapsed time since creation:
 | Broad-leaf plant | 20 seconds | 1 minute | Fades at 5 minutes | 6 minutes |
 | Vine | 20 seconds | 1 minute | Dries at 8 minutes | 10 minutes |
 | Red bloom | Blooms immediately | — | Wilts at 10 seconds | 30 seconds |
+| Weed | 20 seconds | 1 minute | Fades at 5 minutes | 6 minutes |
+| Ghostbloom | 15 seconds | 45 seconds | Fades at 5 minutes | 6 minutes |
+| Crystal fungus | 12 seconds | 40 seconds | Fades at 6 minutes | 7 minutes |
+| Blackthorn | 20 seconds | 1 minute | Fades at 10 minutes | 12 minutes |
 
 State is held only in browser memory; reloading starts an empty garden.

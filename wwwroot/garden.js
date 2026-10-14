@@ -141,6 +141,11 @@ const redbloomTimings = {
   wiltingAfterMs: 10_000,
   expiredAfterMs: 30_000
 };
+// TCPNoise variants use the same placement/expiry loop: 6, 6, 7, and 12 minutes.
+const weedTimings = { growingAfterMs: 20_000, matureAfterMs: 60_000, fadingAfterMs: 300_000, expiredAfterMs: 360_000 };
+const ghostbloomTimings = { growingAfterMs: 15_000, matureAfterMs: 45_000, fadingAfterMs: 300_000, expiredAfterMs: 360_000 };
+const crystalfungusTimings = { growingAfterMs: 12_000, matureAfterMs: 40_000, fadingAfterMs: 360_000, expiredAfterMs: 420_000 };
+const blackthornTimings = { growingAfterMs: 20_000, matureAfterMs: 60_000, fadingAfterMs: 600_000, expiredAfterMs: 720_000 };
 const updateEveryMs = 250;
 
 const grassConfig = {
@@ -186,7 +191,11 @@ const speciesConfig = new Map([
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
   ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }],
   ["vine", { timings: vineTimings, render: drawVine, plural: "vines" }],
-  ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }]
+  ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }],
+  ["weed", { timings: weedTimings, render: drawWeed, plural: "weeds" }],
+  ["ghostbloom", { timings: ghostbloomTimings, render: drawGhostbloom, plural: "ghostblooms" }],
+  ["crystalfungus", { timings: crystalfungusTimings, render: drawCrystalfungus, singular: "crystal fungus", plural: "crystal fungi" }],
+  ["blackthorn", { timings: blackthornTimings, render: drawBlackthorn, plural: "blackthorns" }]
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" }} GardenEvent */
@@ -586,6 +595,142 @@ function drawVine(specimen, now) {
     context.fill();
   }
   context.restore();
+}
+
+// Shared drawing setup for the four variants; no rarity decisions in the browser.
+function drawVariant(specimen, now, paint) {
+  const timings = speciesConfig.get(specimen.type).timings;
+  const age = Math.max(0, now - specimen.createdAt);
+  if (age >= timings.expiredAfterMs) return;
+  const fading = age >= timings.fadingAfterMs;
+  const size = age < timings.growingAfterMs ? 0.4 : age < timings.matureAfterMs ? 0.7 : fading ? 0.65 : 1;
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  context.scale(size, size);
+  paint(fading);
+  context.restore();
+}
+
+function drawWeed(specimen, now) {
+  drawVariant(specimen, now, fading => {
+    context.strokeStyle = fading ? "#856343" : "#a88c39";
+    context.lineWidth = 1.8;
+    context.beginPath();
+    context.moveTo(-2, 11);
+    context.lineTo(1, 3);
+    context.lineTo(-3, -4);
+    context.lineTo(0, -12);
+    context.moveTo(1, 3);
+    context.lineTo(9, -2);
+    context.lineTo(7, -8);
+    context.moveTo(-1, 7);
+    context.lineTo(-10, 1);
+    context.stroke();
+    context.fillStyle = fading ? "#947345" : "#bec04c";
+    // Uneven saw-toothed leaves, deliberately unlike turf blades or vine curls.
+    for (const [x, y, direction] of [[-3, -4, -1], [1, 3, 1], [-1, 7, -1]]) {
+      context.beginPath();
+      context.moveTo(x, y);
+      context.lineTo(x + 10 * direction, y - 6);
+      context.lineTo(x + 7 * direction, y - 1);
+      context.lineTo(x + 5 * direction, y - 3);
+      context.lineTo(x + 4 * direction, y + 2);
+      context.closePath();
+      context.fill();
+    }
+    context.fillStyle = "#b18a4d";
+    context.fillRect(-2, -13, 4, 3);
+    context.fillRect(6, -9, 3, 3);
+  });
+}
+
+function drawGhostbloom(specimen, now) {
+  drawVariant(specimen, now, fading => {
+    context.strokeStyle = fading ? "#71818a" : "#8fc9d8";
+    context.lineWidth = 1.5;
+    context.beginPath();
+    context.moveTo(0, 10);
+    context.lineTo(0, -1);
+    context.stroke();
+    // Translucent halo and narrow star petals, rather than the cream flower's discs.
+    context.fillStyle = fading ? "rgba(150,180,200,0.06)" : "rgba(157,222,255,0.18)";
+    context.beginPath();
+    context.arc(0, -2, 13, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = fading ? "#92a7b5" : "#e2f6ff";
+    for (let petal = 0; petal < 6; petal++) {
+      context.save();
+      context.translate(0, -2);
+      context.rotate(petal * Math.PI / 3);
+      context.beginPath();
+      context.ellipse(0, -5, 2.5, 6, 0, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    }
+    context.fillStyle = fading ? "#b3c4cb" : "#ffffff";
+    context.beginPath();
+    context.arc(0, -2, 2.5, 0, Math.PI * 2);
+    context.fill();
+  });
+}
+
+function drawCrystalfungus(specimen, now) {
+  drawVariant(specimen, now, fading => {
+    context.fillStyle = fading ? "#796c88" : "#9977cc";
+    context.fillRect(-2, 2, 4, 9);
+    for (const [x, y, size] of [[-7, 3, 0.65], [7, 4, 0.55], [0, 0, 1]]) {
+      context.save();
+      context.translate(x, y);
+      context.scale(size, size);
+      context.fillStyle = fading ? "#647f89" : "#71dce4";
+      context.beginPath();
+      context.moveTo(0, -12);
+      context.lineTo(10, -2);
+      context.lineTo(7, 4);
+      context.lineTo(-7, 4);
+      context.lineTo(-10, -2);
+      context.closePath();
+      context.fill();
+      context.fillStyle = fading ? "#7e728d" : "#9e83e6";
+      context.beginPath();
+      context.moveTo(0, -12);
+      context.lineTo(7, 4);
+      context.lineTo(-2, 2);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = fading ? "#9aabb4" : "#c8ffff";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(-10, -2);
+      context.lineTo(0, -12);
+      context.lineTo(10, -2);
+      context.stroke();
+      context.restore();
+    }
+  });
+}
+
+function drawBlackthorn(specimen, now) {
+  drawVariant(specimen, now, fading => {
+    // A pale edge keeps the near-black stem legible on soil.
+    for (const [color, width] of [[fading ? "#756374" : "#a17eb2", 4], [fading ? "#51424e" : "#281c39", 2.5]]) {
+      context.strokeStyle = color;
+      context.lineWidth = width;
+      context.beginPath();
+      context.moveTo(-10, 9);
+      context.bezierCurveTo(9, 8, -9, -8, 10, -10);
+      context.stroke();
+    }
+    context.fillStyle = fading ? "#a38996" : "#e4a1d6";
+    for (const [x, y, direction] of [[-5, 7, -1], [0, 2, 1], [0, -4, -1], [5, -8, 1]]) {
+      context.beginPath();
+      context.moveTo(x, y + 2);
+      context.lineTo(x + 7 * direction, y - 5);
+      context.lineTo(x + 2 * direction, y + 3);
+      context.closePath();
+      context.fill();
+    }
+  });
 }
 
 function drawRedbloom(specimen, now) {

@@ -3,8 +3,8 @@
 These mappings are intentionally playful and provisional. The goal is to create visually distinct behavior, not to encode a perfect taxonomy of network traffic.
 
 The five mappings listed in the prototype subset below are implemented with fake
-events. TCPNoise port hits now also grow these visual families through NATS/SSE.
-Other organism effects in this table are proposals; weeds and mutations are not implemented. Manual weather and live
+events. TCPNoise port hits grow base visual families, weeds, and rare variants
+through NATS/SSE. Other organism effects in this table are proposals. Manual weather and live
 aggregate weather from Noise Observatory share the visual renderer without
 affecting ecology.
 
@@ -14,7 +14,7 @@ affecting ecology.
 | HTTP request | Broad-leaf plant | Ordinary web traffic should look healthy and common. |
 | HTTPS request | Flowering broad-leaf plant | Similar family to HTTP, with a slightly more elaborate appearance. |
 | Genuine SSH connection telemetry | Thorny vine | Protocol-aware evidence of a connection; a port probe alone is insufficient. |
-| TCPNoise connection / port hit | Existing plant family by destination port | Artistic mapping, without claiming protocol or authentication semantics. |
+| TCPNoise connection / port hit | Base plant family by destination port, with a chance of weed or rare growth | Artistic mapping, without claiming protocol or authentication semantics. |
 | Gopher request | Mushroom | A little old-network fungus patch. |
 | Gemini request | Crystal-like fungus | More luminous / geometric than Gopher mushrooms. |
 | Failed authentication telemetry | Red bloom that quickly wilts | Requires appropriate authentication telemetry, not an inferred failure from a probe. |
@@ -43,7 +43,8 @@ produce vines as an artistic mapping without claiming a genuine SSH session.
 Port numbers do not establish protocol or authentication semantics. Actual
 failed authentication still requires auth-aware telemetry; no port hit creates
 a red bloom. Every valid hit produces one garden growth event, including unknown
-ports. There is no separate TCPNoise weeds/invasive category in this slice.
+ports. Weeds and rare variants are artistic outcomes, not classifications of
+scanners, malicious traffic, protocols, or sensor classes.
 
 The PacketGarden backend resolves TCPNoise ports to specimen types before sending
 the growth event to the browser. Real TCPNoise growth shares specimen placement,
@@ -59,6 +60,8 @@ continues controlling weather separately through Noise Observatory.
 
 ## TCPNoise destination-port mapping
 
+These base mappings apply before the rarity roll:
+
 | Listening ports | Visual specimen |
 | --- | --- |
 | 80, 443, 8080, 8443 | broadleaf |
@@ -69,6 +72,38 @@ continues controlling weather separately through Noise Observatory.
 
 53 and 70 are supported future ports even though the current fleet does not
 normally expose them. The planning inventory is in [Real data](REAL-DATA.md#tcpnoise-fleet-planning-inventory).
+
+## TCPNoise rarity
+
+The backend rolls once per accepted connection. Known ports start at **98% normal,
+1.5% weed, 0.5% rare**; fallback ports start at **94% flower, 4% weed, 2% rare**.
+Add these percentage points to the weed and rare chances, subtracting their sum
+from normal growth:
+
+| Coarse trait | Weed bonus | Rare bonus |
+| --- | --- | --- |
+| Numeric integer `ipVersion == 6` | +0.5 | +0.5 |
+| Sensor ends in `-dn42` | +0.5 | +0.5 |
+| Sensor ends in `-ygg` | +1.0 | +1.0 |
+
+Suffix matching is ordinal, case-insensitive, and does not trim names. IPv6 stacks
+with either suffix; suffixes cannot both match. The strongest combination is a
+fallback port with IPv6 and `-ygg`: **91% flower, 5.5% weed, 3.5% rare**.
+IPv4 adds nothing. Missing/unusable optional traits add nothing and do not reject
+an otherwise valid connection. IPv6 / DN42 / Ygg are visual modifiers, never
+security classifications or evidence of a particular protocol.
+
+A uniform integer roll 0–9999 uses normal first, then weed, then rare, with each
+upper boundary exclusive. A separate uniform choice 0–2 selects `ghostbloom`,
+`crystalfungus`, or `blackthorn` equally. No TCPNoise outcome is `redbloom`.
+Weeds are angular ochre/yellow-green; ghostblooms pale blue-white with a soft halo;
+crystal fungi cyan/violet facets; blackthorns dark purple with contrasting thorns.
+Their lifetimes are 6, 6, 7, and 12 minutes respectively (stages in the README).
+
+All rarity is event-driven and resolved before SSE. The browser receives only
+`specimenType` and `listenPort`, never sensor names or IP details, and uses shared
+placement/lifecycles without direct grass influence. Competition and mutations
+of existing specimens remain future ecology work.
 
 ## First prototype subset
 
