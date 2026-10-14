@@ -133,6 +133,7 @@ function weatherIntensity() {
 }
 
 function updateWeatherAnimation() {
+  if (typeof updatePuddleWeather === "function") updatePuddleWeather(Date.now());
   if (weatherAnimationFrame !== null) {
     window.cancelAnimationFrame(weatherAnimationFrame);
     weatherAnimationFrame = null;
@@ -262,7 +263,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [], actors: [], curiosities: [], recentEvents: [] };
+const gardenState = { specimens: [], grassCells: [], puddles: [], actors: [], curiosities: [], recentEvents: [] };
 const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
 
 // Called only at saturation, after expiry. Equal vigor never churns the garden.
@@ -1092,6 +1093,7 @@ function rebuildGardenBase(now) {
     for (const grass of gardenState.grassCells) {
       drawGrass(grass, now);
     }
+    if (typeof drawGardenPuddles === "function") drawGardenPuddles(now);
     animatedSpecimens.length = 0;
     for (const specimen of gardenState.specimens) {
       if (specimen.mutation && typeof drawSpecimenMutation === "function") {
@@ -1157,6 +1159,7 @@ seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
+  if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) gardenBaseDirty = true;
   if (document.hidden) syncWeatherAnimation();
   else {
     if (typeof updateFirstSeenCuriosities === "function") updateFirstSeenCuriosities(Date.now());
@@ -1171,10 +1174,11 @@ drawGarden();
 
 // Clean up before drawing, including the tick that removes the final specimen or tuft.
 window.setInterval(() => {
+  const puddlesChanged = typeof updateGardenPuddles === "function" && updateGardenPuddles(Date.now());
   const curiositiesChanged = typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(Date.now());
   const messageChanged = typeof updateCollectionMessage === "function" && updateCollectionMessage(Date.now());
-  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0
-    || messageChanged) {
+  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0 || gardenState.puddles.length > 0
+    || puddlesChanged || messageChanged) {
     updateGarden();
     drawGarden();
   } else if (curiositiesChanged) {

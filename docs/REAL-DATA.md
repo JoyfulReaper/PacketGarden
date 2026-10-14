@@ -283,10 +283,11 @@ specimen, not a security identity or threat classification.
 
 Live aggregate weather, NATS-backed TCPNoise growth, event-driven weed/rare growth,
 click inspection of live specimen provenance, Recent activity, delayed collectible
-weed mutations, bounded first-seen curiosities, and the static zero score are implemented.
+weed mutations, bounded first-seen curiosities, temporary storm-water terrain,
+and the static zero score are implemented.
 
 Vine/opium and mushroom/Amanita mutations/drops, other collectibles, Stillbloom,
-puddles, local-time lighting, persistence, other protocol/auth-aware adapters, and
+water/creature interactions, local-time lighting, persistence, other protocol/auth-aware adapters, and
 richer specimen responses remain future work.
 
 See [MVP](MVP.md) for completed and remaining capabilities and

@@ -353,9 +353,11 @@ broadleaf growth. Possible later variation can use safe traits such as:
 - subtle sensor/network-class influence;
 - rare animation details.
 
-Vine palette tuning wishlist: make **aqua** the normal/default vine color and make
-**olive** a less-common cosmetic variant. This is purely visual tuning; it should
-not change vigor, TCPNoise meaning, placement, or backend rarity.
+Vine palette tuning is implemented: after the existing 1% **silvervine** roll,
+ordinary hue weights are **aqua 70%**, lime 15%, chartreuse 10%, and **olive 5%**.
+Both live and fake vines use this cosmetic exception to vigor-based hue selection.
+Vigor still changes structure, thickness, detail, and competition. The selected
+hue persists and carries no traffic/security meaning or backend rarity change.
 
 Cosmetic rarity should stay distinct from backend TCPNoise rarity unless there is
 a deliberate reason to combine them.
@@ -411,32 +413,36 @@ Aggregate pressure is already used for weather. Possible extensions include:
 
 ### Heavy-rain puddles
 
-Heavy weather should be able to leave temporary terrain behind so the garden has a
-memory of a storm after the rain animation stops.
+Heavy weather now leaves temporary terrain behind so the garden has a memory of a
+storm after the rain animation stops.
 
-A first version could work like this:
+Implemented first slice:
 
 - only `heavy_rain`, `botnet_thunderstorm`, and `botnet_hurricane` may create or
   refresh puddles;
-- use a bounded formation check every roughly 10–20 seconds rather than rolling per
-  animation frame;
-- cap the total wet area, perhaps around 6–10 puddle cells/patches;
-- heavier weather increases formation/refresh pressure;
-- prefer refreshing or enlarging nearby water instead of endlessly creating new
-  isolated puddles;
+- one formation/refresh check every 15 seconds on the existing garden tick;
+- cap at eight logical patches, separate from all organism/actor state;
+- action chances are 35% heavy rain, 60% thunderstorm, and 85% hurricane;
+- existing water has a 60% refresh/growth preference; new patches often appear
+  nearby, and successful attempts at the cap only refresh existing water;
 - neighboring puddles may render as one irregular little pool;
 - puddles are terrain, not specimens, and consume no specimen slot;
-- no catch-up puddle creation after a suspended tab;
+- no formation while hidden or catch-up checks after suspension; resume schedules
+  the next attempt from current time and discards expired water;
 - once weather drops below heavy rain, stop forming/refreshing puddles and let them
   drain gradually;
-- drainage should be visibly slow -- roughly 5–15 minutes is a useful starting
-  range -- with shrinking/drying rather than instant disappearance.
+- 30 seconds after the last refresh, water gradually shrinks/fades over eight
+  minutes before disappearing;
+- three stable procedural ellipses per patch render in the cached scene after
+  grass and before specimens; no RAF-based terrain rendering or extra timers;
+- no collection, Recent activity entry, provenance, inventory, or persistence.
 
-For the first pass, water does not damage plants or create a survival mechanic.
-Grass beneath water may simply render darker or partially submerged and return to
-normal as the puddle drains.
+Water does not damage plants or create a survival mechanic. Grass beneath water
+looks tinted/partially submerged and returns to normal as the puddle drains,
+without any change to grass lifetime, influence, or spreading.
 
-Temporary water also gives later ambient behavior a natural place to happen:
+Temporary water also gives later ambient behavior a natural place to happen.
+These interactions remain future work:
 
 - frogs may appear near puddles;
 - snails may be more likely after rain;

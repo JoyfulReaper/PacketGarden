@@ -21,6 +21,7 @@ and additional sensor/service inputs remain goals.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
 - Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the manual renderer.
 - Stronger severe visual weather with wind-driven hurricane rain; no lightning, flashing, or ecological damage.
+- Temporary storm-water terrain: heavy rain/thunderstorm/hurricane only, one check per 15 seconds with 35%/60%/85% chances. At most eight patches; existing water is usually refreshed/grown (60%), new patches often join nearby pools, and the cap forces refresh. Sizes grow gradually to a bounded maximum. Water holds for 30 seconds after refresh, then shrinks/fades over eight minutes. Hidden pages skip formation and resume on a fresh schedule without catch-up. Cached draw order is grass, water, specimens. No occupancy, provenance, plant damage, grass mutation, collection, extra Recent activity, or persistence.
 - Optional browser-local Web Audio growth sounds, Off by default at 12% volume, initialized by the user's enable gesture. Species tones and gentle rare chimes represent artistic garden traits, not security alerts; independent 400 ms ordinary / 900 ms rare cooldowns drop extra sounds without delaying growth.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to normalized specimen growth on the same SSE stream.
 - Port-22 redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 has a redbloom base with normal rarity and no port-22 collectible mutation.
@@ -36,7 +37,7 @@ and additional sensor/service inputs remain goals.
 - Separate fast-growing grass beneath specimens, seeded/refreshed by successful fake DNS/HTTP spawns. Mature healthy turf spreads locally with a bounded number of population-scaled attempts; fading turf gets one bounded final seed opportunity per influence cycle. Grass never blocks cells or contributes to specimen counts.
 - Elapsed-time lifecycles with growth, maturity, wilting/fading/drying, and removal. Red blooms appear immediately and have only fresh/wilting stages.
 - Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds; rare species can remain longer.
-- Persistent cosmetic color variants selected once per specimen. Live common palettes follow vigor, fake controls vary across common palettes, and each species has a small browser-only rare-color chance. Broadleaf includes a rare rainbow scheme; other rare color schemes remain purely cosmetic and separate from backend rarity.
+- Persistent cosmetic color variants selected once per specimen. Live common palettes follow vigor except for vine hue. Both live/fake vines use ordinary weights of 70% aqua, 15% lime, 10% chartreuse, and 5% olive after the unchanged 1% silvervine roll; vigor still changes vine structure/detail and competition. Other species keep their existing color behavior. Broadleaf includes a rare rainbow scheme; all rare colors remain purely cosmetic and separate from backend rarity.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 - Click-to-inspect information cards with scaled-canvas hit testing. Empty-soil click, Escape, or the close button dismisses the card; it also closes if the exact inspected specimen expires or is displaced. Fake specimens are labeled as simulated rather than inventing provenance.
 - One authoritative live garden handler: validate/sanitize the current contract, attach TCPNoise provenance directly to the exact specimen at creation before rendering, and expose spawned/replaced/dropped outcomes. No second inspection SSE listener or fresh-specimen search.
@@ -112,7 +113,8 @@ These are desired follow-ups, not descriptions of the code already implemented:
   no behavior or assets for it are implemented yet.
 - **Additional curiosity/drop types:** odd seeds, worthless coin-shaped objects,
   and other collectible drops remain future work beyond the four implemented visitors.
-- **Stillbloom / puddles:** quiet-only growth and weather residue remain future work.
+- **Stillbloom:** quiet-only growth remains future work.
+- **Water interactions:** frogs, water-specific snails, and gnome reactions remain future work; storm puddles themselves are implemented.
 
 See [Ideas](IDEAS.md) for the broader pool and design constraints.
 

@@ -23,11 +23,13 @@ const speciesColorVariants = new Map([
   ["vine", {
     rareChance: 0.01,
     common: [
-      { name: "chartreuse", filter: "none" },
-      { name: "lime", filter: "hue-rotate(-18deg) saturate(1.25) brightness(1.08)" },
       { name: "aqua", filter: "hue-rotate(75deg) saturate(1.25) brightness(1.08)" },
+      { name: "lime", filter: "hue-rotate(-18deg) saturate(1.25) brightness(1.08)" },
+      { name: "chartreuse", filter: "none" },
       { name: "olive", filter: "hue-rotate(-8deg) saturate(0.8) brightness(0.98)" }
     ],
+    // Hue is cosmetic for vines; vigor still controls their structure and competition.
+    commonWeights: [70, 15, 10, 5],
     rare: { name: "silvervine", filter: "grayscale(0.75) sepia(0.12) hue-rotate(155deg) saturate(1.5) brightness(1.35)", glow: "#e7fbff" }
   }],
   ["redbloom", {
@@ -86,6 +88,7 @@ const speciesColorVariants = new Map([
 function commonSpeciesColorVariant(specimenType, vigor) {
   const config = speciesColorVariants.get(specimenType);
   if (!config) return null;
+  if (config.commonWeights) return config.common[0].name;
   const normalizedVigor = Number.isInteger(vigor) ? Math.min(3, Math.max(0, vigor)) : 0;
   return config.common[normalizedVigor].name;
 }
@@ -95,6 +98,17 @@ function chooseSpeciesColorVariant(specimenType, vigor, isFake = false, roll = M
   if (!config) return null;
   const normalizedRoll = Number.isFinite(roll) ? Math.min(1, Math.max(0, roll)) : 0.5;
   if (normalizedRoll < config.rareChance) return config.rare.name;
+  if (config.commonWeights) {
+    const totalWeight = config.commonWeights.reduce((total, weight) => total + weight, 0);
+    let cumulativeWeight = 0;
+    for (let index = 0; index < config.common.length; index++) {
+      cumulativeWeight += config.commonWeights[index];
+      if (normalizedRoll < config.rareChance + (1 - config.rareChance) * cumulativeWeight / totalWeight) {
+        return config.common[index].name;
+      }
+    }
+    return config.common.at(-1).name;
+  }
   if (!isFake) return commonSpeciesColorVariant(specimenType, vigor);
 
   // Fake events have no recurrence signal, so distribute them across the same common palettes.

@@ -120,10 +120,16 @@ Lifecycles now retain several minutes of visual history, with vines lasting up t
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
 Specimens also have persistent cosmetic color variation. Live common palettes track
-coarse vigor while fake growth varies across the same common schemes. Each species
+coarse vigor except for vine hue; fake growth varies across the same common schemes. Each species
 has a small 1% browser-only rare-color chance; broadleaf can become rainbow, while
 other species have their own rare cosmetic schemes. These colors are decoration,
 not extra TCPNoise rarity or security meaning.
+
+Vine hue is a cosmetic exception for both live and fake growth: after the unchanged
+1% silvervine roll, ordinary hues are 70% aqua, 15% lime, 10% chartreuse, and 5%
+olive. Aqua is the dominant/default ordinary coloring; olive is uncommon. Vigor
+still changes vine fullness, thickness, detail, and full-grid competition, with
+no traffic/security meaning attached to hue. The selected color never rerolls.
 
 Very occasionally, sufficiently overgrown gardens may experience a brief and
 completely unhelpful gnome territorial dispute. With at least 30 living specimens,
@@ -183,6 +189,20 @@ not affect organisms or grass. Animated weather, gnomes, mutations, and curiosit
 reuse a cached ecology scene and share a roughly 30 FPS visual limit; lifecycle updates
 still refresh the slow scene every 250 ms. Hidden tabs pause animation, and Canvas
 backing resolution is capped at DPR 2.
+
+Severe weather now leaves temporary standing water: only heavy rain, botnet
+thunderstorm, and botnet hurricane form/refresh puddles. The existing tick checks
+once every 15 seconds, with respective 35%, 60%, and 85% action chances. At most
+eight patches occupy separate browser-memory terrain state and no specimen slots.
+Successful checks usually refresh/grow a patch (60%); otherwise they add one,
+often near existing water so patches can overlap into pools. At the cap, successful
+checks only refresh. Growth is gradual and bounded. After the last refresh, water
+holds briefly for 30 seconds and then shrinks/fades over eight minutes. Below
+heavy rain there is no formation or refresh. Hidden tabs never form water; resume
+discards expired patches and schedules a fresh check without catch-up. Muted
+procedural water renders in the cached scene after grass and before specimens,
+without damaging plants, changing grass, adding Recent activity, or collecting
+anything. Reload clears it. Frogs and water-specific creature interactions remain future.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
 listening ports to visual families without asserting protocol/authentication
@@ -304,6 +324,9 @@ broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 performance checks run with `node tests/render-performance.cjs`.
 First-seen trigger, bounded visitors, clicking, and overlay performance checks run
 with `node tests/garden-curiosities.cjs`.
+Storm-water lifecycle, isolation, and cached rendering checks run with
+`node tests/garden-puddles.cjs`; weighted vine hue boundaries are covered by
+`node tests/species-color-variants.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const createGarden = require('./browser-garden.cjs');
 
 function instrument(garden) {
-  const work = { base: 0, species: 0, grass: 0, overlay: 0, mutation: 0 };
+  const work = { base: 0, species: 0, grass: 0, overlay: 0, mutation: 0, water: 0 };
   for (const name of Object.keys(work)) garden.sandbox['count' + name] = () => work[name]++;
   garden.run(`
     const originalBase = rebuildGardenBase;
@@ -18,8 +18,10 @@ function instrument(garden) {
     drawRain = now => { countoverlay(); originalRain(now); };
     const originalMutation = drawSpecimenMutation;
     drawSpecimenMutation = (specimen,now) => { countmutation(); return originalMutation(specimen,now); };
+    const originalWater = drawGardenPuddles;
+    drawGardenPuddles = now => { countwater(); return originalWater(now); };
   `);
-  work.reset = () => { for (const name of ['base','species','grass','overlay','mutation']) work[name] = 0; };
+  work.reset = () => { for (const name of ['base','species','grass','overlay','mutation','water']) work[name] = 0; };
   return work;
 }
 const weather = (garden, level, eventsPerMinute = 10000) =>
@@ -174,9 +176,11 @@ assert.equal(actorWork.base, 0, 'actor cleanup never invalidates ecology');
 const dense = createGarden();
 dense.run('gardenState.specimens=Array.from({length:640},(_,i)=>({type:"vine",column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-120000,vigor:i%4})); gardenState.grassCells=Array.from({length:640},(_,i)=>({column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()})); drawGarden()');
 weather(dense, 'botnet_hurricane');
+dense.run('for(let i=0;i<8;i++) createStormPuddle(Date.now(),()=>0.5); drawGarden()');
 const denseWork = instrument(dense), denseState = dense.run('JSON.stringify(gardenState)');
 advanceFrames(dense, dense.clock.now, 120, 120, true);
 assert.equal(denseWork.base, 4);
+assert.equal(denseWork.water,4, 'eight water patches still draw only in four cached scene refreshes');
 assert.equal(denseWork.species, 2560); assert.equal(denseWork.grass, 2560);
 assert(denseWork.overlay >= 28 && denseWork.overlay <= 34);
 assert.equal(dense.run('JSON.stringify(gardenState)'), denseState, 'dense rendering changes no ecology');
@@ -189,6 +193,7 @@ for (let frame = 1; frame <= 120; frame++) {
   dense.frame(droppedStart + frame * 1000 / 120); dense.emit(); dense.drawing.length = 0;
 }
 assert.equal(denseWork.base, 0); assert.equal(denseWork.species, 0);
+assert.equal(denseWork.water,0, 'dropped traffic/animated rain never redraw standing water');
 assert.equal(dense.run('JSON.stringify([gardenState.specimens,gardenState.grassCells])'), beforeDroppedTraffic);
 assert(dense.run('gardenState.recentEvents.every(event=>event.outcome==="dropped")'));
-console.log(`PASS: 120 RAF callbacks + 4 lifecycle ticks -> ${stressReport}; another 120 dropped events cause zero extra base rebuilds. FPS/cache/invalidation/hidden/DPR/resize/hits/mutations/actors/activity checks passed.`);
+console.log(`PASS: dense garden + 8 water patches: 120 RAF callbacks + 4 lifecycle ticks -> ${stressReport}, 4 water passes; another 120 dropped events cause zero extra base rebuilds. FPS/cache/invalidation/hidden/DPR/resize/hits/mutations/actors/activity checks passed.`);

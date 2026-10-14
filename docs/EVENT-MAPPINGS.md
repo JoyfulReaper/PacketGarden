@@ -226,7 +226,7 @@ The score must never accumulate or unlock anything.
 
 Color variation is separate from TCPNoise backend rarity.
 
-For live growth, common color schemes follow vigor 0–3. Fake controls have no real
+For live growth, common color schemes follow vigor 0–3 except for vine hue. Fake controls have no real
 recurrence signal, so they vary across the same common schemes. Each specimen also
 gets a **1% browser-only rare cosmetic roll** when its color variant is chosen.
 That choice persists for the specimen's lifetime and is not rerolled while
@@ -257,13 +257,29 @@ Other species use four common palettes plus one rare cosmetic scheme:
 | Crystal fungus | aurora |
 | Blackthorn | gilded |
 
-The current vigor-3 common vine scheme is **olive**, deliberately kept in a muted
-yellow-green range so connected vine patches remain visible over grass without
-reading as orange/coral.
+Vines use persistent cosmetic hue weights for both live and fake growth, after
+the unchanged 1% **silvervine** rare roll: **aqua 70%**, lime 15%, chartreuse 10%,
+and **olive 5%** of ordinary selections. Aqua is the dominant/default hue, olive
+is uncommon, and vigor no longer chooses vine hue. Vigor still changes vine
+fullness, thickness, detail, and competition. None of these hues asserts traffic
+or security meaning, and olive remains an ordinary cosmetic rather than backend rarity.
 
 Rare color schemes are decoration only. A rare-colored ordinary plant does not
 become a backend rare species, does not gain protection, and does not imply more
 severe traffic.
+
+## Temporary storm water
+
+Applied heavy rain, botnet thunderstorm, and botnet hurricane may leave temporary
+water terrain. Every 15 seconds the existing tick makes at most one attempt,
+with respective 35%/60%/85% chances. At most eight patches occupy no specimen slots.
+Existing water is usually refreshed/grown (60%); new patches often join nearby
+water, and the cap forces refresh. Bounded growth is gradual. Water holds for
+30 seconds after refresh, then shrinks/fades over eight minutes. Quiet/drizzle/rain
+never form or refresh water. Hidden tabs skip formation; resume removes expired
+patches and schedules a fresh check without replay. Cached water draws over grass
+and under specimens, with no plant/grass effects, collection, Recent activity,
+provenance, or persistence. Frog/snail/gnome water interactions remain future work.
 
 ## Ambient events
 
