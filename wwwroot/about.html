@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About PacketGarden</title>
+  <link rel="stylesheet" href="garden.css">
+</head>
+<body class="about-page">
+  <header class="about-header">
+    <h1>About PacketGarden</h1>
+    <p>Packet Garden: Composting the internet's shit into something pretty.</p>
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="index.html">Back to the garden</a>
+    </nav>
+  </header>
+
+  <main class="about-main">
+    <section>
+      <h2>What is this?</h2>
+      <p>
+        PacketGarden is a living visualization of background network activity. Instead of turning
+        every connection and traffic spike into another table, graph, or scrolling log, it turns
+        them into flowers, mushrooms, vines, weeds, strange mutations, weather, and occasionally
+        a completely unnecessary gnome territorial dispute.
+      </p>
+      <p>
+        It is meant to be something you can leave open and glance at. The garden slowly changes as
+        traffic arrives, plants age and die, grass spreads, storms roll through, and odd little
+        events happen on their own.
+      </p>
+    </section>
+
+    <section>
+      <h2>How does it work?</h2>
+      <div class="about-flow" aria-label="PacketGarden data flow">
+        <span>Network sensors</span>
+        <span aria-hidden="true">→</span>
+        <span>NATS</span>
+        <span aria-hidden="true">→</span>
+        <span>PacketGarden backend</span>
+        <span aria-hidden="true">→</span>
+        <span>SSE</span>
+        <span aria-hidden="true">→</span>
+        <span>Your browser garden</span>
+      </div>
+      <p>
+        TCPNoise sensors observe connections to listening ports and publish small event summaries.
+        PacketGarden consumes those events through NATS, normalizes them on the server, and streams
+        only the information the browser needs over Server-Sent Events (SSE).
+      </p>
+      <p>
+        The browser then grows the appropriate specimen, chooses its visual details, updates the
+        ecology, and optionally plays a short sound. No page refresh or direct browser connection to
+        the sensors is required.
+      </p>
+    </section>
+
+    <section>
+      <h2>What do the plants mean?</h2>
+      <p>
+        Ports are mapped to plant families for visual variety. Common web-facing traffic tends to
+        produce broad-leaf plants, Gopher/port 70 can produce mushrooms, several remote-access style
+        ports map to vines, and other ports commonly become flowers. Port 22 has its own brief red
+        bloom so those hits are easy to notice.
+      </p>
+      <p>
+        These are artistic mappings, not protocol detection and not security classifications. A red
+        bloom means a TCP connection hit the public listener on port 22; it does not mean somebody
+        supplied credentials, completed SSH negotiation, or successfully attacked anything.
+      </p>
+    </section>
+
+    <section>
+      <h2>Vigor, rarity, and weird colors</h2>
+      <p>
+        Repeated observations are reduced to a coarse <strong>vigor</strong> value from 0 to 3.
+        Higher vigor makes specimens a little fuller or more detailed and, when every specimen cell
+        is occupied, can allow stronger recurring growth to displace weaker ordinary plants.
+      </p>
+      <p>
+        TCPNoise also has an artistic rarity roll that can produce weeds or rare species such as
+        ghostblooms, crystal fungi, and blackthorns. Separately, specimens have browser-side color
+        variation. Common colors follow vigor for live traffic, while very occasionally a specimen
+        gets a rare cosmetic color scheme. A rainbow broad-leaf plant is one example. Color rarity
+        is just decoration and does not change the network meaning of the event.
+      </p>
+    </section>
+
+    <section>
+      <h2>Grass and ecology</h2>
+      <p>
+        Grass is its own layer beneath the specimens. Development DNS and HTTP events can seed or
+        refresh it, and healthy mature grass can spread naturally. Old turf fades, browns, and
+        eventually disappears, with a small final chance to seed a neighbor before it goes.
+      </p>
+      <p>
+        Plants also have their own lifetimes. The result is intentionally temporary: the garden
+        keeps recycling itself rather than becoming a permanent historical database of everything
+        that ever touched the network.
+      </p>
+    </section>
+
+    <section>
+      <h2>What is the weather?</h2>
+      <p>
+        Weather comes from aggregate activity rather than individual connection events. The backend
+        polls Noise Observatory for a current level and events-per-minute rate, then streams that
+        small weather state to the browser. Higher activity can turn drizzle into heavy rain,
+        thunderstorms, or a botnet hurricane.
+      </p>
+      <p>
+        Weather is currently visual. It does not damage plants or change the meaning of traffic.
+      </p>
+    </section>
+
+    <section>
+      <h2>And the gnomes?</h2>
+      <p>
+        The gnomes mean absolutely nothing.
+      </p>
+      <p>
+        Once the garden is sufficiently populated, there is a small chance of a browser-only
+        ambient event in which two tiny red-hat gnomes and two green-hat gnomes settle a pointless
+        territorial disagreement. They do not consume plant cells, alter traffic, classify threats,
+        or affect the outcome of anything important. They just fight and leave.
+      </p>
+    </section>
+
+    <section>
+      <h2>Privacy</h2>
+      <p>
+        The browser does not receive raw packet contents, credentials, sensor names, remote IP
+        addresses, or exact repeat counts. Live specimen events are reduced to the visual specimen
+        type, listening port, and coarse vigor value needed to render the garden.
+      </p>
+      <p>
+        PacketGarden is an ambient visualization, not a packet inspector, SIEM, IDS, or forensic
+        tool. If something looks ominous, that is because the garden is dramatic, not because it has
+        decided somebody is malicious.
+      </p>
+    </section>
+
+    <section>
+      <h2>Why?</h2>
+      <p>
+        Because the public internet produces an endless amount of unsolicited background noise, and
+        watching it grow mushrooms is more fun than staring at another dashboard.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
