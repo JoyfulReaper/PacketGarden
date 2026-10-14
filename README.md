@@ -147,6 +147,19 @@ The permanent `Score: 0` is static text with no scoring or persistence state.
 Port 22 still always maps to redbloom and bypasses backend rarity; its meaning is
 only a connection to listening port 22. Ignoring the mutation has no consequence.
 
+Successful live growth with exact sanitized `seenCount === "1"` now tries to
+create one tiny browser-only curiosity beside that exact new/replacement specimen.
+The uniform initial pool is ladybug, snail, moth, and shiny pebble. At most three
+are active for 20 seconds; a full cap skips the event without queue or catch-up.
+They use separate state and the shared dynamic overlay, consume no specimen cells,
+and affect no grass, provenance, or ecology. Their travel stays within six logical
+pixels; pebbles remain still and occasionally glint. Clicking a curiosity takes
+priority over mutation collection and inspection, briefly shows its type-specific
+`+0 points` message, and uses the optional quiet collection sound. Score stays 0,
+and curiosity spawn/collection/expiry adds no Recent activity row. Gnomes and
+redbloom mutations remain independent. Count one means only source-provided
+first-seen; it does not establish global uniqueness or first-ever history.
+
 Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
 specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near
@@ -166,8 +179,8 @@ cycle to earn another final seed opportunity.
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
-not affect organisms or grass. Animated weather, gnomes, and mutations reuse a
-cached ecology scene and share a roughly 30 FPS visual limit; lifecycle updates
+not affect organisms or grass. Animated weather, gnomes, mutations, and curiosities
+reuse a cached ecology scene and share a roughly 30 FPS visual limit; lifecycle updates
 still refresh the slow scene every 250 ms. Hidden tabs pause animation, and Canvas
 backing resolution is capped at DPR 2.
 
@@ -289,6 +302,8 @@ broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 `node tests/gnome-events.cjs`. Atomic live growth and Recent activity are covered by
 `node tests/garden-activity.cjs`. Cache/animation and dense-garden structural
 performance checks run with `node tests/render-performance.cjs`.
+First-seen trigger, bounded visitors, clicking, and overlay performance checks run
+with `node tests/garden-curiosities.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.

@@ -104,6 +104,11 @@ function specimenAtCanvasPoint(clientX, clientY) {
 
 canvas.addEventListener("click", event => {
   const point = gardenPointFromClient(event.clientX, event.clientY);
+  const curiosity = typeof firstSeenCuriosityAt === "function" ? firstSeenCuriosityAt(point) : null;
+  if (curiosity) {
+    collectFirstSeenCuriosity(curiosity);
+    return;
+  }
   const specimen = specimenAtGardenPoint(point);
   if (specimen && typeof isCollectibleMutationHit === "function" && isCollectibleMutationHit(specimen, point)) {
     collectSpecimenMutation(specimen);

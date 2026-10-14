@@ -17,6 +17,12 @@ const specimenMutationTypes = new Map([
 const collectionMessage = document.querySelector("#collection-message");
 let collectionMessageUntil = 0;
 
+function showCollectionMessage(message, now = Date.now()) {
+  collectionMessage.textContent = message;
+  collectionMessage.hidden = false;
+  collectionMessageUntil = now + specimenMutationConfig.messageDurationMs;
+}
+
 function updateCollectionMessage(now = Date.now()) {
   if (!collectionMessageUntil || now < collectionMessageUntil) return false;
   collectionMessage.textContent = "";
@@ -85,9 +91,7 @@ function collectSpecimenMutation(specimen, now = Date.now()) {
   if (index < 0 || !config || now >= specimen.mutation.expiresAt) return false;
   gardenState.specimens.splice(index, 1);
   if (typeof inspectedSpecimen !== "undefined" && inspectedSpecimen === specimen) closeSpecimenCard();
-  collectionMessage.textContent = config.message;
-  collectionMessage.hidden = false;
-  collectionMessageUntil = now + specimenMutationConfig.messageDurationMs;
+  showCollectionMessage(config.message, now);
   updateGardenStatus();
   drawGarden();
   gardenSound.maybePlayCollectionSound();

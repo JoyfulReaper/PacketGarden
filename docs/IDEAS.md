@@ -29,8 +29,9 @@ until four tiny idiots suddenly have a territorial dispute and then leave.
 ## Ambient actors and incidents
 
 The browser now has a transient actor/event layer because of The Gnome Incident.
-Keep future ambient visitors in that layer rather than consuming specimen cells or
-contaminating the plant ecology.
+First-seen visitors use their own bounded curiosity collection because gnome
+cleanup owns the actor array. Neither layer consumes specimen cells or affects
+plant ecology.
 
 Possible visitors include:
 
@@ -174,42 +175,48 @@ collecting one produces no durable advantage.
 
 ## First-seen curiosities
 
-A valid exact TCPNoise `seenCount` of `"1"` is a good trigger for a separate class
-of short-lived garden curiosities. Here, "first seen" means exactly what the
-source-provided count says; PacketGarden should not pretend it has established
-global uniqueness across collectors or history.
+A valid exact sanitized TCPNoise `seenCount === "1"` now triggers a separate
+browser-only curiosity attempt. Here, "first seen" means only what the
+source-provided count says; it establishes no global uniqueness across collectors
+or first-ever observation in history. Missing counts, non-strings, `"01"`,
+`"1.0"`, and `"1e0"` do not qualify.
 
-Proposed behavior:
+Implemented behavior:
 
-- after a successful live specimen whose exact valid `seenCount` is `"1"`, try to
-  create one transient curiosity near it;
+- after a successful live spawn or replacement with exact count `"1"`, try to
+  create one transient curiosity beside that exact returned specimen; dropped
+  growth and fake events do not trigger it;
 - maintain a small global cap of **3 active first-seen curiosities**;
 - if all three slots are occupied, silently skip the new curiosity;
 - no queue, backlog, or catch-up spawns;
 - missing or unusable `seenCount` does not qualify;
 - the curiosity does not consume a specimen cell or affect grass, vigor, rarity,
   competition, weather, or the source specimen;
-- let it remain roughly 15–30 seconds before wandering away or fading;
-- clicking one may collect it for the magnificent reward of `+0 points`.
+- expire after 20 seconds using the existing garden update tick;
+- clicking collects before mutations/inspection for the magnificent reward of
+  `+0 points`, with the shared transient message and optional quiet sound;
+- animation shares the 30 FPS dynamic overlay without rebuilding cached ecology;
+- gnome cleanup and the three-mutation cap are independent of this layer;
+- no extra Recent activity row, inventory, persistence, or hidden score.
 
-The first-seen pool can mix little creatures and dropped objects rather than always
-using the same thing. Possibilities include:
+The initial uniform pool uses exactly four procedural types:
 
 - **ladybug** — crawls near the new specimen;
-- **snail** — slowly crosses part of the garden and leaves;
+- **snail** — moves extremely slowly beside the source specimen;
 - **moth** — flutters around growth briefly;
 - **shiny pebble** — sits there being inexplicably clickable;
-- **odd seed** — a tiny seed pod that cannot be planted;
-- **coin-shaped object** — specifically not currency and worth no points.
 
-The originating species may bias the pool without making it deterministic: flowers
-might attract ladybugs or moths, mushrooms might attract snails, vines might attract
+All travel stays within six logical pixels; pebbles are stationary with occasional
+glints. Future additions might include an **odd seed** that cannot be planted or a
+**coin-shaped object** that is not currency and earns no points. Later, the
+originating species could bias the pool: flowers might attract ladybugs or moths,
+mushrooms might attract snails, vines might attract
 bugs, and stranger species might be more likely to leave strange objects.
 
 This gives different visual layers distinct jobs:
 
 - ordinary discrete events -> specimen history;
-- exact `seenCount == 1` -> transient first-seen curiosity;
+- exact `seenCount === "1"` -> transient first-seen curiosity;
 - rare collectible mutations/drops -> optional pointless clicking;
 - aggregate traffic -> weather;
 - sustained verified quiet -> quiet-only growth;

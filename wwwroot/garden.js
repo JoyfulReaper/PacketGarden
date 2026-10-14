@@ -96,6 +96,9 @@ function handleLiveGardenEvent(frame) {
     && typeof maybeSchedulePort22Mutation === "function") {
     maybeSchedulePort22Mutation(result.specimen);
   }
+  if (result.specimen && event.seenCount === "1" && typeof createFirstSeenCuriosity === "function") {
+    createFirstSeenCuriosity(result.specimen);
+  }
   return result;
 }
 
@@ -146,7 +149,7 @@ function animateWeather(frameTime = performance.now()) {
 
 function syncWeatherAnimation() {
   const needed = !document.hidden && gardenView !== null && ((weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0)
-    || animatedSpecimens.length > 0);
+    || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0);
   if (!needed && weatherAnimationFrame !== null) {
     window.cancelAnimationFrame(weatherAnimationFrame);
     weatherAnimationFrame = null;
@@ -259,7 +262,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [], actors: [], recentEvents: [] };
+const gardenState = { specimens: [], grassCells: [], actors: [], curiosities: [], recentEvents: [] };
 const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
 
 // Called only at saturation, after expiry. Equal vigor never churns the garden.
@@ -1118,6 +1121,7 @@ function drawGardenOverlay(force = false, now = Date.now(), frameTime = performa
   context.setTransform(pixelRatio * scale, 0, 0, pixelRatio * scale, offsetX * pixelRatio, offsetY * pixelRatio);
   for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
   if (typeof drawGardenActors === "function") drawGardenActors(now);
+  if (typeof drawFirstSeenCuriosities === "function") drawFirstSeenCuriosities(now);
   drawRain(now);
   return true;
 }
@@ -1154,7 +1158,10 @@ new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) syncWeatherAnimation();
-  else drawGarden(); // Refresh once at current time, never replay missed frames.
+  else {
+    if (typeof updateFirstSeenCuriosities === "function") updateFirstSeenCuriosities(Date.now());
+    drawGarden(); // Refresh once at current time, never replay missed frames.
+  }
 });
 window.addEventListener("pagehide", () => {
   if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);
@@ -1164,11 +1171,15 @@ drawGarden();
 
 // Clean up before drawing, including the tick that removes the final specimen or tuft.
 window.setInterval(() => {
+  const curiositiesChanged = typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(Date.now());
   const messageChanged = typeof updateCollectionMessage === "function" && updateCollectionMessage(Date.now());
   if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0
     || messageChanged) {
     updateGarden();
     drawGarden();
+  } else if (curiositiesChanged) {
+    drawGardenOverlay(true);
+    syncWeatherAnimation();
   }
   if (typeof updateAmbientEvents === "function") updateAmbientEvents(Date.now());
   if (typeof updateRecentActivity === "function") updateRecentActivity(Date.now());

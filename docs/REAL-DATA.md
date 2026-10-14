@@ -120,11 +120,10 @@ fake controls default to 0. The browser also retains the normalized sensor label
 listening port, and exact decimal `seenCount` on successful live specimens for
 click inspection.
 
-Today those inspection fields do not change backend species/rarity, placement,
-grass, weather, decay, or competition. A proposed future browser-only first-seen
-curiosity may additionally use an exact valid `seenCount == "1"` as a trigger for
-a short-lived critter/object near the source specimen. That proposed use would not
-change the backend mapping or SSE contract.
+Those inspection fields do not change backend species/rarity, placement, grass,
+weather, decay, or competition. An exact sanitized `seenCount === "1"` now also
+triggers a browser-only curiosity attempt beside the exact successful specimen.
+This leaves backend mapping and the SSE contract unchanged.
 
 Remote IP addresses, remote source ports, packet contents, banners, credentials,
 and unrelated collector fields are never forwarded.
@@ -176,15 +175,26 @@ the permanent static `Score: 0` has no scoring or persistence state. Ordinary
 TCPNoise weeds are independent of this browser-only mutation. Vine/opium and
 mushroom/Amanita mutations or loose drops remain future work.
 
-A second proposed use is an exact valid `seenCount == "1"` first-seen curiosity:
+A second implemented use is an exact sanitized `seenCount === "1"` first-seen curiosity:
 
-- only a successfully spawned live specimen can trigger it;
+- only a successfully spawned/replaced live specimen can trigger it, using the
+  authoritative result directly; dropped/fake events do not;
 - at most three first-seen curiosities exist globally at once;
 - when all slots are occupied, skip the new one without queue/catch-up;
 - the curiosity does not consume a specimen cell or affect grass, rarity, vigor,
   competition, weather, or the source specimen;
-- it may be a short-lived critter or harmless dropped object;
-- clicking it may award the intentionally meaningless message `+0 points`.
+- uniform selection chooses ladybug, snail, moth, or shiny pebble for 20 seconds;
+- separate browser-memory state stores only type, lifetime, logical origin/position,
+  and small movement parameters, with no raw event or endpoint fields;
+- tiny deterministic movement/glints share the dynamic overlay, without invalidating
+  cached ecology on animation frames or adding per-item timers;
+- clicking collects before mutations/inspection, shows a type-specific `+0 points`
+  message, and reuses optional quiet audio; static Score remains 0;
+- curiosity spawn, collection, and expiry add no Recent activity entries;
+- gnome actors and redbloom mutations have independent state and caps.
+
+Missing/null counts, numeric 1, `"01"`, `"1.0"`, and `"1e0"` do not qualify; the
+existing sanitizer does not convert them into the exact string `"1"`.
 
 `seenCount == "1"` should be described narrowly as a source-provided recurrence
 count of one. PacketGarden must not upgrade that into a claim of global first-ever
@@ -273,11 +283,11 @@ specimen, not a security identity or threat classification.
 
 Live aggregate weather, NATS-backed TCPNoise growth, event-driven weed/rare growth,
 click inspection of live specimen provenance, Recent activity, delayed collectible
-weed mutations, and the static zero score are implemented.
+weed mutations, bounded first-seen curiosities, and the static zero score are implemented.
 
-Vine/opium and mushroom/Amanita mutations/drops, first-seen curiosities,
-local-time lighting, persistence, other protocol/auth-aware adapters, and richer
-specimen responses remain future work.
+Vine/opium and mushroom/Amanita mutations/drops, other collectibles, Stillbloom,
+puddles, local-time lighting, persistence, other protocol/auth-aware adapters, and
+richer specimen responses remain future work.
 
 See [MVP](MVP.md) for completed and remaining capabilities and
 [Event mappings](EVENT-MAPPINGS.md) for implemented/proposed effects.

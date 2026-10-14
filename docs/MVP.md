@@ -44,6 +44,7 @@ and additional sensor/service inputs remain goals.
 - A separate browser-only ambient actor layer and The Gnome Incident: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, weather, or network meaning. Tiny optional cues share existing sound controls.
 - Delayed collectible weed mutations: a 5% browser roll on the exact successfully created live port-22 redbloom schedules mutation after three seconds. Canonical type, cell, vigor, color, and safe provenance stay intact. At most three active mutations; cap-skipped candidates never retry. Collection or expiry after 20 active seconds removes the specimen entirely. No secondary sprig, extra cell, grass influence, inventory, or progression. Shared scaled clicks collect before inspecting and close that specimen's card. Ordinary TCPNoise weeds and gnomes remain independent.
 - Static `Score: 0` with no JavaScript scoring/persistence state. Collection briefly shows `You collected some weed. +0 points` and optionally uses the existing quiet collection sound.
+- First-seen curiosities: exact sanitized live `seenCount === "1"` tries to create one visitor beside the exact successfully spawned/replaced specimen. The uniform initial pool is ladybug, snail, moth, and shiny pebble; at most three live for 20 seconds, with no queue or catch-up when full. Separate browser-memory state consumes no cells and affects no specimens, grass, or Recent activity. Locally bounded motion and glints share the cached renderer's 30 FPS overlay. Scaled clicks collect before mutations/inspection, show type-specific `+0 points`, and reuse quiet optional audio. Gnomes and mutations remain independent. Source count one does not establish global first-ever observation or uniqueness.
 - A small standalone About page explaining the project, data flow, visual metaphors, privacy boundary, weather, ecology, inspection, and the fact that the gnomes mean absolutely nothing.
 
 Very occasionally, a port-22 redbloom may itself become a collectible weed plant.
@@ -109,12 +110,9 @@ These are desired follow-ups, not descriptions of the code already implemented:
   with a rarer vine transformation and a separate bounded loose-drop layer.
 - **Mushroom -> Amanita muscaria collectible:** another future mutation/drop;
   no behavior or assets for it are implemented yet.
-- **First-seen curiosities:** when a successful live specimen has exact valid
-  `seenCount == "1"`, optionally produce a short-lived critter or dropped object
-  near it. Cap this layer at three active curiosities globally; when full, silently
-  skip rather than queue/catch up. Missing/unusable counts do not qualify.
-- Candidate first-seen curiosities include ladybugs, snails, moths, shiny pebbles,
-  odd seeds, and worthless coin-shaped objects. Clicking one may award `+0 points`.
+- **Additional curiosity/drop types:** odd seeds, worthless coin-shaped objects,
+  and other collectible drops remain future work beyond the four implemented visitors.
+- **Stillbloom / puddles:** quiet-only growth and weather residue remain future work.
 
 See [Ideas](IDEAS.md) for the broader pool and design constraints.
 
