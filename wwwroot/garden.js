@@ -779,6 +779,12 @@ function drawGarden() {
   drawRain(now);
 }
 
+function seedInitialGrass(now = Date.now()) {
+  const cell = Math.floor(Math.random() * columns * rows);
+  influenceGrassCell(cell % columns, Math.floor(cell / columns), now);
+}
+
+seedInitialGrass();
 new ResizeObserver(drawGarden).observe(canvas);
 window.addEventListener("resize", drawGarden);
 drawGarden();
