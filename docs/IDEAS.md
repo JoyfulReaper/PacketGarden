@@ -346,6 +346,10 @@ broadleaf growth. Possible later variation can use safe traits such as:
 - subtle sensor/network-class influence;
 - rare animation details.
 
+Vine palette tuning wishlist: make **aqua** the normal/default vine color and make
+**olive** a less-common cosmetic variant. This is purely visual tuning; it should
+not change vigor, TCPNoise meaning, placement, or backend rarity.
+
 Cosmetic rarity should stay distinct from backend TCPNoise rarity unless there is
 a deliberate reason to combine them.
 
