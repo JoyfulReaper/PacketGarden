@@ -388,3 +388,38 @@ State is held only in browser memory; reloading starts an empty garden.
 
 Focused wirefern mapping/rendering integration and structural performance checks
 run with `node tests/wirefern.cjs` and the backend checks project.
+
+## Browser performance diagnostics
+
+Open PacketGarden with `?perf=1` to show the compact browser-local profiler.
+It is off by default, is never saved, and sends no data to the server or elsewhere.
+The tool measures approximate `performance.now()` durations for base setup/layout,
+soil/grid/border, grass, puddles, specimens (vine/wirefern/other), and overlay
+setup, mutations, actors, curiosities, loose drops, and rain. It also reports
+repaint reasons, slow-refresh-only costs, render/lookup/neighbor/streak counts,
+16.7/33.3 ms budget counts, RAF gaps, canvas geometry/DPR, existing layout reads,
+backing resizes, and supported long-task observations. Long RAF gaps that contain
+a base completion are counted separately as correlation, not proof of causation.
+
+Last/average/max timings use bounded rings of 120 samples per stream; approximate
+rates count paints in the last second. One panel text replacement at most twice
+per second shares the existing logical tick. Counters/longest durations are
+session totals; `gardenPerf.reset()` in the development console clears measurements
+without changing the garden. There are no additional timers, layout reads, bitmap
+copies, persistence, profiler event listeners, or scenario buttons. The focused
+checks run with `node tests/performance-diagnostics.cjs`.
+
+Timings include instrumentation overhead and synchronous JS/Canvas submission;
+vine/wirefern/other are subdivisions of specimens, and lookup is included in setup.
+They do not measure GPU/compositor presentation or identify GC. FPS-cap skips are
+intentional scheduling decisions, not lost frames. Long tasks and RAF gaps are
+clues only; browser support for long tasks is optional. This is a development
+profiling tool, not user-facing telemetry.
+
+Allocation candidates to examine in a subsequent profiling/optimization slice:
+the base rebuild's Map and mutation-list slice; per-specimen color lookup callbacks
+and rare-color objects; weed/blackthorn drawing arrays; grass render palettes,
+interpolated-color arrays/strings; curiosity/drop position objects each overlay paint; and lifecycle filter
+arrays on the logical tick. Rain uses deterministic numeric streaks without a
+per-streak particle object. These paths are unchanged; no GC diagnosis or
+optimization is implied by the list.

@@ -1,7 +1,7 @@
 // Full browser-script integration with injected clock/rolls; no sleeps or audio device.
 const fs = require('node:fs'), vm = require('node:vm');
 
-function createGarden() {
+function createGarden(options = {}) {
   const html = fs.readFileSync('wwwroot/index.html', 'utf8');
   const clock = { now: 10_000 }, elements = new Map(), intervals = [], frames = new Map(), drawing = [];
   const documentHandlers = new Map(), windowHandlers = new Map();
@@ -24,7 +24,7 @@ function createGarden() {
   const context = makeContext('base'), overlayContext = makeContext('overlay');
   const element = selector => {
     if (!elements.has(selector)) elements.set(selector, {
-      hidden: selector === '#specimen-card' || selector === '#collection-message',
+      hidden: selector === '#specimen-card' || selector === '#collection-message' || selector === '#garden-perf',
       textContent: selector === '#garden-score' ? html.match(/id="garden-score"[^>]*>([^<]*)</)[1] : '',
       checked: selector === '#show-recent-activity' && /id="show-recent-activity"[^>]*\bchecked\b/.test(html),
       style: {}, offsetWidth: 280, offsetHeight: 240,
@@ -61,6 +61,7 @@ function createGarden() {
       addEventListener(name, handler) { addHandler(documentHandlers, name, handler); }
     }, EventSource: Source, ResizeObserver: class { observe() {} },
     window: {
+      location: { search: options.search ?? '' }, PerformanceObserver: options.PerformanceObserver,
       innerWidth: 1200, innerHeight: 900, devicePixelRatio: 2,
       addEventListener(name, handler) { addHandler(windowHandlers, name, handler); },
       setInterval(handler, delay) { intervals.push({ handler, delay }); return intervals.length; },

@@ -1,5 +1,6 @@
 const canvas = document.querySelector("canvas");
 let context = canvas.getContext("2d");
+const gardenPerf = typeof createGardenPerformanceDiagnostics === "function" ? createGardenPerformanceDiagnostics() : null;
 const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
@@ -137,7 +138,7 @@ function weatherIntensity() {
 
 function updateWeatherAnimation() {
   if (typeof updatePuddleWeather === "function") updatePuddleWeather(Date.now());
-  if (weatherSoilDarkening() !== lastBaseSoilDarkening) gardenBaseDirty = true;
+  if (weatherSoilDarkening() !== lastBaseSoilDarkening) { gardenBaseDirty = true; gardenPerf?.reason("weather-soil"); }
   paintGardenBase();
   drawGardenOverlay(true);
   syncWeatherAnimation();
@@ -146,6 +147,7 @@ function updateWeatherAnimation() {
 function animateWeather(frameTime = performance.now()) {
   weatherAnimationFrame = null;
   if (document.hidden) return;
+  gardenPerf?.raf(frameTime);
   const now = Date.now();
   if (gardenState.actors.length && typeof advanceGnomeIncident === "function") advanceGnomeIncident(now);
   drawGardenOverlay(false, now, frameTime);
@@ -155,6 +157,7 @@ function animateWeather(frameTime = performance.now()) {
 function syncWeatherAnimation() {
   const needed = !document.hidden && gardenView !== null && ((weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0)
     || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0 || gardenState.drops.length > 0 || gardenState.actors.length > 0);
+  if (!needed) gardenPerf?.pauseRaf();
   if (!needed && weatherAnimationFrame !== null) {
     window.cancelAnimationFrame(weatherAnimationFrame);
     weatherAnimationFrame = null;
@@ -368,7 +371,7 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0, onCreated
   if (grassEventType) influenceGrass(grassEventType, specimen);
 
   updateGardenStatus();
-  drawGarden();
+  drawGarden("specimen-change");
   gardenSound.maybePlayGrowthSound(specimenType);
   return specimen;
 }
@@ -419,10 +422,12 @@ function influenceGrassCell(column, row, now) {
     if (grass.lastInfluencedAt !== now) {
       grass.lastInfluencedAt = now;
       gardenBaseDirty = true;
+      gardenPerf?.reason("grass-change");
     }
   } else {
     gardenState.grassCells.push({ column, row, createdAt: now, lastInfluencedAt: now });
     gardenBaseDirty = true;
+    gardenPerf?.reason("grass-change");
   }
 }
 
@@ -474,17 +479,18 @@ function updateGarden(now = Date.now()) {
   if (remaining.length !== gardenState.specimens.length) {
     gardenState.specimens = remaining;
     gardenBaseDirty = true;
+    gardenPerf?.reason("specimen-change");
     updateGardenStatus();
   }
-  if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) gardenBaseDirty = true;
+  if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) { gardenBaseDirty = true; gardenPerf?.reason("specimen-change"); }
   const grassCount = gardenState.grassCells.length;
   gardenState.grassCells = gardenState.grassCells.filter(
     grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
   );
-  if (gardenState.grassCells.length !== grassCount) gardenBaseDirty = true;
+  if (gardenState.grassCells.length !== grassCount) { gardenBaseDirty = true; gardenPerf?.reason("grass-change"); }
   const remainingGrassCount = gardenState.grassCells.length;
   if (gardenState.grassCells.length > 0) spreadGrass(now);
-  if (gardenState.grassCells.length !== remainingGrassCount) gardenBaseDirty = true;
+  if (gardenState.grassCells.length !== remainingGrassCount) { gardenBaseDirty = true; gardenPerf?.reason("grass-change"); }
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -1070,6 +1076,7 @@ function drawRain(now) {
   const weather = weatherLevels.get(weatherState.level);
   if (weather.drops === 0 || intensity === 0) return;
   const drops = Math.min(400, Math.round(weather.drops * (0.25 + intensity * 0.75)));
+  gardenPerf?.rain(drops);
   const speed = weather.speed * (0.6 + intensity * 0.4);
 
   context.save();
@@ -1108,6 +1115,8 @@ let vineCellLookup = null;
 const animatedSpecimens = [];
 
 function buildVineCellLookup(now) {
+  const startedAt = gardenPerf ? performance.now() : 0;
+  gardenPerf?.count("vineLookupBuilds");
   const lookup = new Map();
   for (const specimen of gardenState.specimens) {
     if (specimen.type !== "vine") continue;
@@ -1116,20 +1125,28 @@ function buildVineCellLookup(now) {
       lookup.set(specimen.row * columns + specimen.column, specimen);
     }
   }
+  gardenPerf?.lookup(startedAt);
   return lookup;
 }
 
 function vineNeighborAt(lookup, column, row) {
+  gardenPerf?.count("vineNeighborChecks");
   if (column < 0 || column >= columns || row < 0 || row >= rows) return null;
   return lookup.get(row * columns + column) ?? null;
 }
 
 function resizeCanvasBacking(target, width, height) {
+  if (gardenPerf && (target.width !== width || target.height !== height)) {
+    gardenPerf.count("backingResizes");
+    gardenPerf.count("backingWrites", Number(target.width !== width) + Number(target.height !== height));
+  }
   if (target.width !== width) target.width = width;
   if (target.height !== height) target.height = height;
 }
 
 function rebuildGardenBase(now) {
+  gardenPerf?.begin("base");
+  gardenPerf?.count("layoutReads");
   const { width, height } = canvas.getBoundingClientRect();
   if (width <= 0 || height <= 0) { gardenView = null; return false; }
 
@@ -1154,6 +1171,7 @@ function rebuildGardenBase(now) {
     context.clearRect(0, 0, width, height);
     context.translate(gardenView.offsetX, gardenView.offsetY);
     context.scale(scale, scale);
+    gardenPerf?.mark("base", "setup");
 
     context.fillStyle = "#685b45";
     context.fillRect(0, 0, gardenWidth, gardenHeight);
@@ -1176,19 +1194,25 @@ function rebuildGardenBase(now) {
     context.strokeStyle = "#9a9871";
     context.lineWidth = 6;
     context.strokeRect(0, 0, gardenWidth, gardenHeight);
+    gardenPerf?.mark("base", "soil");
 
     for (const grass of gardenState.grassCells) {
       drawGrass(grass, now);
     }
+    gardenPerf?.mark("base", "grass");
     if (typeof drawGardenPuddles === "function") drawGardenPuddles(now);
+    gardenPerf?.mark("base", "puddles");
     animatedSpecimens.length = 0;
     for (const specimen of gardenState.specimens) {
       if (specimen.mutation && typeof drawSpecimenMutation === "function") {
         animatedSpecimens.push(specimen);
       } else {
+        const startedAt = gardenPerf ? performance.now() : 0;
         speciesConfig.get(specimen.type).render(specimen, now);
+        gardenPerf?.specimen(specimen.type, startedAt);
       }
     }
+    gardenPerf?.mark("base", "specimens");
   } finally {
     context = visibleContext;
     vineCellLookup = null;
@@ -1198,6 +1222,7 @@ function rebuildGardenBase(now) {
   gardenBaseDirty = false;
   nextBaseVisualAt = now + rendererConfig.slowVisualRefreshMs;
   lastBaseSoilDarkening = weatherSoilDarkening();
+  gardenPerf?.end("base");
   return true;
 }
 
@@ -1209,8 +1234,9 @@ function paintGardenBase(now = Date.now()) {
 function drawGardenOverlay(force = false, now = Date.now(), frameTime = performance.now()) {
   if (document.hidden) return false;
   // All dynamic objects and weather share the same scheduler and FPS budget.
-  if (!force && frameTime - lastOverlayAt + 0.001 < 1000 / rendererConfig.animationFps) return false;
+  if (!force && frameTime - lastOverlayAt + 0.001 < 1000 / rendererConfig.animationFps) { gardenPerf?.count("fpsSkips"); return false; }
   if (!gardenView) return false;
+  gardenPerf?.begin("overlay", force);
   lastOverlayAt = frameTime;
   const previousContext = context;
   context = gardenOverlayContext;
@@ -1219,20 +1245,28 @@ function drawGardenOverlay(force = false, now = Date.now(), frameTime = performa
     context.clearRect(0, 0, gardenOverlayCanvas.width, gardenOverlayCanvas.height);
     const { pixelRatio, scale, offsetX, offsetY } = gardenView;
     context.setTransform(pixelRatio * scale, 0, 0, pixelRatio * scale, offsetX * pixelRatio, offsetY * pixelRatio);
+    gardenPerf?.mark("overlay", "setup");
     for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
+    gardenPerf?.mark("overlay", "mutations");
     if (typeof drawGardenActors === "function") drawGardenActors(now);
+    gardenPerf?.mark("overlay", "actors");
     if (typeof drawLooseDrops === "function") drawLooseDrops(now);
+    gardenPerf?.mark("overlay", "drops");
     if (typeof drawFirstSeenCuriosities === "function") drawFirstSeenCuriosities(now);
+    gardenPerf?.mark("overlay", "curiosities");
     drawRain(now);
+    gardenPerf?.mark("overlay", "rain");
   } finally {
     context = previousContext;
   }
   gardenOverlayDirty = false;
+  gardenPerf?.end("overlay");
   return true;
 }
 
 // Actual ecology changes repaint immediately. Routine logical ticks do not call this.
-function drawGarden() {
+function drawGarden(reason = "state-change") {
+  gardenPerf?.reason(reason);
   gardenBaseDirty = true;
   paintGardenBase();
   drawGardenOverlay(true);
@@ -1240,12 +1274,13 @@ function drawGarden() {
 }
 
 function resizeGarden() {
-  if (document.hidden) { gardenBaseDirty = true; return; }
+  if (document.hidden) { gardenBaseDirty = true; gardenPerf?.reason("resize"); return; }
+  gardenPerf?.count("layoutReads");
   const { width, height } = canvas.getBoundingClientRect();
   const pixelRatio = Math.min(window.devicePixelRatio || 1, rendererConfig.maxPixelRatio);
   // Window resize and ResizeObserver can report the same change; rebuild once.
   if (!gardenView || width !== gardenView.width || height !== gardenView.height
-    || pixelRatio !== gardenView.pixelRatio) drawGarden();
+    || pixelRatio !== gardenView.pixelRatio) drawGarden("resize");
 }
 
 function seedInitialGrass(count = 5, now = Date.now()) {
@@ -1263,37 +1298,40 @@ seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
-  if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) gardenBaseDirty = true;
+  if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
   if (document.hidden) syncWeatherAnimation();
   else {
     if (typeof updateFirstSeenCuriosities === "function") updateFirstSeenCuriosities(Date.now());
     updateGarden();
     if (typeof updateLooseDrops === "function") updateLooseDrops(Date.now());
     if (typeof advanceGnomeIncident === "function") advanceGnomeIncident(Date.now(), undefined, false);
-    drawGarden(); // Refresh once at current time, never replay missed frames.
+    drawGarden("resume"); // Refresh once at current time, never replay missed frames.
   }
 });
 window.addEventListener("pagehide", () => {
+  gardenPerf?.dispose();
   if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);
   weatherAnimationFrame = null;
   if (typeof finishGnomeIncident === "function") finishGnomeIncident(false);
 });
-drawGarden();
+drawGarden("initial");
 
 // Logical cleanup stays at 250 ms; otherwise age-driven ecology paints at most once a second.
 window.setInterval(() => {
   const now = Date.now();
-  if (typeof updateGardenPuddles === "function" && updateGardenPuddles(now)) gardenBaseDirty = true;
+  if (typeof updateGardenPuddles === "function" && updateGardenPuddles(now)) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
   if (typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(now)) gardenOverlayDirty = true;
   if (typeof updateCollectionMessage === "function") updateCollectionMessage(now);
   updateGarden(now);
   if (typeof updateLooseDrops === "function" && updateLooseDrops(now)) gardenOverlayDirty = true;
   if (now >= nextBaseVisualAt && (gardenState.specimens.length || gardenState.grassCells.length || gardenState.puddles.length)) {
     gardenBaseDirty = true;
+    gardenPerf?.reason("slow-visual-refresh");
   }
   paintGardenBase(now);
   if (typeof updateAmbientEvents === "function") updateAmbientEvents(now);
   if (gardenOverlayDirty) drawGardenOverlay(true, now);
   syncWeatherAnimation();
   if (typeof updateRecentActivity === "function") updateRecentActivity(now);
+  gardenPerf?.updatePanel();
 }, updateEveryMs);

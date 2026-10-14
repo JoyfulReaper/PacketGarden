@@ -76,6 +76,7 @@ function closeSpecimenCard() {
 }
 
 function gardenPointFromClient(clientX, clientY) {
+  if (typeof gardenPerf !== "undefined") gardenPerf?.count("layoutReads");
   const rect = canvas.getBoundingClientRect();
   const scale = Math.min(
     rect.width / (gardenWidth + margin * 2),

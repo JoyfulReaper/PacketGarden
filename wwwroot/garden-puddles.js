@@ -35,6 +35,7 @@ function removeExpiredPuddles(now) {
   if (active.length === gardenState.puddles.length) return false;
   gardenState.puddles = active;
   gardenBaseDirty = true;
+  gardenPerf?.reason("puddle-change");
   return true;
 }
 
@@ -73,6 +74,7 @@ function createStormPuddle(now, random = Math.random) {
   };
   gardenState.puddles.push(puddle);
   gardenBaseDirty = true;
+  gardenPerf?.reason("puddle-change");
   return puddle;
 }
 
@@ -82,6 +84,7 @@ function refreshStormPuddle(puddle, now) {
   puddle.maxSize = Math.min(puddleConfig.maxSize, puddle.maxSize + puddleConfig.growthPerRefresh);
   puddle.lastRefreshedAt = now;
   gardenBaseDirty = true;
+  gardenPerf?.reason("puddle-change");
 }
 
 // One attempt at most on the existing garden tick, even after a long pause.
