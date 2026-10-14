@@ -66,6 +66,10 @@ canvas {
   cursor: pointer;
 }
 
+main[aria-label="Garden"] {
+  position: relative;
+}
+
 footer {
   flex: none;
   display: flex;
@@ -123,10 +127,10 @@ button:disabled, select:disabled, input:disabled {
 }
 
 .collection-message {
-  position: fixed;
+  position: absolute;
   z-index: 10;
   left: 50%;
-  bottom: 130px;
+  bottom: 12px;
   transform: translateX(-50%);
   max-width: calc(100vw - 24px);
   padding: 6px 10px;
