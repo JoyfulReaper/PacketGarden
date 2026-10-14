@@ -28,7 +28,7 @@
       An empty rectangular soil garden with a subtle square grid.
     </canvas>
     <div id="collection-message" class="collection-message" role="status" hidden></div>
-    <section class="recent-activity" aria-label="Recent activity">
+    <section id="recent-activity" class="recent-activity" aria-label="Recent activity">
       <h2>Recent activity</h2>
       <ol>
         <li id="recent-event-0" hidden></li>
@@ -73,6 +73,10 @@
     <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
     <label for="sound-volume">Volume</label>
     <input id="sound-volume" type="range" min="0" max="100" value="12" aria-label="Growth sound volume">
+    <label class="recent-activity-toggle" for="show-recent-activity">
+      <input id="show-recent-activity" type="checkbox" checked>
+      Recent events
+    </label>
   </div>
   <footer aria-label="Temporary development controls">
     <button id="fake-dns" type="button">Generate fake DNS event</button>
