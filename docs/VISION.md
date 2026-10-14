@@ -162,7 +162,8 @@ sensors / Mission Control / protocol services
 The browser should not need direct NATS access.
 
 SSE is the current choice for the initial backend-to-browser transport. NATS
-ingestion and SSE are planned, not implemented. Aggregate activity can influence
+ingestion remains planned; SSE already delivers aggregate weather from Noise Observatory.
+Aggregate activity can influence
 weather, while discrete events can influence specimens; see [Real data](REAL-DATA.md).
 
 A normalized event should contain only the data needed to influence the garden, such as event type, source, timestamp, intensity, duration, and safe tags.

@@ -51,7 +51,9 @@ normalized events / environmental state
 browser garden state / renderer
 ```
 
-The browser should not connect directly to NATS. SSE is the planned initial backend-to-browser transport; neither NATS ingestion nor SSE is implemented yet. See [Real data](docs/REAL-DATA.md) for the next integration phase.
+The browser does not connect directly to external sources. SSE now delivers live
+aggregate weather from the PacketGarden backend; NATS-backed discrete events
+remain planned. See [Real data](docs/REAL-DATA.md).
 
 A fake-event generator remains useful for development and demos and should feed the same normalized event model.
 
@@ -82,7 +84,8 @@ PacketGarden uses:
 - HTML/CSS plus Canvas for the garden;
 - vanilla JavaScript.
 
-Backend adapters consuming NATS and an SSE stream to the browser are planned.
+An HttpClient weather adapter polls Noise Observatory and streams normalized
+weather through SSE. Backend adapters consuming NATS for discrete events remain planned.
 
 The visual simulation is the interesting part. Avoid building infrastructure before the garden itself is fun to watch.
 
@@ -118,12 +121,13 @@ the new specimen, for at most two grass cells per event. Grass does not occupy
 specimen slots or affect their counts. Strength is capped at 3; grass fades after 20 minutes
 without influence and disappears after 30. Re-influence refreshes that timer.
 
-Manual browser weather previews quiet, drizzle, rain, heavy rain, botnet
-thunderstorm, and botnet hurricane. The Events/min input adjusts visual intensity;
-weather does not affect organisms or grass.
+Weather supports Manual previews and Live aggregate weather from Noise
+Observatory through the backend and SSE. Both use the same renderer for quiet,
+drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
+not affect organisms or grass.
 
-Real sensors, NATS adapters, and SSE are not implemented. Inspection, local-time
-lighting, persistence, ecological competition, and real aggregate weather input
+Real discrete specimen events and NATS adapters are not implemented. Inspection,
+local-time lighting, persistence, and ecological competition
 remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
@@ -142,11 +146,23 @@ Click **Start automatic fake traffic** to leave the garden running, and
 **Stop automatic fake traffic** to pause arrivals without resetting the garden.
 Manual buttons remain available while automatic traffic runs.
 
-Use the **Weather** selector and **Events/min** input to preview environmental
+Weather source defaults to **Manual**. Choose **Live** to receive weather from
+the backend; manual weather inputs are disabled until you switch back. A small
+status reports SSE connection/reconnection. Disconnection retains the last
+weather and garden state, without switching to fake weather.
+
+In Manual mode, use the **Weather** selector and **Events/min** input to preview environmental
 rain separately from fake specimen traffic. Quiet restores the normal garden;
 zero intensity also removes the rain and dampening tint. Larger values increase
 rain density, speed, and soil darkening, saturating visually at 10,000 events/min.
 Storm levels currently scale the same rainfall, without lightning or damage.
+
+The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
+5-second timeout. It trusts the source level and exposes only `level` and
+`eventsPerMinute` at `/api/garden/events`. Failures retain the last valid pair;
+before the first valid fetch, the backend starts with quiet/0. For local adapter
+testing, override the source using the ASP.NET configuration key
+`Weather:SnapshotUrl` (environment variable `Weather__SnapshotUrl`).
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and failed auth 2.

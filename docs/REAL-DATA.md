@@ -1,11 +1,46 @@
 # PacketGarden Real Data
 
-## Next integration phase
+## Implemented live aggregate weather
 
 The browser prototype already has five event mappings, clustered placement,
-species lifecycles, and weighted fake traffic. The backend currently serves static
-files. Manual browser weather is a visual preview only. Real sensor ingestion,
-NATS adapters, SSE, and aggregate environmental weather input are not implemented.
+species lifecycles, and weighted fake traffic. The backend serves the browser and
+now delivers live aggregate weather from Noise Observatory:
+
+```text
+Noise Observatory /api/snapshot
+    -> PacketGarden HttpClient adapter -> normalized weather -> SSE -> browser weather renderer
+```
+
+The adapter polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
+5-second request timeout. The Observatory's `level` is authoritative; PacketGarden
+does not reproduce its category thresholds. Supported levels are `quiet`,
+`drizzle`, `rain`, `heavy_rain`, `botnet_thunderstorm`, and `botnet_hurricane`.
+
+Only the latest normalized pair is retained. Unsupported levels, missing fields,
+invalid JSON, and non-finite/non-numeric rates are rejected. Finite rates are
+clamped to 0–1,000,000 without changing the source level. Fetch/parsing failures
+retain the last valid state. Before the first successful fetch, the fallback is
+quiet/0. One warning per outage and a recovery message avoid repeated stack logs.
+
+`/api/garden/events` sends the current state immediately and sends another frame
+only when the normalized pair changes. SSE framing is:
+
+```text
+event: weather
+data: {"level":"rain","eventsPerMinute":29.8}
+
+```
+
+Each frame ends with a blank line. The browser talks only to PacketGarden using
+`EventSource`. Manual is the default source mode; Live disables manual weather
+inputs and updates the existing renderer. SSE disconnection shows a small status,
+retains weather/ecology, and uses normal EventSource reconnection. Switching
+source modes does not reset the garden. Weather still has no ecological effects.
+
+The full Observatory response is never forwarded. Browser-facing weather has
+only `level` and `eventsPerMinute`; this is separate from discrete `GardenEvent`s.
+
+## Still-planned discrete integration
 
 The intended path is:
 
@@ -23,7 +58,8 @@ normalized garden events/environmental state
 existing browser ecology
 ```
 
-SSE is the current design choice for the initial backend-to-browser transport.
+SSE is already implemented for aggregate weather and remains the transport choice
+for future discrete input. NATS ingestion and real specimen events are not implemented.
 The browser should receive normalized input rather than connect directly to
 NATS. Adapters translate sensor/service observations into garden meanings while
 keeping the existing browser state, update loop, and renderer as the foundation.
@@ -38,13 +74,15 @@ events should use the same browser handling path.
 Aggregate/background activity represents pressure over a time window. It can
 drive environmental state such as drizzle, rain, or heavy rain rather than
 spawning one specimen for every packet, probe, or volume sample. Weather should
-ease when that pressure subsides; thresholds and smoothing still need to be
-chosen. Traffic quietness does not determine local-time lighting.
+ease when that pressure subsides. The live weather adapter accepts the
+Observatory's category rather than inferring one locally. Additional environmental
+effects remain future work. Traffic quietness does not determine local-time lighting.
 
 High volume should not necessarily create one new permanent specimen per event.
 Repeated events may strengthen, spread, bloom, mutate, or otherwise influence
-existing growth. The current prototype only spawns into empty cells; these richer
-responses and environmental effects remain work to implement.
+existing growth. The current main-specimen handler only spawns into empty cells;
+richer specimen responses remain work to implement. Grass strengthening is a
+separate existing effect of successful fake DNS/HTTP spawns.
 
 ## Preserve sensor meaning
 
@@ -70,7 +108,8 @@ Normalized input may include only safe coarse fields useful to the garden:
 - duration or aggregation window;
 - sanitized tags describing coarse traits.
 
-This is a direction for adapters, not a finalized schema. The current browser
+These fields describe future discrete adapters, not the current two-field weather
+stream or a finalized schema. The current browser
 `GardenEvent` contains only `type`; add fields as concrete effects need them.
 Normalize and sanitize before sending data to the browser. Do not include private
 addresses, credentials, raw packets, payloads, or unnecessary infrastructure
@@ -79,8 +118,8 @@ splitting the shared garden into network-specific plots.
 
 ## Scope
 
-Begin with a small adapter path and SSE delivery of supported discrete events.
-Add aggregate environmental state deliberately when its browser effect exists.
+The aggregate-weather vertical slice is implemented without NATS. Next, add a
+small NATS adapter path and SSE delivery of supported discrete events.
 Inspection, local-time lighting, persistence, and ecological competition remain
 separate unfinished MVP work; this plan does not imply they are implemented.
 

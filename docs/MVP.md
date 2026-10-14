@@ -17,6 +17,7 @@ goals, with the existing browser garden as the starting point.
 - Simple procedural art, including visual connections between neighboring vine cells.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
+- Live aggregate weather from Noise Observatory through backend polling and weather-only SSE, sharing the manual renderer.
 - One normalized browser event path: `GardenEvent -> handler -> specimen state -> update -> renderer`.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
@@ -39,8 +40,8 @@ re-influence refreshes their timer and can strengthen them up to 3.
 - Deliberately simple persistence across browser/server restarts.
 - Light ecological competition, without health bars or management mechanics.
 - Event effects that strengthen, bloom, spread, mutate, or influence existing growth when new placement is unsuitable.
-- Real sensor/service input through NATS, backend normalization, and SSE delivery.
-- Aggregate activity pressure driving weather/environment, rather than treating every traffic sample as a specimen spawn.
+- Real discrete sensor/service events through NATS and backend normalization; SSE currently carries weather only.
+- Additional environmental/ecological responses to aggregate pressure beyond the existing visual weather layer.
 
 These capabilities are not implemented. The current handler creates one specimen
 per accepted fake event when an empty cell exists and does nothing when the grid
@@ -66,7 +67,7 @@ sensors/services -> NATS -> backend adapters
     -> normalized garden events/environmental state -> SSE -> browser garden
 ```
 
-SSE is the planned initial transport, not an existing feature. The browser must
+SSE is implemented for live aggregate weather and planned for future discrete events. The browser must
 not connect directly to NATS. Backend adapters should distinguish genuine
 protocol/authentication telemetry from probes and aggregate volume.
 

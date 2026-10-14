@@ -3,9 +3,10 @@
 These mappings are intentionally playful and provisional. The goal is to create visually distinct behavior, not to encode a perfect taxonomy of network traffic.
 
 The five mappings listed in the prototype subset below are implemented with fake
-events. Other effects in this table are proposals; real telemetry adapters,
-aggregate weather input, weeds, and mutations are not implemented. Manual weather
-controls preview rainfall without consuming telemetry or affecting ecology.
+events. Other organism effects in this table are proposals; real discrete event
+adapters, weeds, and mutations are not implemented. Manual weather and live
+aggregate weather from Noise Observatory share the visual renderer without
+affecting ecology.
 
 | Event | Garden effect | Notes |
 | --- | --- | --- |
@@ -46,7 +47,8 @@ auth telemetry. Port numbers alone do not establish either meaning.
 Discrete events can influence specimens. Aggregate activity pressure can drive
 weather/environment, with volume summarized over time rather than expanded into
 one spawn per sample. See [Real data](REAL-DATA.md) for the intended NATS adapter
-and SSE path. These are current design choices, not implemented integrations.
+and SSE path. Aggregate weather polling and SSE are implemented; NATS-backed
+discrete events remain planned.
 
 ## First prototype subset
 

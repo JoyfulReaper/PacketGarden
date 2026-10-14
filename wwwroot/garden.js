@@ -9,6 +9,48 @@ const automaticTrafficButton = document.querySelector("#automatic-traffic");
 const gardenStatus = document.querySelector("#garden-status");
 const weatherLevelControl = document.querySelector("#weather-level");
 const weatherIntensityControl = document.querySelector("#weather-intensity");
+const weatherSourceControl = document.querySelector("#weather-source");
+const weatherStatus = document.querySelector("#weather-status");
+let liveWeatherSource = null;
+
+weatherSourceControl.addEventListener("change", () => {
+  if (liveWeatherSource) liveWeatherSource.close();
+  liveWeatherSource = null;
+  const live = weatherSourceControl.value === "live";
+  weatherLevelControl.disabled = live;
+  weatherIntensityControl.disabled = live;
+  if (!live) {
+    weatherStatus.textContent = "Manual weather";
+    return;
+  }
+
+  weatherStatus.textContent = "Live weather connecting";
+  const source = new EventSource("/api/garden/events");
+  liveWeatherSource = source;
+  source.onopen = () => {
+    if (liveWeatherSource === source) weatherStatus.textContent = "Live weather connected";
+  };
+  source.onerror = () => {
+    if (liveWeatherSource === source) weatherStatus.textContent = "Live weather disconnected";
+  };
+  source.addEventListener("weather", message => {
+    if (liveWeatherSource !== source) return;
+    try {
+      const state = JSON.parse(message.data);
+      if (!weatherLevels.has(state.level) || typeof state.eventsPerMinute !== "number" || !Number.isFinite(state.eventsPerMinute)) {
+        throw new Error("Invalid weather state");
+      }
+      weatherState.level = state.level;
+      weatherState.eventsPerMinute = Math.min(1_000_000, Math.max(0, state.eventsPerMinute));
+      weatherLevelControl.value = weatherState.level;
+      weatherIntensityControl.value = String(weatherState.eventsPerMinute);
+      weatherStatus.textContent = "Live weather connected";
+      updateWeatherAnimation();
+    } catch {
+      weatherStatus.textContent = "Live weather update invalid";
+    }
+  });
+});
 
 const weatherState = { level: "quiet", eventsPerMinute: 1200 };
 const weatherLevels = new Map([
