@@ -72,6 +72,21 @@
     </section>
 
     <section>
+      <h2>Click a plant</h2>
+      <p>
+        Specimens grown from live TCPNoise events can be clicked for a small provenance card. It
+        shows the specimen, the sensor that observed it, listening port, exact collector seen count,
+        coarse vigor, color scheme, and current age. Development/fake specimens identify themselves
+        as simulated instead of pretending to have network provenance.
+      </p>
+      <p>
+        The seen count is shown exactly as reported by TCPNoise, while vigor remains the bounded 0–3
+        value used by the visual ecology. The inspection card is informational only; clicking a
+        plant does not change the garden.
+      </p>
+    </section>
+
+    <section>
       <h2>Vigor, rarity, and weird colors</h2>
       <p>
         Repeated observations are reduced to a coarse <strong>vigor</strong> value from 0 to 3.
@@ -130,14 +145,16 @@
     <section>
       <h2>Privacy</h2>
       <p>
-        The browser does not receive raw packet contents, credentials, sensor names, remote IP
-        addresses, or exact repeat counts. Live specimen events are reduced to the visual specimen
-        type, listening port, and coarse vigor value needed to render the garden.
+        Live specimen events expose only the normalized specimen type, listening port, coarse vigor,
+        bounded sensor label, and exact TCPNoise seen count needed for visualization and click
+        inspection. The count is sent as text so large unsigned values are not rounded by JavaScript.
       </p>
       <p>
-        PacketGarden is an ambient visualization, not a packet inspector, SIEM, IDS, or forensic
-        tool. If something looks ominous, that is because the garden is dramatic, not because it has
-        decided somebody is malicious.
+        Raw packet contents, credentials, banners, remote IP addresses, remote source ports, and
+        unrelated collector payload fields are not sent to the browser. PacketGarden is an ambient
+        visualization, not a packet inspector, SIEM, IDS, or forensic tool. If something looks
+        ominous, that is because the garden is dramatic, not because it has decided somebody is
+        malicious.
       </p>
     </section>
 
