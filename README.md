@@ -201,8 +201,8 @@ Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
 not affect organisms or grass. A base ecology Canvas repaints on actual state
-changes and at a bounded one-second cadence for visual aging; logical cleanup
-still runs every 250 ms. A separate transparent overlay Canvas handles weather,
+changes or the earliest known visual deadline; mature/static ecology has no
+recurring one-second repaint. Logical cleanup still runs every 250 ms. A separate transparent overlay Canvas handles weather,
 gnomes, mutations, curiosities, and loose drops through one roughly 30 FPS scheduler, without
 copying the base bitmap. Dense vines share one local cell lookup per base repaint.
 Hidden tabs pause painting and resume once at current time, without catch-up.
@@ -396,7 +396,8 @@ It is off by default, is never saved, and sends no data to the server or elsewhe
 The tool measures approximate `performance.now()` durations for base setup/layout,
 soil/grid/border, grass, puddles, specimens (vine/wirefern/other), and overlay
 setup, mutations, actors, curiosities, loose drops, and rain. It also reports
-repaint reasons, slow-refresh-only costs, render/lookup/neighbor/streak counts,
+repaint reasons, visual-deadline-only costs, the next visual deadline/time until it,
+render/lookup/neighbor/streak counts,
 16.7/33.3 ms budget counts, RAF gaps, canvas geometry/DPR, existing layout reads,
 backing resizes, and supported long-task observations. Long RAF gaps that contain
 a base completion are counted separately as correlation, not proof of causation.
@@ -423,3 +424,33 @@ interpolated-color arrays/strings; curiosity/drop position objects each overlay 
 arrays on the logical tick. Rain uses deterministic numeric streaks without a
 per-streak particle object. These paths are unchanged; no GC diagnosis or
 optimization is implied by the list.
+
+Base rendering uses one aggregate absolute visual deadline, computed only after
+an actual rebuild. Ordinary logical ticks compare the stored deadline rather than
+rescanning objects. All current specimen renderers change at discrete growth,
+maturity, fade/drying/wilting, and expiry boundaries; their drawings at a given age
+are unchanged. Mature specimens wait until the next such boundary, including vine
+connectivity eligibility. Grass geometry interpolates during growth, and its
+geometry/opacity/color interpolate during fading, so those active intervals retain
+approximately one-second visual updates. Stable mature grass waits for fading.
+
+Puddle deadlines invert the existing linear growth, square-root drainage size,
+and linear drainage opacity. A redraw is due after 0.5 logical units of main-radius
+change (under 0.58 pixels including offset/rotated ellipse edges), or 0.02 fill-opacity
+change, whichever occurs first; final growth size and expiry are also preserved.
+This avoids one full-garden repaint per second for sub-pixel drainage changes.
+Any unrelated real repaint reanchors these thresholds to what was actually drawn.
+Puddle formation probabilities, refresh, hold time, and eight-minute drainage are
+unchanged, as are grass ecology and all specimen lifetimes/appearance.
+
+Actual state changes, soil tint changes, and resizing still invalidate immediately
+and recompute the deadline. Hidden pages do not paint or replay missed visual
+steps. Resume reconciles current logical state, repaints the base at most once if
+dirty or a visual deadline was crossed, and preserves the cached base if unchanged.
+The overlay remains independent. No layers or per-object timers were added.
+`node tests/base-visual-scheduling.cjs` covers 30-second mature mixed/vine/wirefern
+scenes with zero recurring base work, lifecycle boundaries, grass interpolation,
+meaningful puddle steps, invalidation, and hidden/resume behavior. This removes
+known unnecessary work; it does not establish a fix for unexplained RAF gaps.
+The profiler also displays the existing session-longest RAF gap so earlier stalls
+remain visible after they leave the rolling 120-sample window.

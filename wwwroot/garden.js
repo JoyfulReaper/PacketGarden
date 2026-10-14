@@ -1100,7 +1100,7 @@ function drawRain(now) {
 }
 
 // The browser composites a persistent ecology canvas and a transparent animation canvas.
-const rendererConfig = { animationFps: 30, maxPixelRatio: 2, slowVisualRefreshMs: 1_000 };
+const rendererConfig = { animationFps: 30, maxPixelRatio: 2, continuousVisualRefreshMs: 1_000 };
 const gardenBaseCanvas = canvas;
 const gardenBaseContext = context;
 const gardenOverlayCanvas = document.querySelector("#garden-overlay");
@@ -1109,10 +1109,56 @@ let gardenBaseDirty = true;
 let gardenOverlayDirty = false;
 let gardenView = null;
 let lastOverlayAt = -Infinity;
-let nextBaseVisualAt = 0;
+let nextBaseVisualAt = null;
 let lastBaseSoilDarkening = null;
 let vineCellLookup = null;
 const animatedSpecimens = [];
+
+// Current specimen renderers use discrete stages, including vine connectivity at growing.
+// Active mutations render entirely on the overlay and are removed by logical cleanup.
+function nextSpecimenVisualChangeAt(specimen, now) {
+  if (specimen.mutation) return null;
+  const timings = speciesConfig.get(specimen.type).timings;
+  let next = Infinity;
+  for (const stage in timings) {
+    const at = specimen.createdAt + timings[stage];
+    if (at > now) next = Math.min(next, at);
+  }
+  return Number.isFinite(next) ? next : null;
+}
+
+function nextGrassVisualChangeAt(grass, now) {
+  const maturity = grass.createdAt + grassConfig.matureAfterMs;
+  const fade = grass.lastInfluencedAt + grassConfig.fadingAfterMs;
+  const expiry = grass.lastInfluencedAt + grassConfig.expiredAfterMs;
+  if (now >= expiry) return null;
+  let next = expiry;
+  // Geometry interpolates through growth, and geometry/opacity/color interpolate through fade.
+  if (now < maturity || now >= fade) next = Math.min(next, now + rendererConfig.continuousVisualRefreshMs);
+  for (const at of [grass.createdAt + grassConfig.growingAfterMs, maturity, fade,
+    grass.lastInfluencedAt + grassConfig.dyingAfterMs, grass.lastInfluencedAt + grassConfig.deadAfterMs]) {
+    if (at > now) next = Math.min(next, at);
+  }
+  return next;
+}
+
+// Recompute only with a rebuilt base. The 250 ms logical tick reads this one stored deadline.
+function computeNextBaseVisualChangeAt(now) {
+  let next = Infinity;
+  for (const specimen of gardenState.specimens) next = Math.min(next, nextSpecimenVisualChangeAt(specimen, now) ?? Infinity);
+  for (const grass of gardenState.grassCells) next = Math.min(next, nextGrassVisualChangeAt(grass, now) ?? Infinity);
+  if (typeof nextPuddleVisualChangeAt === "function") {
+    for (const puddle of gardenState.puddles) next = Math.min(next, nextPuddleVisualChangeAt(puddle, now) ?? Infinity);
+  }
+  return Number.isFinite(next) ? next : null;
+}
+
+function invalidateDueBaseVisual(now) {
+  if (nextBaseVisualAt !== null && now >= nextBaseVisualAt) {
+    gardenBaseDirty = true;
+    gardenPerf?.reason("visual-deadline");
+  }
+}
 
 function buildVineCellLookup(now) {
   const startedAt = gardenPerf ? performance.now() : 0;
@@ -1220,7 +1266,7 @@ function rebuildGardenBase(now) {
   if (previousAnimated.length !== animatedSpecimens.length
     || previousAnimated.some((specimen, index) => specimen !== animatedSpecimens[index])) gardenOverlayDirty = true;
   gardenBaseDirty = false;
-  nextBaseVisualAt = now + rendererConfig.slowVisualRefreshMs;
+  nextBaseVisualAt = computeNextBaseVisualChangeAt(now);
   lastBaseSoilDarkening = weatherSoilDarkening();
   gardenPerf?.end("base");
   return true;
@@ -1305,7 +1351,11 @@ document.addEventListener("visibilitychange", () => {
     updateGarden();
     if (typeof updateLooseDrops === "function") updateLooseDrops(Date.now());
     if (typeof advanceGnomeIncident === "function") advanceGnomeIncident(Date.now(), undefined, false);
-    drawGarden("resume"); // Refresh once at current time, never replay missed frames.
+    const now = Date.now();
+    invalidateDueBaseVisual(now);
+    if (gardenBaseDirty) { gardenPerf?.reason("resume"); paintGardenBase(now); }
+    drawGardenOverlay(true, now);
+    syncWeatherAnimation(); // Resume current state once, never replay missed visual frames.
   }
 });
 window.addEventListener("pagehide", () => {
@@ -1316,7 +1366,7 @@ window.addEventListener("pagehide", () => {
 });
 drawGarden("initial");
 
-// Logical cleanup stays at 250 ms; otherwise age-driven ecology paints at most once a second.
+// Logical cleanup stays at 250 ms; visual work wakes only for state changes or one aggregate deadline.
 window.setInterval(() => {
   const now = Date.now();
   if (typeof updateGardenPuddles === "function" && updateGardenPuddles(now)) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
@@ -1324,10 +1374,7 @@ window.setInterval(() => {
   if (typeof updateCollectionMessage === "function") updateCollectionMessage(now);
   updateGarden(now);
   if (typeof updateLooseDrops === "function" && updateLooseDrops(now)) gardenOverlayDirty = true;
-  if (now >= nextBaseVisualAt && (gardenState.specimens.length || gardenState.grassCells.length || gardenState.puddles.length)) {
-    gardenBaseDirty = true;
-    gardenPerf?.reason("slow-visual-refresh");
-  }
+  invalidateDueBaseVisual(now);
   paintGardenBase(now);
   if (typeof updateAmbientEvents === "function") updateAmbientEvents(now);
   if (gardenOverlayDirty) drawGardenOverlay(true, now);

@@ -43,7 +43,7 @@ const garden = createGarden(), work = instrument(garden);
 assert.equal(garden.frames.size, 0, 'quiet has no idle animation');
 assert.equal(garden.run('rendererConfig.animationFps'), 30);
 assert.equal(garden.run('rendererConfig.maxPixelRatio'), 2);
-assert.equal(garden.run('rendererConfig.slowVisualRefreshMs'), 1000);
+assert.equal(garden.run('rendererConfig.continuousVisualRefreshMs'), 1000);
 const html = fs.readFileSync('wwwroot/index.html','utf8'), css = fs.readFileSync('wwwroot/garden.css','utf8');
 assert.match(html, /class="garden-stage"[\s\S]*id="garden-canvas"[\s\S]*id="garden-overlay" aria-hidden="true"/);
 assert.match(css, /#garden-overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*pointer-events:\s*none;/);
@@ -217,7 +217,7 @@ dense.sandbox.observeCopies=()=>{ baseCopies+=dense.drawing.filter(command=>comm
 const originalDenseFrame=dense.frame;
 dense.frame=now=>{originalDenseFrame(now);dense.sandbox.observeCopies();dense.drawing.length=0};
 advanceFrames(dense, dense.clock.now, 120, 120, true);
-assert.equal(denseWork.base, 1, 'four logical ticks cause only one slow visual refresh');
+assert.equal(denseWork.base, 1, 'young puddles cross one meaningful growth deadline during four logical ticks');
 assert.equal(denseWork.water,1); assert.equal(denseWork.lookup,1);
 assert.equal(denseWork.species, 640); assert.equal(denseWork.grass, 640);
 assert.equal(denseWork.overlay,30); assert.equal(baseCopies,0);
@@ -260,7 +260,7 @@ assert.equal(terrainWork.base,1);assert.equal(terrain.run('gardenState.puddles.l
 terrainWork.reset();terrain.clock.now+=250;terrain.run('nextPuddleCheckAt=Date.now()');terrain.tick();assert.equal(terrainWork.base,1,'puddle refresh paints promptly');
 weather(terrain,'quiet');terrainWork.reset();
 for(let i=0;i<4;i++){terrain.clock.now+=250;terrain.tick()}
-assert.equal(terrainWork.base,1, 'puddle growth/drainage ages at 1 Hz');
+assert.equal(terrainWork.base,1, 'young puddle growth reaches a meaningful visual step');
 terrainWork.reset();terrain.run('gardenState.puddles[0].lastRefreshedAt=Date.now()-puddleConfig.drainDelayAfterLastRefreshMs-puddleConfig.drainDurationMs');terrain.tick();
 assert.equal(terrain.run('gardenState.puddles.length'),0);assert.equal(terrainWork.base,1, 'final puddle expiry repaints empty base');
 const tint=createGarden(), tintWork=instrument(tint);weather(tint,'rain',10000);tintWork.reset();
@@ -268,4 +268,4 @@ weather(tint,'rain',20000);assert.equal(tintWork.base,0, 'saturated intensity le
 weather(tint,'rain',10);assert.equal(tintWork.base,1, 'changed soil tint paints immediately');
 tintWork.reset();tint.clock.now+=100000;tint.tick();assert.equal(tintWork.base,1, 'delayed tick paints once at current age, no replay');
 
-console.log(`PASS: dense garden + 8 puddles + 3 curiosities + 3 loose drops + gnomes: 120 RAF callbacks + 4 lifecycle ticks -> ${stressReport}, 90 tiny drop renders; another 120 dropped events cause zero extra base rebuilds. Layer isolation/local vines/1Hz aging/immediate state changes/one scheduler/FPS/hidden/DPR/resize/hits/mutations/activity checks passed.`);
+console.log(`PASS: dense garden + 8 young puddles + 3 curiosities + 3 loose drops + gnomes: 120 RAF callbacks + 4 lifecycle ticks -> ${stressReport}, 90 tiny drop renders; another 120 dropped events cause zero extra base rebuilds. Layer isolation/local vines/visual deadlines/immediate state changes/one scheduler/FPS/hidden/DPR/resize/hits/mutations/activity checks passed.`);

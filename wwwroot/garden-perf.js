@@ -5,18 +5,18 @@ function createGardenPerformanceDiagnostics() {
   const baseKeys = ["total", "setup", "soil", "grass", "puddles", "specimens", "vines", "wireferns", "otherSpecies", "lookup"];
   const overlayKeys = ["total", "setup", "mutations", "actors", "curiosities", "drops", "rain", "rainStreaks"];
   const ring = () => ({ values: new Array(capacity), next: 0, size: 0 });
-  const base = ring(), overlay = ring(), slowOnly = ring(), rafGaps = ring();
+  const base = ring(), overlay = ring(), deadlineOnly = ring(), rafGaps = ring();
   const push = (buffer, sample) => {
     buffer.values[buffer.next] = sample;
     buffer.next = (buffer.next + 1) % capacity;
     buffer.size = Math.min(capacity, buffer.size + 1);
   };
-  const reasons = Object.fromEntries(["initial", "state-change", "slow-visual-refresh", "resize", "weather-soil", "grass-change", "puddle-change", "specimen-change", "resume", "other"].map(reason => [reason, 0]));
+  const reasons = Object.fromEntries(["initial", "state-change", "visual-deadline", "resize", "weather-soil", "grass-change", "puddle-change", "specimen-change", "resume", "other"].map(reason => [reason, 0]));
   const pendingReasons = new Set();
   const counts = {
     baseRebuilds: 0, overlayPaints: 0, forcedOverlayPaints: 0, fpsSkips: 0,
     baseOver16: 0, baseOver33: 0, overlayOver16: 0, overlayOver33: 0,
-    longestBase: 0, longestOverlay: 0, slowOnlyRebuilds: 0,
+    longestBase: 0, longestOverlay: 0, deadlineOnlyRebuilds: 0,
     vineLookupBuilds: 0, vineNeighborChecks: 0, vinesRendered: 0, wirefernsRendered: 0,
     rainStreaks: 0, layoutReads: 0, backingResizes: 0, backingWrites: 0,
     rafGapsOver50: 0, rafGapsWithBase: 0, longestRafGap: 0, longTasks: 0, longestLongTask: 0, panelUpdates: 0
@@ -70,8 +70,8 @@ function createGardenPerformanceDiagnostics() {
       counts.baseOver33 += Number(sample.total > 1000 / 30);
       counts.longestBase = Math.max(counts.longestBase, sample.total);
       for (const reason of sample.reasons) reasons[reason]++;
-      if (sample.reasons.length === 1 && sample.reasons[0] === "slow-visual-refresh") {
-        counts.slowOnlyRebuilds++; push(slowOnly, sample);
+      if (sample.reasons.length === 1 && sample.reasons[0] === "visual-deadline") {
+        counts.deadlineOnlyRebuilds++; push(deadlineOnly, sample);
       }
       pendingReasons.clear(); activeBase = null;
     } else {
@@ -100,10 +100,11 @@ function createGardenPerformanceDiagnostics() {
     return {
       base: Object.fromEntries(baseKeys.map(key => [key, stats(base, key)])),
       overlay: Object.fromEntries(overlayKeys.map(key => [key, stats(overlay, key)])),
-      slowOnly: stats(slowOnly), rafGap: stats(rafGaps), counts: { ...counts }, reasons: { ...reasons },
+      deadlineOnly: stats(deadlineOnly), rafGap: stats(rafGaps), counts: { ...counts }, reasons: { ...reasons },
       lastReasons: base.size ? base.values[(base.next + capacity - 1) % capacity].reasons.slice() : [],
       rates: { base: rate(base, now), overlay: rate(overlay, now) },
-      samples: { base: base.size, overlay: overlay.size, slowOnly: slowOnly.size, rafGaps: rafGaps.size, capacity },
+      samples: { base: base.size, overlay: overlay.size, deadlineOnly: deadlineOnly.size, rafGaps: rafGaps.size, capacity },
+      nextBaseVisualAt, untilNextBaseVisualMs: nextBaseVisualAt === null ? null : Math.max(0, nextBaseVisualAt - Date.now()),
       longTaskSupported: observer !== null
     };
   }
@@ -121,7 +122,8 @@ function createGardenPerformanceDiagnostics() {
       `  Specimens ${ms(data.base.specimens)}`,
       `    Vines ${ms(data.base.vines)} · wireferns ${ms(data.base.wireferns)}`,
       `    Other ${ms(data.base.otherSpecies)} · lookup ${ms(data.base.lookup)}`,
-      `  Slow-only ${ms(data.slowOnly)} · n=${counts.slowOnlyRebuilds}`,
+      `  Deadline-only ${ms(data.deadlineOnly)} · n=${counts.deadlineOnlyRebuilds}`,
+      `  Next visual: ${data.nextBaseVisualAt === null ? "none" : `${data.nextBaseVisualAt} · in ${(data.untilNextBaseVisualMs / 1000).toFixed(2)}s`}`,
       `  Last reasons: ${data.lastReasons.join(", ")}`,
       `  >16.7ms ${counts.baseOver16} · >33.3ms ${counts.baseOver33} · longest ${counts.longestBase.toFixed(2)}`,
       `Overlay ${ms(data.overlay.total)} · ~${data.rates.overlay}/s · n=${counts.overlayPaints}`,
@@ -132,6 +134,7 @@ function createGardenPerformanceDiagnostics() {
       `  >16.7ms ${counts.overlayOver16} · >33.3ms ${counts.overlayOver33} · longest ${counts.longestOverlay.toFixed(2)}`,
       `  FPS-cap skips ${counts.fpsSkips} (intentional, not lost frames)`,
       `RAF gap ${ms(data.rafGap)} · >50ms ${counts.rafGapsOver50} · with base ${counts.rafGapsWithBase}`,
+      `  Longest RAF gap ${counts.longestRafGap.toFixed(2)}ms (session)`,
       `Vine lookups ${counts.vineLookupBuilds} · checks ${counts.vineNeighborChecks} · renders ${counts.vinesRendered}`,
       `Wirefern renders ${counts.wirefernsRendered}`,
       `Layout reads ${counts.layoutReads} · backing resizes ${counts.backingResizes} (${counts.backingWrites} dimension writes)`,
@@ -147,7 +150,7 @@ function createGardenPerformanceDiagnostics() {
   return {
     begin, mark, end, snapshot, updatePanel,
     reset() {
-      for (const buffer of [base, overlay, slowOnly, rafGaps]) {
+      for (const buffer of [base, overlay, deadlineOnly, rafGaps]) {
         buffer.values.fill(undefined); buffer.next = 0; buffer.size = 0;
       }
       for (const key of Object.keys(counts)) counts[key] = 0;

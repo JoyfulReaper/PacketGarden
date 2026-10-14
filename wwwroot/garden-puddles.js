@@ -16,6 +16,9 @@ const puddleConfig = {
 const puddleFormationChances = new Map([
   ["heavy_rain", 0.35], ["botnet_thunderstorm", 0.60], ["botnet_hurricane", 0.85]
 ]);
+// Main ellipse radius steps of 0.5 logical px (offset/rotated edges move <0.58 px),
+// or 0.02 fill-opacity changes. No change to the interpolation used by drawing.
+const puddleVisualThresholds = { size: 0.5, opacity: 0.02 };
 let puddleStormActive = puddleFormationChances.has(weatherState.level);
 let nextPuddleCheckAt = Date.now() + puddleConfig.checkEveryMs;
 
@@ -27,6 +30,28 @@ function puddleVisualState(puddle, now = Date.now()) {
     size: (puddle.size + (puddle.maxSize - puddle.size) * growth) * Math.sqrt(wetness),
     opacity: 0.38 * wetness
   };
+}
+
+function nextPuddleVisualChangeAt(puddle, now) {
+  const refreshed = puddle.lastRefreshedAt;
+  const growthEnd = refreshed + puddleConfig.growthDurationMs;
+  const drainStart = refreshed + puddleConfig.drainDelayAfterLastRefreshMs;
+  const expiry = drainStart + puddleConfig.drainDurationMs;
+  if (now >= expiry) return null;
+  const growthSize = puddle.maxSize - puddle.size;
+  if (now < growthEnd && growthSize > 0) {
+    return Math.min(growthEnd, Math.max(now, refreshed)
+      + puddleConfig.growthDurationMs * puddleVisualThresholds.size / growthSize);
+  }
+  const visual = puddleVisualState(puddle, now);
+  // Invert the existing sqrt(wetness) radius and linear opacity, anchored to
+  // what this rebuild actually drew. Any unrelated repaint safely resets that anchor.
+  const targetSize = Math.max(0, visual.size - puddleVisualThresholds.size);
+  const sizeAt = drainStart + puddleConfig.drainDurationMs * (1 - (targetSize / puddle.maxSize) ** 2);
+  const fullOpacity = puddleVisualState(puddle, drainStart).opacity;
+  const targetOpacity = Math.max(0, visual.opacity - puddleVisualThresholds.opacity);
+  const opacityAt = drainStart + puddleConfig.drainDurationMs * (1 - targetOpacity / fullOpacity);
+  return Math.min(expiry, sizeAt, opacityAt);
 }
 
 function removeExpiredPuddles(now) {

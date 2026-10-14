@@ -211,6 +211,6 @@ assert(!order.includes('water') && !order.includes('grass') && !order.includes('
 layers.run('drawGarden()'); order.length=0;
 for(let index=0;index<3;index++){layers.clock.now+=250;layers.tick()}
 assert.equal(order.filter(name=>name==='water').length,0,'water does not repaint on unchanged quarter-second ticks');
-layers.clock.now+=250;layers.tick();assert.equal(order.filter(name=>name==='water').length,1,'drainage ages at the one-second visual cadence');
+layers.clock.now+=250;layers.tick();assert.equal(order.filter(name=>name==='water').length,1,'young grass/puddle growth reaches a visual deadline');
 
 console.log('PASS: severe-only 15s cadence and 35/60/85% boundaries, cap8/nearby pools/60% refresh, smooth bounded growth and 30s+8min drainage, applied Manual/Live weather, hidden/no catch-up, state/occupancy/provenance/grass/activity/score/click isolation, resize/no timers, cached grass-water-specimen order. Water+rain: 120 RAF callbacks -> 30 overlay paints, zero water/ecology redraws.');

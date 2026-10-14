@@ -44,7 +44,7 @@ assert.equal(state(enabled),state(normal));assert.deepEqual(enabled.drawing,norm
 assert.equal(enabled.sources.length,1);assert.equal(enabled.sources[0].handlers.get('garden').length,1);
 assert.equal(enabled.run('gardenBaseContext===gardenOverlayContext'),false);
 assert.equal(enabled.run('rendererConfig.animationFps'),30);
-assert.equal(enabled.run('rendererConfig.slowVisualRefreshMs'),1000);
+assert.equal(enabled.run('rendererConfig.continuousVisualRefreshMs'),1000);
 enabled.run('gardenPerf.reset()');normal.drawing.length=enabled.drawing.length=0;
 let paintCount=0;const start=enabled.clock.now;
 for(let i=1;i<=120;i++){
@@ -83,14 +83,14 @@ garden.run('drawGardenOverlay(true)');
 assert.equal(snapshot(garden).counts.overlayOver16,1);assert.equal(snapshot(garden).counts.overlayOver33,1);
 assert.equal(snapshot(garden).counts.longestOverlay,snapshot(garden).overlay.total.max);
 
-// Reasons preserve overlapping invalidations and isolate slow-only aging.
+// Reasons preserve overlapping invalidations and isolate deadline-only visual work.
 garden.sandbox.performance.now=()=>garden.clock.now;
-garden.run('gardenPerf.reset()');tick(garden,1000);
-let data=snapshot(garden);assert.deepEqual(data.lastReasons,['slow-visual-refresh']);
-assert.equal(data.counts.slowOnlyRebuilds,1);assert.equal(data.samples.slowOnly,1);
+garden.run('gardenState.grassCells[0].createdAt=Date.now();drawGarden();gardenPerf.reset()');tick(garden,1000);
+let data=snapshot(garden);assert.deepEqual(data.lastReasons,['visual-deadline']);
+assert.equal(data.counts.deadlineOnlyRebuilds,1);assert.equal(data.samples.deadlineOnly,1);
 garden.run('influenceGrassCell(0,0,Date.now()+1)');tick(garden,1000);
-data=snapshot(garden);assert(data.lastReasons.includes('grass-change'));assert(data.lastReasons.includes('slow-visual-refresh'));
-assert.equal(data.counts.slowOnlyRebuilds,1,'mixed causes are not counted as solely slow refresh');
+data=snapshot(garden);assert(data.lastReasons.includes('grass-change'));assert(data.lastReasons.includes('visual-deadline'));
+assert.equal(data.counts.deadlineOnlyRebuilds,1,'mixed causes are not counted as solely deadline refresh');
 garden.run('refreshStormPuddle(gardenState.puddles[0],Date.now())');tick(garden);
 assert(snapshot(garden).lastReasons.includes('puddle-change'));
 garden.run('Object.assign(weatherState,{level:"rain",eventsPerMinute:500});updateWeatherAnimation()');
@@ -107,8 +107,8 @@ const before=panel.run('gardenPerf.snapshot().counts.baseRebuilds');
 panel.tick();panel.tick();assert.equal(textWrites,1);
 for(let i=0;i<20;i++)tick(panel,100);
 assert.equal(textWrites,5);assert.equal(snapshot(panel).counts.panelUpdates,5);
-assert.equal(snapshot(panel).counts.baseRebuilds-before,2,'only normal one-second aging, no panel invalidation');
-assert.match(textValue,/last 120 samples/);assert.match(textValue,/Canvas CSS/);assert.match(textValue,/not proof of GC/);
+assert.equal(snapshot(panel).counts.baseRebuilds-before,2,'only growing grass deadlines, no panel invalidation');
+assert.match(textValue,/last 120 samples/);assert.match(textValue,/Canvas CSS/);assert.match(textValue,/not proof of GC/);assert.match(textValue,/Longest RAF gap/);
 panel.run('gardenState.grassCells=[];drawGarden();gardenPerf.reset()');
 for(let i=0;i<8;i++)tick(panel);
 assert.equal(snapshot(panel).counts.baseRebuilds,0,'empty quiet diagnostics do not cause renders');
@@ -153,7 +153,8 @@ for(let i=0;i<500;i++){
 data=snapshot(bounded);assert.equal(data.samples.base,120);assert.equal(data.samples.overlay,120);assert.equal(data.samples.rafGaps,120);
 assert.equal(data.counts.baseRebuilds,500);assert.equal(data.counts.overlayPaints,500);
 assert.equal(data.counts.panelUpdates,1);assert.equal(state(bounded),boundedState);
-for(let i=0;i<130;i++)tick(bounded,1000);assert.equal(snapshot(bounded).samples.slowOnly,120);
+bounded.run('gardenState.grassCells[0].lastInfluencedAt=Date.now()-grassConfig.fadingAfterMs;drawGarden()');
+for(let i=0;i<130;i++)tick(bounded,1000);assert.equal(snapshot(bounded).samples.deadlineOnly,120);
 assert(!JSON.stringify(data).includes('garden-test'),'diagnostics contain no safe provenance either');
 const source=fs.readFileSync('wwwroot/garden-perf.js','utf8');
 assert(!/setInterval|setTimeout|requestAnimationFrame|drawImage|localStorage|sessionStorage|fetch\(|sendBeacon/.test(source));
@@ -176,4 +177,4 @@ for(const type of ['vine','wirefern']){
   assert.equal(type==='vine'?work.counts.vinesRendered:work.counts.wirefernsRendered,640);
 }
 garden.windowHandlers.get('pagehide')[0]();assert.equal(disconnected,1);
-console.log('PASS: opt-in/local diagnostics; unchanged ecology/weather/canvases/FPS/hits/hidden behavior; all timing buckets, reasons/slow-only refresh, vine/wire/rain counters, exact layout/resize counts, optional long-task clues, 120-sample bounds, 2Hz single panel updates, no new timers/bitmap copies.');
+console.log('PASS: opt-in/local diagnostics; unchanged ecology/weather/canvases/FPS/hits/hidden behavior; all timing buckets, reasons/deadline-only refresh, next deadline, vine/wire/rain counters, exact layout/resize counts, optional long-task clues, 120-sample bounds, 2Hz single panel updates, no new timers/bitmap copies.');
