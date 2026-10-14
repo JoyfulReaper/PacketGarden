@@ -57,8 +57,9 @@ gardenEventSource.addEventListener("weather", message => {
 gardenEventSource.addEventListener("garden", message => {
   try {
     const event = JSON.parse(message.data);
-    if (event?.type === "port-hit" && Number.isInteger(event.port) && event.port >= 1 && event.port <= 65535) {
-      handleGardenEvent({ type: "port-hit", port: event.port });
+    if (typeof event?.specimenType === "string" && speciesConfig.has(event.specimenType)
+      && Number.isInteger(event.listenPort) && event.listenPort >= 1 && event.listenPort <= 65535) {
+      spawnSpecimen(event.specimenType);
     }
   } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
@@ -143,7 +144,7 @@ const redbloomTimings = {
 const updateEveryMs = 250;
 
 const grassConfig = {
-  influenceChances: { flower: 0.45, broadleaf: 0.65 },
+  influenceChances: { dns: 0.45, http: 0.65 },
   secondCellChance: 0.35,
   sameCellChance: 0.5,
   influenceRadius: 1,
@@ -180,13 +181,6 @@ const eventSpecimenTypes = new Map([
   ["ssh", "vine"],
   ["failed-auth", "redbloom"]
 ]);
-// Destination-port aesthetics, not identification of a protocol/auth outcome.
-const portSpecimenTypes = new Map([
-  ...[80, 443, 8080, 8443].map(port => [port, "broadleaf"]),
-  ...[22, 2222, 23, 2323, 3389, 5900].map(port => [port, "vine"]),
-  ...[21, 445, 5432, 6379, 9200, 70].map(port => [port, "mushroom"]),
-  ...[25, 420, 42069, 53].map(port => [port, "flower"])
-]);
 const speciesConfig = new Map([
   ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
@@ -195,19 +189,18 @@ const speciesConfig = new Map([
   ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }]
 ]);
 
-/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" } | { type: "port-hit", port: number }} GardenEvent */
+/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" }} GardenEvent */
 const gardenState = { specimens: [], grassCells: [] };
-
-function resolveSpecimenType(event) {
-  if (event.type !== "port-hit") return eventSpecimenTypes.get(event.type);
-  if (!Number.isInteger(event.port) || event.port < 1 || event.port > 65535) return;
-  return portSpecimenTypes.get(event.port) ?? "flower";
-}
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
-  const specimenType = resolveSpecimenType(event);
+  const specimenType = eventSpecimenTypes.get(event.type);
   if (!specimenType) return;
+  spawnSpecimen(specimenType, event.type);
+}
+
+function spawnSpecimen(specimenType, grassEventType = null) {
+  if (!speciesConfig.has(specimenType)) return;
 
   updateGarden();
 
@@ -252,14 +245,15 @@ function handleGardenEvent(event) {
     createdAt: Date.now()
   };
   gardenState.specimens.push(specimen);
-  influenceGrass(specimenType, specimen);
+  if (grassEventType) influenceGrass(grassEventType, specimen);
 
   updateGardenStatus();
   drawGarden();
+  return specimen;
 }
 
-function influenceGrass(specimenType, specimen, now = Date.now()) {
-  const chance = grassConfig.influenceChances[specimenType] ?? 0;
+function influenceGrass(eventType, specimen, now = Date.now()) {
+  const chance = grassConfig.influenceChances[eventType] ?? 0;
   if (chance === 0 || Math.random() >= chance) return;
 
   let column = specimen.column;

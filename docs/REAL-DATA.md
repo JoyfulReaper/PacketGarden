@@ -38,7 +38,7 @@ retains weather/ecology, and uses normal EventSource reconnection. Switching
 source modes does not reset the garden. Weather still has no ecological effects.
 
 The full Observatory response is never forwarded. Browser-facing weather has
-only `level` and `eventsPerMinute`; this is separate from discrete `GardenEvent`s.
+only `level` and `eventsPerMinute`; this is separate from discrete garden growth.
 
 ## Implemented TCPNoise port hits
 
@@ -49,9 +49,11 @@ TCPNoise collector (`tcpnoise.connection`)
      ↓
     NATS
      ↓
-PacketGarden backend adapters
+PacketGarden backend adapter
      ↓
-normalized garden events/environmental state
+validate + destination port -> specimen type
+     ↓
+normalized garden growth
      ↓
     SSE
      ↓
@@ -64,35 +66,40 @@ Without a URL, discrete input is disabled and the app/weather/fake controls stil
 work. Broker outages use normal client reconnection, with an initial-connect
 retry and one warning per outage. There is no persistence, replay, or coalescing.
 
-Only `EventType`, `SchemaVersion`, and `Payload.listenPort` are deserialized.
-The adapter accepts `tcpnoise.connection`, schema version 1, and integer ports
-1–65535; malformed/unsupported input is ignored. It emits only:
+Only `EventType`, `Source`, `SchemaVersion`, and `Payload.listenPort` are
+deserialized. The adapter accepts `EventType == tcpnoise.connection`,
+`Source == tcpnoise`, schema version 1, and integer ports 1–65535;
+malformed/unsupported input is ignored. The backend resolves the listening port
+to an aesthetic specimen before anything is sent to the browser. SSE emits only:
 
 ```text
 event: garden
-data: {"type":"port-hit","port":443}
+data: {"specimenType":"broadleaf","listenPort":443}
 
 ```
 
 Each valid hit produces one growth event for each currently connected browser.
 Each SSE client has its own transient queue; new connections do not replay hits.
 The existing `/api/garden/events` endpoint multiplexes `garden` and `weather`
-frames. One browser EventSource stays connected in both weather modes: garden
-frames always reach `handleGardenEvent()`, while weather frames affect rendering
-only in Live mode. Manual weather remains the default. Switching modes can apply
-the latest cached live weather without reopening the stream.
+frames. One browser EventSource stays connected in both weather modes: normalized
+garden frames always reach the shared specimen placement path, while weather
+frames affect rendering only in Live mode. Manual weather remains the default.
+Switching modes can apply the latest cached live weather without reopening the
+stream.
 
 Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
-They share placement, lifecycles, and occupancy with fake events. Flower and
-broadleaf growth can seed/refresh grass with the existing 45%/65% probabilities.
-If specimen cells are full, the existing handler cannot place another specimen.
+They share placement, clustering, lifecycles, and occupancy with fake events, but
+do not inherit fake DNS/HTTP grass effects. Real TCPNoise growth does not directly
+seed or refresh grass in this slice. If specimen cells are full, the existing
+placement path cannot place another specimen.
 
 ## Discrete events and aggregate pressure
 
 Discrete observations may influence specimens: DNS activity can grow flowers,
 HTTP activity broad-leaf plants, Gopher activity mushrooms, genuine SSH telemetry
 vines, and authentication failures brief red blooms. Fake and real discrete
-events should use the same browser handling path.
+events should converge on shared ecological placement/rendering without
+pretending that raw port hits establish higher-level protocol semantics.
 
 Aggregate/background activity represents pressure over a time window. It can
 drive environmental state such as drizzle, rain, or heavy rain rather than
@@ -103,9 +110,9 @@ effects remain future work. Traffic quietness does not determine local-time ligh
 
 High volume should not necessarily create one new permanent specimen per event.
 Repeated events may strengthen, spread, bloom, mutate, or otherwise influence
-existing growth. The current main-specimen handler only spawns into empty cells;
+existing growth. The current main-specimen path only spawns into empty cells;
 richer specimen responses remain work to implement. Grass seeding/refresh is a
-separate existing effect of successful flower/broadleaf spawns; seeded turf grows
+separate existing effect of successful fake DNS/HTTP spawns; seeded turf grows
 and spreads locally through the browser update loop.
 
 ## Preserve sensor meaning
@@ -143,8 +150,8 @@ Normalized input may include only safe coarse fields useful to the garden:
 - sanitized tags describing coarse traits.
 
 These fields describe possible future adapters, not a finalized schema. Current
-weather has only `level`/`eventsPerMinute`; discrete port hits have only
-`type`/`port`, and fake events still have only `type`.
+weather has only `level`/`eventsPerMinute`; TCPNoise browser growth has only
+`specimenType`/`listenPort`, and fake events still have only `type`.
 Normalize and sanitize before sending data to the browser. Do not include private
 addresses, credentials, raw packets, payloads, or unnecessary infrastructure
 details. Network class describes coarse context without exposing endpoints or
@@ -152,7 +159,7 @@ splitting the shared garden into network-specific plots.
 
 ## Scope
 
-Live aggregate weather and NATS-backed TCPNoise port hits are implemented.
+Live aggregate weather and NATS-backed TCPNoise growth are implemented.
 Other protocol/auth-aware adapters, mutations, and richer specimen responses
 remain future work.
 Inspection, local-time lighting, persistence, and ecological competition remain

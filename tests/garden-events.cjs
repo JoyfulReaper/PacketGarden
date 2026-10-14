@@ -27,30 +27,48 @@ const run = code => vm.runInContext(code, sandbox);
 const reset = () => run('gardenState.specimens=[]; gardenState.grassCells=[]; nextGrassSpreadAt=1000000;');
 assert.equal(sources.length, 1); assert.equal(sources[0].url, '/api/garden/events');
 const source = sources[0];
-for (const [port, type] of [[443,'broadleaf'],[22,'vine'],[5432,'mushroom'],[42069,'flower'],[53,'flower'],[70,'mushroom'],[65535,'flower']]) {
-  reset(); source.emit('garden', { type:'port-hit',port });
+
+for (const [port, type] of [[443,'broadleaf'],[22,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
+  reset(); sandbox.Math.random = () => 0;
+  source.emit('garden', { specimenType:type, listenPort:port });
   assert.equal(run('gardenState.specimens.length'), 1);
   assert.equal(run('gardenState.specimens[0].type'), type);
-  assert.equal(run('gardenState.grassCells.length > 0'), ['flower','broadleaf'].includes(type));
+  assert.equal(run('gardenState.grassCells.length'), 0, 'real TCPNoise growth must not seed grass');
 }
-const inventory = [21,22,23,80,443,445,2323,3389,5432,6379,8080,9200,420,42069,25,2222,5900,8443];
-for (const port of inventory) assert(['flower','broadleaf','vine','mushroom'].includes(run(`resolveSpecimenType({type:'port-hit',port:${port}})`)));
-for (let port=1;port<=65535;port++) assert.notEqual(run(`resolveSpecimenType({type:'port-hit',port:${port}})`), 'redbloom');
+
+reset(); sandbox.Math.random = () => 0;
+source.emit('garden', { specimenType:'vine', listenPort:22 });
+source.emit('garden', { specimenType:'vine', listenPort:22 });
+assert.equal(run('gardenState.specimens.length'), 2);
+assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1);
+
 reset();
-for (const bad of ['{','null',{type:'port-hit',port:0},{type:'port-hit',port:65536},{type:'port-hit',port:443.5},{type:'port-hit',port:'443'},{type:'dns'}]) source.emit('garden', bad);
+for (const bad of ['{','null',{specimenType:'nope',listenPort:443},{specimenType:'broadleaf',listenPort:0},
+  {specimenType:'broadleaf',listenPort:65536},{specimenType:'broadleaf',listenPort:443.5},
+  {specimenType:'broadleaf',listenPort:'443'},{type:'port-hit',port:443}]) source.emit('garden', bad);
 assert.equal(run('gardenState.specimens.length'),0);
-for (const [event,type] of [['dns','flower'],['http','broadleaf'],['ssh','vine'],['gopher','mushroom'],['failed-auth','redbloom']]) {
-  element(`#fake-${event}`).handlers.click(); assert.equal(run('gardenState.specimens.at(-1).type'),type);
+
+for (const [event,type,grass] of [['dns','flower',true],['http','broadleaf',true],['ssh','vine',false],['gopher','mushroom',false],['failed-auth','redbloom',false]]) {
+  reset(); sandbox.Math.random = () => 0;
+  element(`#fake-${event}`).handlers.click();
+  assert.equal(run('gardenState.specimens.length'), 1);
+  assert.equal(run('gardenState.specimens[0].type'),type);
+  assert.equal(run('gardenState.grassCells.length > 0'), grass);
 }
-for(const [type,chance] of [['flower',.45],['broadleaf',.65]]) {
+
+for(const [eventType,chance] of [['dns',.45],['http',.65]]) {
   reset(); sandbox.Math.random=()=>chance;
-  run(`influenceGrass('${type}',{column:10,row:10})`); assert.equal(run('gardenState.grassCells.length'),0);
+  run(`influenceGrass('${eventType}',{column:10,row:10})`); assert.equal(run('gardenState.grassCells.length'),0);
   sandbox.Math.random=()=>chance-.01;
-  run(`influenceGrass('${type}',{column:10,row:10})`); assert(run('gardenState.grassCells.length')>0);
+  run(`influenceGrass('${eventType}',{column:10,row:10})`); assert(run('gardenState.grassCells.length')>0);
   const count=run('gardenState.grassCells.length'); run('gardenState.grassCells.forEach(g=>g.lastInfluencedAt=0)');
-  run(`influenceGrass('${type}',{column:10,row:10})`); assert.equal(run('gardenState.grassCells.length'),count);
+  run(`influenceGrass('${eventType}',{column:10,row:10})`); assert.equal(run('gardenState.grassCells.length'),count);
   assert.equal(run('gardenState.grassCells[0].lastInfluencedAt'),1000);
 }
+reset(); sandbox.Math.random=()=>0;
+run("influenceGrass('flower',{column:10,row:10}); influenceGrass('broadleaf',{column:11,row:10});");
+assert.equal(run('gardenState.grassCells.length'), 0, 'species names alone must not trigger grass');
+
 source.onopen(); source.emit('weather',{level:'rain',eventsPerMinute:29.8});
 assert.equal(run('weatherState.level'),'quiet');
 element('#weather-source').value='live'; element('#weather-source').handlers.change();
@@ -62,7 +80,9 @@ source.emit('weather',{level:'quiet',eventsPerMinute:0}); assert.equal(run('weat
 element('#weather-source').value='live'; element('#weather-source').handlers.change(); assert.equal(run('weatherState.level'),'quiet');
 const state=JSON.stringify(run('gardenState')); source.onerror(); assert.equal(element('#weather-status').textContent,'Live weather disconnected'); source.onopen();
 assert.equal(JSON.stringify(run('gardenState')),state); assert.equal(sources.length,1);
+
 reset(); sandbox.Math.random=()=>0;
 element('#automatic-traffic').handlers.click(); const callback=timeouts.values().next().value; timeouts.clear(); callback();
-assert.equal(run('gardenState.specimens.length'),1); element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
-console.log('PASS: all ports/fallback, single-event growth, validation, fake buttons/traffic, grass probabilities/refresh, Manual/Live switching, one SSE connection, reconnect state retention.');
+assert.equal(run('gardenState.specimens.length'),1); assert(run('gardenState.grassCells.length')>0);
+element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
+console.log('PASS: normalized growth, shared clustering, validation, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');

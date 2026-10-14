@@ -52,7 +52,7 @@ browser garden state / renderer
 ```
 
 The browser does not connect directly to external sources. SSE now delivers live
-aggregate weather and sanitized NATS-backed TCPNoise port hits from the
+aggregate weather and backend-normalized TCPNoise growth events from the
 PacketGarden backend. See [Real data](docs/REAL-DATA.md).
 
 A fake-event generator remains useful for development and demos and should feed the same normalized event model.
@@ -85,7 +85,9 @@ PacketGarden uses:
 - vanilla JavaScript.
 
 An HttpClient weather adapter polls Noise Observatory and streams normalized
-weather through SSE. A NATS adapter normalizes TCPNoise port hits for the same stream.
+weather through SSE. A NATS adapter validates TCPNoise port hits, maps each
+listening port to an aesthetic specimen type, and emits sanitized growth on the
+same SSE stream.
 
 The visual simulation is the interesting part. Avoid building infrastructure before the garden itself is fun to watch.
 
@@ -114,28 +116,29 @@ Manual controls and automatic weighted fake traffic feed the same event handler.
 Lifecycles now retain several minutes of visual history, with vines lasting up to
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
-Successful flower and broad-leaf spawns (fake or port-driven) can seed or refresh grass beneath
-the specimens (45% and 65% influence chances). Each successful influence affects
+Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
+specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near
-the new specimen, for at most two grass cells per event. Grass does not occupy
-specimen slots or affect their counts. Once seeded, sparse grass expands into
-ragged, near-full turf over 30 seconds without further traffic. Healthy mature
-grass occasionally seeds an immediate neighbor; spread is capped across the
-whole garden to prevent runaway filling. Neglected turf begins fading after
-20 minutes, becomes brown/dead-looking by 32 minutes, and disappears after 35.
-Re-influence restores health and refreshes that timer without duplicating cells.
+the new specimen, for at most two grass cells per event. Real TCPNoise growth does
+not directly seed or refresh grass. Grass does not occupy specimen slots or affect
+specimen counts. Once seeded, sparse grass expands into ragged, near-full turf
+over 30 seconds without further traffic. Healthy mature grass occasionally seeds
+an immediate neighbor; spread is capped across the whole garden to prevent
+runaway filling. Neglected turf begins fading after 20 minutes, becomes
+brown/dead-looking by 32 minutes, and disappears after 35. Re-influence restores
+health and refreshes that timer without duplicating cells.
 
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
 not affect organisms or grass.
 
-TCPNoise port hits now create plants through NATS and SSE. Listening ports select
-visual families, without asserting protocol/authentication semantics; a port-22
-hit can grow a vine, and unknown ports grow flowers. No port hit creates a red bloom.
-Other discrete adapters, inspection,
-local-time lighting, persistence, and ecological competition
-remain planned work; see [MVP](docs/MVP.md).
+TCPNoise port hits now create plants through NATS and SSE. The backend maps
+listening ports to visual families without asserting protocol/authentication
+semantics; a port-22 hit can grow a vine, and unknown ports grow flowers. The
+browser receives only the resolved specimen type and listening port. No port hit
+creates a red bloom. Other discrete adapters, inspection, local-time lighting,
+persistence, and ecological competition remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
 

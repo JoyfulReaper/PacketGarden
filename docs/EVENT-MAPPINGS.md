@@ -45,11 +45,17 @@ failed authentication still requires auth-aware telemetry; no port hit creates
 a red bloom. Every valid hit produces one garden growth event, including unknown
 ports. There is no separate TCPNoise weeds/invasive category in this slice.
 
+The PacketGarden backend resolves TCPNoise ports to specimen types before sending
+the growth event to the browser. Real TCPNoise growth shares specimen placement,
+clustering, lifecycles, and rendering with fake events, but does not directly seed
+or refresh grass. The existing grass trigger remains specific to fake DNS and HTTP
+events.
+
 Discrete events can influence specimens. Aggregate activity pressure can drive
 weather/environment, with volume summarized over time rather than expanded into
-one spawn per sample. See [Real data](REAL-DATA.md) for the intended NATS adapter
-and SSE path. Individual TCPNoise hits grow plants through NATS/SSE; aggregate
-rate continues controlling weather separately through Noise Observatory.
+one spawn per sample. See [Real data](REAL-DATA.md) for the NATS adapter and SSE
+path. Individual TCPNoise hits grow plants through NATS/SSE; aggregate rate
+continues controlling weather separately through Noise Observatory.
 
 ## TCPNoise destination-port mapping
 
