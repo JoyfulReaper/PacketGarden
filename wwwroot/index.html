@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PacketGarden</title>
   <link rel="stylesheet" href="garden.css">
+  <script src="garden-audio.js" defer></script>
   <script src="garden.js" defer></script>
 </head>
 <body>
@@ -35,6 +36,11 @@
     <label for="weather-intensity">Events/min</label>
     <input id="weather-intensity" type="number" min="0" max="1000000" step="100" value="1200">
     <span id="weather-status" role="status">Live weather connecting</span>
+  </div>
+  <div class="sound-controls" aria-label="Garden sound controls">
+    <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
+    <label for="sound-volume">Volume</label>
+    <input id="sound-volume" type="range" min="0" max="100" value="12" aria-label="Growth sound volume">
   </div>
   <footer aria-label="Temporary development controls">
     <button id="fake-dns" type="button">Generate fake DNS event</button>

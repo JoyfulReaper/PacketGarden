@@ -73,9 +73,9 @@ const weatherLevels = new Map([
   ["quiet", { drops: 0, speed: 0, darkening: 0, length: 0, opacity: 0 }],
   ["drizzle", { drops: 16, speed: 120, darkening: 0.04, length: 5, opacity: 0.18 }],
   ["rain", { drops: 48, speed: 260, darkening: 0.09, length: 8, opacity: 0.35 }],
-  ["heavy_rain", { drops: 100, speed: 430, darkening: 0.14, length: 11, opacity: 0.4 }],
-  ["botnet_thunderstorm", { drops: 170, speed: 570, darkening: 0.18, length: 13, opacity: 0.42 }],
-  ["botnet_hurricane", { drops: 256, speed: 720, darkening: 0.22, length: 16, opacity: 0.44 }]
+  ["heavy_rain", { drops: 150, speed: 520, darkening: 0.18, length: 14, opacity: 0.48, drift: 60, slant: 5 }],
+  ["botnet_thunderstorm", { drops: 260, speed: 700, darkening: 0.26, length: 18, opacity: 0.56, drift: 150, slant: 11 }],
+  ["botnet_hurricane", { drops: 400, speed: 900, darkening: 0.34, length: 23, opacity: 0.62, drift: 360, slant: 25 }]
 ]);
 let weatherAnimationFrame = null;
 
@@ -263,6 +263,7 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0) {
 
   updateGardenStatus();
   drawGarden();
+  gardenSound.maybePlayGrowthSound(specimenType);
   return specimen;
 }
 
@@ -902,7 +903,7 @@ function drawRain(now) {
   const intensity = weatherIntensity();
   const weather = weatherLevels.get(weatherState.level);
   if (weather.drops === 0 || intensity === 0) return;
-  const drops = Math.min(256, Math.round(weather.drops * (0.25 + intensity * 0.75)));
+  const drops = Math.min(400, Math.round(weather.drops * (0.25 + intensity * 0.75)));
   const speed = weather.speed * (0.6 + intensity * 0.4);
 
   context.save();
@@ -915,11 +916,11 @@ function drawRain(now) {
   context.beginPath();
   for (let drop = 0; drop < drops; drop++) {
     // Fixed seeds plus elapsed time animate a bounded layer without particle/ecology state.
-    const x = (drop * 137.508 + (drop % 7) * 19) % gardenWidth;
+    const x = (drop * 137.508 + (drop % 7) * 19 + now / 1000 * (weather.drift ?? 0)) % gardenWidth;
     const y = (drop * 127.7 + now / 1000 * speed * (0.85 + (drop % 5) * 0.05))
       % (gardenHeight + 30) - 15;
     context.moveTo(x, y);
-    context.lineTo(x + 2, y + weather.length);
+    context.lineTo(x + (weather.slant ?? 2), y + weather.length);
   }
   context.stroke();
   context.restore();

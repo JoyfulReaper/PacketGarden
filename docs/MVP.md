@@ -19,6 +19,8 @@ browser garden as the starting point.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
 - Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the manual renderer.
+- Stronger severe visual weather with wind-driven hurricane rain; no lightning, flashing, or ecological damage.
+- Optional browser-local Web Audio growth sounds, Off by default at 12% volume, initialized by the user's enable gesture. Species tones and gentle rare chimes represent artistic garden traits, not security alerts; independent 400 ms ordinary / 900 ms rare cooldowns drop extra sounds without delaying growth. No weather ambience or saved sound preferences.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to sanitized specimen growth on the same SSE stream.
 - Redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 retains normal vine/rarity behavior. The fake `port22-probe` control previews the same redbloom without grass influence.
 - Event-driven artistic TCPNoise rarity: weeds, pale ghostblooms, cyan/violet crystal fungi, and dark blackthorns, lasting 6, 6, 7, and 12 minutes. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).

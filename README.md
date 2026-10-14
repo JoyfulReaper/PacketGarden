@@ -179,7 +179,17 @@ In Manual mode, use the **Weather** selector and **Events/min** input to preview
 rain separately from fake specimen traffic. Quiet restores the normal garden;
 zero intensity also removes the rain and dampening tint. Larger values increase
 rain density, speed, and soil darkening, saturating visually at 10,000 events/min.
-Storm levels currently scale the same rainfall, without lightning or damage.
+Heavy rain and storm levels increase density, speed, streak length, opacity, and
+soil darkening sharply. Hurricane rain has strong horizontal drift and diagonal
+streaks. These remain visual effects, without lightning, flashing, or damage.
+
+Optional browser-local Web Audio growth sounds start **Off**. Click **Sound: Off**
+to enable them; the volume slider starts at **12%**. Successful real and fake
+specimen spawns share subtle species tones. Ghostbloom, crystal fungus, and
+blackthorn use gentle chime flourishes reflecting artistic rarity, not security
+alerts. Ordinary sounds have a 400 ms cooldown and rare flourishes an independent
+900 ms cooldown; suppressed sounds are dropped while growth continues. Sound
+preferences are not saved, and weather has no continuous audio.
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
 5-second timeout. It trusts the source level and exposes only `level` and

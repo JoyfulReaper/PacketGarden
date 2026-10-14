@@ -78,7 +78,7 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   outline-offset: 3px;
 }
 
-.weather-controls {
+.weather-controls, .sound-controls {
   flex: none;
   display: flex;
   justify-content: center;
@@ -92,6 +92,11 @@ button:focus-visible, select:focus-visible, input:focus-visible {
 
 #weather-intensity {
   width: 100px;
+}
+
+#sound-volume {
+  width: 110px;
+  padding: 0;
 }
 
 button:disabled, select:disabled, input:disabled {
