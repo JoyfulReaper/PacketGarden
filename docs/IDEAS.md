@@ -90,6 +90,33 @@ Port 22 must still resolve to redbloom server-side and still bypass ordinary rar
 A port-22 event must not suddenly become evidence of malicious traffic, SSH auth,
 or anything beyond a connection to listening port 22.
 
+### Vine -> opium mutation
+
+Use the same semantic pattern for vines rather than spawning an unrelated plant
+beside them:
+
+1. a live event first produces its normal vine;
+2. on a much rarer browser-only mutation roll, that exact vine may visibly mutate
+   into a stylized opium-poppy / opium-plant form;
+3. the mutation keeps the original specimen's cell, safe TCPNoise provenance,
+   vigor, and history rather than inventing another network event;
+4. while the mutation exists, it may have a still rarer chance to produce a
+   temporary clickable opium pod;
+5. the pod uses the same bounded transient collectible system and disappears if
+   ignored.
+
+A collected pod can say:
+
+```text
+You collected an opium pod. +0 points
+```
+
+This is visual garden nonsense only. It says nothing about the protocol, source,
+intent, or security meaning of the traffic that created the vine. It must not grow
+into crafting, processing, inventory, trade, or any useful resource system.
+Because vines live much longer than redblooms, the vine mutation should be rarer
+than the redbloom -> weed mutation so mutated plants do not accumulate everywhere.
+
 ### The zero-point anti-score
 
 A deliberately fake game score would strengthen the joke:
@@ -104,6 +131,7 @@ Collectible messages can then report things such as:
 
 ```text
 You collected some weed. +0 points
+You collected an opium pod. +0 points
 You found a rainbow leaf. +0 points
 You acquired a suspicious crystal shard. +0 points
 Excellent. A rock. +0 points
@@ -180,7 +208,76 @@ This gives different visual layers distinct jobs:
 - exact `seenCount == 1` -> transient first-seen curiosity;
 - rare collectible mutations/drops -> optional pointless clicking;
 - aggregate traffic -> weather;
+- sustained verified quiet -> quiet-only growth;
+- heavy weather -> temporary terrain residue;
 - completely unrelated cosmic forces -> gnomes.
+
+## Recent activity strip
+
+A tiny recent-event view can provide just enough context to connect sudden garden
+changes with incoming telemetry without turning PacketGarden into another dashboard.
+
+Proposed behavior:
+
+- show only the most recent **1–3 normalized events**, preferably three at most;
+- newest first;
+- browser-memory only, cleared on reload;
+- no scrolling history, pagination, search, export, or telemetry database;
+- show safe compact fields already available to the browser, such as sensor,
+  listening port, specimen, exact `seenCount`, and relative age;
+- fake-development events are clearly marked as simulated and do not invent sensor,
+  port, or count provenance;
+- a valid event dropped because the saturated garden cannot accept it may still
+  appear with a quiet `no growth` hint;
+- never expose remote IPs, source ports, payloads, banners, credentials, or other
+  excluded TCPNoise data.
+
+A compact presentation might look like:
+
+```text
+Recent activity
+wurstcase-public · :443 · broadleaf · seen 1 · now
+scopecreep-ygg · :23 · vine · seen 7 · 4s
+noisemaker · :22 · redbloom · seen 2 · 9s
+```
+
+This should stay visually subordinate to the garden. It is ambient context, not a
+replacement for Mission Control, logs, or proper observability.
+
+## Quiet-only growth
+
+Quietness should have a positive visual identity instead of the garden becoming
+interesting only when sensors are busy.
+
+A rare species -- working name **Stillbloom** -- could grow only after a genuinely
+quiet period. It belongs to the aggregate/environmental layer rather than TCPNoise
+port rarity.
+
+Important distinction: **quiet is not the same thing as broken telemetry**. A
+quiet-only plant should require a fresh/healthy aggregate source so a disconnected
+or stale sensor feed cannot accidentally create "peaceful" growth.
+
+A possible first version:
+
+- require activity to remain at zero or below a deliberately low threshold for
+  roughly 5–10 continuous minutes;
+- after the quiet threshold is reached, make only a small bounded roll every 2–5
+  minutes;
+- cap the rare quiet species at perhaps 1–2 active specimens;
+- do not replay missed rolls after tab suspension;
+- meaningful traffic immediately prevents new quiet-only growth;
+- already-grown Stillblooms remain and age naturally rather than vanishing the
+  instant activity resumes;
+- inspection should identify the source as something like `Sustained quiet`
+  rather than inventing a sensor, port, or discrete event.
+
+Visually it should not be confused with ghostbloom: thin silver-green growth, a
+large pale flower, or another restrained design that reads as something able to
+appear only after the garden has been left in peace. A mature form could have a
+very faint glow, especially once local-time night lighting exists.
+
+Possible later quiet-only relatives include a silence fern, dewbell, or extremely
+rare glass lily, but begin with one species so seeing it stays special.
 
 ## Inspection and interaction polish
 
@@ -258,12 +355,14 @@ Longer-lived terrain/history ideas from the vision include:
 
 - rocks;
 - logs;
-- puddles or ponds;
+- longer-lived ponds;
 - fallen branches;
 - tiny garden structures;
 - slow-growing trees from genuinely long-lived connection telemetry.
 
 These can live for hours or days while common plants continue cycling over minutes.
+Short-lived storm puddles belong to the weather-residue layer below rather than
+needing to become persistent terrain.
 
 ## Additional event sources
 
@@ -284,7 +383,7 @@ The mapping should stay playful, but the data meaning must remain honest. A port
 is not authentication, a weird plant is not a threat score, and a dramatic garden
 is not an intrusion-detection system.
 
-## Environmental pressure
+## Environmental pressure and weather residue
 
 Aggregate pressure is already used for weather. Possible extensions include:
 
@@ -294,6 +393,50 @@ Aggregate pressure is already used for weather. Possible extensions include:
   hundreds of permanent specimens;
 - eventual ecological responses to aggregate pressure, only if they remain subtle
   and understandable.
+
+### Heavy-rain puddles
+
+Heavy weather should be able to leave temporary terrain behind so the garden has a
+memory of a storm after the rain animation stops.
+
+A first version could work like this:
+
+- only `heavy_rain`, `botnet_thunderstorm`, and `botnet_hurricane` may create or
+  refresh puddles;
+- use a bounded formation check every roughly 10–20 seconds rather than rolling per
+  animation frame;
+- cap the total wet area, perhaps around 6–10 puddle cells/patches;
+- heavier weather increases formation/refresh pressure;
+- prefer refreshing or enlarging nearby water instead of endlessly creating new
+  isolated puddles;
+- neighboring puddles may render as one irregular little pool;
+- puddles are terrain, not specimens, and consume no specimen slot;
+- no catch-up puddle creation after a suspended tab;
+- once weather drops below heavy rain, stop forming/refreshing puddles and let them
+  drain gradually;
+- drainage should be visibly slow -- roughly 5–15 minutes is a useful starting
+  range -- with shrinking/drying rather than instant disappearance.
+
+For the first pass, water does not damage plants or create a survival mechanic.
+Grass beneath water may simply render darker or partially submerged and return to
+normal as the puddle drains.
+
+Temporary water also gives later ambient behavior a natural place to happen:
+
+- frogs may appear near puddles;
+- snails may be more likely after rain;
+- occasional small ripples;
+- a floating leaf;
+- a gnome can eventually walk through a puddle and become extremely displeased;
+- a first-seen curiosity could choose a frog when suitable water already exists.
+
+The useful causal chain is:
+
+```text
+aggregate traffic pressure -> severe weather -> temporary puddles -> slow drainage
+```
+
+That adds environmental history without pretending the rain is a damaging event.
 
 Lightning/flashing was intentionally omitted from severe weather and should not be
 added casually; the current storms communicate intensity without strobing.
