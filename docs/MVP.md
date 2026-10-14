@@ -21,7 +21,7 @@ goals, with the existing browser garden as the starting point.
 - One normalized browser event path: `GardenEvent -> handler -> specimen state -> update -> renderer`.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
-- Separate grass ground cover beneath specimens, influenced only by successful DNS/HTTP spawns. It does not block cells or contribute to specimen counts.
+- Separate fast-growing grass beneath specimens, seeded/refreshed by successful DNS/HTTP spawns. Mature healthy turf can spread locally without blocking cells or contributing to specimen counts.
 - Elapsed-time lifecycles with growth, maturity, wilting/fading/drying, and removal. Red blooms appear immediately and have only a fresh and wilting stage.
 - Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
@@ -29,9 +29,11 @@ goals, with the existing browser garden as the starting point.
 The current event is only `{ type }`. Specimens hold `type`, `column`, `row`, and
 `createdAt`. State is browser memory only; reloading clears it. Detailed
 lifecycle thresholds and fake-traffic defaults are in the [README](../README.md).
-Grass cells separately hold `column`, `row`, `lastInfluencedAt`, and `strength`.
-They fade after 20 minutes without influence and expire after 30 minutes;
-re-influence refreshes their timer and can strengthen them up to 3.
+Grass cells separately hold `column`, `row`, `createdAt`, and `lastInfluencedAt`.
+They expand automatically from sparse seeds to mature turf over 30 seconds.
+Probabilistic adjacent spread is bounded across the whole garden. Without refresh,
+turf fades after 20 minutes, gradually yellows/browns and thins, and expires after
+35 minutes. Re-influence revives the existing cell and refreshes its lifetime.
 
 ## Remaining MVP work
 
@@ -45,7 +47,7 @@ re-influence refreshes their timer and can strengthen them up to 3.
 
 These capabilities are not implemented. The current handler creates one specimen
 per accepted fake event when an empty cell exists and does nothing when the grid
-is full. It can strengthen grass after a successful DNS/HTTP spawn, but does not
+is full. It can refresh grass after a successful DNS/HTTP spawn, but does not
 strengthen existing main specimens, mutate them, or model competition.
 
 ## Presentation and shared ecosystem

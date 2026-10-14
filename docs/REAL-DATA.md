@@ -81,8 +81,9 @@ effects remain future work. Traffic quietness does not determine local-time ligh
 High volume should not necessarily create one new permanent specimen per event.
 Repeated events may strengthen, spread, bloom, mutate, or otherwise influence
 existing growth. The current main-specimen handler only spawns into empty cells;
-richer specimen responses remain work to implement. Grass strengthening is a
-separate existing effect of successful fake DNS/HTTP spawns.
+richer specimen responses remain work to implement. Grass seeding/refresh is a
+separate existing effect of successful fake DNS/HTTP spawns; seeded turf grows
+and spreads locally through the browser update loop.
 
 ## Preserve sensor meaning
 

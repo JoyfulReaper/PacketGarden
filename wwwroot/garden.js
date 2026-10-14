@@ -136,10 +136,16 @@ const grassConfig = {
   secondCellChance: 0.35,
   sameCellChance: 0.5,
   influenceRadius: 1,
-  maxStrength: 3,
+  growingAfterMs: 10_000,
+  matureAfterMs: 30_000,
   fadingAfterMs: 20 * 60_000,
-  expiredAfterMs: 30 * 60_000
+  dyingAfterMs: 27 * 60_000,
+  deadAfterMs: 32 * 60_000,
+  expiredAfterMs: 35 * 60_000,
+  spreadEveryMs: 5_000,
+  spreadChance: 0.35
 };
+let nextGrassSpreadAt = 0;
 
 // Browser-only development traffic: about 30 events per minute at these defaults.
 const fakeTrafficConfig = {
@@ -271,11 +277,32 @@ function grassNeighbors(column, row) {
 function influenceGrassCell(column, row, now) {
   const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
   if (grass) {
-    grass.strength = Math.min(grass.strength + 1, grassConfig.maxStrength);
     grass.lastInfluencedAt = now;
   } else {
-    gardenState.grassCells.push({ column, row, lastInfluencedAt: now, strength: 1 });
+    gardenState.grassCells.push({ column, row, createdAt: now, lastInfluencedAt: now });
   }
+}
+
+function spreadGrass(now) {
+  if (now < nextGrassSpreadAt) return;
+  // One attempt for the whole garden, with no catch-up bursts after a paused tab.
+  nextGrassSpreadAt = now + grassConfig.spreadEveryMs;
+  if (Math.random() >= grassConfig.spreadChance) return;
+
+  const occupied = new Set(gardenState.grassCells.map(cell => cell.row * columns + cell.column));
+  const candidates = [];
+  for (const grass of gardenState.grassCells) {
+    if (now - grass.createdAt < grassConfig.matureAfterMs
+      || now - grass.lastInfluencedAt >= grassConfig.fadingAfterMs) continue;
+    const neighbors = grassNeighbors(grass.column, grass.row).filter(
+      cell => !occupied.has(cell.row * columns + cell.column)
+    );
+    if (neighbors.length > 0) candidates.push(neighbors);
+  }
+  if (candidates.length === 0) return;
+  const neighbors = candidates[Math.floor(Math.random() * candidates.length)];
+  const target = neighbors[Math.floor(Math.random() * neighbors.length)];
+  influenceGrassCell(target.column, target.row, now);
 }
 
 function updateGardenStatus() {
@@ -305,6 +332,7 @@ function updateGarden(now = Date.now()) {
   gardenState.grassCells = gardenState.grassCells.filter(
     grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
   );
+  if (gardenState.grassCells.length > 0) spreadGrass(now);
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -582,31 +610,42 @@ function drawRedbloom(specimen, now) {
 }
 
 function drawGrass(grass, now) {
-  const ageMs = Math.max(0, now - grass.lastInfluencedAt);
-  if (ageMs >= grassConfig.expiredAfterMs) return;
-  const fading = ageMs >= grassConfig.fadingAfterMs;
-  const fadeProgress = fading
-    ? (ageMs - grassConfig.fadingAfterMs) / (grassConfig.expiredAfterMs - grassConfig.fadingAfterMs) : 0;
+  const ageMs = Math.max(0, now - grass.createdAt);
+  const idleMs = Math.max(0, now - grass.lastInfluencedAt);
+  if (idleMs >= grassConfig.expiredAfterMs) return;
+  const growing = Math.min(1, ageMs / grassConfig.growingAfterMs);
+  const expansion = Math.min(1, Math.max(0,
+    (ageMs - grassConfig.growingAfterMs) / (grassConfig.matureAfterMs - grassConfig.growingAfterMs)));
+  const growth = 0.18 + growing * 0.12 + expansion * 0.7;
+  const decline = Math.min(1, Math.max(0,
+    (idleMs - grassConfig.fadingAfterMs) / (grassConfig.expiredAfterMs - grassConfig.fadingAfterMs)));
+  // Green -> yellow -> brown -> dead turf; interpolate rather than jumping colors.
+  const colors = [[86, 127, 71], [144, 137, 74], [133, 105, 67], [112, 93, 69]];
+  const thresholds = [grassConfig.fadingAfterMs, grassConfig.dyingAfterMs,
+    grassConfig.deadAfterMs, grassConfig.expiredAfterMs];
+  const colorStage = idleMs < thresholds[1] ? 0 : idleMs < thresholds[2] ? 1 : 2;
+  const colorProgress = Math.min(1, Math.max(0,
+    (idleMs - thresholds[colorStage]) / (thresholds[colorStage + 1] - thresholds[colorStage])));
+  const color = colors[colorStage].map((channel, index) => Math.round(
+    channel + (colors[colorStage + 1][index] - channel) * colorProgress));
   const x = (grass.column + 0.5) * cellSize;
-  const y = (grass.row + 0.5) * cellSize + 7;
+  const y = (grass.row + 0.5) * cellSize;
 
   context.save();
   // Clip to the garden boundary, not individual tiles, so neighboring patches can merge.
   context.beginPath();
   context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
   context.clip();
-  context.fillStyle = fading ? "#878056" : "#567f47";
-  context.globalAlpha = (0.52 + grass.strength * 0.04) * (1 - 0.65 * fadeProgress);
+  context.fillStyle = `rgb(${color.join(", ")})`;
+  context.globalAlpha = 0.6 * (1 - 0.65 * decline);
   context.beginPath();
-  const blobs = grass.strength === 1 ? 2 : grass.strength === 2 ? 3 : 5;
   const seed = grass.column * 37 + grass.row * 61;
-  for (let blob = 0; blob < blobs; blob++) {
+  for (let blob = 0; blob < 9; blob++) {
     const angle = (seed % 17) * 0.37 + blob * 2.4;
-    const offset = 3 + (seed + blob * 7) % 3;
-    const blobX = x + Math.cos(angle) * offset;
-    const blobY = y - 7 + Math.sin(angle) * offset;
-    const radiusX = 3 + grass.strength * 2.5 + (seed + blob * 3) % 3;
-    const radiusY = radiusX * (0.65 + ((seed + blob) % 3) * 0.08);
+    const blobX = x + ((blob % 3 - 1) * 8 + Math.cos(angle) * 1.5) * growth;
+    const blobY = y + ((Math.floor(blob / 3) - 1) * 8 + Math.sin(angle) * 1.5) * growth;
+    const radiusX = (10 + (seed + blob * 3) % 3) * growth * (1 - decline * 0.65);
+    const radiusY = radiusX * (0.78 + ((seed + blob) % 3) * 0.06);
     const rotation = angle + 0.4;
     context.moveTo(blobX + Math.cos(rotation) * radiusX, blobY + Math.sin(rotation) * radiusX);
     context.ellipse(blobX, blobY, radiusX, radiusY, rotation, 0, Math.PI * 2);
@@ -614,18 +653,19 @@ function drawGrass(grass, now) {
   // One fill keeps overlapping blobs translucent enough to retain soil/grid detail.
   context.fill();
 
-  context.strokeStyle = fading ? "#8b8060" : "#738254";
-  context.globalAlpha = 0.55 * (1 - 0.65 * fadeProgress);
+  context.strokeStyle = decline > 0 ? "#a08d60" : "#738254";
+  context.globalAlpha = 0.45 * (1 - 0.8 * decline);
   context.lineWidth = 1;
   context.beginPath();
-  const blades = grass.strength * 2 + 1;
+  const blades = 7;
   for (let blade = 0; blade < blades; blade++) {
     // Stable cell-based variation keeps tufts irregular without flickering on redraw.
-    const baseX = x + (blade - (blades - 1) / 2) * 1.5;
+    const baseX = x + ((seed + blade * 7) % 21 - 10) * growth;
+    const baseY = y + ((seed + blade * 11) % 21 - 10) * growth;
     const lean = (grass.column + grass.row + blade) % 3 - 1;
-    const height = 3 + (grass.column * 3 + grass.row + blade * 2) % 4;
-    context.moveTo(baseX, y);
-    context.quadraticCurveTo(baseX + lean, y - height / 2, baseX + lean * 2, y - height);
+    const height = (3 + (grass.column * 3 + grass.row + blade * 2) % 4) * growth * (1 - decline * 0.6);
+    context.moveTo(baseX, baseY);
+    context.quadraticCurveTo(baseX + lean, baseY - height / 2, baseX + lean * 2, baseY - height);
   }
   context.stroke();
   context.restore();

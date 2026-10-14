@@ -114,12 +114,16 @@ Manual controls and automatic weighted fake traffic feed the same event handler.
 Lifecycles now retain several minutes of visual history, with vines lasting up to
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
-Successful DNS and HTTP spawns can also seed or strengthen subtle grass beneath
+Successful DNS and HTTP spawns can also seed or refresh grass beneath
 the specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near
 the new specimen, for at most two grass cells per event. Grass does not occupy
-specimen slots or affect their counts. Strength is capped at 3; grass fades after 20 minutes
-without influence and disappears after 30. Re-influence refreshes that timer.
+specimen slots or affect their counts. Once seeded, sparse grass expands into
+ragged, near-full turf over 30 seconds without further traffic. Healthy mature
+grass occasionally seeds an immediate neighbor; spread is capped across the
+whole garden to prevent runaway filling. Neglected turf begins fading after
+20 minutes, becomes brown/dead-looking by 32 minutes, and disappears after 35.
+Re-influence restores health and refreshes that timer without duplicating cells.
 
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
