@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using NATS.Client.Core;
@@ -26,7 +27,7 @@ Check(Parse(good) == new GardenGrowth("broadleaf", 443), "Valid message normaliz
 var json = JsonSerializer.Serialize(Parse(good), new JsonSerializerOptions(JsonSerializerDefaults.Web));
 using (var document = JsonDocument.Parse(json))
 {
-    Check(document.RootElement.EnumerateObject().Count() == 3, "Only three sanitized fields");
+    Check(document.RootElement.EnumerateObject().Count() == 3, "Missing inspection metadata keeps the compact three-field shape");
     Check(document.RootElement.GetProperty("specimenType").GetString() == "broadleaf", "Normalized specimen type");
     Check(document.RootElement.GetProperty("listenPort").GetInt32() == 443, "Normalized listen port");
     Check(document.RootElement.GetProperty("vigor").GetInt32() == 0, "Missing seenCount defaults to vigor 0");
@@ -89,7 +90,7 @@ foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
     for (var roll = 0; roll < 10_000; roll++)
     for (var choice = 0; choice < 3; choice++)
     {
-        Check(TcpNoiseAdapter.Normalize(input, roll, choice) == new GardenGrowth("redbloom", 22),
+        Check(TcpNoiseAdapter.Normalize(input, roll, choice) == new GardenGrowth("redbloom", 22, 0, sensor),
             "Port 22 stays redbloom for every roll/rare choice and IPv4/IPv6/sensor combination");
     }
 }
@@ -99,8 +100,8 @@ Check(Parse(WithPort(Traits(good, "{}", "[]"), 22), 9999, 2) == new GardenGrowth
 Check(Parse(WithPort(good, 22).Replace("tcpnoise.connection", "other"), 9999, 2) is null,
     "Port 22 still requires a validated TCPNoise event");
 Check(JsonSerializer.Serialize(Parse(WithPort(Traits(good, "6", "\"private-sensor-ygg\""), 22), 9999, 2),
-    new JsonSerializerOptions(JsonSerializerDefaults.Web)) == """{"specimenType":"redbloom","listenPort":22,"vigor":0}""",
-    "Port-22 SSE data has exactly the three safe fields, without sensor/IP/sensitive fields");
+    new JsonSerializerOptions(JsonSerializerDefaults.Web)) == """{"specimenType":"redbloom","listenPort":22,"vigor":0,"sensor":"private-sensor-ygg"}""",
+    "Port-22 SSE data includes bounded inspection sensor metadata without IP/payload fields");
 Check(Parse(Traits(good, "4", "\"public\""), 9750)?.SpecimenType == "broadleaf", "IPv4 public has base rates");
 Check(Parse(Traits(good, "6", "\"public\""), 9750)?.SpecimenType == "weed", "IPv6 increases unusual growth");
 Check(Parse(Traits(good, "4", "\"overlay-dn42\""), 9750)?.SpecimenType == "weed", "DN42 increases unusual growth");
@@ -121,6 +122,9 @@ foreach (var sensor in new[] { "null", "4", "true", "{}", "[]", "\"\"", "\" \"",
 Check(Parse(good, 9750)?.SpecimenType == "broadleaf", "Missing optional traits accepted without bonus");
 
 static string Seen(string json, string count) => json.Replace("\"Payload\":{", $"\"Payload\":{{\"seenCount\":{count},");
+static string? ExpectedSeen(string count) =>
+    ulong.TryParse(count, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)
+        ? parsed.ToString(CultureInfo.InvariantCulture) : null;
 var vigorCases = new (string Count, int Vigor)[]
 {
     ("null", 0), ("\"10\"", 0), ("{}", 0), ("[]", 0), ("true", 0),
@@ -131,12 +135,13 @@ var vigorCases = new (string Count, int Vigor)[]
 };
 foreach (var (count, vigor) in vigorCases)
 {
-    Check(Parse(Seen(good, count)) == new GardenGrowth("broadleaf", 443, vigor), $"seenCount {count} -> vigor {vigor}");
-    Check(Parse(Seen(WithPort(good, 22), count), 9999, 2) == new GardenGrowth("redbloom", 22, vigor),
+    var exact = ExpectedSeen(count);
+    Check(Parse(Seen(good, count)) == new GardenGrowth("broadleaf", 443, vigor, null, exact), $"seenCount {count} -> vigor {vigor} plus exact inspection count when valid");
+    Check(Parse(Seen(WithPort(good, 22), count), 9999, 2) == new GardenGrowth("redbloom", 22, vigor, null, exact),
         "Port 22 remains redbloom at every vigor/default case");
 }
 
-// Vigor must not affect base mappings or any normal/weed/rare boundary outcome.
+// Vigor and inspection metadata must not affect base mappings or any normal/weed/rare boundary outcome.
 foreach (var port in new[] { 22, 2222, 443, 5432, 53, 12345 })
 foreach (var ip in new[] { "4", "6" })
 foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
@@ -151,8 +156,8 @@ foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
     foreach (var (count, vigor) in vigorCases)
     {
         var baseline = Parse(input, roll, choice)!;
-        Check(Parse(Seen(input, count), roll, choice) == baseline with { Vigor = vigor },
-            "seenCount affects only vigor, independently of port/species/rarity/traits");
+        Check(Parse(Seen(input, count), roll, choice) == baseline with { Vigor = vigor, SeenCount = ExpectedSeen(count) },
+            "seenCount affects only vigor/inspection metadata, independently of port/species/rarity/traits");
     }
 }
 
@@ -162,11 +167,17 @@ foreach (var (roll, choice) in new[] { (0, 0), (9800, 0), (9999, 0), (9999, 1), 
         new JsonSerializerOptions(JsonSerializerDefaults.Web));
     using var document = JsonDocument.Parse(sanitized);
     Check(document.RootElement.EnumerateObject().Select(property => property.Name)
-        .Order().SequenceEqual(new[] { "listenPort", "specimenType", "vigor" }), "All outcomes serialize only the three safe fields");
-    Check(document.RootElement.GetProperty("vigor").GetInt32() == 3, "Only bounded vigor forwarded");
-    foreach (var secret in new[] { "private", "secret", "sensitive-test-marker", "sensor", "ipVersion", "seenCount", "1234567", "remoteAddress", "remotePort", "banner", "payload" })
-        Check(!sanitized.Contains(secret, StringComparison.OrdinalIgnoreCase), "No sensor/IP/sensitive fields forwarded");
+        .Order().SequenceEqual(new[] { "listenPort", "seenCount", "sensor", "specimenType", "vigor" }),
+        "Inspectable outcomes serialize only the five intended fields");
+    Check(document.RootElement.GetProperty("vigor").GetInt32() == 3, "Bounded vigor forwarded");
+    Check(document.RootElement.GetProperty("sensor").GetString() == "private-sensor-ygg", "Sensor label forwarded for inspection");
+    Check(document.RootElement.GetProperty("seenCount").GetString() == "1234567", "Exact seenCount forwarded as text");
+    foreach (var secret in new[] { "secret", "sensitive-test-marker", "ipVersion", "remoteAddress", "remotePort", "banner", "payload" })
+        Check(!sanitized.Contains(secret, StringComparison.OrdinalIgnoreCase), "Packet/IP/sensitive fields remain excluded");
 }
+var longSensor = new string('x', 140) + "-ygg";
+var longSensorGrowth = Parse(Traits(good, "4", JsonSerializer.Serialize(longSensor)))!;
+Check(longSensorGrowth.Sensor?.Length == 128, "Inspection sensor is bounded to 128 characters");
 foreach (var (roll, choice) in new[] { (-1, 0), (10_000, 0), (0, -1), (0, 3) })
 {
     var rejected = false;
@@ -186,10 +197,10 @@ Check(a is { Name: "garden", Data: GardenGrowth { SpecimenType: "broadleaf", Lis
 Check(!first.Reader.TryRead(out _) && !second.Reader.TryRead(out _), "Exactly once per client");
 events.Publish(Parse(Seen(WithPort(good, 22), "10"), 9999, 2)!);
 Check(first.Reader.TryRead(out var redA) && second.Reader.TryRead(out var redB) && redA == redB
-    && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 3 } },
-    "Port-22 redbloom uses existing transient fanout");
+    && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 3, SeenCount: "10" } },
+    "Port-22 redbloom uses existing transient fanout with inspection count");
 events.RemoveClient(first);
 events.Publish(Parse(WithPort(good, 70))!);
 Check(second.Reader.TryRead(out var c) && c.Data is GardenGrowth { SpecimenType: "mushroom", ListenPort: 70 }, "Remaining client unaffected by disconnect");
 events.RemoveClient(second);
-Console.WriteLine("PASS: TCPNoise validation/mapping, optional bounded vigor independent of rarity, port-22 rarity bypass, port-2222 vine/rarity, exact rarity probabilities/boundaries/traits, sanitized growth fields, fanout, no replay, disconnect cleanup.");
+Console.WriteLine("PASS: TCPNoise validation/mapping, bounded vigor and inspectable sensor/seenCount metadata, port-22 rarity bypass, exact rarity probabilities/boundaries/traits, sensitive-field exclusion, fanout, no replay, disconnect cleanup.");
