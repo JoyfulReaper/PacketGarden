@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PacketGarden · Pixi rendering spike</title>
+  <link rel="stylesheet" href="pixi-stress.css">
+  <script src="vendor/pixi/pixi.min.js" defer></script>
+  <script src="pixi-stress.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><a href="/">← Production garden</a><h1>Pixi rendering spike</h1>
+      <p>Synthetic scene · one opaque GPU surface · no live data</p></header>
+    <section class="controls" aria-label="Stress controls">
+      <label>Scene <select id="scene">
+        <option value="empty">Empty</option><option value="sparse">Sparse</option>
+        <option value="mixed" selected>Dense mixed</option><option value="vines">640 vines</option>
+        <option value="wireferns">640 wireferns</option>
+      </select></label>
+      <label>Weather <select id="weather">
+        <option value="quiet">Quiet</option><option value="drizzle">Drizzle</option>
+        <option value="rain">Rain</option><option value="heavy">Heavy rain</option>
+        <option value="thunderstorm">Thunderstorm</option><option value="hurricane" selected>Hurricane</option>
+      </select></label>
+      <label>Animation target <select id="target"><option value="native" selected>Native</option><option value="60">60 FPS</option></select></label>
+      <label><input id="probes" type="checkbox" checked> Probe dots</label>
+      <button id="reset" type="button">Reset measurements</button>
+    </section>
+    <div id="probe-track" aria-label="CSS red and Pixi green motion probes"><span id="css-probe"></span></div>
+    <div id="view" aria-label="Pixi synthetic garden"></div>
+    <pre id="hud" role="status">Initializing Pixi…</pre>
+    <p class="note">Red square: CSS transform. Green square: Pixi ticker. Compare their motion with the rain.
+      Frame gaps are ticker intervals, not proof of GPU completion. Mode changes reset measurements.</p>
+  </main>
+</body>
+</html>

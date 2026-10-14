@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- Keep generated output out of source/content globs, including alternate artifact paths. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;**/bin/**;**/obj/**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);artifacts/**;**/bin/**;**/obj/**;node_modules/**</DefaultItemExcludes>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="tests/**/*.cs" />

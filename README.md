@@ -61,6 +61,12 @@ A fake-event generator remains useful for development and demos and should feed 
 
 ## First prototype
 
+An isolated GPU rendering feasibility page is available at `/pixi-stress.html`.
+It defaults to 640 synthetic plants, dense grass, puddles, actors and hurricane
+rain using locally served PixiJS 8.22.0. It does not replace or load into the
+production garden. See [the spike notes](docs/PIXI-STRESS.md) for controls,
+dependency reproduction and measurement limits.
+
 The first useful milestone is intentionally small:
 
 > Open PacketGarden in a browser and watch network-shaped events grow and reshape a weird little garden.
