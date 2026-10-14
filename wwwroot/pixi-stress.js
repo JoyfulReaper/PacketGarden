@@ -65,7 +65,7 @@
 
   // All procedural art is built once into one shared GPU atlas. Every cell reuses a frame.
   // No Graphics construction, texture generation, or neighbor search occurs in the ticker.
-  function makeAtlas(P, renderer) {
+  function makeAtlas(P, renderer, extraTiles = []) {
     const sheet = new P.Container(), keys = [];
     const line = (g, points, color, width = 2) => {
       g.moveTo(points[0], points[1]);
@@ -134,6 +134,7 @@
     tile('gnome', g => { g.roundRect(24, 32, 16, 19, 3).fill(0x719399); g.circle(32, 29, 7).fill(0xe2bf99); g.poly([20, 26, 32, 7, 43, 26]).fill(0xb34c47); g.poly([25, 33, 32, 43, 39, 33]).fill(0xe6dfc9); });
     tile('rain', g => g.rect(31, 8, 1.4, 20).fill(0xb9d6dc));
     tile('probe', g => g.rect(26, 26, 12, 12).fill(0x52ff80));
+    for (const [key, draw] of extraTiles) tile(key, draw);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 512, Math.ceil(keys.length / 8) * 64), resolution: 2 });
     sheet.destroy({ children: true });
     const frames = new Map(keys.map((key, i) => [key, new P.Texture({ source: atlas.source,
@@ -282,5 +283,10 @@
     updateHud(); if (!document.hidden) app.start();
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { config, weather, sceneModel, seededRandom, contain, frameWindow, makeAtlas, createScene };
-  else start().catch(error => { document.querySelector('#hud').textContent = `Pixi initialization failed: ${error.message}. Production garden is unchanged.`; console.error(error); });
+  else {
+    window.PacketGardenPixi = { config, contain, seededRandom, frameWindow, makeAtlas };
+    if (!document.currentScript?.hasAttribute('data-pixi-library')) start().catch(error => {
+      document.querySelector('#hud').textContent = `Pixi initialization failed: ${error.message}. Production garden is unchanged.`; console.error(error);
+    });
+  }
 })();

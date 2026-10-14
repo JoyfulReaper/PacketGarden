@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PacketGarden · Pixi live soak</title>
+  <link rel="stylesheet" href="pixi-stress.css">
+  <script src="vendor/pixi/pixi.min.js" defer></script>
+  <script src="pixi-stress.js" defer data-pixi-library></script>
+  <script src="pixi-live-core.js" defer></script><script src="pixi-live.js" defer></script>
+</head>
+<body>
+  <main>
+    <header><a href="/">← Production garden</a><a href="pixi-stress.html">Synthetic stress test</a>
+      <h1>Pixi live soak</h1><p id="connection" role="status">connecting</p></header>
+    <section class="controls" aria-label="Live soak controls">
+      <button id="clear" type="button">Clear garden</button>
+      <button id="seed" type="button">Seed dense garden (simulated)</button>
+      <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
+      <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
+      <label><input id="pause" type="checkbox"> Pause live garden events</label>
+      <label><input id="probes" type="checkbox" checked> Probe dots</label>
+      <button id="reset" type="button">Reset measurements</button>
+    </section>
+    <p id="weather-status" role="status">Live weather connecting</p>
+    <div id="probe-track" aria-label="CSS red and Pixi green motion probes"><span id="css-probe"></span></div>
+    <div id="view" aria-label="Pixi live garden"></div>
+    <pre id="hud" role="status">Initializing Pixi…</pre>
+    <p class="note">Opt-in prototype. SSE growth and weather are real; dense seeding is local simulated state.
+      Grass, puddles, curiosities, drops, mutations, gnomes, inspection, activity, audio, score and collection are deferred.
+      Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
+  </main>
+</body>
+</html>

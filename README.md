@@ -67,6 +67,12 @@ rain using locally served PixiJS 8.22.0. It does not replace or load into the
 production garden. See [the spike notes](docs/PIXI-STRESS.md) for controls,
 dependency reproduction and measurement limits.
 
+`/pixi-live.html` is a second opt-in prototype using real garden/weather SSE,
+production placement/competition/lifecycle rules, and persistent Pixi specimens.
+Its local seed, weather and pause controls support live soaks. Grass and the
+remaining interaction systems are deferred; `/` still uses Canvas. See
+[Pixi live soak](docs/PIXI-LIVE.md).
+
 The first useful milestone is intentionally small:
 
 > Open PacketGarden in a browser and watch network-shaped events grow and reshape a weird little garden.
