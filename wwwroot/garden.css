@@ -121,6 +121,20 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   padding: 0;
 }
 
+.recent-activity-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+#show-recent-activity {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  accent-color: #91a18a;
+}
+
 button:disabled, select:disabled, input:disabled {
   opacity: 0.5;
   cursor: default;
@@ -144,10 +158,10 @@ button:disabled, select:disabled, input:disabled {
 
 .recent-activity {
   position: absolute;
-  top: 8px;
-  left: 8px;
+  top: 12px;
+  right: 12px;
   width: fit-content;
-  max-width: min(460px, calc(100% - 16px));
+  max-width: min(460px, calc(100% - 24px));
   padding: 6px 9px;
   border-radius: 5px;
   background: rgba(31, 41, 34, 0.82);
@@ -156,6 +170,10 @@ button:disabled, select:disabled, input:disabled {
   line-height: 1.5;
   overflow-wrap: anywhere;
   pointer-events: none;
+}
+
+.recent-activity[hidden] {
+  display: none;
 }
 
 .recent-activity h2 {
