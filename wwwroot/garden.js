@@ -27,7 +27,30 @@ function handleGardenEvent(event) {
   }
   if (emptyCells.length === 0) return;
 
-  const cell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  const adjacentCells = [];
+  const nearbyCells = [];
+  for (const cell of emptyCells) {
+    const column = cell % columns;
+    const row = Math.floor(cell / columns);
+    let distance = Infinity;
+    for (const flower of gardenState.specimens) {
+      // Diagonals count as neighbors; coordinate distances never wrap at edges.
+      distance = Math.min(distance, Math.max(
+        Math.abs(column - flower.column),
+        Math.abs(row - flower.row)
+      ));
+    }
+    if (distance === 1) adjacentCells.push(cell);
+    else if (distance === 2) nearbyCells.push(cell);
+  }
+
+  // Mostly extend a patch, with occasional small gaps rather than distant seeds.
+  const preferAdjacent = Math.random() < 0.9;
+  const preferredCells = preferAdjacent ? adjacentCells : nearbyCells;
+  const alternateCells = preferAdjacent ? nearbyCells : adjacentCells;
+  const candidates = preferredCells.length > 0 ? preferredCells
+    : alternateCells.length > 0 ? alternateCells : emptyCells;
+  const cell = candidates[Math.floor(Math.random() * candidates.length)];
   gardenState.specimens.push({
     type: "flower",
     column: cell % columns,
