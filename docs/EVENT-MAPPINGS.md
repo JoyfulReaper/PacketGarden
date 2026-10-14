@@ -16,6 +16,7 @@ without affecting ecology.
 | HTTPS request | Flowering broad-leaf plant | Similar family to HTTP, with a slightly more elaborate appearance. |
 | Genuine SSH connection telemetry | Thorny vine | Protocol-aware evidence of a connection; a port probe alone is insufficient. |
 | TCPNoise connection / port hit | Port 22 always redbloom; other ports use base families with a chance of weed or rare growth | Artistic mapping, without claiming protocol or authentication semantics. |
+| Exact valid TCPNoise `seenCount == 1` | Proposed short-lived first-seen curiosity | Browser-only critter/object near the successful source specimen, globally capped and not proof of global uniqueness. |
 | Gopher request | Mushroom | A little old-network fungus patch. |
 | Gemini request | Crystal-like fungus | More luminous / geometric than Gopher mushrooms. |
 | Port 22 probe / hit | Red bloom that quickly wilts | Based solely on a connection to listening port 22; bypasses ordinary rarity. |
@@ -37,6 +38,7 @@ without affecting ecology.
 - Repeated events may strengthen, spread, bloom, mutate, or otherwise influence existing growth instead of creating a new permanent specimen every time.
 - Similar protocols can share a visual family while still remaining recognizable.
 - Cosmetic variation is not automatically a security or rarity classification.
+- Transient curiosities and collectibles may use safe already-forwarded metadata, but must not imply stronger semantics than the source field actually has.
 
 ## Interpreting real telemetry
 
@@ -110,15 +112,15 @@ security classifications or evidence of a particular protocol.
 A uniform integer roll 0–9999 uses normal first, then weed, then rare, with each
 upper boundary exclusive. A separate uniform choice 0–2 selects `ghostbloom`,
 `crystalfungus`, or `blackthorn` equally. Port 22 cannot become a weed or rare
-species.
+species in backend rarity selection.
 
 Weeds are angular yellow-green; ghostblooms are pale luminous flowers; crystal
 fungi use faceted crystalline shapes; blackthorns are dark thorny growth. Their
 lifetimes are 6, 6, 7, and 12 minutes respectively (stages in the README).
 
 All backend rarity is event-driven and resolved before SSE. The browser does not
-reroll species rarity. Richer competition and mutations of existing specimens
-remain future ecology work.
+reroll species rarity. Browser-only collectible mutation is a separate presentation
+concept and does not change this policy.
 
 ## TCPNoise vigor
 
@@ -164,12 +166,58 @@ seenCount?   # exact valid UInt64 represented as decimal text
 ```
 
 The exact count is text so JavaScript cannot round values above its safe integer
-range. Sensor and count are display-only metadata: they do not alter rarity,
-species, color, placement, competition, grass, weather, or lifetime.
+range. Sensor and count are display-only metadata: they do not alter backend rarity,
+species selection, placement, competition, grass, weather, or lifetime.
 
 Remote IP addresses, remote source ports, credentials, banners, raw packets, and
 payloads are not forwarded. Fake-development specimens are explicitly labeled as
 simulated rather than receiving invented provenance.
+
+## First-seen curiosity proposal
+
+The exact decimal-string `seenCount` makes a small browser-only first-seen effect
+possible without expanding the SSE contract.
+
+Proposed rule:
+
+```text
+seenCount == "1" -> may create one transient curiosity near the successfully spawned specimen
+```
+
+Important boundaries:
+
+- `"1"` means only that the source supplied an exact valid count of one;
+- PacketGarden should not call it globally first-ever across sensors or history;
+- missing, invalid, or unusable counts do not qualify;
+- at most three first-seen curiosities should exist globally at one time;
+- when the cap is full, skip the new curiosity with no queue or catch-up;
+- curiosities do not consume specimen cells or affect grass, vigor, rarity,
+  competition, weather, or the source specimen;
+- they should last only tens of seconds and may be collectable for `+0 points`.
+
+Candidate curiosities include a ladybug, snail, moth, shiny pebble, odd seed, or
+worthless coin-shaped object. Species may bias the pool for visual flavor.
+
+## Port-22 collectible behavior
+
+The current implementation keeps the backend mapping unchanged and, after
+successful live port-22 redbloom growth, performs a separate 5% browser-only roll
+that may leave a temporary weed sprig nearby.
+
+The preferred follow-up is different: keep the initial normal redbloom, then let
+that **same specimen** mutate into a temporary collectible weed plant on the rare
+browser-only collectible roll. The mutation should preserve the source specimen's
+safe provenance and remain visually downstream of the original redbloom signal.
+
+This does not mean port 22 becomes a backend weed mapping. The backend remains:
+
+```text
+port 22 -> redbloom, always, rarity bypassed
+```
+
+Collecting the mutated weed is optional and useless. A proposed UI gag is a
+permanent `Score: 0` plus messages such as `You collected some weed. +0 points`.
+The score must never accumulate or unlock anything.
 
 ## Cosmetic color variation
 

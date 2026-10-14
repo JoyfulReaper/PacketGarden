@@ -7,9 +7,9 @@ Build the smallest browser prototype that proves the core idea:
 > Network-shaped events visibly grow and reshape a top-down garden that is interesting to watch.
 
 The prototype now has real TCPNoise input, live aggregate weather, lifecycles,
-grass ecology, color variation, bounded competition, click inspection, sound, and
-a lightweight ambient actor layer. Persistence and additional sensor/service
-inputs remain goals.
+grass ecology, color variation, bounded competition, click inspection, sound, a
+lightweight ambient actor layer, and the first pointless collectible. Persistence
+and additional sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
@@ -43,9 +43,9 @@ inputs remain goals.
 - Pointless transient weed-sprig collectibles: a separate 5% browser roll after successful live port-22 redbloom growth, at most three active, expiring after 20 seconds through the existing tick. No specimen cells, grass influence, provenance, inventory, or progression. Shared scaled-canvas routing collects before inspecting; a two-second message and optional quiet pluck use existing sound controls. Gnome start/cleanup and collectible collection/expiry preserve each other's state.
 - A small standalone About page explaining the project, data flow, visual metaphors, privacy boundary, weather, ecology, inspection, and the fact that the gnomes mean absolutely nothing.
 
-Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
-quickly enough and you collect some weed. This accomplishes absolutely nothing.
-Redbloom mapping and backend rarity are unchanged; ignoring a sprig has no
+Very occasionally, a port-22 redbloom may currently leave behind a tiny weed sprig.
+Click it quickly enough and you collect some weed. This accomplishes absolutely
+nothing. Redbloom mapping and backend rarity are unchanged; ignoring a sprig has no
 consequence.
 
 ## Current browser-facing growth model
@@ -98,6 +98,26 @@ weaker occupant at saturation. Dropped saturated events are silent; successful
 replacements use shared growth sound/cooldowns. Natural expiry remains the normal
 way space opens. Real TCPNoise growth does not directly seed or refresh grass.
 
+## Captured next slices
+
+These are desired follow-ups, not descriptions of the code already implemented:
+
+- **Port-22 collectible mutation:** preserve the initial normal redbloom, then on a
+  rare browser-only roll mutate that same specimen into a temporary collectible
+  weed plant instead of leaving a separate sprig. Preserve its safe source
+  provenance. Backend port-22 mapping remains redbloom and still bypasses rarity.
+- **The zero-point anti-score:** display `Score: 0` and never change it. Collection
+  messages may say `You collected some weed. +0 points`. No hidden scoring, high
+  score, multiplier, persistence, achievements, or collection totals.
+- **First-seen curiosities:** when a successful live specimen has exact valid
+  `seenCount == "1"`, optionally produce a short-lived critter or dropped object
+  near it. Cap this layer at three active curiosities globally; when full, silently
+  skip rather than queue/catch up. Missing/unusable counts do not qualify.
+- Candidate first-seen curiosities include ladybugs, snails, moths, shiny pebbles,
+  odd seeds, and worthless coin-shaped objects. Clicking one may award `+0 points`.
+
+See [Ideas](IDEAS.md) for the broader pool and design constraints.
+
 ## Presentation and shared ecosystem
 
 Keep the top-down bounded garden visible as a whole. PacketGarden is primarily a
@@ -108,9 +128,10 @@ type determines the main effect; safe source traits may influence visual variati
 without turning the garden into a dashboard.
 
 Rare ambient events should remain rare enough to be surprising. The project should
-not grow a score, economy, progression system, required gardening chores, health
-bars, persistent combat factions, or optimization loop. See [Ideas and future
-directions](IDEAS.md) for captured possibilities and guardrails.
+not grow a meaningful accumulating score, economy, progression system, required
+gardening chores, health bars, persistent combat factions, or optimization loop.
+A permanently-zero joke score is fine because it creates no progression. See
+[Ideas and future directions](IDEAS.md) for captured possibilities and guardrails.
 
 ## Real-data direction
 
@@ -149,7 +170,7 @@ independently.
 
 - Raw packet capture or direct browser-to-NATS connectivity.
 - Accounts/authentication or multiplayer/shared-user gardens.
-- Game economy, scoring, achievements, progression, or gardening controls.
+- Meaningful game economy, accumulating score, achievements, progression, or gardening controls.
 - Player-directed combat or tactical unit management; gnome fights are ambient nonsense, not a combat system.
 - Complex procedural ecology or a giant scrollable map.
 - Perfect botanical art or long-term terrain simulation.
