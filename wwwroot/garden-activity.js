@@ -1,3 +1,5 @@
+const recentActivityPanel = document.querySelector("#recent-activity");
+const showRecentActivityControl = document.querySelector("#show-recent-activity");
 const recentActivityRows = [0, 1, 2].map(index => document.querySelector(`#recent-event-${index}`));
 let nextRecentActivityUpdateAt = 0;
 
@@ -23,6 +25,13 @@ function renderRecentActivity(now = Date.now()) {
   });
   nextRecentActivityUpdateAt = now + 1000;
 }
+
+function updateRecentActivityVisibility() {
+  recentActivityPanel.hidden = !showRecentActivityControl.checked;
+}
+
+showRecentActivityControl.addEventListener("change", updateRecentActivityVisibility);
+updateRecentActivityVisibility();
 
 // Share the existing garden tick; no event-specific timers or stored raw frames.
 function updateRecentActivity(now) {
