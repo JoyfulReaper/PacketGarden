@@ -127,8 +127,15 @@ const gardenSound = (() => {
     } catch { reportUnavailable(); }
   }
 
+  function maybePlayCollectionSound() {
+    if (!enabled || volume === 0 || audio?.state !== "running") return;
+    try {
+      playTone(392, "triangle", 0.08, audio.currentTime, 0.045);
+    } catch { reportUnavailable(); }
+  }
+
   toggle.addEventListener("click", () => setSoundEnabled(!enabled));
   volumeControl.addEventListener("input", () => setSoundVolume(volumeControl.value));
   updateToggle();
-  return { maybePlayGrowthSound, maybePlayGnomeSound };
+  return { maybePlayGrowthSound, maybePlayGnomeSound, maybePlayCollectionSound };
 })();

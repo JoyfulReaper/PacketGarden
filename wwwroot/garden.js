@@ -63,7 +63,11 @@ gardenEventSource.addEventListener("garden", message => {
     if (typeof event?.specimenType === "string" && speciesConfig.has(event.specimenType)
       && Number.isInteger(event.listenPort) && event.listenPort >= 1 && event.listenPort <= 65535
       && Number.isInteger(event.vigor) && event.vigor >= 0 && event.vigor <= 3) {
-      spawnSpecimen(event.specimenType, null, event.vigor);
+      const specimen = spawnSpecimen(event.specimenType, null, event.vigor);
+      if (specimen && event.listenPort === 22 && event.specimenType === "redbloom"
+        && typeof maybeSpawnPort22Collectible === "function") {
+        maybeSpawnPort22Collectible(specimen);
+      }
     }
   } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
@@ -203,7 +207,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [], actors: [] };
+const gardenState = { specimens: [], grassCells: [], actors: [], collectibles: [] };
 const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
 
 // Called only at saturation, after expiry. Equal vigor never churns the garden.
@@ -1003,6 +1007,7 @@ function drawGarden() {
   for (const specimen of gardenState.specimens) {
     speciesConfig.get(specimen.type).render(specimen, now);
   }
+  if (typeof drawGardenCollectibles === "function") drawGardenCollectibles(now);
   if (typeof drawGardenActors === "function") drawGardenActors(now);
   drawRain(now);
 }
@@ -1025,7 +1030,9 @@ drawGarden();
 
 // Clean up before drawing, including the tick that removes the final specimen or tuft.
 window.setInterval(() => {
-  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0) {
+  const collectiblesChanged = typeof updateCollectibles === "function" && updateCollectibles(Date.now());
+  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0
+    || gardenState.collectibles.length > 0 || collectiblesChanged) {
     updateGarden();
     drawGarden();
   }

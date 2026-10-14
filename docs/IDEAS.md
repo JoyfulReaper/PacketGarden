@@ -60,12 +60,13 @@ telemetry. Most of them can simply be garden nonsense.
 
 ## Pointless collectibles
 
-Occasionally the garden could produce a short-lived clickable object that the
-viewer can collect for absolutely no useful reason.
+The first collectible is implemented as a separate transient browser layer:
+a successful live port-22 redbloom has a 5% chance to leave a tiny weed sprig
+nearby, capped at three active sprigs and expiring quietly after 20 seconds.
+It consumes no specimen cell and has no effect on grass or gnomes.
 
-One example: a port-22 hit still creates its normal redbloom, but very rarely also
-causes a small collectible weed to appear nearby. Clicking it before it expires
-plucks/collects it; ignoring it simply lets it disappear on its own.
+Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
+quickly enough and you collect some weed. This accomplishes absolutely nothing.
 
 Keeping the collectible as a secondary effect preserves the existing rule that a
 TCPNoise hit on listening port 22 always maps to redbloom rather than muddying that
@@ -81,10 +82,11 @@ The important part is that collecting should remain intentionally pointless:
 - no gameplay advantage for clicking it;
 - missing one should have no penalty.
 
-A tiny pluck animation, soft sound, or brief message such as `You picked some weed.`
-is enough. Other rare ephemeral objects could eventually use the same mechanism as
-long as they remain optional curiosities rather than the start of a progression
-system.
+Clicking shows `You collected some weed.` for two seconds and, with Sound enabled,
+plays a quiet pluck through the existing volume control. There is no inventory or
+progression. Other rare ephemeral objects could eventually use the same mechanism
+as long as they remain optional curiosities. Gnome weed theft remains future
+research; current incidents leave collectibles alone.
 
 ## Inspection and interaction polish
 

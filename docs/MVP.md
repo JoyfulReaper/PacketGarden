@@ -40,7 +40,13 @@ inputs remain goals.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 - Click-to-inspect information cards with scaled-canvas hit testing. Empty-soil click, Escape, or the close button dismisses the card; it also closes if the exact inspected specimen expires or is displaced. Fake specimens are labeled as simulated rather than inventing provenance.
 - A separate browser-only ambient actor layer and The Gnome Incident: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, weather, or network meaning. Tiny optional cues share existing sound controls.
+- Pointless transient weed-sprig collectibles: a separate 5% browser roll after successful live port-22 redbloom growth, at most three active, expiring after 20 seconds through the existing tick. No specimen cells, grass influence, provenance, inventory, or progression. Shared scaled-canvas routing collects before inspecting; a two-second message and optional quiet pluck use existing sound controls. Gnome start/cleanup and collectible collection/expiry preserve each other's state.
 - A small standalone About page explaining the project, data flow, visual metaphors, privacy boundary, weather, ecology, inspection, and the fact that the gnomes mean absolutely nothing.
+
+Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
+quickly enough and you collect some weed. This accomplishes absolutely nothing.
+Redbloom mapping and backend rarity are unchanged; ignoring a sprig has no
+consequence.
 
 ## Current browser-facing growth model
 

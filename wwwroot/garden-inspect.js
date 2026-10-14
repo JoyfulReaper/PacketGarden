@@ -79,7 +79,7 @@ function closeSpecimenCard() {
   specimenCard.hidden = true;
 }
 
-function specimenAtCanvasPoint(clientX, clientY) {
+function gardenPointFromClient(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const scale = Math.min(
     rect.width / (gardenWidth + margin * 2),
@@ -92,14 +92,28 @@ function specimenAtCanvasPoint(clientX, clientY) {
   const x = (clientX - rect.left - offsetX) / scale;
   const y = (clientY - rect.top - offsetY) / scale;
   if (x < 0 || x >= gardenWidth || y < 0 || y >= gardenHeight) return null;
+  return { x, y };
+}
 
-  const column = Math.floor(x / cellSize);
-  const row = Math.floor(y / cellSize);
+function specimenAtGardenPoint(point) {
+  if (!point) return null;
+  const column = Math.floor(point.x / cellSize);
+  const row = Math.floor(point.y / cellSize);
   return gardenState.specimens.find(specimen => specimen.column === column && specimen.row === row) ?? null;
 }
 
+function specimenAtCanvasPoint(clientX, clientY) {
+  return specimenAtGardenPoint(gardenPointFromClient(clientX, clientY));
+}
+
 canvas.addEventListener("click", event => {
-  const specimen = specimenAtCanvasPoint(event.clientX, event.clientY);
+  const point = gardenPointFromClient(event.clientX, event.clientY);
+  const collectible = typeof collectibleAtGardenPoint === "function" ? collectibleAtGardenPoint(point) : null;
+  if (collectible) {
+    collectCollectible(collectible);
+    return;
+  }
+  const specimen = specimenAtGardenPoint(point);
   if (!specimen) {
     closeSpecimenCard();
     return;

@@ -133,6 +133,16 @@ green-hat gnomes. They approach, shove, randomly pick a winner, and disappear af
 grass, or weather. Sound-enabled gardens get two tiny cues through the existing
 volume control. It is garden nonsense, with no network or security meaning.
 
+Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
+quickly enough and you collect some weed. This accomplishes absolutely nothing.
+After successful live port-22 growth, a separate browser-only 5% roll can create
+one sprig nearby, capped at three active sprigs. They occupy no specimen cells,
+affect no grass or gnomes, and disappear quietly after 20 seconds. Clicking takes
+priority over specimen inspection and briefly says `You collected some weed.`;
+Sound-enabled gardens get a tiny pluck at the existing volume. Port 22 still
+always maps to redbloom and bypasses backend rarity. Collectibles are cosmetic and
+transient, with no inventory, score, progression, or consequence for ignoring them.
+
 Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
 specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near
@@ -256,7 +266,9 @@ browser-path checks with `node tests/garden-events.cjs`, focused inspection chec
 with `node tests/garden-inspect.cjs`, audio checks with `node tests/garden-audio.cjs`,
 broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 `node tests/species-color-variants.cjs`, and focused grass ecology checks with
-`node tests/grass-ecology.cjs`.
+`node tests/grass-ecology.cjs`. Collectible integration checks run with
+`node tests/garden-collectibles.cjs`, and ambient actor checks with
+`node tests/gnome-events.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.

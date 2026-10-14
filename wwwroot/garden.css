@@ -122,6 +122,22 @@ button:disabled, select:disabled, input:disabled {
   cursor: default;
 }
 
+.collection-message {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: 130px;
+  transform: translateX(-50%);
+  max-width: calc(100vw - 24px);
+  padding: 6px 10px;
+  border: 1px solid #71816a;
+  border-radius: 5px;
+  background: rgba(31, 41, 34, 0.92);
+  color: #dbe3d4;
+  font-size: 12px;
+  pointer-events: none;
+}
+
 .specimen-card {
   position: fixed;
   z-index: 20;
