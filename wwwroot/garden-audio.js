@@ -15,6 +15,11 @@ const gardenSound = (() => {
   ]);
   const ordinaryCooldownMs = 400;
   const rareCooldownMs = 900;
+  // Oscillator envelopes need substantially more headroom than the original
+  // prototype. Keep the master slider linear while making 100% genuinely audible.
+  const ordinaryPeak = 0.38;
+  const rarePeak = 0.26;
+  const overtonePeak = 0.07;
   let audio = null;
   let master = null;
   let enabled = false;
@@ -102,8 +107,8 @@ const gardenSound = (() => {
       notes.forEach((ratio, index) => {
         const start = audio.currentTime + index * 0.1;
         const frequency = sound.frequency * ratio * pitch;
-        playTone(frequency, sound.wave, sound.duration, start, rare ? 0.09 : 0.12);
-        if (sound.overtone) playTone(frequency * sound.overtone, sound.wave, sound.duration * 0.75, start, 0.025);
+        playTone(frequency, sound.wave, sound.duration, start, rare ? rarePeak : ordinaryPeak);
+        if (sound.overtone) playTone(frequency * sound.overtone, sound.wave, sound.duration * 0.75, start, overtonePeak);
       });
       // Rare chords can break through ordinary traffic, then leave a little space.
       lastOrdinaryAt = now;
