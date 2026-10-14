@@ -58,6 +58,34 @@ Ambient incidents should not claim to represent attacks, failures, threat levels
 or specific protocols unless an event is explicitly designed around trustworthy
 telemetry. Most of them can simply be garden nonsense.
 
+## Pointless collectibles
+
+Occasionally the garden could produce a short-lived clickable object that the
+viewer can collect for absolutely no useful reason.
+
+One example: a port-22 hit still creates its normal redbloom, but very rarely also
+causes a small collectible weed to appear nearby. Clicking it before it expires
+plucks/collects it; ignoring it simply lets it disappear on its own.
+
+Keeping the collectible as a secondary effect preserves the existing rule that a
+TCPNoise hit on listening port 22 always maps to redbloom rather than muddying that
+signal.
+
+The important part is that collecting should remain intentionally pointless:
+
+- no score;
+- no currency;
+- no crafting;
+- no upgrades;
+- no required collection log;
+- no gameplay advantage for clicking it;
+- missing one should have no penalty.
+
+A tiny pluck animation, soft sound, or brief message such as `You picked some weed.`
+is enough. Other rare ephemeral objects could eventually use the same mechanism as
+long as they remain optional curiosities rather than the start of a progression
+system.
+
 ## Inspection and interaction polish
 
 Click-to-inspect is implemented. Possible refinements:
