@@ -490,6 +490,29 @@ function drawGrass(grass, now) {
   const y = (grass.row + 0.5) * cellSize + 7;
 
   context.save();
+  // Clip to the garden boundary, not individual tiles, so neighboring patches can merge.
+  context.beginPath();
+  context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
+  context.clip();
+  context.fillStyle = fading ? "#878056" : "#567f47";
+  context.globalAlpha = (0.52 + grass.strength * 0.04) * (1 - 0.65 * fadeProgress);
+  context.beginPath();
+  const blobs = grass.strength === 1 ? 2 : grass.strength === 2 ? 3 : 5;
+  const seed = grass.column * 37 + grass.row * 61;
+  for (let blob = 0; blob < blobs; blob++) {
+    const angle = (seed % 17) * 0.37 + blob * 2.4;
+    const offset = 3 + (seed + blob * 7) % 3;
+    const blobX = x + Math.cos(angle) * offset;
+    const blobY = y - 7 + Math.sin(angle) * offset;
+    const radiusX = 3 + grass.strength * 2.5 + (seed + blob * 3) % 3;
+    const radiusY = radiusX * (0.65 + ((seed + blob) % 3) * 0.08);
+    const rotation = angle + 0.4;
+    context.moveTo(blobX + Math.cos(rotation) * radiusX, blobY + Math.sin(rotation) * radiusX);
+    context.ellipse(blobX, blobY, radiusX, radiusY, rotation, 0, Math.PI * 2);
+  }
+  // One fill keeps overlapping blobs translucent enough to retain soil/grid detail.
+  context.fill();
+
   context.strokeStyle = fading ? "#8b8060" : "#738254";
   context.globalAlpha = 0.55 * (1 - 0.65 * fadeProgress);
   context.lineWidth = 1;
