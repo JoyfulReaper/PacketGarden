@@ -112,8 +112,10 @@ Lifecycles now retain several minutes of visual history, with vines lasting up t
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
 Successful DNS and HTTP spawns can also seed or strengthen subtle grass beneath
-the specimens (30% and 50% influence chances). Grass does not occupy specimen
-slots or affect their counts. Strength is capped at 3; grass fades after 20 minutes
+the specimens (45% and 65% influence chances). Each successful influence affects
+the usual target and has a 35% chance to also affect a distinct adjacent cell near
+the new specimen, for at most two grass cells per event. Grass does not occupy
+specimen slots or affect their counts. Strength is capped at 3; grass fades after 20 minutes
 without influence and disappears after 30. Re-influence refreshes that timer.
 
 Real sensors, NATS adapters, and SSE are not implemented. Inspection, local-time

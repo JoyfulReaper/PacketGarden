@@ -48,7 +48,8 @@ const redbloomTimings = {
 const updateEveryMs = 250;
 
 const grassConfig = {
-  influenceChances: { dns: 0.3, http: 0.5 },
+  influenceChances: { dns: 0.45, http: 0.65 },
+  secondCellChance: 0.35,
   sameCellChance: 0.5,
   influenceRadius: 1,
   maxStrength: 3,
@@ -149,18 +150,8 @@ function influenceGrass(eventType, specimen, now = Date.now()) {
 
   let column = specimen.column;
   let row = specimen.row;
+  const neighbors = grassNeighbors(column, row);
   if (Math.random() >= grassConfig.sameCellChance) {
-    const neighbors = [];
-    for (let dy = -grassConfig.influenceRadius; dy <= grassConfig.influenceRadius; dy++) {
-      for (let dx = -grassConfig.influenceRadius; dx <= grassConfig.influenceRadius; dx++) {
-        if (dx === 0 && dy === 0) continue;
-        const neighborColumn = column + dx;
-        const neighborRow = row + dy;
-        if (neighborColumn >= 0 && neighborColumn < columns && neighborRow >= 0 && neighborRow < rows) {
-          neighbors.push({ column: neighborColumn, row: neighborRow });
-        }
-      }
-    }
     if (neighbors.length > 0) {
       const neighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
       column = neighbor.column;
@@ -168,6 +159,32 @@ function influenceGrass(eventType, specimen, now = Date.now()) {
     }
   }
 
+  influenceGrassCell(column, row, now);
+  if (Math.random() < grassConfig.secondCellChance) {
+    const otherNeighbors = neighbors.filter(cell => cell.column !== column || cell.row !== row);
+    if (otherNeighbors.length > 0) {
+      const second = otherNeighbors[Math.floor(Math.random() * otherNeighbors.length)];
+      influenceGrassCell(second.column, second.row, now);
+    }
+  }
+}
+
+function grassNeighbors(column, row) {
+  const neighbors = [];
+  for (let dy = -grassConfig.influenceRadius; dy <= grassConfig.influenceRadius; dy++) {
+    for (let dx = -grassConfig.influenceRadius; dx <= grassConfig.influenceRadius; dx++) {
+      if (dx === 0 && dy === 0) continue;
+      const neighborColumn = column + dx;
+      const neighborRow = row + dy;
+      if (neighborColumn >= 0 && neighborColumn < columns && neighborRow >= 0 && neighborRow < rows) {
+        neighbors.push({ column: neighborColumn, row: neighborRow });
+      }
+    }
+  }
+  return neighbors;
+}
+
+function influenceGrassCell(column, row, now) {
   const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
   if (grass) {
     grass.strength = Math.min(grass.strength + 1, grassConfig.maxStrength);
