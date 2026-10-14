@@ -47,6 +47,15 @@ const redbloomTimings = {
 };
 const updateEveryMs = 250;
 
+const grassConfig = {
+  influenceChances: { dns: 0.3, http: 0.5 },
+  sameCellChance: 0.5,
+  influenceRadius: 1,
+  maxStrength: 3,
+  fadingAfterMs: 20 * 60_000,
+  expiredAfterMs: 30 * 60_000
+};
+
 // Browser-only development traffic: about 30 events per minute at these defaults.
 const fakeTrafficConfig = {
   minDelayMs: 1_200,
@@ -78,7 +87,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" }} GardenEvent */
-const gardenState = { specimens: [] };
+const gardenState = { specimens: [], grassCells: [] };
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
@@ -121,15 +130,51 @@ function handleGardenEvent(event) {
   const candidates = preferredCells.length > 0 ? preferredCells
     : alternateCells.length > 0 ? alternateCells : emptyCells;
   const cell = candidates[Math.floor(Math.random() * candidates.length)];
-  gardenState.specimens.push({
+  const specimen = {
     type: specimenType,
     column: cell % columns,
     row: Math.floor(cell / columns),
     createdAt: Date.now()
-  });
+  };
+  gardenState.specimens.push(specimen);
+  influenceGrass(event.type, specimen);
 
   updateGardenStatus();
   drawGarden();
+}
+
+function influenceGrass(eventType, specimen, now = Date.now()) {
+  const chance = grassConfig.influenceChances[eventType] ?? 0;
+  if (chance === 0 || Math.random() >= chance) return;
+
+  let column = specimen.column;
+  let row = specimen.row;
+  if (Math.random() >= grassConfig.sameCellChance) {
+    const neighbors = [];
+    for (let dy = -grassConfig.influenceRadius; dy <= grassConfig.influenceRadius; dy++) {
+      for (let dx = -grassConfig.influenceRadius; dx <= grassConfig.influenceRadius; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const neighborColumn = column + dx;
+        const neighborRow = row + dy;
+        if (neighborColumn >= 0 && neighborColumn < columns && neighborRow >= 0 && neighborRow < rows) {
+          neighbors.push({ column: neighborColumn, row: neighborRow });
+        }
+      }
+    }
+    if (neighbors.length > 0) {
+      const neighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+      column = neighbor.column;
+      row = neighbor.row;
+    }
+  }
+
+  const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
+  if (grass) {
+    grass.strength = Math.min(grass.strength + 1, grassConfig.maxStrength);
+    grass.lastInfluencedAt = now;
+  } else {
+    gardenState.grassCells.push({ column, row, lastInfluencedAt: now, strength: 1 });
+  }
 }
 
 function updateGardenStatus() {
@@ -156,6 +201,9 @@ function updateGarden(now = Date.now()) {
     gardenState.specimens = remaining;
     updateGardenStatus();
   }
+  gardenState.grassCells = gardenState.grassCells.filter(
+    grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
+  );
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -432,6 +480,33 @@ function drawRedbloom(specimen, now) {
   context.restore();
 }
 
+function drawGrass(grass, now) {
+  const ageMs = Math.max(0, now - grass.lastInfluencedAt);
+  if (ageMs >= grassConfig.expiredAfterMs) return;
+  const fading = ageMs >= grassConfig.fadingAfterMs;
+  const fadeProgress = fading
+    ? (ageMs - grassConfig.fadingAfterMs) / (grassConfig.expiredAfterMs - grassConfig.fadingAfterMs) : 0;
+  const x = (grass.column + 0.5) * cellSize;
+  const y = (grass.row + 0.5) * cellSize + 7;
+
+  context.save();
+  context.strokeStyle = fading ? "#8b8060" : "#738254";
+  context.globalAlpha = 0.55 * (1 - 0.65 * fadeProgress);
+  context.lineWidth = 1;
+  context.beginPath();
+  const blades = grass.strength * 2 + 1;
+  for (let blade = 0; blade < blades; blade++) {
+    // Stable cell-based variation keeps tufts irregular without flickering on redraw.
+    const baseX = x + (blade - (blades - 1) / 2) * 1.5;
+    const lean = (grass.column + grass.row + blade) % 3 - 1;
+    const height = 3 + (grass.column * 3 + grass.row + blade * 2) % 4;
+    context.moveTo(baseX, y);
+    context.quadraticCurveTo(baseX + lean, y - height / 2, baseX + lean * 2, y - height);
+  }
+  context.stroke();
+  context.restore();
+}
+
 function drawGarden() {
   const { width, height } = canvas.getBoundingClientRect();
   if (width <= 0 || height <= 0) return;
@@ -473,6 +548,9 @@ function drawGarden() {
   context.strokeRect(0, 0, gardenWidth, gardenHeight);
 
   const now = Date.now();
+  for (const grass of gardenState.grassCells) {
+    drawGrass(grass, now);
+  }
   for (const specimen of gardenState.specimens) {
     speciesConfig.get(specimen.type).render(specimen, now);
   }
@@ -482,9 +560,9 @@ new ResizeObserver(drawGarden).observe(canvas);
 window.addEventListener("resize", drawGarden);
 drawGarden();
 
-// Clean up before drawing, including the tick that removes the final specimen.
+// Clean up before drawing, including the tick that removes the final specimen or tuft.
 window.setInterval(() => {
-  if (gardenState.specimens.length > 0) {
+  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0) {
     updateGarden();
     drawGarden();
   }

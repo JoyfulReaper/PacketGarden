@@ -111,6 +111,11 @@ Manual controls and automatic weighted fake traffic feed the same event handler.
 Lifecycles now retain several minutes of visual history, with vines lasting up to
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
+Successful DNS and HTTP spawns can also seed or strengthen subtle grass beneath
+the specimens (30% and 50% influence chances). Grass does not occupy specimen
+slots or affect their counts. Strength is capped at 3; grass fades after 20 minutes
+without influence and disappears after 30. Re-influence refreshes that timer.
+
 Real sensors, NATS adapters, and SSE are not implemented. Inspection, local-time
 lighting, persistence, ecological competition, and aggregate weather effects
 remain planned work; see [MVP](docs/MVP.md).
