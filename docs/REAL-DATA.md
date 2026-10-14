@@ -54,11 +54,11 @@ PacketGarden backend adapter
      ↓
 validate -> port 22: redbloom; other ports: base mapping + coarse rarity traits
      ↓
-normalized garden growth
+normalized garden growth + bounded inspection provenance
      ↓
     SSE
      ↓
-existing browser ecology
+existing browser ecology + click inspection
 ```
 
 The hosted adapter uses `NATS.Client.Core`. Set `Nats:Url` (`Nats__Url` in the
@@ -85,11 +85,17 @@ are unsigned 64-bit JSON integers: 0–1 give vigor 0, 2–3 give 1, 4–9 give 
 negative, fractional/exponent representations, or overflowing numbers give vigor 0
 without rejecting a valid connection. No arithmetic on the raw count is needed.
 Vigor is artistic recurrence, not a threat score or rarity input; it affects
-bounded rendering details and competition only at full specimen occupancy. SSE emits only:
+bounded rendering details and competition only at full specimen occupancy.
+
+For click inspection, a valid TCPNoise sensor string is forwarded as a bounded
+label (maximum 128 characters), and a valid unsigned `seenCount` is forwarded as
+its exact decimal text. Sending the count as text avoids JavaScript rounding of
+large UInt64 values. Optional inspection fields are omitted when unusable.
+A typical live frame is:
 
 ```text
 event: garden
-data: {"specimenType":"broadleaf","listenPort":443,"vigor":0}
+data: {"specimenType":"broadleaf","listenPort":445,"vigor":3,"sensor":"wurstcase-public","seenCount":"17"}
 
 ```
 
@@ -104,9 +110,12 @@ stream.
 
 The browser requires integer vigor 0–3 and ignores growth frames with missing or
 invalid vigor. Each specimen retains its received vigor throughout its lifetime;
-fake controls default to 0. Exact `seenCount`, sensor names, and IP-version/address
-information are never forwarded. Species selection, rarity, free-cell placement,
-grass, weather, and decay timings are independent of vigor.
+fake controls default to 0. The browser also retains the normalized sensor label,
+listening port, and exact decimal `seenCount` on successful live specimens for
+click inspection. These inspection fields do not affect species, rarity, placement,
+grass, weather, decay, or competition. Remote IP addresses, remote source ports,
+packet contents, banners, credentials, and unrelated collector fields are never
+forwarded.
 
 Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
 They share placement, clustering, lifecycles, and occupancy with fake events, but
@@ -157,7 +166,8 @@ IPv6 / DN42 / Ygg and fallback ports are coarse visual modifiers, not security
 classifications or claims that any sensor/traffic class is malicious.
 Individual hits drive plants; aggregate activity continues driving weather
 separately through Noise Observatory. Rare growth still requires an accepted event;
-there are no timed mutation events. Sensor names and IP details never reach SSE.
+there are no timed mutation events. Sensor labels may reach SSE only as bounded
+inspection provenance; remote endpoint/IP details do not.
 
 ## TCPNoise fleet planning inventory
 
@@ -173,32 +183,31 @@ Reference only; this is not runtime discovery or configuration.
 
 ## Normalized data and privacy
 
-Normalized input may include only safe coarse fields useful to the garden:
+Normalized input may include only safe fields useful to the garden and inspection:
 
-- event type or environmental activity category;
-- sanitized source/sensor label;
-- network class: `public`, `dn42`, or `ygg`;
-- timestamp;
-- intensity, such as a bounded activity level;
-- duration or aggregation window;
-- sanitized tags describing coarse traits.
+- normalized specimen/event type;
+- listening port where relevant;
+- bounded source/sensor label;
+- coarse visual vigor;
+- exact sanitized recurrence count when explicitly useful for inspection;
+- environmental activity category/intensity;
+- timestamp, duration, aggregation window, or sanitized coarse tags for future adapters.
 
-These fields describe possible future adapters, not a finalized schema. Current
-weather has only `level`/`eventsPerMinute`; TCPNoise browser growth has only
-`specimenType`/`listenPort`/`vigor`, and fake events still have only `type`.
-Normalize and sanitize before sending data to the browser. Do not include private
-addresses, credentials, raw packets, payloads, or unnecessary infrastructure
-details. Network class describes coarse context without exposing endpoints or
-splitting the shared garden into network-specific plots.
+These fields describe both the current adapters and possible future ones. Current
+weather has only `level`/`eventsPerMinute`; TCPNoise browser growth has
+`specimenType`/`listenPort`/`vigor` plus optional `sensor`/`seenCount`, and fake
+events still originate from local development controls. Normalize and sanitize
+before sending data to the browser. Do not include private/remote addresses,
+credentials, raw packets, payloads, banners, or unnecessary endpoint details.
+The sensor label is provenance for a clicked specimen, not a security identity or
+threat classification.
 
 ## Scope
 
-Live aggregate weather and NATS-backed TCPNoise growth are implemented.
-Event-driven weed/rare growth is implemented. Other protocol/auth-aware adapters,
-mutations of existing specimens, and richer specimen responses
-remain future work.
-Inspection, local-time lighting, persistence, and richer ecological competition remain
-separate unfinished MVP work; this plan does not imply they are implemented.
+Live aggregate weather, NATS-backed TCPNoise growth, event-driven weed/rare growth,
+and click inspection of live specimen provenance are implemented. Other
+protocol/auth-aware adapters, mutations of existing specimens, local-time lighting,
+persistence, and richer specimen responses remain future work.
 
 See [MVP](MVP.md) for completed and remaining capabilities and
 [Event mappings](EVENT-MAPPINGS.md) for proposed effects.
