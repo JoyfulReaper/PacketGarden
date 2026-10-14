@@ -93,8 +93,8 @@ function handleLiveGardenEvent(frame) {
     sensor: event.sensor, seenCount: event.seenCount, receivedAt, outcome: result.outcome
   });
   if (result.specimen && event.listenPort === 22 && event.specimenType === "redbloom"
-    && typeof maybeSpawnPort22Collectible === "function") {
-    maybeSpawnPort22Collectible(result.specimen);
+    && typeof maybeSchedulePort22Mutation === "function") {
+    maybeSchedulePort22Mutation(result.specimen);
   }
   return result;
 }
@@ -249,7 +249,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [], actors: [], collectibles: [], recentEvents: [] };
+const gardenState = { specimens: [], grassCells: [], actors: [], recentEvents: [] };
 const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
 
 // Called only at saturation, after expiry. Equal vigor never churns the garden.
@@ -438,6 +438,7 @@ function updateGardenStatus() {
 
 function updateGarden(now = Date.now()) {
   const remaining = gardenState.specimens.filter(specimen => {
+    if (specimen.mutation) return now < specimen.mutation.expiresAt;
     const expiresAfterMs = speciesConfig.get(specimen.type).timings.expiredAfterMs;
     return now - specimen.createdAt < expiresAfterMs;
   });
@@ -445,6 +446,7 @@ function updateGarden(now = Date.now()) {
     gardenState.specimens = remaining;
     updateGardenStatus();
   }
+  if (typeof updateSpecimenMutations === "function") updateSpecimenMutations(now);
   gardenState.grassCells = gardenState.grassCells.filter(
     grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
   );
@@ -1056,9 +1058,10 @@ function drawGarden() {
     drawGrass(grass, now);
   }
   for (const specimen of gardenState.specimens) {
-    speciesConfig.get(specimen.type).render(specimen, now);
+    if (typeof drawSpecimenMutation !== "function" || !drawSpecimenMutation(specimen, now)) {
+      speciesConfig.get(specimen.type).render(specimen, now);
+    }
   }
-  if (typeof drawGardenCollectibles === "function") drawGardenCollectibles(now);
   if (typeof drawGardenActors === "function") drawGardenActors(now);
   drawRain(now);
 }
@@ -1081,9 +1084,9 @@ drawGarden();
 
 // Clean up before drawing, including the tick that removes the final specimen or tuft.
 window.setInterval(() => {
-  const collectiblesChanged = typeof updateCollectibles === "function" && updateCollectibles(Date.now());
+  const messageChanged = typeof updateCollectionMessage === "function" && updateCollectionMessage(Date.now());
   if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0
-    || gardenState.collectibles.length > 0 || collectiblesChanged) {
+    || messageChanged) {
     updateGarden();
     drawGarden();
   }

@@ -147,15 +147,16 @@ Ambient incidents should usually be:
 - harmless to the core ecology unless deliberately designed otherwise;
 - slightly inexplicable when that is funnier than explaining them.
 
-The current collectible implementation lets rare live port-22 redblooms leave a
-short-lived weed sprig. A preferred future refinement is for the redbloom itself to
-mutate into a temporary collectible weed plant after first appearing normally, so
-port 22 remains visibly and semantically a redbloom before the browser-only joke
-mutation occurs.
+The current collectible implementation lets the exact live port-22 redbloom mutate
+into a temporary collectible weed plant after first appearing normally for three
+seconds. A 5% browser-only roll and cap of three active mutations keep it rare.
+The original cell, canonical redbloom type, vigor, color, and provenance stay intact;
+collection or expiry after 20 active seconds removes the specimen. The secondary
+weed sprig is gone. Port 22 still means only a connection to listening port 22.
 
 Collecting something should be optional and materially useless. A message such as
-`You collected some weed. +0 points` and a permanently unchanged `Score: 0` are
-appropriate. Inventory, achievements, currency, progression, high scores, and
+`You collected some weed. +0 points` and the permanently static `Score: 0` are now
+implemented. Inventory, achievements, currency, progression, high scores, and
 penalties for missing collectibles are not.
 
 Exact live `seenCount == "1"` may also drive a separate first-seen curiosity layer:

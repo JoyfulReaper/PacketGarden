@@ -1,105 +1,127 @@
-// A secondary live-growth curiosity. These objects own no cells or provenance.
-const collectibleConfig = {
+// Collectible mutations belong to their exact specimen. Loose drops are a future layer.
+const specimenMutationConfig = {
   port22WeedChance: 0.05,
+  mutationDelayMs: 3_000,
   maxActive: 3,
-  lifetimeMs: 20_000,
+  collectibleLifetimeMs: 20_000,
   messageDurationMs: 2_000,
-  offsetRadius: 10,
-  hitRadius: 9,
-  visualInset: 10
+  hitRadius: 12
 };
+const specimenMutationTypes = new Map([
+  ["collectible_weed", {
+    label: "Collectible weed",
+    render: drawCollectibleWeed,
+    message: "You collected some weed. +0 points"
+  }]
+]);
 const collectionMessage = document.querySelector("#collection-message");
 let collectionMessageUntil = 0;
 
-// Driven by the existing garden tick, including when no specimens remain.
-function updateCollectibles(now = Date.now()) {
-  const remaining = gardenState.collectibles.filter(item => now < item.expiresAt);
-  let changed = remaining.length !== gardenState.collectibles.length;
-  if (changed) gardenState.collectibles = remaining;
-  if (collectionMessageUntil && now >= collectionMessageUntil) {
-    collectionMessage.textContent = "";
-    collectionMessage.hidden = true;
-    collectionMessageUntil = 0;
-    changed = true;
-  }
-  return changed;
+function updateCollectionMessage(now = Date.now()) {
+  if (!collectionMessageUntil || now < collectionMessageUntil) return false;
+  collectionMessage.textContent = "";
+  collectionMessage.hidden = true;
+  collectionMessageUntil = 0;
+  return true;
 }
 
-// Called only after a successful live port-22 redbloom spawn. Roll/time seams
-// keep checks deterministic; fake controls never enter this path.
-function maybeSpawnPort22Collectible(specimen, roll, random = Math.random, now = Date.now()) {
-  if (specimen?.type !== "redbloom" || !gardenState.specimens.includes(specimen)) return null;
-  updateCollectibles(now);
-  if (gardenState.collectibles.length >= collectibleConfig.maxActive) return null;
-  roll ??= random();
-  if (!Number.isFinite(roll) || roll < 0 || roll >= collectibleConfig.port22WeedChance) return null;
+function scheduleSpecimenMutation(specimen, type, now = Date.now()) {
+  if (!gardenState.specimens.includes(specimen) || !specimenMutationTypes.has(type)
+    || specimen.pendingMutation || specimen.mutation
+    || now - specimen.createdAt >= speciesConfig.get(specimen.type).timings.expiredAfterMs) return false;
+  specimen.pendingMutation = { type, activateAt: now + specimenMutationConfig.mutationDelayMs };
+  return true;
+}
 
-  const inset = collectibleConfig.visualInset;
-  const offset = () => (random() * 2 - 1) * collectibleConfig.offsetRadius;
-  const item = {
-    type: "weed_sprig",
-    x: Math.max(inset, Math.min(gardenWidth - inset, (specimen.column + 0.5) * cellSize + offset())),
-    y: Math.max(inset, Math.min(gardenHeight - inset, (specimen.row + 0.5) * cellSize + offset())),
+function maybeSchedulePort22Mutation(specimen, roll, now = Date.now()) {
+  if (specimen?.type !== "redbloom" || specimen.origin?.kind !== "tcpnoise"
+    || specimen.origin.listenPort !== 22 || !gardenState.specimens.includes(specimen)) return false;
+  roll ??= Math.random();
+  if (!Number.isFinite(roll) || roll < 0 || roll >= specimenMutationConfig.port22WeedChance) return false;
+  return scheduleSpecimenMutation(specimen, "collectible_weed", now);
+}
+
+function activateSpecimenMutation(specimen, now = Date.now()) {
+  const pending = specimen.pendingMutation;
+  if (!pending || now < pending.activateAt || !gardenState.specimens.includes(specimen)) return false;
+  // A due attempt is consumed even at the cap. There is no retry queue.
+  delete specimen.pendingMutation;
+  if (specimen.mutation || !specimenMutationTypes.has(pending.type)
+    || now - specimen.createdAt >= speciesConfig.get(specimen.type).timings.expiredAfterMs) return false;
+  const active = gardenState.specimens.filter(item => item.mutation && now < item.mutation.expiresAt).length;
+  if (active >= specimenMutationConfig.maxActive) return false;
+  specimen.mutation = {
+    type: pending.type,
     createdAt: now,
-    expiresAt: now + collectibleConfig.lifetimeMs
+    expiresAt: now + specimenMutationConfig.collectibleLifetimeMs
   };
-  gardenState.collectibles.push(item);
-  drawGarden();
-  return item;
+  return true;
 }
 
-function collectibleAtGardenPoint(point, now = Date.now()) {
-  if (!point) return null;
-  // Topmost sprig wins if two overlap. A little extra hit area includes the idle bob.
-  return [...gardenState.collectibles].reverse().find(item => now < item.expiresAt
-    && Math.hypot(point.x - item.x, point.y - item.y) <= collectibleConfig.hitRadius) ?? null;
+// Called by updateGarden after expired specimens are removed, before drawing.
+function updateSpecimenMutations(now) {
+  for (const specimen of gardenState.specimens) activateSpecimenMutation(specimen, now);
 }
 
-function collectCollectible(item, now = Date.now()) {
-  const index = gardenState.collectibles.indexOf(item);
-  if (index < 0 || now >= item.expiresAt) return false;
-  gardenState.collectibles.splice(index, 1);
-  collectionMessage.textContent = "You collected some weed.";
+function specimenMutationLabel(specimen, now = Date.now()) {
+  return specimen.mutation && now < specimen.mutation.expiresAt
+    ? specimenMutationTypes.get(specimen.mutation.type)?.label ?? "None" : "None";
+}
+
+function isCollectibleMutationHit(specimen, point, now = Date.now()) {
+  if (!point || !specimen.mutation || now >= specimen.mutation.expiresAt
+    || !specimenMutationTypes.has(specimen.mutation.type)) return false;
+  return Math.hypot(point.x - (specimen.column + 0.5) * cellSize,
+    point.y - (specimen.row + 0.5) * cellSize) <= specimenMutationConfig.hitRadius;
+}
+
+function collectSpecimenMutation(specimen, now = Date.now()) {
+  const index = gardenState.specimens.indexOf(specimen);
+  const config = specimenMutationTypes.get(specimen?.mutation?.type);
+  if (index < 0 || !config || now >= specimen.mutation.expiresAt) return false;
+  gardenState.specimens.splice(index, 1);
+  if (typeof inspectedSpecimen !== "undefined" && inspectedSpecimen === specimen) closeSpecimenCard();
+  collectionMessage.textContent = config.message;
   collectionMessage.hidden = false;
-  collectionMessageUntil = now + collectibleConfig.messageDurationMs;
+  collectionMessageUntil = now + specimenMutationConfig.messageDurationMs;
+  updateGardenStatus();
   drawGarden();
   gardenSound.maybePlayCollectionSound();
   return true;
 }
 
-function drawGardenCollectibles(now) {
-  for (const item of gardenState.collectibles) {
-    if (now >= item.expiresAt) continue;
-    const phase = (now - item.createdAt) / 800;
-    context.save();
-    context.translate(item.x, item.y + Math.sin(phase) * 0.7);
-    // A loose, sideways bundle with a tied brown stem, not an upright weed plant.
-    context.strokeStyle = "#9d7950";
-    context.lineWidth = 1.5;
+function drawSpecimenMutation(specimen, now) {
+  const config = specimenMutationTypes.get(specimen.mutation?.type);
+  if (!config) return false;
+  // Expired mutations never flash back into their original species between ticks.
+  if (now < specimen.mutation.expiresAt) config.render(specimen, now);
+  return true;
+}
+
+function drawCollectibleWeed(specimen, now) {
+  const phase = (now - specimen.mutation.createdAt) / 800;
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  // A compact rooted plant with broad paired ochre leaves and a pale bud.
+  context.strokeStyle = "#94704c";
+  context.lineWidth = 1.5;
+  context.beginPath();
+  context.moveTo(-4, 10); context.lineTo(0, 7); context.lineTo(4, 10);
+  context.moveTo(0, 7); context.lineTo(Math.sin(phase) * 0.4, -9);
+  context.stroke();
+  for (const [x, y, angle, color] of [
+    [-4, 2, 0.5, "#aab557"], [4, -1, -0.5, "#c2b66a"], [-3, -5, 0.4, "#8e9e46"]
+  ]) {
+    context.fillStyle = color;
     context.beginPath();
-    context.moveTo(-6, 4);
-    context.lineTo(5, -3);
-    context.stroke();
-    for (const [x, y, angle, color] of [
-      [-2, 0, -0.7, "#b2b75c"], [2, -2, -0.3, "#899449"], [2, 2, 0.4, "#c1b16b"]
-    ]) {
-      context.save();
-      context.translate(x, y);
-      context.rotate(angle);
-      context.fillStyle = color;
-      context.beginPath();
-      context.ellipse(0, 0, 4, 1.8, 0, 0, Math.PI * 2);
-      context.fill();
-      context.restore();
-    }
-    context.strokeStyle = "#dbcaa0";
-    context.lineWidth = 1;
-    context.beginPath();
-    context.moveTo(-3, 1);
-    context.lineTo(-1, 3);
-    context.stroke();
-    context.fillStyle = `rgba(243, 230, 179, ${0.2 + (Math.sin(phase) + 1) * 0.2})`;
-    context.fillRect(5, -5, 1.5, 1.5);
-    context.restore();
+    context.ellipse(x, y, 4.5, 2.2, angle, 0, Math.PI * 2);
+    context.fill();
   }
+  context.fillStyle = "#d8c782";
+  context.beginPath();
+  context.arc(0, -9, 1.5, 0, Math.PI * 2);
+  context.fill();
+  context.fillStyle = `rgba(249, 239, 187, ${0.2 + (Math.sin(phase) + 1) * 0.2})`;
+  context.fillRect(2, -10, 1.5, 1.5);
+  context.restore();
 }

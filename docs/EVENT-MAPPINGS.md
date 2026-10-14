@@ -42,11 +42,12 @@ without affecting ecology.
 
 ## Interpreting real telemetry
 
-TCPNoise listening ports select plant visuals deliberately. A redbloom means
+TCPNoise listening ports select plant visuals deliberately. A port-22 redbloom means
 TCPNoise observed a connection to listening port 22. This aesthetic signal bypasses
 ordinary rarity, regardless of IPv6 or sensor traits. It does not prove SSH
 negotiation, attempted credentials, failed authentication, or malicious intent.
-Port 2222 still has a vine base and participates normally in rarity.
+Port 2222 has a redbloom base and participates normally in rarity, without the
+port-22 collectible mutation.
 
 Every valid hit produces one garden growth event, including unknown ports. Weeds
 and rare species are artistic outcomes, not classifications of scanners, malicious
@@ -71,8 +72,9 @@ rarity roll:
 | Listening ports | Visual specimen |
 | --- | --- |
 | 22 | redbloom (always; bypasses rarity) |
+| 2222 | redbloom (base; normal rarity) |
 | 80, 443, 445, 8080, 8443 | broadleaf |
-| 2222, 23, 2323, 3389, 5900 | vine |
+| 23, 2323, 3389, 5900 | vine |
 | 21, 70 | mushroom |
 | 25, 53, 420, 42069, 5432, 6379, 9200 | flower |
 | Any other valid port (1–65535) | flower |
@@ -202,12 +204,13 @@ worthless coin-shaped object. Species may bias the pool for visual flavor.
 
 The current implementation keeps the backend mapping unchanged and, after
 successful live port-22 redbloom growth, performs a separate 5% browser-only roll
-that may leave a temporary weed sprig nearby.
+that schedules a collectible weed mutation on that exact specimen.
 
-The preferred follow-up is different: keep the initial normal redbloom, then let
-that **same specimen** mutate into a temporary collectible weed plant on the rare
-browser-only collectible roll. The mutation should preserve the source specimen's
-safe provenance and remain visually downstream of the original redbloom signal.
+The initial normal redbloom stays visible for three seconds before mutation. The
+same cell, canonical redbloom type, vigor, color, and safe provenance are retained.
+At most three collectible mutations are active; attempts skipped at the cap never
+retry. The 20-second interaction window ends with removal of the specimen, as does
+collection. No secondary weed sprig is produced. Ordinary weeds remain separate.
 
 This does not mean port 22 becomes a backend weed mapping. The backend remains:
 
@@ -215,7 +218,7 @@ This does not mean port 22 becomes a backend weed mapping. The backend remains:
 port 22 -> redbloom, always, rarity bypassed
 ```
 
-Collecting the mutated weed is optional and useless. A proposed UI gag is a
+Collecting the mutated weed is optional and useless. The implemented UI gag is a
 permanent `Score: 0` plus messages such as `You collected some weed. +0 points`.
 The score must never accumulate or unlock anything.
 

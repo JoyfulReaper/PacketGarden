@@ -23,7 +23,7 @@ and additional sensor/service inputs remain goals.
 - Stronger severe visual weather with wind-driven hurricane rain; no lightning, flashing, or ecological damage.
 - Optional browser-local Web Audio growth sounds, Off by default at 12% volume, initialized by the user's enable gesture. Species tones and gentle rare chimes represent artistic garden traits, not security alerts; independent 400 ms ordinary / 900 ms rare cooldowns drop extra sounds without delaying growth.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to normalized specimen growth on the same SSE stream.
-- Redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 retains normal vine/rarity behavior.
+- Port-22 redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 has a redbloom base with normal rarity and no port-22 collectible mutation.
 - Event-driven artistic TCPNoise rarity: weeds plus ghostblooms, crystal fungi, and blackthorns. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).
 - TCPNoise `seenCount` converted server-side to coarse vigor (0–1/missing/unusable -> 0, 2–3 -> 1, 4–9 -> 2, usable counts 10+ -> 3). This artistic recurrence trait affects visual fullness and saturation-only competitive strength, independently of species/rarity, and is not a threat score.
 - Bounded click-inspection provenance for live TCPNoise specimens: sensor label, listening port, exact valid `seenCount`, coarse vigor, species/color details, and age. Large UInt64 counts travel as decimal text so JavaScript cannot round them.
@@ -42,13 +42,14 @@ and additional sensor/service inputs remain goals.
 - One authoritative live garden handler: validate/sanitize the current contract, attach TCPNoise provenance directly to the exact specimen at creation before rendering, and expose spawned/replaced/dropped outcomes. No second inspection SSE listener or fresh-specimen search.
 - A small Recent activity view retaining the newest three normalized safe events in browser memory, including valid dropped-at-saturation events marked `no growth`. Fake events are explicitly simulated. Relative ages share the existing update loop; reload clears the list. No raw frames, expanded history, persistence, or replacement for monitoring.
 - A separate browser-only ambient actor layer and The Gnome Incident: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, weather, or network meaning. Tiny optional cues share existing sound controls.
-- Pointless transient weed-sprig collectibles: a separate 5% browser roll after successful live port-22 redbloom growth, at most three active, expiring after 20 seconds through the existing tick. No specimen cells, grass influence, provenance, inventory, or progression. Shared scaled-canvas routing collects before inspecting; a two-second message and optional quiet pluck use existing sound controls. Gnome start/cleanup and collectible collection/expiry preserve each other's state.
+- Delayed collectible weed mutations: a 5% browser roll on the exact successfully created live port-22 redbloom schedules mutation after three seconds. Canonical type, cell, vigor, color, and safe provenance stay intact. At most three active mutations; cap-skipped candidates never retry. Collection or expiry after 20 active seconds removes the specimen entirely. No secondary sprig, extra cell, grass influence, inventory, or progression. Shared scaled clicks collect before inspecting and close that specimen's card. Ordinary TCPNoise weeds and gnomes remain independent.
+- Static `Score: 0` with no JavaScript scoring/persistence state. Collection briefly shows `You collected some weed. +0 points` and optionally uses the existing quiet collection sound.
 - A small standalone About page explaining the project, data flow, visual metaphors, privacy boundary, weather, ecology, inspection, and the fact that the gnomes mean absolutely nothing.
 
-Very occasionally, a port-22 redbloom may currently leave behind a tiny weed sprig.
+Very occasionally, a port-22 redbloom may itself become a collectible weed plant.
 Click it quickly enough and you collect some weed. This accomplishes absolutely
-nothing. Redbloom mapping and backend rarity are unchanged; ignoring a sprig has no
-consequence.
+nothing. The backend port-22 mapping and rarity bypass are unchanged; ignoring the
+mutation has no consequence and the score remains zero.
 
 ## Current browser-facing growth model
 
@@ -104,13 +105,10 @@ way space opens. Real TCPNoise growth does not directly seed or refresh grass.
 
 These are desired follow-ups, not descriptions of the code already implemented:
 
-- **Port-22 collectible mutation:** preserve the initial normal redbloom, then on a
-  rare browser-only roll mutate that same specimen into a temporary collectible
-  weed plant instead of leaving a separate sprig. Preserve its safe source
-  provenance. Backend port-22 mapping remains redbloom and still bypasses rarity.
-- **The zero-point anti-score:** display `Score: 0` and never change it. Collection
-  messages may say `You collected some weed. +0 points`. No hidden scoring, high
-  score, multiplier, persistence, achievements, or collection totals.
+- **Vine -> opium mutation / opium pod:** extend the specimen mutation helpers
+  with a rarer vine transformation and a separate bounded loose-drop layer.
+- **Mushroom -> Amanita muscaria collectible:** another future mutation/drop;
+  no behavior or assets for it are implemented yet.
 - **First-seen curiosities:** when a successful live specimen has exact valid
   `seenCount == "1"`, optionally produce a short-lived critter or dropped object
   near it. Cap this layer at three active curiosities globally; when full, silently

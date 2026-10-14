@@ -63,7 +63,7 @@ assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`
 assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.row]))'), '[[0,0],[0,4],[0,8],[0,12],[0,16]]');
 assert(run('gardenState.grassCells.every(g => g.createdAt === 1000 && g.lastInfluencedAt === 1000)'));
 
-for (const [port, type] of [[443,'broadleaf'],[445,'broadleaf'],[22,'redbloom'],[2222,'vine'],[70,'mushroom'],[5432,'flower'],[42069,'flower'],[65535,'flower']]) {
+for (const [port, type] of [[443,'broadleaf'],[445,'broadleaf'],[22,'redbloom'],[2222,'redbloom'],[70,'mushroom'],[5432,'flower'],[42069,'flower'],[65535,'flower']]) {
   for (const vigor of [0, 1, 2, 3]) {
   reset(); sandbox.Math.random = () => 0;
   source.emit('garden', { specimenType:type, listenPort:port, vigor });
@@ -106,8 +106,8 @@ for (const [type, expires, color] of [['weed',360000,'#bec04c'],['ghostbloom',36
 }
 
 reset(); sandbox.Math.random = () => 0;
-source.emit('garden', { specimenType:'vine', listenPort:2222, vigor:0 });
-source.emit('garden', { specimenType:'vine', listenPort:2222, vigor:3 });
+source.emit('garden', { specimenType:'vine', listenPort:23, vigor:0 });
+source.emit('garden', { specimenType:'vine', listenPort:23, vigor:3 });
 assert.equal(run('gardenState.specimens.length'), 2);
 assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1);
 

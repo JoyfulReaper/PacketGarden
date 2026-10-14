@@ -19,7 +19,7 @@ function makeElement(selector) {
 for (const selector of [
   '#specimen-card', '#specimen-card-close', '#specimen-card-title', '#specimen-source',
   '#specimen-sensor', '#specimen-port', '#specimen-seen-count', '#specimen-vigor',
-  '#specimen-color', '#specimen-age'
+  '#specimen-color', '#specimen-age', '#specimen-mutation'
 ]) makeElement(selector);
 
 const canvasHandlers = {};

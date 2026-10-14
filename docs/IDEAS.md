@@ -61,18 +61,20 @@ telemetry. Most of them can simply be garden nonsense.
 
 ## Pointless collectibles
 
-The first collectible implementation is a separate transient browser layer: a
-successful live port-22 redbloom has a 5% chance to leave a tiny weed sprig nearby,
-capped at three active sprigs and expiring quietly after 20 seconds. It consumes no
-specimen cell and has no effect on grass or gnomes.
+The first collectible is now a mutation of the exact successful live port-22
+redbloom. A 5% browser roll schedules the change after three seconds; at most
+three mutations are active. The mutation keeps the canonical redbloom type, cell,
+vigor, color, and provenance, without adding a specimen or affecting grass/gnomes.
+Collection or expiry after 20 active seconds removes the specimen. Cap-skipped
+attempts never retry. The old secondary weed sprig is removed.
 
-Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
+Very occasionally, a port-22 redbloom may itself become a collectible weed. Click it
 quickly enough and you collect some weed. This accomplishes absolutely nothing.
 
-### Desired port-22 refinement: mutation instead of a secondary drop
+### Implemented port-22 mutation
 
-The preferred follow-up is for the **redbloom itself** to mutate into a collectible
-weed plant rather than creating an unrelated secondary sprig.
+The **redbloom itself** mutates into a collectible weed plant after the normal
+redbloom has been visible for three seconds. There is no secondary drop.
 
 The semantic sequence should remain clear:
 
@@ -92,8 +94,8 @@ or anything beyond a connection to listening port 22.
 
 ### Vine -> opium mutation
 
-Use the same semantic pattern for vines rather than spawning an unrelated plant
-beside them:
+This remains future work. Use the same semantic pattern for vines rather than
+spawning an unrelated plant beside them:
 
 1. a live event first produces its normal vine;
 2. on a much rarer browser-only mutation roll, that exact vine may visibly mutate
@@ -119,15 +121,16 @@ than the redbloom -> weed mutation so mutated plants do not accumulate everywher
 
 ### The zero-point anti-score
 
-A deliberately fake game score would strengthen the joke:
+A deliberately fake game score is now permanent static HTML:
 
 ```text
 Score: 0
 ```
 
-It should always remain **0**.
+It always remains **0**; there is no score variable or saved score.
 
-Collectible messages can then report things such as:
+Weed collection currently says `You collected some weed. +0 points`. Other
+possible future messages include:
 
 ```text
 You collected some weed. +0 points
@@ -155,6 +158,7 @@ point is to parody a progression system, not quietly build one.
 
 Keep the pool small enough that finding one remains memorable. Candidates include:
 
+- **Amanita muscaria** — a future mushroom mutation/collectible, not yet implemented;
 - **mushroom cap** — a Gopher mushroom occasionally leaves a cap;
 - **rainbow leaf** — a rainbow broadleaf sheds a multicolored leaf;
 - **crystal shard** — crystal fungus leaves a glowing shard;

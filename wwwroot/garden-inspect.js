@@ -8,7 +8,8 @@ const specimenCardFields = {
   seenCount: document.querySelector("#specimen-seen-count"),
   vigor: document.querySelector("#specimen-vigor"),
   color: document.querySelector("#specimen-color"),
-  age: document.querySelector("#specimen-age")
+  age: document.querySelector("#specimen-age"),
+  mutation: document.querySelector("#specimen-mutation")
 };
 let inspectedSpecimen = null;
 
@@ -61,6 +62,8 @@ function renderSpecimenCard(specimen, clientX = null, clientY = null) {
   specimenCardFields.vigor.textContent = `${vigor} — ${vigorNames[vigor] ?? "unknown"}`;
   specimenCardFields.color.textContent = specimenColorName(specimen);
   specimenCardFields.age.textContent = formatSpecimenAge(Date.now() - specimen.createdAt);
+  specimenCardFields.mutation.textContent = typeof specimenMutationLabel === "function"
+    ? specimenMutationLabel(specimen) : "None";
   inspectedSpecimen = specimen;
   specimenCard.hidden = false;
 
@@ -101,12 +104,11 @@ function specimenAtCanvasPoint(clientX, clientY) {
 
 canvas.addEventListener("click", event => {
   const point = gardenPointFromClient(event.clientX, event.clientY);
-  const collectible = typeof collectibleAtGardenPoint === "function" ? collectibleAtGardenPoint(point) : null;
-  if (collectible) {
-    collectCollectible(collectible);
+  const specimen = specimenAtGardenPoint(point);
+  if (specimen && typeof isCollectibleMutationHit === "function" && isCollectibleMutationHit(specimen, point)) {
+    collectSpecimenMutation(specimen);
     return;
   }
-  const specimen = specimenAtGardenPoint(point);
   if (!specimen) {
     closeSpecimenCard();
     return;
@@ -137,4 +139,6 @@ window.setInterval(() => {
     return;
   }
   specimenCardFields.age.textContent = formatSpecimenAge(Date.now() - inspectedSpecimen.createdAt);
+  specimenCardFields.mutation.textContent = typeof specimenMutationLabel === "function"
+    ? specimenMutationLabel(inspectedSpecimen) : "None";
 }, 1_000);

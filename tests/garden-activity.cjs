@@ -46,7 +46,7 @@ assert.deepEqual(Object.keys(run('gardenState.recentEvents[1]')).sort(),
 assert.equal(row(0).textContent, 'second-sensor · :445 · broadleaf · seen 1 · now');
 assert.equal(row(1).textContent, '<b>first-sensor</b> · :443 · broadleaf · seen 18446744073709551615 · now', 'textContent, never HTML');
 assert(!run('JSON.stringify(gardenState)').match(/secret-endpoint|12345|private-banner|private-payload/));
-assert.equal(run('gardenState.collectibles.length'), 0, 'no first-seen critter or other new effect');
+assert.equal(run('gardenState.specimens.filter(specimen=>specimen.mutation).length'), 0, 'no first-seen critter or other new effect');
 garden.click((first.column + 0.5) * 30, (first.row + 0.5) * 30);
 assert.equal(element('#specimen-sensor').textContent, '<b>first-sensor</b>');
 assert.equal(element('#specimen-seen-count').textContent, '18446744073709551615');
@@ -91,7 +91,7 @@ assert.equal(dropped.outcome, 'dropped'); assert.equal(dropped.specimen, null);
 assert.equal(unattributed.origin, undefined, 'dropped event cannot attribute a fresh matching specimen');
 assert.equal(full.run('JSON.stringify(gardenState.specimens)'), beforeDrop);
 assert.equal(full.element('#recent-event-0').textContent, 'dropped-sensor · :22 · redbloom · seen 100 · now · no growth');
-assert.equal(full.run('gardenState.collectibles.length'), 0);
+assert.equal(full.run('gardenState.specimens.filter(specimen=>specimen.mutation).length'), 0);
 const spawned = garden.run('handleLiveGardenEvent({specimenType:"flower",listenPort:53,vigor:0,seenCount:"2"})');
 assert.equal(spawned.outcome, 'spawned'); assert.equal(spawned.specimen, garden.run('gardenState.specimens.at(-1)'));
 assert.equal(garden.run('handleLiveGardenEvent({specimenType:"flower",listenPort:53})'), null);
@@ -121,13 +121,14 @@ const reload = createGarden(); assert.equal(reload.run('gardenState.recentEvents
 
 // Recording/rendering/aging recent rows own no ecology, actor, or collectible state.
 const independent = createGarden(); independent.fill(0); independent.forceRoll(0); independent.emit(22, 'redbloom', 3);
+independent.clock.now += 3000; independent.tick();
 independent.run('startGnomeIncident(Date.now(),()=>0.5)');
-const ecosystem = () => independent.run('JSON.stringify([gardenState.specimens,gardenState.grassCells,gardenState.collectibles,gardenState.actors,gnomeIncident,weatherState])');
+const ecosystem = () => independent.run('JSON.stringify([gardenState.specimens,gardenState.grassCells,gardenState.actors,gnomeIncident,weatherState])');
 const ecosystemBefore = ecosystem();
 independent.run('recordRecentGardenEvent({kind:"simulated",eventType:"gopher",specimenType:"mushroom",receivedAt:Date.now(),outcome:"dropped"}); renderRecentActivity(Date.now()+30000); updateRecentActivity(Date.now()+60000)');
 assert.equal(ecosystem(), ecosystemBefore);
 assert.equal(independent.run('gardenState.specimens.length'), 640);
-assert.equal(independent.run('gardenState.collectibles.length'), 1);
+assert.equal(independent.run('gardenState.specimens.filter(specimen=>specimen.mutation).length'), 1);
 assert.equal(independent.run('gardenState.actors.length'), 4);
 
 console.log('PASS: one atomic live path, exact spawn/replacement provenance, rapid twins, safe optional fields, dropped events, bounded newest-first activity, simulated events, shared relative-age updates, and ecology/actors/collectibles independence.');

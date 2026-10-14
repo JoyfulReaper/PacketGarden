@@ -161,15 +161,20 @@ grid is full.
 ## Browser-only transient uses of live provenance
 
 The browser already uses live port-22 growth for the first pointless collectible:
-a successful redbloom gets a separate 5% browser-only roll that may leave a tiny
-weed sprig nearby for 20 seconds, with at most three active sprigs.
+a successful redbloom gets a 5% browser-only roll scheduling a mutation of that
+exact specimen after three seconds. It first appears normally, then becomes a
+rooted collectible weed in the same cell. Its canonical type remains redbloom;
+vigor, color, and provenance remain intact. At most three mutations are active;
+cap-skipped attempts never retry. Expiry after 20 active seconds or collection
+removes the specimen entirely. There is no secondary weed sprig.
 
 This does not alter the TCPNoise mapping. The backend event is still redbloom.
 
-The preferred follow-up is to replace that secondary-drop presentation with a
-mutation of the **same redbloom specimen** into a temporary collectible weed plant
-after the redbloom first appears normally. The mutated presentation should retain
-the source specimen's safe provenance and remain entirely browser-side.
+Recent activity continues to describe the original redbloom event, with no extra
+mutation/collection row. Collection says `You collected some weed. +0 points`;
+the permanent static `Score: 0` has no scoring or persistence state. Ordinary
+TCPNoise weeds are independent of this browser-only mutation. Vine/opium and
+mushroom/Amanita mutations or loose drops remain future work.
 
 A second proposed use is an exact valid `seenCount == "1"` first-seen curiosity:
 
@@ -212,12 +217,13 @@ loop.
 ## Preserve sensor meaning
 
 TCPNoise destination ports deliberately select plant visual families, not protocol
-classifications. Redbloom means TCPNoise observed a connection to listening port
+classifications. Port-22 redbloom means TCPNoise observed a connection to listening port
 22, based solely on that port. It does not prove SSH negotiation, attempted
 credentials, failed authentication, or malicious intent.
 
 The aesthetic port-22 special case bypasses ordinary rarity to keep the signal
-recognizable. Port 2222 retains its vine base and normal rarity. Every valid port
+recognizable. Port 2222 has a redbloom base with normal rarity and does not trigger
+the port-22 collectible mutation. Every valid port
 gets growth, with flowers as the unknown-port fallback before rarity. Weeds and
 rare specimens are artistic outcomes.
 
@@ -266,10 +272,10 @@ specimen, not a security identity or threat classification.
 ## Scope
 
 Live aggregate weather, NATS-backed TCPNoise growth, event-driven weed/rare growth,
-click inspection of live specimen provenance, and the first secondary weed-sprig
-collectible are implemented.
+click inspection of live specimen provenance, Recent activity, delayed collectible
+weed mutations, and the static zero score are implemented.
 
-The preferred redbloom-to-collectible-weed mutation, first-seen curiosities,
+Vine/opium and mushroom/Amanita mutations/drops, first-seen curiosities,
 local-time lighting, persistence, other protocol/auth-aware adapters, and richer
 specimen responses remain future work.
 

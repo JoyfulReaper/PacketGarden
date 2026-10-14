@@ -5,9 +5,9 @@ public static class TcpNoiseRarity
 {
     public static (string SpecimenType, bool IsFallback) BaseSpecimen(int port) => port switch
     {
-        22 => ("redbloom", false),
+        22 or 2222 => ("redbloom", false),
         80 or 443 or 445 or 8080 or 8443 => ("broadleaf", false),
-        2222 or 23 or 2323 or 3389 or 5900 => ("vine", false),
+        23 or 2323 or 3389 or 5900 => ("vine", false),
         21 or 70 => ("mushroom", false),
         25 or 53 or 420 or 42069 or 5432 or 6379 or 9200 => ("flower", false),
         _ => ("flower", true)

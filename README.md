@@ -133,15 +133,19 @@ green-hat gnomes. They approach, shove, randomly pick a winner, and disappear af
 grass, or weather. Sound-enabled gardens get two tiny cues through the existing
 volume control. It is garden nonsense, with no network or security meaning.
 
-Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
-quickly enough and you collect some weed. This accomplishes absolutely nothing.
-After successful live port-22 growth, a separate browser-only 5% roll can create
-one sprig nearby, capped at three active sprigs. They occupy no specimen cells,
-affect no grass or gnomes, and disappear quietly after 20 seconds. Clicking takes
-priority over specimen inspection and briefly says `You collected some weed.`;
-Sound-enabled gardens get a tiny pluck at the existing volume. Port 22 still
-always maps to redbloom and bypasses backend rarity. Collectibles are cosmetic and
-transient, with no inventory, score, progression, or consequence for ignoring them.
+Very occasionally, a live port-22 redbloom may itself become a collectible weed
+plant. Click it quickly enough and you collect some weed. This accomplishes
+absolutely nothing. A 5% browser-only roll schedules the change after three
+seconds, so the normal redbloom is visible first. The exact specimen keeps its
+canonical `redbloom` type, cell, vigor, color, and provenance. At most three
+mutations are active; a candidate skipped at the cap is never retried. Collection
+or expiry after a 20-second interaction window removes that specimen entirely.
+No secondary weed sprig is created, and grass and gnomes are unaffected.
+Clicking the plant wins over inspection and briefly says
+`You collected some weed. +0 points`, with the existing optional quiet pluck.
+The permanent `Score: 0` is static text with no scoring or persistence state.
+Port 22 still always maps to redbloom and bypasses backend rarity; its meaning is
+only a connection to listening port 22. Ignoring the mutation has no consequence.
 
 Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
 specimens (45% and 65% influence chances). Each successful influence affects
@@ -166,10 +170,10 @@ not affect organisms or grass.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
 listening ports to visual families without asserting protocol/authentication
-semantics. A redbloom means TCPNoise observed a connection to listening port 22;
+semantics. A port-22 redbloom means TCPNoise observed a connection to listening port 22;
 it does not prove SSH negotiation, attempted credentials, failed authentication,
 or malicious intent. This aesthetic special case bypasses ordinary rarity so the
-signal remains recognizable. Port 2222 retains its vine base and normal rarity;
+signal remains recognizable. Port 2222 has a redbloom base and retains normal rarity;
 unknown ports have a flower base. Each accepted non-22 connection rolls for an
 artistic weed or rare specimen.
 IPv6 and sensor suffixes `-dn42` / `-ygg` are coarse visual modifiers, not security

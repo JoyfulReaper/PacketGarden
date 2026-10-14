@@ -171,6 +171,11 @@ button:disabled, select:disabled, input:disabled {
   list-style: none;
 }
 
+#garden-score {
+  margin: 3px 0 0;
+  color: #91a18a;
+}
+
 .specimen-card {
   position: fixed;
   z-index: 20;

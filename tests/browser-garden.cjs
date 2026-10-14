@@ -2,6 +2,7 @@
 const fs = require('node:fs'), vm = require('node:vm');
 
 function createGarden() {
+  const html = fs.readFileSync('wwwroot/index.html', 'utf8');
   const clock = { now: 10_000 }, elements = new Map(), intervals = [], frames = new Map(), drawing = [];
   let nextFrame = 0;
   let rect = { left: 40, top: 70, width: 992, height: 632 };
@@ -12,7 +13,8 @@ function createGarden() {
   const element = selector => {
     if (!elements.has(selector)) elements.set(selector, {
       hidden: selector === '#specimen-card' || selector === '#collection-message',
-      textContent: '', style: {}, offsetWidth: 280, offsetHeight: 240,
+      textContent: selector === '#garden-score' ? html.match(/id="garden-score"[^>]*>([^<]*)</)[1] : '',
+      style: {}, offsetWidth: 280, offsetHeight: 240,
       value: selector === '#weather-source' ? 'live' : selector === '#weather-level' ? 'quiet'
         : selector === '#sound-volume' ? '12' : '1200',
       handlers: new Map(), attributes: {},
@@ -48,17 +50,19 @@ function createGarden() {
       setTimeout() { throw new Error('Browser features must reuse the existing tick'); }, clearTimeout() {},
       requestAnimationFrame(handler) { frames.set(++nextFrame, handler); return nextFrame; },
       cancelAnimationFrame(id) { frames.delete(id); },
-      AudioContext: class { constructor() { audioContexts++; throw new Error('Audio must stay off'); } }
+      AudioContext: class { constructor() { audioContexts++; throw new Error('Audio must stay off'); } },
+      get localStorage() { throw new Error('No persistent score or collection state'); },
+      get sessionStorage() { throw new Error('No persistent score or collection state'); }
     }
   };
   sandbox.Math.random = () => 0.5;
   vm.createContext(sandbox);
   // Exercise the exact production load order, including color/inspection wrappers.
-  const scripts = [...fs.readFileSync('wwwroot/index.html', 'utf8').matchAll(/<script src="([^"]+)" defer><\/script>/g)];
+  const scripts = [...html.matchAll(/<script src="([^"]+)" defer><\/script>/g)];
   for (const [, file] of scripts) vm.runInContext(fs.readFileSync('wwwroot/' + file, 'utf8'), sandbox);
   const run = code => vm.runInContext(code, sandbox);
-  run('const originalCollectibleSpawn = maybeSpawnPort22Collectible');
-  const forceRoll = roll => run(`maybeSpawnPort22Collectible = specimen => originalCollectibleSpawn(specimen, ${roll}, () => 0.5)`);
+  run('const originalPort22Mutation = maybeSchedulePort22Mutation');
+  const forceRoll = roll => run(`maybeSchedulePort22Mutation = specimen => originalPort22Mutation(specimen, ${roll})`);
   const emit = (port = 22, type = 'redbloom', vigor = 0) => {
     clock.now++;
     sources[0].emit({ specimenType: type, listenPort: port, vigor, sensor: 'garden-test', seenCount: '12' });

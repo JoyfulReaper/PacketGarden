@@ -46,7 +46,7 @@ static string WithPort(string json, int port) => json.Replace("\"listenPort\":44
 foreach (var (port, type) in new (int Port, string Type)[]
 {
     (80, "broadleaf"), (443, "broadleaf"), (445, "broadleaf"), (8080, "broadleaf"), (8443, "broadleaf"),
-    (22, "redbloom"), (2222, "vine"), (23, "vine"), (2323, "vine"), (3389, "vine"), (5900, "vine"),
+    (22, "redbloom"), (2222, "redbloom"), (23, "vine"), (2323, "vine"), (3389, "vine"), (5900, "vine"),
     (21, "mushroom"), (70, "mushroom"),
     (25, "flower"), (420, "flower"), (42069, "flower"), (53, "flower"),
     (5432, "flower"), (6379, "flower"), (9200, "flower"), (1, "flower"), (65535, "flower")
@@ -55,6 +55,10 @@ foreach (var (port, type) in new (int Port, string Type)[]
     Check(Parse(WithPort(good, port)) == new GardenGrowth(type, port), $"Port {port} maps to {type}");
     Check(TcpNoiseRarity.BaseSpecimen(port) == (type, port is 1 or 65535), $"Base mapping/fallback flag for {port}");
 }
+
+Check(Parse(WithPort(good, 2222), 9799)?.SpecimenType == "redbloom", "Port 2222 has a redbloom base");
+Check(Parse(WithPort(good, 2222), 9800)?.SpecimenType == "weed", "Port 2222 retains normal weed rarity");
+Check(Parse(WithPort(good, 2222), 9999, 2)?.SpecimenType == "blackthorn", "Port 2222 retains normal rare growth");
 
 // Check the complete discrete roll space, as well as exact transition boundaries.
 foreach (var port in new[] { 443, 445, 2222, 21, 70, 53, 5432, 6379, 9200, 12345 })
