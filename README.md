@@ -107,7 +107,7 @@ The renderer should not need raw IP addresses, credentials, request payloads, or
 ## Status
 
 All five initial MVP mappings are implemented: DNS flowers, Gopher mushrooms,
-HTTP broad-leaf plants, SSH thorny vines, and brief failed-authentication red
+HTTP broad-leaf plants, SSH thorny vines, and brief port-22-probe red
 blooms. The Canvas shows the whole fixed garden and subtle grid. Cluster-first
 placement, species lifecycles, and shared cell occupancy work; neighboring vines
 visually connect into creeping patches.
@@ -135,14 +135,17 @@ not affect organisms or grass.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
 listening ports to visual families without asserting protocol/authentication
-semantics; a port-22 hit has a vine base, and unknown ports have a flower base.
-Each accepted connection also rolls for an artistic weed or rare specimen.
+semantics. A redbloom means TCPNoise observed a connection to listening port 22;
+it does not prove SSH negotiation, attempted credentials, failed authentication,
+or malicious intent. This aesthetic special case bypasses ordinary rarity so the
+signal remains recognizable. Port 2222 retains its vine base and normal rarity;
+unknown ports have a flower base. Each accepted non-22 connection rolls for an
+artistic weed or rare specimen.
 IPv6 and sensor suffixes `-dn42` / `-ygg` are coarse visual modifiers, not security
 classifications. Rarity stays event-driven; no timer creates mutations. See the
 [probability policy](docs/EVENT-MAPPINGS.md#tcpnoise-rarity).
 The browser receives only the resolved specimen type and listening port, with no
-sensor name or IP details. No port hit
-creates a red bloom. Other discrete adapters, inspection, local-time lighting,
+sensor name or IP details. Other discrete adapters, inspection, local-time lighting,
 persistence, and ecological competition remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
@@ -156,7 +159,7 @@ dotnet run --project PacketGarden.csproj --urls http://localhost:5080
 Open http://localhost:5080 in a browser and click **Generate fake DNS event** to
 add a flower, **Generate fake Gopher event** to add a mushroom,
 **Generate fake HTTP event** to add a broad-leaf plant, **Generate fake SSH event**
-to add a vine, or **Generate fake failed-auth event** to add a red bloom.
+to add a vine, or **Fake port 22 probe** to add a red bloom without grass influence.
 Click **Start automatic fake traffic** to leave the garden running, and
 **Stop automatic fake traffic** to pause arrivals without resetting the garden.
 Manual buttons remain available while automatic traffic runs.
@@ -190,7 +193,7 @@ Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Ch
 and browser-path checks with `node tests/garden-events.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
-with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and failed auth 2.
+with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.
 Tune the delays and weights together in `fakeTrafficConfig` in `wwwroot/garden.js`.
 
 The whole garden scales to fit the window, and specimens survive resizing.

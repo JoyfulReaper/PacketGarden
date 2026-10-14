@@ -5,8 +5,9 @@ public static class TcpNoiseRarity
 {
     public static (string SpecimenType, bool IsFallback) BaseSpecimen(int port) => port switch
     {
+        22 => ("redbloom", false),
         80 or 443 or 8080 or 8443 => ("broadleaf", false),
-        22 or 2222 or 23 or 2323 or 3389 or 5900 => ("vine", false),
+        2222 or 23 or 2323 or 3389 or 5900 => ("vine", false),
         21 or 445 or 5432 or 6379 or 9200 or 70 => ("mushroom", false),
         25 or 53 or 420 or 42069 => ("flower", false),
         _ => ("flower", true)
@@ -25,6 +26,10 @@ public static class TcpNoiseRarity
     // Production supplies uniform random values; checks supply exact boundaries.
     public static string Resolve(int port, bool isIpv6, string? sensor, int roll, int rareChoice)
     {
+        // A listening-port hit only, not evidence of SSH or authentication.
+        // Keep this aesthetic signal recognizable regardless of traits or rolls.
+        if (port == 22) return "redbloom";
+
         ArgumentOutOfRangeException.ThrowIfNegative(roll);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(roll, 10_000);
         ArgumentOutOfRangeException.ThrowIfNegative(rareChoice);

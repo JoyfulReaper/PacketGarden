@@ -51,7 +51,7 @@ TCPNoise collector (`tcpnoise.connection`)
      ↓
 PacketGarden backend adapter
      ↓
-validate + destination port base + coarse rarity traits -> specimen type
+validate -> port 22: redbloom; other ports: base mapping + coarse rarity traits
      ↓
 normalized garden growth
      ↓
@@ -76,7 +76,8 @@ null, nonnumeric, fractional, or unsupported versions give no bonus. Only string
 sensor values can match the case-insensitive `-dn42` / `-ygg` suffixes (no trimming);
 missing, nonstring, blank, or nonmatching names give no sensor bonus.
 No unrelated collector fields are required or retained. The backend resolves the
-base port mapping and [artistic rarity roll](EVENT-MAPPINGS.md#tcpnoise-rarity)
+port-22 redbloom special case or, for every other port, the base mapping and
+[artistic rarity roll](EVENT-MAPPINGS.md#tcpnoise-rarity)
 before anything is sent to the browser. SSE emits only:
 
 ```text
@@ -104,7 +105,7 @@ placement path cannot place another specimen.
 
 Discrete observations may influence specimens: DNS activity can grow flowers,
 HTTP activity broad-leaf plants, Gopher activity mushrooms, genuine SSH telemetry
-vines, and authentication failures brief red blooms. Fake and real discrete
+vines, and port-22 hits brief red blooms. Fake and real discrete
 events should converge on shared ecological placement/rendering without
 pretending that raw port hits establish higher-level protocol semantics.
 
@@ -125,10 +126,12 @@ and spreads locally through the browser update loop.
 ## Preserve sensor meaning
 
 TCPNoise destination ports deliberately select plant visual families, not
-protocol classifications. A hit on 22/2222 may grow a vine without claiming a
-genuine SSH session. Every valid port gets growth, with flowers as the unknown-port
-fallback before rarity. No port hit produces a red bloom: actual failed authentication still
-requires auth-aware telemetry. Weeds and rare specimens are artistic outcomes.
+protocol classifications. Redbloom means TCPNoise observed a connection to listening
+port 22, based solely on that port. It does not prove SSH negotiation, attempted
+credentials, failed authentication, or malicious intent. The aesthetic port-22
+special case bypasses ordinary rarity to keep the signal recognizable. Port 2222
+retains its vine base and normal rarity. Every valid port gets growth, with flowers
+as the unknown-port fallback before rarity. Weeds and rare specimens are artistic outcomes.
 IPv6 / DN42 / Ygg and fallback ports are coarse visual modifiers, not security
 classifications or claims that any sensor/traffic class is malicious.
 Individual hits drive plants; aggregate activity continues driving weather

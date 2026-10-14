@@ -36,7 +36,7 @@ assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`
 assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.row]))'), '[[0,0],[0,4],[0,8],[0,12],[0,16]]');
 assert(run('gardenState.grassCells.every(g => g.createdAt === 1000 && g.lastInfluencedAt === 1000)'));
 
-for (const [port, type] of [[443,'broadleaf'],[22,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
+for (const [port, type] of [[443,'broadleaf'],[22,'redbloom'],[2222,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
   reset(); sandbox.Math.random = () => 0;
   source.emit('garden', { specimenType:type, listenPort:port });
   assert.equal(run('gardenState.specimens.length'), 1);
@@ -76,8 +76,8 @@ for (const [type, expires, color] of [['weed',360000,'#bec04c'],['ghostbloom',36
 }
 
 reset(); sandbox.Math.random = () => 0;
-source.emit('garden', { specimenType:'vine', listenPort:22 });
-source.emit('garden', { specimenType:'vine', listenPort:22 });
+source.emit('garden', { specimenType:'vine', listenPort:2222 });
+source.emit('garden', { specimenType:'vine', listenPort:2222 });
 assert.equal(run('gardenState.specimens.length'), 2);
 assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1);
 
@@ -87,13 +87,45 @@ for (const bad of ['{','null',{specimenType:'nope',listenPort:443},{specimenType
   {specimenType:'broadleaf',listenPort:'443'},{type:'port-hit',port:443}]) source.emit('garden', bad);
 assert.equal(run('gardenState.specimens.length'),0);
 
-for (const [event,type,grass] of [['dns','flower',true],['http','broadleaf',true],['ssh','vine',false],['gopher','mushroom',false],['failed-auth','redbloom',false]]) {
+for (const [event,type,grass] of [['dns','flower',true],['http','broadleaf',true],['ssh','vine',false],['gopher','mushroom',false],['port22-probe','redbloom',false]]) {
   reset(); sandbox.Math.random = () => 0;
   element(`#fake-${event}`).handlers.click();
   assert.equal(run('gardenState.specimens.length'), 1);
   assert.equal(run('gardenState.specimens[0].type'),type);
   assert.equal(run('gardenState.grassCells.length > 0'), grass);
 }
+
+const html = fs.readFileSync('wwwroot/index.html', 'utf8');
+assert.match(html, /id="fake-port22-probe"[^>]*>Fake port 22 probe<\/button>/);
+assert(!html.includes('fake-failed-auth'));
+assert(!elements.has('#fake-failed-auth'), 'obsolete control is not bound');
+assert(!run("eventSpecimenTypes.has('failed-auth')"));
+assert(!run("fakeTrafficConfig.eventWeights.some(e => e.type === 'failed-auth')"));
+reset();
+run("handleGardenEvent({type:'failed-auth'})");
+assert.equal(run('gardenState.specimens.length'), 0, 'obsolete fake event rejected');
+assert.equal(run('gardenState.grassCells.length'), 0);
+
+reset(); sandbox.Math.random = () => 0;
+run('influenceGrassCell(0, 0, 500)');
+source.emit('garden', {specimenType:'redbloom', listenPort:22});
+element('#fake-port22-probe').handlers.click();
+assert.equal(run('gardenState.specimens.length'), 2);
+assert(run("gardenState.specimens.every(s => s.type === 'redbloom')"));
+assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1, 'real/fake redblooms share clustering');
+assert.equal(run('gardenState.grassCells.length'), 1);
+assert.equal(run('gardenState.grassCells[0].lastInfluencedAt'), 500, 'real/fake port-22 growth never refreshes grass');
+for (const age of [0, 9999, 10000, 29999, 30000]) {
+  drawing.length = 0;
+  run(`drawRedbloom(gardenState.specimens[0], ${1000 + age})`);
+  assert.equal(drawing.length > 0, age < 30000, 'redbloom rendering retains its 30-second lifetime');
+}
+run('updateGarden(30999)'); assert.equal(run('gardenState.specimens.length'), 2);
+run('updateGarden(31000)'); assert.equal(run('gardenState.specimens.length'), 0);
+
+// The browser trusts the normalized species; it never derives a species from port 22.
+reset(); source.emit('garden', {specimenType:'flower', listenPort:22});
+assert.equal(run('gardenState.specimens[0].type'), 'flower');
 
 for(const [eventType,chance] of [['dns',.45],['http',.65]]) {
   reset(); sandbox.Math.random=()=>chance;
@@ -123,5 +155,12 @@ assert.equal(JSON.stringify(run('gardenState')),state); assert.equal(sources.len
 reset(); sandbox.Math.random=()=>0;
 element('#automatic-traffic').handlers.click(); const callback=timeouts.values().next().value; timeouts.clear(); callback();
 assert.equal(run('gardenState.specimens.length'),1); assert(run('gardenState.grassCells.length')>0);
+element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
+reset(); sandbox.Math.random=()=>0.99;
+element('#automatic-traffic').handlers.click();
+const probeCallback=timeouts.values().next().value; timeouts.clear(); probeCallback();
+assert.equal(run('gardenState.specimens.length'),1);
+assert.equal(run('gardenState.specimens[0].type'),'redbloom', 'weighted fake traffic now emits port22-probe');
+assert.equal(run('gardenState.grassCells.length'),0);
 element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
 console.log('PASS: five initial grass seeds, normalized growth, four variant renderers/lifecycles, shared clustering, validation, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');

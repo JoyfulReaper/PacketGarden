@@ -14,12 +14,13 @@ browser garden as the starting point.
 
 - ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
 - Canvas garden with a fixed 32×20 square grid, subtle soil seams, and the whole area visible when resized.
-- All five initial mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and failed-authentication red blooms.
+- All five development mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and port-22-probe red blooms.
 - Simple procedural art, including visual connections between neighboring vine cells.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
 - Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the manual renderer.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to sanitized specimen growth on the same SSE stream.
+- Redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 retains normal vine/rarity behavior. The fake `port22-probe` control previews the same redbloom without grass influence.
 - Event-driven artistic TCPNoise rarity: weeds, pale ghostblooms, cyan/violet crystal fungi, and dark blackthorns, lasting 6, 6, 7, and 12 minutes. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).
 - Shared specimen placement path for fake events and normalized real growth.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.

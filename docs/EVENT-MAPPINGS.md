@@ -14,10 +14,10 @@ affecting ecology.
 | HTTP request | Broad-leaf plant | Ordinary web traffic should look healthy and common. |
 | HTTPS request | Flowering broad-leaf plant | Similar family to HTTP, with a slightly more elaborate appearance. |
 | Genuine SSH connection telemetry | Thorny vine | Protocol-aware evidence of a connection; a port probe alone is insufficient. |
-| TCPNoise connection / port hit | Base plant family by destination port, with a chance of weed or rare growth | Artistic mapping, without claiming protocol or authentication semantics. |
+| TCPNoise connection / port hit | Port 22 always redbloom; other ports use base families with a chance of weed or rare growth | Artistic mapping, without claiming protocol or authentication semantics. |
 | Gopher request | Mushroom | A little old-network fungus patch. |
 | Gemini request | Crystal-like fungus | More luminous / geometric than Gopher mushrooms. |
-| Failed authentication telemetry | Red bloom that quickly wilts | Requires appropriate authentication telemetry, not an inferred failure from a probe. |
+| Port 22 probe / hit | Red bloom that quickly wilts | Based solely on a connection to listening port 22; bypasses ordinary rarity. |
 | Long-lived connection | Slow-growing tree | Duration can affect trunk/ring/branch growth. |
 | Traffic burst | Rain / pollen / wind event | Environmental effect rather than another permanent plant. |
 | Aggregate/background traffic volume | Drizzle / rain / heavy rain | Activity pressure over a time window, rather than one specimen per traffic sample. |
@@ -38,11 +38,12 @@ affecting ecology.
 
 ## Interpreting real telemetry
 
-TCPNoise listening ports select plant visuals deliberately. Ports 22/2222 can
-produce vines as an artistic mapping without claiming a genuine SSH session.
-Port numbers do not establish protocol or authentication semantics. Actual
-failed authentication still requires auth-aware telemetry; no port hit creates
-a red bloom. Every valid hit produces one garden growth event, including unknown
+TCPNoise listening ports select plant visuals deliberately. A redbloom means
+TCPNoise observed a connection to listening port 22. This aesthetic signal bypasses
+ordinary rarity, regardless of IPv6 or sensor traits. It does not prove SSH
+negotiation, attempted credentials, failed authentication, or malicious intent.
+Port 2222 still has a vine base and participates normally in rarity.
+Every valid hit produces one garden growth event, including unknown
 ports. Weeds and rare variants are artistic outcomes, not classifications of
 scanners, malicious traffic, protocols, or sensor classes.
 
@@ -60,12 +61,13 @@ continues controlling weather separately through Noise Observatory.
 
 ## TCPNoise destination-port mapping
 
-These base mappings apply before the rarity roll:
+Port 22 is an explicit signal; the other base mappings apply before the rarity roll:
 
 | Listening ports | Visual specimen |
 | --- | --- |
+| 22 | redbloom (always; bypasses rarity) |
 | 80, 443, 8080, 8443 | broadleaf |
-| 22, 2222, 23, 2323, 3389, 5900 | vine |
+| 2222, 23, 2323, 3389, 5900 | vine |
 | 21, 445, 5432, 6379, 9200, 70 | mushroom |
 | 25, 420, 42069, 53 | flower |
 | Any other valid port (1–65535) | flower |
@@ -75,7 +77,8 @@ normally expose them. The planning inventory is in [Real data](REAL-DATA.md#tcpn
 
 ## TCPNoise rarity
 
-The backend rolls once per accepted connection. Known ports start at **98% normal,
+Port 22 always resolves to redbloom before ordinary rarity. For every other accepted
+connection, the backend rolls once. Known non-22 ports start at **98% normal,
 1.5% weed, 0.5% rare**; fallback ports start at **94% flower, 4% weed, 2% rare**.
 Add these percentage points to the weed and rare chances, subtracting their sum
 from normal growth:
@@ -95,7 +98,7 @@ security classifications or evidence of a particular protocol.
 
 A uniform integer roll 0–9999 uses normal first, then weed, then rare, with each
 upper boundary exclusive. A separate uniform choice 0–2 selects `ghostbloom`,
-`crystalfungus`, or `blackthorn` equally. No TCPNoise outcome is `redbloom`.
+`crystalfungus`, or `blackthorn` equally. Port 22 cannot become a weed or rare variant.
 Weeds are angular ochre/yellow-green; ghostblooms pale blue-white with a soft halo;
 crystal fungi cyan/violet facets; blackthorns dark purple with contrasting thorns.
 Their lifetimes are 6, 6, 7, and 12 minutes respectively (stages in the README).
@@ -113,7 +116,7 @@ The current prototype implements:
 2. HTTP -> broad-leaf plant
 3. SSH -> thorny vine
 4. Gopher -> mushroom
-5. failed authentication -> red bloom / wilt
+5. port 22 probe (`port22-probe`) -> red bloom / wilt
 
 Manual controls and weighted automatic fake traffic feed these five types into
 the same handler. Keep this subset while developing the next real-data phase.

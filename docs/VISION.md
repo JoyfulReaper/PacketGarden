@@ -128,7 +128,7 @@ Examples:
 - Gopher traffic -> mushrooms;
 - Gemini traffic -> crystalline fungi;
 - SSH connections -> thorny vines;
-- failed authentication -> a flower that blooms red and quickly wilts;
+- a TCP connection to listening port 22 -> a redbloom that quickly wilts, without implying SSH negotiation or authentication;
 - long-lived connections -> slow-growing trees;
 - bursts of traffic -> rain, wind, spores, or pollen;
 - suspicious or noisy traffic -> invasive weeds;

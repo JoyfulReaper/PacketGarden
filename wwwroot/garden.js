@@ -4,7 +4,7 @@ const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
 const fakeSshButton = document.querySelector("#fake-ssh");
-const fakeFailedAuthButton = document.querySelector("#fake-failed-auth");
+const fakePort22ProbeButton = document.querySelector("#fake-port22-probe");
 const automaticTrafficButton = document.querySelector("#automatic-traffic");
 const gardenStatus = document.querySelector("#garden-status");
 const weatherLevelControl = document.querySelector("#weather-level");
@@ -173,7 +173,7 @@ const fakeTrafficConfig = {
     { type: "http", weight: 28 },
     { type: "ssh", weight: 10 },
     { type: "gopher", weight: 5 },
-    { type: "failed-auth", weight: 2 }
+    { type: "port22-probe", weight: 2 }
   ]
 };
 let automaticTrafficRunning = false;
@@ -184,7 +184,7 @@ const eventSpecimenTypes = new Map([
   ["gopher", "mushroom"],
   ["http", "broadleaf"],
   ["ssh", "vine"],
-  ["failed-auth", "redbloom"]
+  ["port22-probe", "redbloom"]
 ]);
 const speciesConfig = new Map([
   ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
@@ -198,7 +198,7 @@ const speciesConfig = new Map([
   ["blackthorn", { timings: blackthornTimings, render: drawBlackthorn, plural: "blackthorns" }]
 ]);
 
-/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" }} GardenEvent */
+/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
 const gardenState = { specimens: [], grassCells: [] };
 
 /** @param {GardenEvent} event */
@@ -344,7 +344,7 @@ function updateGardenStatus() {
   fakeGopherButton.disabled = count === columns * rows;
   fakeHttpButton.disabled = count === columns * rows;
   fakeSshButton.disabled = count === columns * rows;
-  fakeFailedAuthButton.disabled = count === columns * rows;
+  fakePort22ProbeButton.disabled = count === columns * rows;
 }
 
 function updateGarden(now = Date.now()) {
@@ -386,9 +386,9 @@ fakeSshButton.addEventListener("click", () => {
   handleGardenEvent(event);
 });
 
-fakeFailedAuthButton.addEventListener("click", () => {
+fakePort22ProbeButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
-  const event = { type: "failed-auth" };
+  const event = { type: "port22-probe" };
   handleGardenEvent(event);
 });
 
