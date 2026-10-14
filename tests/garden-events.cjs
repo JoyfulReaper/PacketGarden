@@ -27,6 +27,11 @@ const run = code => vm.runInContext(code, sandbox);
 const reset = () => run('gardenState.specimens=[]; gardenState.grassCells=[]; nextGrassSpreadAt=1000000;');
 assert.equal(sources.length, 1); assert.equal(sources[0].url, '/api/garden/events');
 const source = sources[0];
+assert.equal(run('gardenState.grassCells.length'), 1, 'garden starts with exactly one grass seed');
+assert.equal(run('gardenState.grassCells[0].column'), 0);
+assert.equal(run('gardenState.grassCells[0].row'), 0);
+assert.equal(run('gardenState.grassCells[0].createdAt'), 1000);
+assert.equal(run('gardenState.grassCells[0].lastInfluencedAt'), 1000);
 
 for (const [port, type] of [[443,'broadleaf'],[22,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
   reset(); sandbox.Math.random = () => 0;
@@ -85,4 +90,4 @@ reset(); sandbox.Math.random=()=>0;
 element('#automatic-traffic').handlers.click(); const callback=timeouts.values().next().value; timeouts.clear(); callback();
 assert.equal(run('gardenState.specimens.length'),1); assert(run('gardenState.grassCells.length')>0);
 element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
-console.log('PASS: normalized growth, shared clustering, validation, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');
+console.log('PASS: initial grass seed, normalized growth, shared clustering, validation, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');
