@@ -203,7 +203,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [] };
+const gardenState = { specimens: [], grassCells: [], actors: [] };
 const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
 
 // Called only at saturation, after expiry. Equal vigor never churns the garden.
@@ -1003,6 +1003,7 @@ function drawGarden() {
   for (const specimen of gardenState.specimens) {
     speciesConfig.get(specimen.type).render(specimen, now);
   }
+  if (typeof drawGardenActors === "function") drawGardenActors(now);
   drawRain(now);
 }
 
@@ -1028,4 +1029,5 @@ window.setInterval(() => {
     updateGarden();
     drawGarden();
   }
+  if (typeof updateAmbientEvents === "function") updateAmbientEvents(Date.now());
 }, updateEveryMs);

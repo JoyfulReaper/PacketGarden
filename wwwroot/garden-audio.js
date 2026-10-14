@@ -116,8 +116,19 @@ const gardenSound = (() => {
     } catch { reportUnavailable(); }
   }
 
+  function maybePlayGnomeSound(stage) {
+    if (!enabled || volume === 0 || audio?.state !== "running") return;
+    if (stage !== "battle" && stage !== "victory") return;
+    try {
+      // A couple of tiny cues, substantially below the tuned growth envelopes.
+      const notes = stage === "battle" ? [880] : [523, 659, 784];
+      notes.forEach((frequency, index) =>
+        playTone(frequency, "sine", 0.12, audio.currentTime + index * 0.07, 0.045));
+    } catch { reportUnavailable(); }
+  }
+
   toggle.addEventListener("click", () => setSoundEnabled(!enabled));
   volumeControl.addEventListener("input", () => setSoundVolume(volumeControl.value));
   updateToggle();
-  return { maybePlayGrowthSound };
+  return { maybePlayGrowthSound, maybePlayGnomeSound };
 })();

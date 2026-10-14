@@ -58,6 +58,7 @@ function createGarden(options = {}) {
   vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js','utf8'),sandbox);
+  vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   const grow=(type,time=state.now)=>{
     state.now=time; sources[0].emit({specimenType:type,listenPort:type==='redbloom'?22:443,vigor:0});
@@ -162,6 +163,21 @@ module.exports=async function checkAudio() {
   await pending.toggle(); pending.state.finishResume(); await enabling;
   assert.equal(pending.element('#sound-toggle').textContent,'Sound: Off');
   assert.equal(pending.state.gains[0].gain.value,0,'late resume cannot override explicit Off');
+  const gnomes=createGarden();
+  gnomes.run("gardenSound.maybePlayGnomeSound('battle'); gardenSound.maybePlayGnomeSound('victory')");
+  assert.equal(gnomes.state.contexts.length,0,'muted gnomes never create audio');
+  await gnomes.toggle();
+  gnomes.run("gardenSound.maybePlayGnomeSound('battle'); gardenSound.maybePlayGnomeSound('victory')");
+  assert.equal(gnomes.state.contexts.length,1,'gnomes share the growth AudioContext');
+  assert.equal(gnomes.state.oscillators.length,4,'one ting and a three-note victory trill');
+  assert.equal(gnomes.state.gains[0].gain.value,0.12,'gnomes share the master volume');
+  assert(gnomes.state.gains.slice(1).every(gain=>gain.gain.events.find(event=>event[0]==='linear')[1]===0.045),'ambient cues stay below growth envelopes');
+  await gnomes.toggle();
+  gnomes.run("gardenSound.maybePlayGnomeSound('battle'); gardenSound.maybePlayGnomeSound('victory')");
+  assert.equal(gnomes.state.oscillators.length,4,'Sound Off suppresses every gnome cue');
+  const gnomeFailure=createGarden({failPlayback:true}); await gnomeFailure.toggle();
+  assert.doesNotThrow(()=>gnomeFailure.run("gardenSound.maybePlayGnomeSound('battle')"));
+  gnomeFailure.grow('flower'); assert.equal(gnomeFailure.run('gardenState.specimens.length'),1);
   console.log('PASS: stronger severe weather; Web Audio opt-in, volume, all species identities, rare/ordinary cooldowns, burst/fake/shared growth, bounded pitch, cleanup, failure/race isolation.');
 };
 

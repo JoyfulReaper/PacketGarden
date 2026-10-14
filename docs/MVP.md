@@ -34,6 +34,7 @@ browser garden as the starting point.
 - Elapsed-time lifecycles with growth, maturity, wilting/fading/drying, and removal. Red blooms appear immediately and have only a fresh and wilting stage.
 - Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
+- A separate browser-only ambient actor layer and The Gnome Incident: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, or weather. Tiny optional cues share existing sound controls; reload clears the nonsense.
 
 Fake events are `{ type }`; live TCPNoise browser growth is
 `{ specimenType, listenPort, vigor }` after backend validation, mapping, and rarity,

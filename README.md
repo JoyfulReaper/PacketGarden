@@ -118,6 +118,14 @@ Manual controls and automatic weighted fake traffic feed the same event handler.
 Lifecycles now retain several minutes of visual history, with vines lasting up to
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
+Very occasionally, sufficiently overgrown gardens may experience a brief and
+completely unhelpful gnome territorial dispute. With at least 30 living specimens,
+a browser-only check every 45 seconds has a 2% chance to summon two red-hat and two
+green-hat gnomes. They approach, shove, randomly pick a winner, and disappear after
+12 seconds. These transient actors occupy no plant cells and change no specimens,
+grass, or weather. Sound-enabled gardens get two tiny cues through the existing
+volume control. It is garden nonsense, with no network or security meaning.
+
 Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
 specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near

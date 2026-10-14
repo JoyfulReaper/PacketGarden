@@ -38,6 +38,7 @@ vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js', 'utf8'), sandbox);
 const run = code => vm.runInContext(code, sandbox);
 const reset = () => run('gardenState.specimens=[]; gardenState.grassCells=[]; nextGrassSpreadAt=1000000;');
 assert.equal(sources.length, 1); assert.equal(sources[0].url, '/api/garden/events');
