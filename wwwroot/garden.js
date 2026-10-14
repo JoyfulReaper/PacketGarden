@@ -15,6 +15,8 @@ const rows = gardenHeight / cellSize;
 const flowerTimings = {
   growingAfterMs: 5_000,
   matureAfterMs: 12_000,
+  wiltingAfterMs: 25_000,
+  expiredAfterMs: 35_000,
   redrawEveryMs: 250
 };
 
@@ -24,6 +26,8 @@ const gardenState = { specimens: [] };
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
   if (event.type !== "dns") return;
+
+  updateGarden();
 
   const occupiedCells = new Set(
     gardenState.specimens.map(specimen => specimen.row * columns + specimen.column)
@@ -65,12 +69,26 @@ function handleGardenEvent(event) {
     createdAt: Date.now()
   });
 
+  updateGardenStatus();
+  drawGarden();
+}
+
+function updateGardenStatus() {
   const count = gardenState.specimens.length;
   const description = `${count} ${count === 1 ? "flower" : "flowers"}`;
   gardenStatus.textContent = description;
   canvas.setAttribute("aria-label", `Rectangular soil garden with a subtle square grid and ${description}`);
   fakeDnsButton.disabled = count === columns * rows;
-  drawGarden();
+}
+
+function updateGarden(now = Date.now()) {
+  const remaining = gardenState.specimens.filter(
+    specimen => now - specimen.createdAt < flowerTimings.expiredAfterMs
+  );
+  if (remaining.length !== gardenState.specimens.length) {
+    gardenState.specimens = remaining;
+    updateGardenStatus();
+  }
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -83,11 +101,14 @@ function drawFlower(specimen, now) {
   const x = (specimen.column + 0.5) * cellSize;
   const y = (specimen.row + 0.5) * cellSize;
   const ageMs = Math.max(0, now - specimen.createdAt);
+  if (ageMs >= flowerTimings.expiredAfterMs) return;
   const stage = ageMs < flowerTimings.growingAfterMs ? "sprout"
-    : ageMs < flowerTimings.matureAfterMs ? "growing" : "mature";
-  const leafSize = stage === "sprout" ? 0.4 : stage === "growing" ? 0.75 : 1;
+    : ageMs < flowerTimings.matureAfterMs ? "growing"
+    : ageMs < flowerTimings.wiltingAfterMs ? "mature" : "wilting";
+  const wilting = stage === "wilting";
+  const leafSize = stage === "sprout" ? 0.4 : stage === "growing" ? 0.75 : wilting ? 0.65 : 1;
 
-  context.fillStyle = "#75935b";
+  context.fillStyle = wilting ? "#88764f" : "#75935b";
   context.beginPath();
   context.ellipse(x - 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, -Math.PI / 4, 0, Math.PI * 2);
   context.ellipse(x + 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, Math.PI / 4, 0, Math.PI * 2);
@@ -102,17 +123,19 @@ function drawFlower(specimen, now) {
     return;
   }
 
-  context.fillStyle = "#eedec3";
+  const bloomSize = wilting ? 0.65 : 1;
+  const bloomY = y + (wilting ? 3 : 0);
+  context.fillStyle = wilting ? "#ab997b" : "#eedec3";
   for (let petal = 0; petal < 5; petal++) {
     const angle = petal * Math.PI * 2 / 5 - Math.PI / 2;
     context.beginPath();
-    context.arc(x + Math.cos(angle) * 5, y + Math.sin(angle) * 5, 4, 0, Math.PI * 2);
+    context.arc(x + Math.cos(angle) * 5 * bloomSize, bloomY + Math.sin(angle) * 5 * bloomSize, 4 * bloomSize, 0, Math.PI * 2);
     context.fill();
   }
 
-  context.fillStyle = "#d6aa4e";
+  context.fillStyle = wilting ? "#8c784e" : "#d6aa4e";
   context.beginPath();
-  context.arc(x, y, 3, 0, Math.PI * 2);
+  context.arc(x, bloomY, 3 * bloomSize, 0, Math.PI * 2);
   context.fill();
 }
 
@@ -166,7 +189,10 @@ new ResizeObserver(drawGarden).observe(canvas);
 window.addEventListener("resize", drawGarden);
 drawGarden();
 
-// Redraw only; elapsed time determines stages even if a background tab throttles timers.
+// Clean up before drawing, including the tick that removes the final flower.
 window.setInterval(() => {
-  if (gardenState.specimens.length > 0) drawGarden();
+  if (gardenState.specimens.length > 0) {
+    updateGarden();
+    drawGarden();
+  }
 }, flowerTimings.redrawEveryMs);
