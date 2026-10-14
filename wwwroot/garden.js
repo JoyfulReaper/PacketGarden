@@ -11,6 +11,13 @@ const margin = 16;
 const columns = gardenWidth / cellSize;
 const rows = gardenHeight / cellSize;
 
+// Short development timings, measured from each flower's creation.
+const flowerTimings = {
+  growingAfterMs: 5_000,
+  matureAfterMs: 12_000,
+  redrawEveryMs: 250
+};
+
 /** @typedef {{ type: "dns" }} GardenEvent */
 const gardenState = { specimens: [] };
 
@@ -54,7 +61,8 @@ function handleGardenEvent(event) {
   gardenState.specimens.push({
     type: "flower",
     column: cell % columns,
-    row: Math.floor(cell / columns)
+    row: Math.floor(cell / columns),
+    createdAt: Date.now()
   });
 
   const count = gardenState.specimens.length;
@@ -71,15 +79,28 @@ fakeDnsButton.addEventListener("click", () => {
   handleGardenEvent(event);
 });
 
-function drawFlower(specimen) {
+function drawFlower(specimen, now) {
   const x = (specimen.column + 0.5) * cellSize;
   const y = (specimen.row + 0.5) * cellSize;
+  const ageMs = Math.max(0, now - specimen.createdAt);
+  const stage = ageMs < flowerTimings.growingAfterMs ? "sprout"
+    : ageMs < flowerTimings.matureAfterMs ? "growing" : "mature";
+  const leafSize = stage === "sprout" ? 0.4 : stage === "growing" ? 0.75 : 1;
 
   context.fillStyle = "#75935b";
   context.beginPath();
-  context.ellipse(x - 5, y + 5, 7, 3, -Math.PI / 4, 0, Math.PI * 2);
-  context.ellipse(x + 5, y + 5, 7, 3, Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x - 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, -Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x + 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, Math.PI / 4, 0, Math.PI * 2);
   context.fill();
+
+  if (stage === "sprout") return;
+  if (stage === "growing") {
+    context.fillStyle = "#a6b777";
+    context.beginPath();
+    context.arc(x, y, 3, 0, Math.PI * 2);
+    context.fill();
+    return;
+  }
 
   context.fillStyle = "#eedec3";
   for (let petal = 0; petal < 5; petal++) {
@@ -135,11 +156,17 @@ function drawGarden() {
   context.lineWidth = 6;
   context.strokeRect(0, 0, gardenWidth, gardenHeight);
 
+  const now = Date.now();
   for (const specimen of gardenState.specimens) {
-    drawFlower(specimen);
+    drawFlower(specimen, now);
   }
 }
 
 new ResizeObserver(drawGarden).observe(canvas);
 window.addEventListener("resize", drawGarden);
 drawGarden();
+
+// Redraw only; elapsed time determines stages even if a background tab throttles timers.
+window.setInterval(() => {
+  if (gardenState.specimens.length > 0) drawGarden();
+}, flowerTimings.redrawEveryMs);
