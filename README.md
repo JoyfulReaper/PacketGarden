@@ -8,7 +8,7 @@ The core idea is deliberately playful: a DNS lookup might strengthen a flower pa
 
 PacketGarden is primarily a passive / idle experience with light inspection, not a conventional management or combat game.
 
-The current design is:
+The intended design is:
 
 - top-down;
 - fixed-size garden visible as a whole on one screen;
@@ -42,16 +42,16 @@ sensors / services
 PacketGarden backend
        |
        v
-normalized GardenEvent
+normalized events / environmental state
        |
        v
-garden state / ecology
+      SSE
        |
        v
-browser renderer
+browser garden state / renderer
 ```
 
-The browser should not connect directly to NATS. The backend can stream normalized changes to the frontend over SSE, SignalR, or another simple mechanism.
+The browser should not connect directly to NATS. SSE is the planned initial backend-to-browser transport; neither NATS ingestion nor SSE is implemented yet. See [Real data](docs/REAL-DATA.md) for the next integration phase.
 
 A fake-event generator remains useful for development and demos and should feed the same normalized event model.
 
@@ -75,14 +75,14 @@ Initial prototype goals:
 
 ## Chosen stack
 
-PacketGarden will be a .NET web app using:
+PacketGarden uses:
 
 - ASP.NET Core / .NET for the application host and backend;
 - a lightweight browser frontend;
 - HTML/CSS plus Canvas for the garden;
-- vanilla JavaScript initially unless a framework becomes useful;
-- a NATS consumer in the backend when live sensors are connected;
-- SSE, SignalR, or another simple stream from backend to browser.
+- vanilla JavaScript.
+
+Backend adapters consuming NATS and an SSE stream to the browser are planned.
 
 The visual simulation is the interesting part. Avoid building infrastructure before the garden itself is fun to watch.
 
@@ -97,15 +97,23 @@ The renderer should not need raw IP addresses, credentials, request payloads, or
 - [Vision](docs/VISION.md)
 - [MVP](docs/MVP.md)
 - [Initial event mappings](docs/EVENT-MAPPINGS.md)
+- [Real data](docs/REAL-DATA.md)
 
 ## Status
 
-The prototype displays a fixed garden boundary and subtle grid. Temporary
-development controls generate fake DNS events for flowers, Gopher events for
-mushrooms, HTTP events for broad-leaf plants, SSH events for thorny vines, and
-failed-authentication events for brief red blooms. Each species forms clusters
-and eventually disappears. Neighboring vine cells visually connect into creeping
-patches; red blooms appear immediately, then quickly wilt.
+All five initial MVP mappings are implemented: DNS flowers, Gopher mushrooms,
+HTTP broad-leaf plants, SSH thorny vines, and brief failed-authentication red
+blooms. The Canvas shows the whole fixed garden and subtle grid. Cluster-first
+placement, species lifecycles, and shared cell occupancy work; neighboring vines
+visually connect into creeping patches.
+
+Manual controls and automatic weighted fake traffic feed the same event handler.
+Lifecycles now retain several minutes of visual history, with vines lasting up to
+10 minutes and red blooms remaining brief. State is held only in browser memory.
+
+Real sensors, NATS adapters, and SSE are not implemented. Inspection, local-time
+lighting, persistence, ecological competition, and aggregate weather effects
+remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
 

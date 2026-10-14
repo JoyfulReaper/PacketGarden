@@ -4,157 +4,93 @@
 
 Build the smallest browser prototype that proves the core idea:
 
-> Network-shaped events visibly grow and reshape a persistent top-down garden that is interesting to watch.
+> Network-shaped events visibly grow and reshape a top-down garden that is interesting to watch.
 
-The first development input may be fake generated events, but the design should match the eventual NATS-backed sensor feed so the renderer and ecology do not need to be rewritten later.
+The current prototype uses fake events. Persistence and a real sensor feed remain
+goals, with the existing browser garden as the starting point.
 
-## Chosen presentation
+## Completed prototype capabilities
 
-The MVP should establish the selected visual direction:
+- ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
+- Canvas garden with a fixed 32×20 square grid, subtle soil seams, and the whole area visible when resized.
+- All five initial mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and failed-authentication red blooms.
+- Simple procedural art, including visual connections between neighboring vine cells.
+- Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
+- One normalized browser event path: `GardenEvent -> handler -> specimen state -> update -> renderer`.
+- Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
+- Shared occupancy of one specimen per cell across all species.
+- Elapsed-time lifecycles with growth, maturity, wilting/fading/drying, and removal. Red blooms appear immediately and have only a fresh and wilting stage.
+- Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds.
+- A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 
-- top-down garden;
-- fixed bounded area;
-- entire garden visible on one screen;
-- subtle square grid used for placement and growth;
-- stylized painted/cartoon 2D sprites;
-- ordinary activity looks mostly cozy and natural;
-- unusual activity produces stranger mutations and effects;
-- real local-time lighting with gradual day/night transitions.
+The current event is only `{ type }`. Specimens hold `type`, `column`, `row`, and
+`createdAt`. State is browser memory only; reloading clears it. Detailed
+lifecycle thresholds and fake-traffic defaults are in the [README](../README.md).
 
-No pan-around world or giant scrolling map is needed.
+## Remaining MVP work
 
-## MVP capabilities
+- Click/hover inspection and safe information about the event behind a specimen.
+- Gradual lighting based on the viewer's real local time, with a readable night garden.
+- Deliberately simple persistence across browser/server restarts.
+- Light ecological competition, without health bars or management mechanics.
+- Event effects that strengthen, bloom, spread, mutate, or influence existing growth when new placement is unsuitable.
+- Real sensor/service input through NATS, backend normalization, and SSE delivery.
+- Aggregate activity pressure driving weather/environment, rather than treating every traffic sample as a specimen spawn.
 
-- Display a top-down garden / soil scene in the browser.
-- Generate or receive an event every few seconds during testing.
-- Map at least five event types to visibly different organisms or effects.
-- Place growth using cluster-first placement with very light randomness.
-- Let events strengthen, bloom, spread, mutate, or replace existing growth when space is crowded instead of always spawning another object.
-- Give specimens simple lifecycles including aging and decay.
-- Include light competition for space without health bars or management mechanics.
-- Allow a specimen to be inspected by click or hover.
-- Show a small amount of safe information about the event that created or influenced it.
-- Keep the full garden readable at once.
+These capabilities are not implemented. The current handler creates one specimen
+per accepted fake event when an empty cell exists and does nothing when the grid
+is full. It does not strengthen existing growth, mutate it, or model competition.
 
-## Suggested first event types
+## Presentation and shared ecosystem
 
-Start with a handful that are visually distinct:
+Keep the top-down bounded garden visible as a whole. Procedural shapes establish
+the prototype; painted/cartoon art, gradual lighting, and stranger mutations
+remain visual goals.
 
-- DNS -> small flower cluster;
-- HTTP -> broad-leaf plant;
-- SSH -> thorny vine;
-- Gopher -> mushroom;
-- failed authentication -> brief red bloom / wilt.
+All sources should contribute to one ecosystem, with no host-specific plots.
+Event type determines the main effect. Safe source traits may eventually affect
+visual variation, without turning the garden into a dashboard.
 
-Do not begin with twenty event types. Five working mappings are enough to learn whether the idea is fun.
+## Real-data direction
 
-## Input model
-
-PacketGarden should have one normalized internal event model regardless of where events originate.
-
-A conceptual event may contain:
-
-- event type;
-- source/sensor;
-- timestamp;
-- intensity;
-- optional duration;
-- safe coarse tags.
-
-The fake generator should produce the same kind of events that the later NATS consumer will produce.
-
-The intended real flow is:
+The next integration phase is documented in [Real data](REAL-DATA.md):
 
 ```text
-sensors -> NATS -> PacketGarden backend -> normalized event -> garden rules -> browser
+sensors/services -> NATS -> backend adapters
+    -> normalized garden events/environmental state -> SSE -> browser garden
 ```
 
-The browser should not connect directly to NATS.
+SSE is the planned initial transport, not an existing feature. The browser must
+not connect directly to NATS. Backend adapters should distinguish genuine
+protocol/authentication telemetry from probes and aggregate volume.
 
-## Shared ecosystem
+Normalized data may include event type, source/sensor, network class (`public`,
+`dn42`, `ygg`), timestamp, intensity, duration, and sanitized tags. Add fields only
+when they serve an actual garden effect. Fake and real discrete events should
+use the same handling path.
 
-All sources contribute to one garden.
+## Event pressure and timing
 
-Do not divide the map into host-specific plots. The event type determines the main species/effect while the source may influence subtle variation such as color, markings, shape, or mutation traits.
+High volume should not require one new permanent specimen per event. Repeated
+events may eventually strengthen, spread, bloom, mutate, or otherwise influence
+existing growth. Aggregate/background activity may instead become drizzle,
+rain, or heavy rain. Those responses are planned, not part of the current handler.
 
-## Garden state
-
-A specimen only needs a small amount of state initially, for example:
-
-- ID;
-- species/type;
-- grid position;
-- size/age/lifecycle stage;
-- creation and last-influenced timestamps;
-- source event type;
-- source/sensor identity if safe to expose;
-- visual seed / variation value;
-- optional weirdness or competition traits.
-
-The exact model should follow what the renderer and ecology need rather than attempting to design a complete simulation engine up front.
-
-## Ecology timing
-
-The garden should be visibly alive during an active session.
-
-Assuming events are arriving, a roughly 30-minute viewing session should show meaningful growth, blooming, spreading, crowding, mutation, and decay.
-
-Common specimens may change on minute-scale lifecycles. Larger or rarer growth can persist far longer so the garden still carries history.
-
-## Terrain
-
-Sparse environmental features such as rocks, logs, puddles, or small structures may exist, but most of the garden should remain usable for event-driven growth.
-
-Long-lived terrain changes can be added later and may evolve over days rather than minutes.
-
-## Chosen technical direction
-
-PacketGarden will be an ASP.NET Core / .NET web application.
-
-The first visual prototype can still keep most of the interesting logic in the browser:
-
-```text
-fake event generator
-        |
-        v
-normalized GardenEvent
-        |
-        v
-event-to-growth mapper
-        |
-        v
-garden state / ecology
-        |
-        v
-Canvas renderer
-```
-
-The .NET backend hosts the application and will later subscribe to NATS for real sensor input. It can forward normalized garden changes to the browser using SSE, SignalR, or another simple streaming mechanism.
-
-The backend should not be allowed to become the project before the visual garden is fun to watch.
-
-## Persistence
-
-The eventual garden is persistent across browser/server restarts.
-
-Persistence does not need to block the earliest visual prototype. First prove the lifecycle and ecology in memory; then add a deliberately simple persistent representation.
+An active viewing session should show meaningful change over roughly 30 minutes.
+The tuned prototype lifetimes retain recent visual history; longer-lived terrain
+and rare growth lasting hours or days remain future work. Quiet traffic should
+mean quieter activity, while lighting follows local time independently.
 
 ## Not MVP
 
-- Raw packet capture.
-- Direct browser-to-NATS connectivity.
-- Accounts/authentication.
-- Multiplayer/shared-user gardens.
-- Game economy.
-- Scoring.
-- Achievements.
-- Gardening controls such as watering or pruning.
-- Complex procedural ecology.
-- A giant scrollable map.
-- Perfect botanical art.
+- Raw packet capture or direct browser-to-NATS connectivity.
+- Accounts/authentication or multiplayer/shared-user gardens.
+- Game economy, scoring, achievements, or gardening controls.
+- Complex procedural ecology or a giant scrollable map.
+- Perfect botanical art or long-term terrain simulation.
 
 ## Success criteria
 
-The prototype succeeds if active event input makes the garden interesting enough to leave running and watch for roughly half an hour.
-
-If the fake-event version is boring, connecting real sensor data will not fix the core visual idea.
+The prototype succeeds if active event input makes the garden interesting enough
+to leave running and watch for roughly half an hour. Connecting real data should
+build on that experience, not substitute for it.

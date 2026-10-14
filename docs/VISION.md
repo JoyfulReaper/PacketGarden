@@ -1,5 +1,9 @@
 # PacketGarden Vision
 
+This document describes the intended experience, including features that are not
+implemented yet. See [MVP](MVP.md) for current prototype status and [Real data](REAL-DATA.md)
+for the planned integration phase.
+
 ## What it is
 
 PacketGarden turns network activity into an evolving ambient garden.
@@ -69,7 +73,8 @@ This lets event pressure shape the ecosystem without turning high-volume traffic
 
 ## Lifecycles, persistence, and competition
 
-The garden is persistent and should eventually survive browser/server restarts.
+The intended garden is persistent across browser/server restarts. The current
+prototype keeps state only in browser memory.
 
 Organisms have lifecycles such as:
 
@@ -142,20 +147,23 @@ sensors / Mission Control / protocol services
                  NATS
                   |
                   v
-      PacketGarden backend consumer
+      PacketGarden backend adapters
                   |
                   v
-       normalized GardenEvent model
+ normalized events / environmental state
                   |
                   v
-      garden state / ecology rules
+                 SSE
                   |
                   v
-        browser renderer via SSE,
-         SignalR, or similar
+    browser garden state / ecology / renderer
 ```
 
 The browser should not need direct NATS access.
+
+SSE is the current choice for the initial backend-to-browser transport. NATS
+ingestion and SSE are planned, not implemented. Aggregate activity can influence
+weather, while discrete events can influence specimens; see [Real data](REAL-DATA.md).
 
 A normalized event should contain only the data needed to influence the garden, such as event type, source, timestamp, intensity, duration, and safe tags.
 
