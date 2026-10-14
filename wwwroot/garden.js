@@ -2,6 +2,7 @@ const canvas = document.querySelector("canvas");
 const context = canvas.getContext("2d");
 const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
+const fakeHttpButton = document.querySelector("#fake-http");
 const gardenStatus = document.querySelector("#garden-status");
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
@@ -25,15 +26,32 @@ const mushroomTimings = {
   decayingAfterMs: 30_000,
   expiredAfterMs: 42_000
 };
+const broadleafTimings = {
+  growingAfterMs: 6_000,
+  matureAfterMs: 14_000,
+  fadingAfterMs: 38_000,
+  expiredAfterMs: 50_000
+};
 const updateEveryMs = 250;
 
-/** @typedef {{ type: "dns" | "gopher" }} GardenEvent */
+const eventSpecimenTypes = new Map([
+  ["dns", "flower"],
+  ["gopher", "mushroom"],
+  ["http", "broadleaf"]
+]);
+const speciesConfig = new Map([
+  ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
+  ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
+  ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }]
+]);
+
+/** @typedef {{ type: "dns" | "gopher" | "http" }} GardenEvent */
 const gardenState = { specimens: [] };
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
-  if (event.type !== "dns" && event.type !== "gopher") return;
-  const specimenType = event.type === "dns" ? "flower" : "mushroom";
+  const specimenType = eventSpecimenTypes.get(event.type);
+  if (!specimenType) return;
 
   updateGarden();
 
@@ -84,19 +102,20 @@ function handleGardenEvent(event) {
 
 function updateGardenStatus() {
   const count = gardenState.specimens.length;
-  const flowers = gardenState.specimens.filter(specimen => specimen.type === "flower").length;
-  const mushrooms = count - flowers;
-  const description = `${flowers} ${flowers === 1 ? "flower" : "flowers"}, ${mushrooms} ${mushrooms === 1 ? "mushroom" : "mushrooms"}`;
+  const description = Array.from(speciesConfig, ([type, config]) => {
+    const speciesCount = gardenState.specimens.filter(specimen => specimen.type === type).length;
+    return `${speciesCount} ${speciesCount === 1 ? config.singular ?? type : config.plural}`;
+  }).join(", ");
   gardenStatus.textContent = description;
   canvas.setAttribute("aria-label", `Rectangular soil garden with a subtle square grid and ${description}`);
   fakeDnsButton.disabled = count === columns * rows;
   fakeGopherButton.disabled = count === columns * rows;
+  fakeHttpButton.disabled = count === columns * rows;
 }
 
 function updateGarden(now = Date.now()) {
   const remaining = gardenState.specimens.filter(specimen => {
-    const expiresAfterMs = specimen.type === "flower"
-      ? flowerTimings.expiredAfterMs : mushroomTimings.expiredAfterMs;
+    const expiresAfterMs = speciesConfig.get(specimen.type).timings.expiredAfterMs;
     return now - specimen.createdAt < expiresAfterMs;
   });
   if (remaining.length !== gardenState.specimens.length) {
@@ -114,6 +133,12 @@ fakeDnsButton.addEventListener("click", () => {
 fakeGopherButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
   const event = { type: "gopher" };
+  handleGardenEvent(event);
+});
+
+fakeHttpButton.addEventListener("click", () => {
+  /** @type {GardenEvent} */
+  const event = { type: "http" };
   handleGardenEvent(event);
 });
 
@@ -189,6 +214,39 @@ function drawMushroom(specimen, now) {
   context.restore();
 }
 
+function drawBroadleaf(specimen, now) {
+  const ageMs = Math.max(0, now - specimen.createdAt);
+  if (ageMs >= broadleafTimings.expiredAfterMs) return;
+  const stage = ageMs < broadleafTimings.growingAfterMs ? "sprout"
+    : ageMs < broadleafTimings.matureAfterMs ? "growing"
+    : ageMs < broadleafTimings.fadingAfterMs ? "mature" : "fading";
+  const fading = stage === "fading";
+  const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.7 : 1;
+  const leafCount = stage === "sprout" ? 2 : stage === "growing" ? 4 : 6;
+
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  context.scale(size, size);
+
+  for (let leaf = 0; leaf < leafCount; leaf++) {
+    const angle = leaf * Math.PI * 2 / leafCount - Math.PI / 4;
+    context.save();
+    context.rotate(angle);
+    context.fillStyle = fading ? "#8d8653" : leaf % 2 === 0 ? "#6e9a56" : "#527c44";
+    context.beginPath();
+    context.ellipse(6, 0, 7, 4, 0, 0, Math.PI * 2);
+    context.fill();
+    context.strokeStyle = fading ? "#a59a67" : "#9bbb76";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(1, 0);
+    context.lineTo(11, 0);
+    context.stroke();
+    context.restore();
+  }
+  context.restore();
+}
+
 function drawGarden() {
   const { width, height } = canvas.getBoundingClientRect();
   if (width <= 0 || height <= 0) return;
@@ -231,8 +289,7 @@ function drawGarden() {
 
   const now = Date.now();
   for (const specimen of gardenState.specimens) {
-    if (specimen.type === "flower") drawFlower(specimen, now);
-    else if (specimen.type === "mushroom") drawMushroom(specimen, now);
+    speciesConfig.get(specimen.type).render(specimen, now);
   }
 }
 

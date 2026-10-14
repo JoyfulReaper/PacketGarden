@@ -101,8 +101,9 @@ The renderer should not need raw IP addresses, credentials, request payloads, or
 ## Status
 
 The prototype displays a fixed garden boundary and subtle grid. Temporary
-development controls generate fake DNS events for flowers and Gopher events for
-mushrooms. Each species forms clusters, grows, and eventually disappears.
+development controls generate fake DNS events for flowers, Gopher events for
+mushrooms, and HTTP events for broad-leaf plants. Each species forms clusters,
+grows, and eventually disappears.
 
 ## Run the prototype
 
@@ -113,7 +114,8 @@ dotnet run --project PacketGarden.csproj --urls http://localhost:5080
 ```
 
 Open http://localhost:5080 in a browser and click **Generate fake DNS event** to
-add a flower or **Generate fake Gopher event** to add a mushroom. The whole garden
-scales to fit the window, and specimens survive resizing. Development lifecycles
-last 35 seconds for flowers and 42 seconds for mushrooms. State is held only in
-browser memory; reloading starts an empty garden.
+add a flower, **Generate fake Gopher event** to add a mushroom, or
+**Generate fake HTTP event** to add a broad-leaf plant. The whole garden scales to
+fit the window, and specimens survive resizing. Development lifecycles last
+35 seconds for flowers, 42 seconds for mushrooms, and 50 seconds for broad-leaf
+plants. State is held only in browser memory; reloading starts an empty garden.
