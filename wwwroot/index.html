@@ -21,7 +21,7 @@
     <label for="weather-source">Weather source</label>
     <select id="weather-source">
       <option value="manual">Manual</option>
-      <option value="live">Live</option>
+      <option value="live" selected>Live</option>
     </select>
     <label for="weather-level">Weather</label>
     <select id="weather-level">
@@ -34,7 +34,7 @@
     </select>
     <label for="weather-intensity">Events/min</label>
     <input id="weather-intensity" type="number" min="0" max="1000000" step="100" value="1200">
-    <span id="weather-status" role="status">Manual weather</span>
+    <span id="weather-status" role="status">Live weather connecting</span>
   </div>
   <footer aria-label="Temporary development controls">
     <button id="fake-dns" type="button">Generate fake DNS event</button>

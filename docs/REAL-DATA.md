@@ -32,8 +32,9 @@ data: {"level":"rain","eventsPerMinute":29.8}
 ```
 
 Each frame ends with a blank line. The browser talks only to PacketGarden using
-`EventSource`. Manual is the default source mode; Live disables manual weather
-inputs and updates the existing renderer. SSE disconnection shows a small status,
+`EventSource`. Live is the default source mode; it disables manual weather
+inputs and updates the existing renderer. Manual remains an explicit override.
+SSE disconnection shows a small status,
 retains weather/ecology, and uses normal EventSource reconnection. Switching
 source modes does not reset the garden. Weather still has no ecological effects.
 
@@ -97,7 +98,7 @@ Each SSE client has its own transient queue; new connections do not replay hits.
 The existing `/api/garden/events` endpoint multiplexes `garden` and `weather`
 frames. One browser EventSource stays connected in both weather modes: normalized
 garden frames always reach the shared specimen placement path, while weather
-frames affect rendering only in Live mode. Manual weather remains the default.
+frames affect rendering only in Live mode. Live weather is the default.
 Switching modes can apply the latest cached live weather without reopening the
 stream.
 

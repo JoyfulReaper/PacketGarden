@@ -14,13 +14,16 @@ const weatherStatus = document.querySelector("#weather-status");
 let latestLiveWeather = null;
 let liveConnectionStatus = "Live weather connecting";
 
-weatherSourceControl.addEventListener("change", () => {
+function updateWeatherSource() {
   const live = weatherSourceControl.value === "live";
   weatherLevelControl.disabled = live;
   weatherIntensityControl.disabled = live;
   weatherStatus.textContent = live ? liveConnectionStatus : "Manual weather";
   if (live && latestLiveWeather) applyLiveWeather();
-});
+}
+
+weatherSourceControl.addEventListener("change", updateWeatherSource);
+updateWeatherSource();
 
 function applyLiveWeather() {
   Object.assign(weatherState, latestLiveWeather);

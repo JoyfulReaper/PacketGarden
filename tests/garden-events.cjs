@@ -1,5 +1,8 @@
 // Browser-path checks with controlled DOM, EventSource, clock, and random values.
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
+const html = fs.readFileSync('wwwroot/index.html', 'utf8');
+const sourceOptions = html.match(/<select id="weather-source">([\s\S]*?)<\/select>/)[1];
+const initialWeatherSource = sourceOptions.match(/<option value="([^"]+)" selected>/)[1];
 const elements = new Map(), sources = [], timeouts = new Map(); let nextTimeout = 0;
 const drawing = [];
 const context = new Proxy({}, {
@@ -8,7 +11,7 @@ const context = new Proxy({}, {
 });
 const element = selector => {
   if (!elements.has(selector)) elements.set(selector, {
-    value: selector === '#weather-source' ? 'manual' : selector === '#weather-level' ? 'quiet' : '1200',
+    value: selector === '#weather-source' ? initialWeatherSource : selector === '#weather-level' ? 'quiet' : '1200',
     handlers: {}, addEventListener(name, handler) { this.handlers[name] = handler; },
     getContext: () => context, getBoundingClientRect: () => ({ width: 960, height: 600 }), setAttribute() {}
   });
@@ -31,6 +34,21 @@ const run = code => vm.runInContext(code, sandbox);
 const reset = () => run('gardenState.specimens=[]; gardenState.grassCells=[]; nextGrassSpreadAt=1000000;');
 assert.equal(sources.length, 1); assert.equal(sources[0].url, '/api/garden/events');
 const source = sources[0];
+assert.equal(element('#weather-source').value, 'live', 'HTML selects Live on initial load');
+assert.equal(element('#weather-level').disabled, true, 'manual weather level starts disabled');
+assert.equal(element('#weather-intensity').disabled, true, 'manual rate starts disabled');
+assert.equal(element('#weather-status').textContent, 'Live weather connecting');
+// Switching before any weather frame restores the live connection status.
+element('#weather-source').value='manual'; element('#weather-source').handlers.change();
+assert.equal(element('#weather-level').disabled, false);
+assert.equal(element('#weather-intensity').disabled, false);
+assert.equal(element('#weather-status').textContent, 'Manual weather');
+source.onerror(); assert.equal(element('#weather-status').textContent, 'Manual weather');
+element('#weather-source').value='live'; element('#weather-source').handlers.change();
+assert.equal(element('#weather-level').disabled, true);
+assert.equal(element('#weather-intensity').disabled, true);
+assert.equal(element('#weather-status').textContent, 'Live weather disconnected');
+source.onopen(); assert.equal(element('#weather-status').textContent, 'Live weather connected');
 assert.equal(run('gardenState.grassCells.length'), 5, 'garden starts with exactly five grass seeds');
 assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`)).size'), 5, 'initial grass seeds are distinct');
 assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.row]))'), '[[0,0],[0,4],[0,8],[0,12],[0,16]]');
@@ -102,7 +120,6 @@ for (const [event,type,grass] of [['dns','flower',true],['http','broadleaf',true
   assert.equal(run('gardenState.grassCells.length > 0'), grass);
 }
 
-const html = fs.readFileSync('wwwroot/index.html', 'utf8');
 assert.match(html, /id="fake-port22-probe"[^>]*>Fake port 22 probe<\/button>/);
 assert(!html.includes('fake-failed-auth'));
 assert(!elements.has('#fake-failed-auth'), 'obsolete control is not bound');
@@ -203,15 +220,29 @@ reset(); sandbox.Math.random=()=>0;
 run("influenceGrass('flower',{column:10,row:10}); influenceGrass('broadleaf',{column:11,row:10});");
 assert.equal(run('gardenState.grassCells.length'), 0, 'species names alone must not trigger grass');
 
-source.onopen(); source.emit('weather',{level:'rain',eventsPerMinute:29.8});
-assert.equal(run('weatherState.level'),'quiet');
-element('#weather-source').value='live'; element('#weather-source').handlers.change();
-assert.equal(run('weatherState.level'),'rain'); assert(element('#weather-level').disabled);
+source.emit('weather',{level:'rain',eventsPerMinute:29.8});
+assert.equal(run('weatherState.level'),'rain', 'first valid live frame applies automatically');
+assert.equal(run('weatherState.eventsPerMinute'),29.8);
+assert.equal(element('#weather-level').value,'rain');
+assert.equal(element('#weather-intensity').value,'29.8');
+source.emit('weather','{'); assert.equal(element('#weather-status').textContent,'Live weather update invalid');
 source.emit('weather',{level:'drizzle',eventsPerMinute:12}); assert.equal(run('weatherState.level'),'drizzle');
+assert.equal(element('#weather-status').textContent,'Live weather connected');
 element('#weather-source').value='manual'; element('#weather-source').handlers.change();
+assert.equal(element('#weather-level').disabled,false);
+assert.equal(element('#weather-intensity').disabled,false);
+assert.equal(element('#weather-status').textContent,'Manual weather');
 element('#weather-level').value='heavy_rain'; element('#weather-level').handlers.change();
+element('#weather-intensity').value='900'; element('#weather-intensity').handlers.input();
+assert.equal(run('weatherState.eventsPerMinute'),900,'Manual rate override still works');
+source.emit('weather','{'); assert.equal(element('#weather-status').textContent,'Manual weather');
 source.emit('weather',{level:'quiet',eventsPerMinute:0}); assert.equal(run('weatherState.level'),'heavy_rain');
+assert.equal(run('weatherState.eventsPerMinute'),900,'live updates do not replace Manual rate');
 element('#weather-source').value='live'; element('#weather-source').handlers.change(); assert.equal(run('weatherState.level'),'quiet');
+assert.equal(run('weatherState.eventsPerMinute'),0,'switching back immediately applies cached live rate');
+assert.equal(element('#weather-level').disabled,true);
+assert.equal(element('#weather-intensity').disabled,true);
+assert.equal(element('#weather-status').textContent,'Live weather connected');
 const state=JSON.stringify(run('gardenState')); source.onerror(); assert.equal(element('#weather-status').textContent,'Live weather disconnected'); source.onopen();
 assert.equal(JSON.stringify(run('gardenState')),state); assert.equal(sources.length,1);
 

@@ -169,8 +169,8 @@ Click **Start automatic fake traffic** to leave the garden running, and
 **Stop automatic fake traffic** to pause arrivals without resetting the garden.
 Manual buttons remain available while automatic traffic runs.
 
-Weather source defaults to **Manual**. Choose **Live** to receive weather from
-the backend; manual weather inputs are disabled until you switch back. A small
+Weather source defaults to **Live**, with manual weather inputs disabled.
+Choose **Manual** to enable the inputs and override weather locally. A small
 status reports SSE connection/reconnection. Disconnection retains the last
 weather and garden state, without switching to fake weather. One SSE connection
 also receives live garden events in Manual mode; weather frames apply only in Live.
