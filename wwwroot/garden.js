@@ -59,18 +59,60 @@ gardenEventSource.addEventListener("weather", message => {
 });
 gardenEventSource.addEventListener("garden", message => {
   try {
-    const event = JSON.parse(message.data);
-    if (typeof event?.specimenType === "string" && speciesConfig.has(event.specimenType)
-      && Number.isInteger(event.listenPort) && event.listenPort >= 1 && event.listenPort <= 65535
-      && Number.isInteger(event.vigor) && event.vigor >= 0 && event.vigor <= 3) {
-      const specimen = spawnSpecimen(event.specimenType, null, event.vigor);
-      if (specimen && event.listenPort === 22 && event.specimenType === "redbloom"
-        && typeof maybeSpawnPort22Collectible === "function") {
-        maybeSpawnPort22Collectible(specimen);
-      }
-    }
+    handleLiveGardenEvent(JSON.parse(message.data));
   } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
+
+function normalizeLiveGardenEvent(event) {
+  if (typeof event?.specimenType !== "string" || !speciesConfig.has(event.specimenType)
+    || !Number.isInteger(event.listenPort) || event.listenPort < 1 || event.listenPort > 65535
+    || !Number.isInteger(event.vigor) || event.vigor < 0 || event.vigor > 3) return null;
+  // Whitelist the current browser contract; never retain the raw frame.
+  return {
+    specimenType: event.specimenType,
+    listenPort: event.listenPort,
+    vigor: event.vigor,
+    sensor: typeof event.sensor === "string" && event.sensor.length > 0 ? event.sensor : null,
+    seenCount: typeof event.seenCount === "string" && /^\d+$/.test(event.seenCount) ? event.seenCount : null
+  };
+}
+
+function handleLiveGardenEvent(frame) {
+  const event = normalizeLiveGardenEvent(frame);
+  if (!event) return null;
+  const receivedAt = Date.now();
+  const result = { specimen: null, outcome: "dropped" };
+  spawnSpecimen(event.specimenType, null, event.vigor, (specimen, outcome) => {
+    // Attach directly at creation, before the first draw/sound or secondary effects.
+    specimen.origin = { kind: "tcpnoise", sensor: event.sensor, listenPort: event.listenPort, seenCount: event.seenCount };
+    result.specimen = specimen;
+    result.outcome = outcome;
+  });
+  recordRecentGardenEvent({
+    kind: "tcpnoise", specimenType: event.specimenType, listenPort: event.listenPort,
+    sensor: event.sensor, seenCount: event.seenCount, receivedAt, outcome: result.outcome
+  });
+  if (result.specimen && event.listenPort === 22 && event.specimenType === "redbloom"
+    && typeof maybeSpawnPort22Collectible === "function") {
+    maybeSpawnPort22Collectible(result.specimen);
+  }
+  return result;
+}
+
+const recentEventLimit = 3;
+const fakeSourceNames = {
+  dns: "Simulated DNS",
+  gopher: "Simulated Gopher",
+  http: "Simulated HTTP",
+  ssh: "Simulated SSH",
+  "port22-probe": "Simulated port 22 probe"
+};
+
+function recordRecentGardenEvent(entry) {
+  gardenState.recentEvents.unshift(entry);
+  gardenState.recentEvents.length = Math.min(gardenState.recentEvents.length, recentEventLimit);
+  if (typeof renderRecentActivity === "function") renderRecentActivity();
+}
 
 const weatherState = { level: "quiet", eventsPerMinute: 1200 };
 const weatherLevels = new Map([
@@ -207,7 +249,7 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [], actors: [], collectibles: [] };
+const gardenState = { specimens: [], grassCells: [], actors: [], collectibles: [], recentEvents: [] };
 const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
 
 // Called only at saturation, after expiry. Equal vigor never churns the garden.
@@ -231,10 +273,18 @@ function findReplacementCandidate(incomingVigor) {
 function handleGardenEvent(event) {
   const specimenType = eventSpecimenTypes.get(event.type);
   if (!specimenType) return;
-  spawnSpecimen(specimenType, event.type);
+  const receivedAt = Date.now();
+  const result = { specimen: null, outcome: "dropped" };
+  spawnSpecimen(specimenType, event.type, 0, (specimen, outcome) => {
+    result.specimen = specimen;
+    result.outcome = outcome;
+  });
+  recordRecentGardenEvent({ kind: "simulated", eventType: event.type, specimenType, receivedAt, outcome: result.outcome });
+  return result;
 }
 
-function spawnSpecimen(specimenType, grassEventType = null, vigor = 0) {
+// Existing callers still receive the specimen; live handling can observe the exact placement outcome.
+function spawnSpecimen(specimenType, grassEventType = null, vigor = 0, onCreated = null) {
   if (!speciesConfig.has(specimenType)) return;
 
   updateGarden();
@@ -289,6 +339,7 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0) {
   };
   if (replacementIndex === null) gardenState.specimens.push(specimen);
   else gardenState.specimens[replacementIndex] = specimen;
+  if (onCreated) onCreated(specimen, replacementIndex === null ? "spawned" : "replaced");
   if (grassEventType) influenceGrass(grassEventType, specimen);
 
   updateGardenStatus();
@@ -1037,4 +1088,5 @@ window.setInterval(() => {
     drawGarden();
   }
   if (typeof updateAmbientEvents === "function") updateAmbientEvents(Date.now());
+  if (typeof updateRecentActivity === "function") updateRecentActivity(Date.now());
 }, updateEveryMs);

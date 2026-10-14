@@ -46,6 +46,7 @@ const sandbox = {
   gardenEventSource,
   gardenState,
   speciesConfig,
+  fakeSourceNames: { dns: 'Simulated DNS', http: 'Simulated HTTP' },
   gardenWidth: 960,
   gardenHeight: 600,
   margin: 16,
@@ -76,7 +77,7 @@ vm.runInContext(fs.readFileSync('wwwroot/garden-inspect.js', 'utf8'), sandbox);
 const run = code => vm.runInContext(code, sandbox);
 
 assert.equal(typeof canvasHandlers.click, 'function');
-assert.equal(typeof sourceHandlers.garden, 'function');
+assert.equal(sourceHandlers.garden, undefined, 'inspection does not register another SSE garden listener');
 assert.equal(typeof intervalHandler, 'function');
 
 // Fake growth gets explicit simulated provenance instead of invented network metadata.
@@ -85,20 +86,19 @@ assert.equal(fake.origin.kind, 'simulated');
 assert.equal(fake.origin.eventType, 'dns');
 assert.equal(fake.origin.sensor, undefined);
 
-// Real growth remains unattributed until the backend garden frame's inspection listener runs.
+// Inspection presents provenance supplied atomically by the live path.
+// That path's real spawn/metadata integration is checked in garden-activity.cjs.
 now += 10;
 const real = run("spawnSpecimen('broadleaf', null, 3)");
 real.broadleafVariant = 'rainbow';
 assert.equal(real.origin, undefined);
-sourceHandlers.garden({ data: JSON.stringify({
-  specimenType: 'broadleaf',
+real.origin = {
+  kind: 'tcpnoise',
   listenPort: 445,
   vigor: 3,
   sensor: '<b>wurstcase-public</b>',
-  seenCount: '18446744073709551615',
-  remoteAddress: 'must-not-be-retained',
-  remotePort: 54321
-}) });
+  seenCount: '18446744073709551615'
+};
 assert.equal(real.origin.kind, 'tcpnoise');
 assert.equal(real.origin.sensor, '<b>wurstcase-public</b>');
 assert.equal(real.origin.listenPort, 445);
@@ -152,7 +152,7 @@ assert.equal(elements.get('#specimen-card').hidden, true);
 // Invalid inspection extras never prevent the specimen itself from remaining usable.
 now += 10;
 const noExtras = run("spawnSpecimen('redbloom', null, 1)");
-sourceHandlers.garden({ data: JSON.stringify({ specimenType: 'redbloom', listenPort: 22, vigor: 1, sensor: 42, seenCount: 10 }) });
+noExtras.origin = { kind: 'tcpnoise', listenPort: 22, sensor: null, seenCount: null };
 assert.equal(noExtras.origin.kind, 'tcpnoise');
 assert.equal(noExtras.origin.sensor, null);
 assert.equal(noExtras.origin.seenCount, null);

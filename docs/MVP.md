@@ -39,6 +39,8 @@ and additional sensor/service inputs remain goals.
 - Persistent cosmetic color variants selected once per specimen. Live common palettes follow vigor, fake controls vary across common palettes, and each species has a small browser-only rare-color chance. Broadleaf includes a rare rainbow scheme; other rare color schemes remain purely cosmetic and separate from backend rarity.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 - Click-to-inspect information cards with scaled-canvas hit testing. Empty-soil click, Escape, or the close button dismisses the card; it also closes if the exact inspected specimen expires or is displaced. Fake specimens are labeled as simulated rather than inventing provenance.
+- One authoritative live garden handler: validate/sanitize the current contract, attach TCPNoise provenance directly to the exact specimen at creation before rendering, and expose spawned/replaced/dropped outcomes. No second inspection SSE listener or fresh-specimen search.
+- A small Recent activity view retaining the newest three normalized safe events in browser memory, including valid dropped-at-saturation events marked `no growth`. Fake events are explicitly simulated. Relative ages share the existing update loop; reload clears the list. No raw frames, expanded history, persistence, or replacement for monitoring.
 - A separate browser-only ambient actor layer and The Gnome Incident: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, weather, or network meaning. Tiny optional cues share existing sound controls.
 - Pointless transient weed-sprig collectibles: a separate 5% browser roll after successful live port-22 redbloom growth, at most three active, expiring after 20 seconds through the existing tick. No specimen cells, grass influence, provenance, inventory, or progression. Shared scaled-canvas routing collects before inspecting; a two-second message and optional quiet pluck use existing sound controls. Gnome start/cleanup and collectible collection/expiry preserve each other's state.
 - A small standalone About page explaining the project, data flow, visual metaphors, privacy boundary, weather, ecology, inspection, and the fact that the gnomes mean absolutely nothing.
@@ -59,8 +61,8 @@ Live TCPNoise SSE growth is normalized to:
 specimenType
 listenPort
 vigor
-sensor?      # bounded label, inspection only
-seenCount?   # exact valid UInt64 represented as decimal text, inspection only
+sensor?      # bounded label for inspection and Recent activity
+seenCount?   # exact valid UInt64 decimal text for inspection and Recent activity
 ```
 
 The browser requires integer vigor 0–3. Sensor/seenCount are optional display

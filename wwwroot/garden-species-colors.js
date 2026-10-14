@@ -130,8 +130,8 @@ for (const [specimenType] of speciesColorVariants) {
 }
 
 const spawnSpecimenWithoutSpeciesColors = spawnSpecimen;
-spawnSpecimen = function spawnSpecimenWithSpeciesColors(specimenType, grassEventType = null, vigor = 0) {
-  const specimen = spawnSpecimenWithoutSpeciesColors(specimenType, grassEventType, vigor);
+spawnSpecimen = function spawnSpecimenWithSpeciesColors(specimenType, grassEventType = null, vigor = 0, onCreated = null) {
+  const specimen = spawnSpecimenWithoutSpeciesColors(specimenType, grassEventType, vigor, onCreated);
   if (!specimen || !speciesColorVariants.has(specimenType)) return specimen;
 
   specimen.colorVariant = chooseSpeciesColorVariant(specimenType, vigor, grassEventType !== null);

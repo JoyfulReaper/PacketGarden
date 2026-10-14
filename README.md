@@ -190,6 +190,17 @@ as simulated and does not invent sensor or port provenance. Clicking empty soil,
 pressing Escape, or using the close button dismisses the card; it also closes if
 the inspected specimen expires or is displaced.
 
+The small **Recent activity** view keeps only the newest three normalized garden
+events in browser memory. Live rows show an optional sensor, listening port,
+species, optional exact seen count, and relative age. Fake rows are explicitly
+simulated, without invented network provenance. Valid events that cannot grow at
+saturation still appear with `no growth`; replacements need no special label.
+One live handler validates each frame and attaches provenance directly to the
+exact created specimen before rendering, rather than searching for a recent match.
+The view has no history or persistence, clears on reload, and is ambient context,
+not a replacement for monitoring. It retains no raw SSE frames or endpoint/payload
+details. Ages share the existing garden update loop.
+
 TCPNoise mushrooms now have the narrower base-port set **21 and 70**. Port 445
 has a broadleaf base; 5432, 6379, and 9200 have flower bases. These mappings are
 aesthetic, without asserting application protocols; rarity odds are unchanged.
@@ -268,7 +279,8 @@ broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 `node tests/species-color-variants.cjs`, and focused grass ecology checks with
 `node tests/grass-ecology.cjs`. Collectible integration checks run with
 `node tests/garden-collectibles.cjs`, and ambient actor checks with
-`node tests/gnome-events.cjs`.
+`node tests/gnome-events.cjs`. Atomic live growth and Recent activity are covered by
+`node tests/garden-activity.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.

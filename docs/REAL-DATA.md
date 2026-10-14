@@ -117,6 +117,20 @@ grass, weather, decay, or competition. Remote IP addresses, remote source ports,
 packet contents, banners, credentials, and unrelated collector fields are never
 forwarded.
 
+One browser live handler validates and sanitizes each normalized garden frame,
+attaches provenance to the exact newly spawned/replaced specimen before its first
+render, and reports the growth outcome. Inspection no longer has a second SSE
+listener that searches for a recent matching specimen.
+
+Recent activity retains only the newest three normalized safe garden events in
+browser memory, with received time and outcome. Rows show optional sensor, port,
+species, optional exact count, and relative age; valid saturated events appear
+with `no growth` even when no specimen was created. Simulated development events
+are clearly labeled and invent no sensor, port, or count. The list uses the
+existing garden update loop for ages, clears on reload, and has no expandable
+history or persistence. It is ambient context, not a monitoring replacement; raw
+frames, remote endpoints, and payloads are never retained in it.
+
 Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
 They share placement, clustering, lifecycles, and occupancy with fake events, but
 do not inherit fake DNS/HTTP grass effects. Real TCPNoise growth does not directly

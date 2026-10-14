@@ -12,13 +12,6 @@ const specimenCardFields = {
 };
 let inspectedSpecimen = null;
 
-const fakeSourceNames = {
-  dns: "Simulated DNS",
-  gopher: "Simulated Gopher",
-  http: "Simulated HTTP",
-  ssh: "Simulated SSH",
-  "port22-probe": "Simulated port 22 probe"
-};
 const vigorNames = ["one-off", "repeated", "frequent", "persistent"];
 
 function specimenDisplayName(specimen) {
@@ -128,43 +121,13 @@ window.addEventListener("keydown", event => {
 
 // Fake controls have no TCPNoise provenance; label them explicitly instead of inventing it.
 const spawnSpecimenWithoutInspection = spawnSpecimen;
-spawnSpecimen = function spawnSpecimenWithInspection(specimenType, grassEventType = null, vigor = 0) {
-  const specimen = spawnSpecimenWithoutInspection(specimenType, grassEventType, vigor);
+spawnSpecimen = function spawnSpecimenWithInspection(specimenType, grassEventType = null, vigor = 0, onCreated = null) {
+  const specimen = spawnSpecimenWithoutInspection(specimenType, grassEventType, vigor, onCreated);
   if (specimen && grassEventType !== null) {
     specimen.origin = { kind: "simulated", eventType: grassEventType };
   }
   return specimen;
 };
-
-// The core garden listener runs first and creates/replaces the specimen. This second listener
-// attaches the extra provenance only to that fresh, still-unattributed specimen.
-gardenEventSource.addEventListener("garden", message => {
-  try {
-    const event = JSON.parse(message.data);
-    if (typeof event?.specimenType !== "string"
-      || !Number.isInteger(event.listenPort) || event.listenPort < 1 || event.listenPort > 65535
-      || !Number.isInteger(event.vigor) || event.vigor < 0 || event.vigor > 3) return;
-
-    const now = Date.now();
-    const specimen = [...gardenState.specimens].reverse().find(candidate =>
-      candidate.origin === undefined
-      && candidate.type === event.specimenType
-      && (candidate.vigor ?? 0) === event.vigor
-      && now - candidate.createdAt >= 0
-      && now - candidate.createdAt < 2_000
-    );
-    if (!specimen) return;
-
-    specimen.origin = {
-      kind: "tcpnoise",
-      sensor: typeof event.sensor === "string" && event.sensor.length > 0 ? event.sensor : null,
-      listenPort: event.listenPort,
-      seenCount: typeof event.seenCount === "string" && /^\d+$/.test(event.seenCount) ? event.seenCount : null
-    };
-  } catch {
-    // Inspection metadata is optional; malformed frames must never affect the garden.
-  }
-});
 
 // Keep age useful while open and close if the selected specimen expires or is displaced.
 window.setInterval(() => {

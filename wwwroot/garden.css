@@ -142,6 +142,35 @@ button:disabled, select:disabled, input:disabled {
   pointer-events: none;
 }
 
+.recent-activity {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: fit-content;
+  max-width: min(460px, calc(100% - 16px));
+  padding: 6px 9px;
+  border-radius: 5px;
+  background: rgba(31, 41, 34, 0.82);
+  color: #b8c4b0;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.recent-activity h2 {
+  margin: 0 0 2px;
+  color: #91a18a;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.recent-activity ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
 .specimen-card {
   position: fixed;
   z-index: 20;

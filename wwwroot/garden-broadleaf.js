@@ -70,8 +70,8 @@ function drawBroadleafVariant(specimen, now) {
 }
 
 const spawnSpecimenWithoutBroadleafVariants = spawnSpecimen;
-spawnSpecimen = function spawnSpecimenWithBroadleafVariants(specimenType, grassEventType = null, vigor = 0) {
-  const specimen = spawnSpecimenWithoutBroadleafVariants(specimenType, grassEventType, vigor);
+spawnSpecimen = function spawnSpecimenWithBroadleafVariants(specimenType, grassEventType = null, vigor = 0, onCreated = null) {
+  const specimen = spawnSpecimenWithoutBroadleafVariants(specimenType, grassEventType, vigor, onCreated);
   if (!specimen || specimenType !== "broadleaf") return specimen;
 
   specimen.broadleafVariant = chooseBroadleafVariant(vigor, grassEventType === "http");
