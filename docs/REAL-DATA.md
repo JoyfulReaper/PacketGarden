@@ -40,12 +40,12 @@ source modes does not reset the garden. Weather still has no ecological effects.
 The full Observatory response is never forwarded. Browser-facing weather has
 only `level` and `eventsPerMinute`; this is separate from discrete `GardenEvent`s.
 
-## Still-planned discrete integration
+## Implemented TCPNoise port hits
 
-The intended path is:
+The first discrete path is:
 
 ```text
-sensors/services
+TCPNoise collector (`tcpnoise.connection`)
      ↓
     NATS
      ↓
@@ -58,11 +58,34 @@ normalized garden events/environmental state
 existing browser ecology
 ```
 
-SSE is already implemented for aggregate weather and remains the transport choice
-for future discrete input. NATS ingestion and real specimen events are not implemented.
-The browser should receive normalized input rather than connect directly to
-NATS. Adapters translate sensor/service observations into garden meanings while
-keeping the existing browser state, update loop, and renderer as the foundation.
+The hosted adapter uses `NATS.Client.Core`. Set `Nats:Url` (`Nats__Url` in the
+environment) to enable it; `Nats:Subject` defaults to `tcpnoise.connection`.
+Without a URL, discrete input is disabled and the app/weather/fake controls still
+work. Broker outages use normal client reconnection, with an initial-connect
+retry and one warning per outage. There is no persistence, replay, or coalescing.
+
+Only `EventType`, `SchemaVersion`, and `Payload.listenPort` are deserialized.
+The adapter accepts `tcpnoise.connection`, schema version 1, and integer ports
+1–65535; malformed/unsupported input is ignored. It emits only:
+
+```text
+event: garden
+data: {"type":"port-hit","port":443}
+
+```
+
+Each valid hit produces one growth event for each currently connected browser.
+Each SSE client has its own transient queue; new connections do not replay hits.
+The existing `/api/garden/events` endpoint multiplexes `garden` and `weather`
+frames. One browser EventSource stays connected in both weather modes: garden
+frames always reach `handleGardenEvent()`, while weather frames affect rendering
+only in Live mode. Manual weather remains the default. Switching modes can apply
+the latest cached live weather without reopening the stream.
+
+Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
+They share placement, lifecycles, and occupancy with fake events. Flower and
+broadleaf growth can seed/refresh grass with the existing 45%/65% probabilities.
+If specimen cells are full, the existing handler cannot place another specimen.
 
 ## Discrete events and aggregate pressure
 
@@ -82,20 +105,30 @@ High volume should not necessarily create one new permanent specimen per event.
 Repeated events may strengthen, spread, bloom, mutate, or otherwise influence
 existing growth. The current main-specimen handler only spawns into empty cells;
 richer specimen responses remain work to implement. Grass seeding/refresh is a
-separate existing effect of successful fake DNS/HTTP spawns; seeded turf grows
+separate existing effect of successful flower/broadleaf spawns; seeded turf grows
 and spreads locally through the browser update loop.
 
 ## Preserve sensor meaning
 
-TCPNoise probes against ports such as 22/2222 are probe/noise observations. They
-must not automatically be classified as genuine SSH connections or failed
-authentication. Genuine SSH telemetry can still map to vines, and failed-auth
-events need appropriate auth telemetry.
+TCPNoise destination ports deliberately select plant visual families, not
+protocol classifications. A hit on 22/2222 may grow a vine without claiming a
+genuine SSH session. Every valid port gets growth, with flowers as the unknown-port
+fallback. No port hit produces a red bloom: actual failed authentication still
+requires auth-aware telemetry. There is no separate TCPNoise weed category.
+Individual hits drive plants; aggregate activity continues driving weather
+separately through Noise Observatory. Unusual-port mutations remain future work.
 
-Port scans/noisy probes may create weeds or invasive growth. Unusual ports may
-influence mutations. These are proposed garden effects, not additional mappings
-already supported by the browser. Adapters should retain coarse observation
-meaning when a sensor cannot establish a protocol or authentication outcome.
+## TCPNoise fleet planning inventory
+
+Reference only; this is not runtime discovery or configuration.
+
+| Sensors | Listening ports |
+| --- | --- |
+| noisemaker | 21 22 23 80 443 445 2323 3389 5432 6379 8080 9200 420 42069 |
+| clanker-public / clanker-dn42 / clanker-ygg | 21 23 25 80 443 445 2222 3389 5900 8080 8443 |
+| scopecreep-public / scopecreep-dn42 / scopecreep-ygg | 21 23 80 443 2222 2323 3389 5432 8080 420 42069 |
+| wurstcase-public / wurstcase-dn42 / wurstcase-ygg | 21 23 25 80 443 445 2222 3389 5900 8080 8443 |
+| overlay-dn42 / overlay-ygg | 21 22 23 25 80 443 445 3389 5900 8080 8443 |
 
 ## Normalized data and privacy
 
@@ -109,9 +142,9 @@ Normalized input may include only safe coarse fields useful to the garden:
 - duration or aggregation window;
 - sanitized tags describing coarse traits.
 
-These fields describe future discrete adapters, not the current two-field weather
-stream or a finalized schema. The current browser
-`GardenEvent` contains only `type`; add fields as concrete effects need them.
+These fields describe possible future adapters, not a finalized schema. Current
+weather has only `level`/`eventsPerMinute`; discrete port hits have only
+`type`/`port`, and fake events still have only `type`.
 Normalize and sanitize before sending data to the browser. Do not include private
 addresses, credentials, raw packets, payloads, or unnecessary infrastructure
 details. Network class describes coarse context without exposing endpoints or
@@ -119,8 +152,9 @@ splitting the shared garden into network-specific plots.
 
 ## Scope
 
-The aggregate-weather vertical slice is implemented without NATS. Next, add a
-small NATS adapter path and SSE delivery of supported discrete events.
+Live aggregate weather and NATS-backed TCPNoise port hits are implemented.
+Other protocol/auth-aware adapters, mutations, and richer specimen responses
+remain future work.
 Inspection, local-time lighting, persistence, and ecological competition remain
 separate unfinished MVP work; this plan does not imply they are implemented.
 

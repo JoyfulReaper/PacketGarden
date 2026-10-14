@@ -26,7 +26,7 @@ The garden should visibly evolve over roughly a 30-minute active session when ev
 
 ## Event input
 
-The eventual real input is NATS, using existing sensors and related services as event sources.
+Real discrete input uses NATS, starting with TCPNoise connection events.
 
 All sources feed one shared ecosystem rather than separate host-specific plots. Event type determines the main species/effect while source identity may influence subtle visual variation.
 
@@ -52,8 +52,8 @@ browser garden state / renderer
 ```
 
 The browser does not connect directly to external sources. SSE now delivers live
-aggregate weather from the PacketGarden backend; NATS-backed discrete events
-remain planned. See [Real data](docs/REAL-DATA.md).
+aggregate weather and sanitized NATS-backed TCPNoise port hits from the
+PacketGarden backend. See [Real data](docs/REAL-DATA.md).
 
 A fake-event generator remains useful for development and demos and should feed the same normalized event model.
 
@@ -85,7 +85,7 @@ PacketGarden uses:
 - vanilla JavaScript.
 
 An HttpClient weather adapter polls Noise Observatory and streams normalized
-weather through SSE. Backend adapters consuming NATS for discrete events remain planned.
+weather through SSE. A NATS adapter normalizes TCPNoise port hits for the same stream.
 
 The visual simulation is the interesting part. Avoid building infrastructure before the garden itself is fun to watch.
 
@@ -114,7 +114,7 @@ Manual controls and automatic weighted fake traffic feed the same event handler.
 Lifecycles now retain several minutes of visual history, with vines lasting up to
 10 minutes and red blooms remaining brief. State is held only in browser memory.
 
-Successful DNS and HTTP spawns can also seed or refresh grass beneath
+Successful flower and broad-leaf spawns (fake or port-driven) can seed or refresh grass beneath
 the specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near
 the new specimen, for at most two grass cells per event. Grass does not occupy
@@ -130,7 +130,10 @@ Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
 not affect organisms or grass.
 
-Real discrete specimen events and NATS adapters are not implemented. Inspection,
+TCPNoise port hits now create plants through NATS and SSE. Listening ports select
+visual families, without asserting protocol/authentication semantics; a port-22
+hit can grow a vine, and unknown ports grow flowers. No port hit creates a red bloom.
+Other discrete adapters, inspection,
 local-time lighting, persistence, and ecological competition
 remain planned work; see [MVP](docs/MVP.md).
 
@@ -153,7 +156,8 @@ Manual buttons remain available while automatic traffic runs.
 Weather source defaults to **Manual**. Choose **Live** to receive weather from
 the backend; manual weather inputs are disabled until you switch back. A small
 status reports SSE connection/reconnection. Disconnection retains the last
-weather and garden state, without switching to fake weather.
+weather and garden state, without switching to fake weather. One SSE connection
+also receives live garden events in Manual mode; weather frames apply only in Live.
 
 In Manual mode, use the **Weather** selector and **Events/min** input to preview environmental
 rain separately from fake specimen traffic. Quiet restores the normal garden;
@@ -167,6 +171,15 @@ The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with
 before the first valid fetch, the backend starts with quiet/0. For local adapter
 testing, override the source using the ASP.NET configuration key
 `Weather:SnapshotUrl` (environment variable `Weather__SnapshotUrl`).
+
+Set `Nats:Url` (environment variable `Nats__Url`) to enable TCPNoise input.
+`Nats:Subject` (`Nats__Subject`) defaults to `tcpnoise.connection`. With no URL,
+the app starts normally with discrete input disabled. Garden events are transient,
+with no replay after reconnection; fake controls remain available in either mode.
+See [Real data](docs/REAL-DATA.md) for validation, mapping, and fleet inventory.
+
+Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Checks`
+and browser-path checks with `node tests/garden-events.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and failed auth 2.

@@ -17,7 +17,8 @@ goals, with the existing browser garden as the starting point.
 - Simple procedural art, including visual connections between neighboring vine cells.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
-- Live aggregate weather from Noise Observatory through backend polling and weather-only SSE, sharing the manual renderer.
+- Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the manual renderer.
+- NATS-backed TCPNoise connection input, sanitized to port-hit events on the same SSE stream and resolved to existing plant visuals.
 - One normalized browser event path: `GardenEvent -> handler -> specimen state -> update -> renderer`.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
@@ -26,7 +27,8 @@ goals, with the existing browser garden as the starting point.
 - Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds.
 - A 250 ms update/redraw loop that removes expired specimens and frees their cells. Resizing preserves state.
 
-The current event is only `{ type }`. Specimens hold `type`, `column`, `row`, and
+Fake events are `{ type }`; live port hits are `{ type: "port-hit", port }`.
+Specimens hold `type`, `column`, `row`, and
 `createdAt`. State is browser memory only; reloading clears it. Detailed
 lifecycle thresholds and fake-traffic defaults are in the [README](../README.md).
 Grass cells separately hold `column`, `row`, `createdAt`, and `lastInfluencedAt`.
@@ -42,12 +44,12 @@ turf fades after 20 minutes, gradually yellows/browns and thins, and expires aft
 - Deliberately simple persistence across browser/server restarts.
 - Light ecological competition, without health bars or management mechanics.
 - Event effects that strengthen, bloom, spread, mutate, or influence existing growth when new placement is unsuitable.
-- Real discrete sensor/service events through NATS and backend normalization; SSE currently carries weather only.
+- Additional sensor/service adapters beyond the implemented TCPNoise port-hit path.
 - Additional environmental/ecological responses to aggregate pressure beyond the existing visual weather layer.
 
 These capabilities are not implemented. The current handler creates one specimen
-per accepted fake event when an empty cell exists and does nothing when the grid
-is full. It can refresh grass after a successful DNS/HTTP spawn, but does not
+per accepted fake event or port hit when an empty cell exists and does nothing when the grid
+is full. It can refresh grass after successful flower/broadleaf growth, but does not
 strengthen existing main specimens, mutate them, or model competition.
 
 ## Presentation and shared ecosystem
@@ -69,9 +71,9 @@ sensors/services -> NATS -> backend adapters
     -> normalized garden events/environmental state -> SSE -> browser garden
 ```
 
-SSE is implemented for live aggregate weather and planned for future discrete events. The browser must
-not connect directly to NATS. Backend adapters should distinguish genuine
-protocol/authentication telemetry from probes and aggregate volume.
+SSE carries live aggregate weather and TCPNoise port hits. The browser must not
+connect directly to NATS. Port-hit plant mappings are aesthetic and do not claim
+protocol/authentication semantics; aggregate volume remains separate weather input.
 
 Normalized data may include event type, source/sensor, network class (`public`,
 `dn42`, `ygg`), timestamp, intensity, duration, and sanitized tags. Add fields only
@@ -83,7 +85,8 @@ use the same handling path.
 High volume should not require one new permanent specimen per event. Repeated
 events may eventually strengthen, spread, bloom, mutate, or otherwise influence
 existing growth. Aggregate/background activity may instead become drizzle,
-rain, or heavy rain. Those responses are planned, not part of the current handler.
+rain, or heavy rain through the existing weather path. Richer specimen responses
+remain planned; the current handler spawns one specimen when space is available.
 
 An active viewing session should show meaningful change over roughly 30 minutes.
 The tuned prototype lifetimes retain recent visual history; longer-lived terrain

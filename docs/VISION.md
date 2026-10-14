@@ -162,7 +162,7 @@ sensors / Mission Control / protocol services
 The browser should not need direct NATS access.
 
 SSE is the current choice for the initial backend-to-browser transport. NATS
-ingestion remains planned; SSE already delivers aggregate weather from Noise Observatory.
+ingestion now supports TCPNoise port hits; SSE also delivers aggregate weather from Noise Observatory.
 Aggregate activity can influence
 weather, while discrete events can influence specimens; see [Real data](REAL-DATA.md).
 

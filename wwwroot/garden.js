@@ -11,45 +11,56 @@ const weatherLevelControl = document.querySelector("#weather-level");
 const weatherIntensityControl = document.querySelector("#weather-intensity");
 const weatherSourceControl = document.querySelector("#weather-source");
 const weatherStatus = document.querySelector("#weather-status");
-let liveWeatherSource = null;
+let latestLiveWeather = null;
+let liveConnectionStatus = "Live weather connecting";
 
 weatherSourceControl.addEventListener("change", () => {
-  if (liveWeatherSource) liveWeatherSource.close();
-  liveWeatherSource = null;
   const live = weatherSourceControl.value === "live";
   weatherLevelControl.disabled = live;
   weatherIntensityControl.disabled = live;
-  if (!live) {
-    weatherStatus.textContent = "Manual weather";
-    return;
-  }
+  weatherStatus.textContent = live ? liveConnectionStatus : "Manual weather";
+  if (live && latestLiveWeather) applyLiveWeather();
+});
 
-  weatherStatus.textContent = "Live weather connecting";
-  const source = new EventSource("/api/garden/events");
-  liveWeatherSource = source;
-  source.onopen = () => {
-    if (liveWeatherSource === source) weatherStatus.textContent = "Live weather connected";
-  };
-  source.onerror = () => {
-    if (liveWeatherSource === source) weatherStatus.textContent = "Live weather disconnected";
-  };
-  source.addEventListener("weather", message => {
-    if (liveWeatherSource !== source) return;
-    try {
-      const state = JSON.parse(message.data);
-      if (!weatherLevels.has(state.level) || typeof state.eventsPerMinute !== "number" || !Number.isFinite(state.eventsPerMinute)) {
-        throw new Error("Invalid weather state");
-      }
-      weatherState.level = state.level;
-      weatherState.eventsPerMinute = Math.min(1_000_000, Math.max(0, state.eventsPerMinute));
-      weatherLevelControl.value = weatherState.level;
-      weatherIntensityControl.value = String(weatherState.eventsPerMinute);
-      weatherStatus.textContent = "Live weather connected";
-      updateWeatherAnimation();
-    } catch {
-      weatherStatus.textContent = "Live weather update invalid";
+function applyLiveWeather() {
+  Object.assign(weatherState, latestLiveWeather);
+  weatherLevelControl.value = weatherState.level;
+  weatherIntensityControl.value = String(weatherState.eventsPerMinute);
+  updateWeatherAnimation();
+}
+
+// One same-origin connection carries garden input even when weather is Manual.
+const gardenEventSource = new EventSource("/api/garden/events");
+gardenEventSource.onopen = () => {
+  liveConnectionStatus = "Live weather connected";
+  if (weatherSourceControl.value === "live") weatherStatus.textContent = liveConnectionStatus;
+};
+gardenEventSource.onerror = () => {
+  liveConnectionStatus = "Live weather disconnected";
+  if (weatherSourceControl.value === "live") weatherStatus.textContent = liveConnectionStatus;
+};
+gardenEventSource.addEventListener("weather", message => {
+  try {
+    const state = JSON.parse(message.data);
+    if (!weatherLevels.has(state.level) || typeof state.eventsPerMinute !== "number" || !Number.isFinite(state.eventsPerMinute)) {
+      throw new Error("Invalid weather state");
     }
-  });
+    latestLiveWeather = { level: state.level, eventsPerMinute: Math.min(1_000_000, Math.max(0, state.eventsPerMinute)) };
+    if (weatherSourceControl.value === "live") {
+      weatherStatus.textContent = liveConnectionStatus;
+      applyLiveWeather();
+    }
+  } catch {
+    if (weatherSourceControl.value === "live") weatherStatus.textContent = "Live weather update invalid";
+  }
+});
+gardenEventSource.addEventListener("garden", message => {
+  try {
+    const event = JSON.parse(message.data);
+    if (event?.type === "port-hit" && Number.isInteger(event.port) && event.port >= 1 && event.port <= 65535) {
+      handleGardenEvent({ type: "port-hit", port: event.port });
+    }
+  } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
 
 const weatherState = { level: "quiet", eventsPerMinute: 1200 };
@@ -132,7 +143,7 @@ const redbloomTimings = {
 const updateEveryMs = 250;
 
 const grassConfig = {
-  influenceChances: { dns: 0.45, http: 0.65 },
+  influenceChances: { flower: 0.45, broadleaf: 0.65 },
   secondCellChance: 0.35,
   sameCellChance: 0.5,
   influenceRadius: 1,
@@ -169,6 +180,13 @@ const eventSpecimenTypes = new Map([
   ["ssh", "vine"],
   ["failed-auth", "redbloom"]
 ]);
+// Destination-port aesthetics, not identification of a protocol/auth outcome.
+const portSpecimenTypes = new Map([
+  ...[80, 443, 8080, 8443].map(port => [port, "broadleaf"]),
+  ...[22, 2222, 23, 2323, 3389, 5900].map(port => [port, "vine"]),
+  ...[21, 445, 5432, 6379, 9200, 70].map(port => [port, "mushroom"]),
+  ...[25, 420, 42069, 53].map(port => [port, "flower"])
+]);
 const speciesConfig = new Map([
   ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
@@ -177,12 +195,18 @@ const speciesConfig = new Map([
   ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }]
 ]);
 
-/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" }} GardenEvent */
+/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" } | { type: "port-hit", port: number }} GardenEvent */
 const gardenState = { specimens: [], grassCells: [] };
+
+function resolveSpecimenType(event) {
+  if (event.type !== "port-hit") return eventSpecimenTypes.get(event.type);
+  if (!Number.isInteger(event.port) || event.port < 1 || event.port > 65535) return;
+  return portSpecimenTypes.get(event.port) ?? "flower";
+}
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
-  const specimenType = eventSpecimenTypes.get(event.type);
+  const specimenType = resolveSpecimenType(event);
   if (!specimenType) return;
 
   updateGarden();
@@ -228,14 +252,14 @@ function handleGardenEvent(event) {
     createdAt: Date.now()
   };
   gardenState.specimens.push(specimen);
-  influenceGrass(event.type, specimen);
+  influenceGrass(specimenType, specimen);
 
   updateGardenStatus();
   drawGarden();
 }
 
-function influenceGrass(eventType, specimen, now = Date.now()) {
-  const chance = grassConfig.influenceChances[eventType] ?? 0;
+function influenceGrass(specimenType, specimen, now = Date.now()) {
+  const chance = grassConfig.influenceChances[specimenType] ?? 0;
   if (chance === 0 || Math.random() >= chance) return;
 
   let column = specimen.column;
