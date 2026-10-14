@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -44,7 +45,8 @@ public sealed class TcpNoiseAdapter(
             var sensor = envelope.Payload.Sensor.ValueKind == JsonValueKind.String
                 ? envelope.Payload.Sensor.GetString() : null;
             var species = TcpNoiseRarity.Resolve(port, isIpv6, sensor, roll, rareChoice);
-            return new GardenGrowth(species, port, ResolveVigor(envelope.Payload.SeenCount));
+            var (vigor, seenCount) = ResolveSeenCount(envelope.Payload.SeenCount);
+            return new GardenGrowth(species, port, vigor, InspectionSensor(sensor), seenCount);
         }
         catch (JsonException)
         {
@@ -52,12 +54,23 @@ public sealed class TcpNoiseAdapter(
         }
     }
 
-    // Optional recurrence trait: no identity, rarity, lifetime, or threat semantics.
-    // Use the collector's unsigned 64-bit integer range; unusable/overflowing values default to 0.
-    private static int ResolveVigor(JsonElement seenCount) =>
-        seenCount.ValueKind == JsonValueKind.Number && seenCount.TryGetUInt64(out var count)
-            ? count switch { <= 1 => 0, <= 3 => 1, <= 9 => 2, _ => 3 }
-            : 0;
+    // Optional recurrence trait: no rarity, lifetime, or threat semantics.
+    // Preserve a valid unsigned count as text for inspection so JavaScript never loses UInt64 precision.
+    private static (int Vigor, string? SeenCount) ResolveSeenCount(JsonElement seenCount)
+    {
+        if (seenCount.ValueKind != JsonValueKind.Number || !seenCount.TryGetUInt64(out var count))
+            return (0, null);
+
+        var vigor = count switch { <= 1 => 0, <= 3 => 1, <= 9 => 2, _ => 3 };
+        return (vigor, count.ToString(CultureInfo.InvariantCulture));
+    }
+
+    // Sensor is useful provenance for click inspection but remains bounded display metadata.
+    private static string? InspectionSensor(string? sensor)
+    {
+        if (string.IsNullOrWhiteSpace(sensor)) return null;
+        return sensor.Length <= 128 ? sensor : sensor[..128];
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
