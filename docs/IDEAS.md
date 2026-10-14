@@ -14,7 +14,8 @@ Future additions should generally make the garden more interesting to leave open
 and occasionally notice, rather than adding chores or optimization. In particular:
 
 - watch-first, inspect-second;
-- no score, economy, progression tree, inventory, or loss state;
+- no meaningful or accumulating score, economy, progression tree, inventory, or loss state;
+- a permanently useless joke score such as `Score: 0` is allowed precisely because it never becomes progression;
 - no gardening chores required to keep the garden alive;
 - no player-directed combat system;
 - no health bars, unit stats, persistent factions, or tactical controls;
@@ -60,33 +61,126 @@ telemetry. Most of them can simply be garden nonsense.
 
 ## Pointless collectibles
 
-The first collectible is implemented as a separate transient browser layer:
-a successful live port-22 redbloom has a 5% chance to leave a tiny weed sprig
-nearby, capped at three active sprigs and expiring quietly after 20 seconds.
-It consumes no specimen cell and has no effect on grass or gnomes.
+The first collectible implementation is a separate transient browser layer: a
+successful live port-22 redbloom has a 5% chance to leave a tiny weed sprig nearby,
+capped at three active sprigs and expiring quietly after 20 seconds. It consumes no
+specimen cell and has no effect on grass or gnomes.
 
 Very occasionally, a port-22 redbloom may leave behind a tiny weed sprig. Click it
 quickly enough and you collect some weed. This accomplishes absolutely nothing.
 
-Keeping the collectible as a secondary effect preserves the existing rule that a
-TCPNoise hit on listening port 22 always maps to redbloom rather than muddying that
-signal.
+### Desired port-22 refinement: mutation instead of a secondary drop
 
-The important part is that collecting should remain intentionally pointless:
+The preferred follow-up is for the **redbloom itself** to mutate into a collectible
+weed plant rather than creating an unrelated secondary sprig.
 
-- no score;
-- no currency;
-- no crafting;
-- no upgrades;
-- no required collection log;
-- no gameplay advantage for clicking it;
-- missing one should have no penalty.
+The semantic sequence should remain clear:
 
-Clicking shows `You collected some weed.` for two seconds and, with Sound enabled,
-plays a quiet pluck through the existing volume control. There is no inventory or
-progression. Other rare ephemeral objects could eventually use the same mechanism
-as long as they remain optional curiosities. Gnome weed theft remains future
-research; current incidents leave collectibles alone.
+1. a live TCPNoise hit on listening port 22 first produces the normal redbloom;
+2. the existing port-22 meaning is therefore still visible and honest;
+3. on a rare browser-only collectible roll, that same redbloom later mutates into a
+   temporary collectible weed plant;
+4. the mutated plant keeps the source specimen's safe provenance rather than
+   inventing a second network event;
+5. clicking it harvests/removes it; ignoring it lets it disappear naturally after
+   its short collectible window.
+
+This is a presentation-layer mutation, not a change to backend TCPNoise rarity.
+Port 22 must still resolve to redbloom server-side and still bypass ordinary rarity.
+A port-22 event must not suddenly become evidence of malicious traffic, SSH auth,
+or anything beyond a connection to listening port 22.
+
+### The zero-point anti-score
+
+A deliberately fake game score would strengthen the joke:
+
+```text
+Score: 0
+```
+
+It should always remain **0**.
+
+Collectible messages can then report things such as:
+
+```text
+You collected some weed. +0 points
+You found a rainbow leaf. +0 points
+You acquired a suspicious crystal shard. +0 points
+Excellent. A rock. +0 points
+```
+
+Rules:
+
+- no hidden score;
+- no incrementing score;
+- no high score;
+- no combo multiplier;
+- no score persistence;
+- no achievements derived from collection;
+- no collection total disguised as a score;
+- collecting everything still leaves `Score: 0`.
+
+Occasional messages such as `Score remains 0.` or `Still 0.` are fair game. The
+point is to parody a progression system, not quietly build one.
+
+### Other possible collectibles
+
+Keep the pool small enough that finding one remains memorable. Candidates include:
+
+- **mushroom cap** — a Gopher mushroom occasionally leaves a cap;
+- **rainbow leaf** — a rainbow broadleaf sheds a multicolored leaf;
+- **crystal shard** — crystal fungus leaves a glowing shard;
+- **blackthorn thorn** — one oversized cartoon thorn;
+- **ghost petal** — a translucent petal that fades if ignored;
+- **gnome hat** — very rarely left behind after a Gnome Incident;
+- **shiny rock** — needs no explanation whatsoever;
+- **odd seed** — explicitly cannot be planted;
+- **snail shell** — useful if snails eventually exist, which is to say not useful.
+
+Collectibles should remain optional curiosities. Missing one has no penalty and
+collecting one produces no durable advantage.
+
+## First-seen curiosities
+
+A valid exact TCPNoise `seenCount` of `"1"` is a good trigger for a separate class
+of short-lived garden curiosities. Here, "first seen" means exactly what the
+source-provided count says; PacketGarden should not pretend it has established
+global uniqueness across collectors or history.
+
+Proposed behavior:
+
+- after a successful live specimen whose exact valid `seenCount` is `"1"`, try to
+  create one transient curiosity near it;
+- maintain a small global cap of **3 active first-seen curiosities**;
+- if all three slots are occupied, silently skip the new curiosity;
+- no queue, backlog, or catch-up spawns;
+- missing or unusable `seenCount` does not qualify;
+- the curiosity does not consume a specimen cell or affect grass, vigor, rarity,
+  competition, weather, or the source specimen;
+- let it remain roughly 15–30 seconds before wandering away or fading;
+- clicking one may collect it for the magnificent reward of `+0 points`.
+
+The first-seen pool can mix little creatures and dropped objects rather than always
+using the same thing. Possibilities include:
+
+- **ladybug** — crawls near the new specimen;
+- **snail** — slowly crosses part of the garden and leaves;
+- **moth** — flutters around growth briefly;
+- **shiny pebble** — sits there being inexplicably clickable;
+- **odd seed** — a tiny seed pod that cannot be planted;
+- **coin-shaped object** — specifically not currency and worth no points.
+
+The originating species may bias the pool without making it deterministic: flowers
+might attract ladybugs or moths, mushrooms might attract snails, vines might attract
+bugs, and stranger species might be more likely to leave strange objects.
+
+This gives different visual layers distinct jobs:
+
+- ordinary discrete events -> specimen history;
+- exact `seenCount == 1` -> transient first-seen curiosity;
+- rare collectible mutations/drops -> optional pointless clicking;
+- aggregate traffic -> weather;
+- completely unrelated cosmic forces -> gnomes.
 
 ## Inspection and interaction polish
 
