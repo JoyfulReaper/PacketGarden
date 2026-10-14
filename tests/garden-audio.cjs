@@ -57,6 +57,7 @@ function createGarden(options = {}) {
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden.js','utf8'),sandbox);
+  vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   const grow=(type,time=state.now)=>{
     state.now=time; sources[0].emit({specimenType:type,listenPort:type==='redbloom'?22:443,vigor:0});
@@ -128,7 +129,18 @@ module.exports=async function checkAudio() {
   burst.state.now=400; burst.element('#fake-dns').handlers.click();
   assert.equal(burst.state.oscillators.length,2,'fake controls use the shared sound path');
   burst.run('gardenState.specimens=Array.from({length:columns*rows},(_,i)=>({type:"flower",column:i%columns,row:Math.floor(i/columns),createdAt:400,vigor:0}))');
-  burst.grow('ghostbloom',1000); assert.equal(burst.state.oscillators.length,2,'full garden cannot play a spawn sound');
+  burst.grow('ghostbloom',1000); assert.equal(burst.state.oscillators.length,2,'vigor-0 growth at capacity cannot play a spawn sound');
+  burst.source.emit({specimenType:'flower',listenPort:5432,vigor:3});
+  assert.equal(burst.state.oscillators.length,3,'successful forced replacement uses ordinary synthesis');
+  assert.equal(burst.run('gardenState.specimens.length'),640);
+  burst.state.now=1100;
+  burst.source.emit({specimenType:'ghostbloom',listenPort:443,vigor:3});
+  assert.equal(burst.state.oscillators.length,6,'rare forced replacement can break ordinary cooldown');
+  burst.source.emit({specimenType:'flower',listenPort:5432,vigor:3});
+  assert.equal(burst.state.oscillators.length,6,'replacement still obeys ordinary cooldown');
+  burst.state.now=1200;
+  burst.source.emit({specimenType:'blackthorn',listenPort:443,vigor:3});
+  assert.equal(burst.state.oscillators.length,6,'replacement still obeys independent rare cooldown');
   for(const roll of [0,1,-1,2,NaN]) {
     const pitches=createGarden(); await pitches.toggle();
     pitches.run(`gardenSound.maybePlayGrowthSound('flower',0,${roll})`);
@@ -152,3 +164,5 @@ module.exports=async function checkAudio() {
   assert.equal(pending.state.gains[0].gain.value,0,'late resume cannot override explicit Off');
   console.log('PASS: stronger severe weather; Web Audio opt-in, volume, all species identities, rare/ordinary cooldowns, burst/fake/shared growth, bounded pitch, cleanup, failure/race isolation.');
 };
+
+if (require.main === module) module.exports().catch(error => { console.error(error); process.exitCode=1; });

@@ -24,10 +24,12 @@ browser garden as the starting point.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to sanitized specimen growth on the same SSE stream.
 - Redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 retains normal vine/rarity behavior. The fake `port22-probe` control previews the same redbloom without grass influence.
 - Event-driven artistic TCPNoise rarity: weeds, pale ghostblooms, cyan/violet crystal fungi, and dark blackthorns, lasting 6, 6, 7, and 12 minutes. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).
-- Optional TCPNoise `seenCount` converted server-side to coarse visual vigor (0–1/missing/unusable -> 0, 2–3 -> 1, 4–9 -> 2, usable counts 10+ -> 3). This artistic recurrence trait affects appearance only, independently of species/rarity, and is not a threat score. Exact counts are never sent to the browser.
+- Optional TCPNoise `seenCount` converted server-side to coarse vigor (0–1/missing/unusable -> 0, 2–3 -> 1, 4–9 -> 2, usable counts 10+ -> 3). This artistic recurrence trait affects visual fullness and saturation-only competitive strength, independently of species/rarity, and is not a threat score. Exact counts are never sent to the browser.
+- Rebalanced aesthetic base ports: mushrooms only for 21/70, broadleaf for 445 alongside existing broadleaf ports, and flowers for 5432/6379/9200 alongside existing flower ports. Known/fallback rarity odds are unchanged.
 - Shared specimen placement path for fake events and normalized real growth.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.
+- Full-grid competition: strictly stronger incoming vigor replaces the oldest occupant in the lowest eligible vigor tier, reusing its exact cell. Ghostbloom, crystal fungus, and blackthorn are protected from forced replacement; weed/redbloom are eligible. Incoming rare growth uses the same vigor gate, and equal vigor cannot churn the grid. A concise full-garden status clears after natural expiry opens space.
 - Separate fast-growing grass beneath specimens, seeded/refreshed by successful fake DNS/HTTP spawns. Mature healthy turf spreads locally with a bounded number of population-scaled attempts; fading turf also gets one bounded final seed opportunity per influence cycle. Grass never blocks cells or contributes to specimen counts.
 - Elapsed-time lifecycles with growth, maturity, wilting/fading/drying, and removal. Red blooms appear immediately and have only a fresh and wilting stage.
 - Lifecycle timings tuned for several minutes of visual history: flowers last 4 minutes, mushrooms 5, broad-leaf plants 6, vines 10, and red blooms 30 seconds.
@@ -40,7 +42,8 @@ The browser receives no sensor names or IP details and makes no rarity decisions
 Every weed/rare spawn requires an accepted TCPNoise event, with no direct grass
 influence or timer-driven mutation. Specimens
 hold `type`, `column`, `row`, `createdAt`, and stable `vigor` (fake paths default to 0).
-Vigor does not alter lifetimes or ecology. State is browser memory only;
+Vigor does not alter lifetimes, growth speed, free-cell clustering, grass, or weather.
+Its ecological effect is limited to replacement at saturation. State is browser memory only;
 reloading clears it. Detailed lifecycle thresholds and fake-traffic defaults are
 in the [README](../README.md).
 Grass cells separately hold `column`, `row`, `createdAt`, and `lastInfluencedAt`.
@@ -59,16 +62,20 @@ allows a later fade cycle to earn another final seed opportunity.
 - Click/hover inspection and safe information about the event behind a specimen.
 - Gradual lighting based on the viewer's real local time, with a readable night garden.
 - Deliberately simple persistence across browser/server restarts.
-- Light ecological competition, without health bars or management mechanics.
+- Richer ecological competition beyond the bounded saturation-only replacement rule, without health bars or management mechanics.
 - Event effects that strengthen, bloom, spread, mutate, or influence existing growth when new placement is unsuitable.
 - Additional sensor/service adapters beyond the implemented TCPNoise path.
 - Additional environmental/ecological responses to aggregate pressure beyond the existing visual weather layer.
 
 These capabilities are not implemented. The current placement path creates one
 specimen per accepted fake event or normalized TCPNoise growth when an empty cell
-exists and does nothing when the grid is full. Fake DNS/HTTP events can refresh
+exists, or replaces one eligible weaker occupant at saturation. Dropped saturated
+events are silent; successful replacements use shared growth sound/cooldowns.
+Natural expiry remains the normal way space opens in this bounded garden.
+Fake DNS/HTTP events can refresh
 grass, but real TCPNoise growth does not directly affect grass. The prototype does
-not strengthen existing main specimens, mutate them, or model competition.
+not strengthen or mutate existing main specimens; competition is limited to
+deterministic full-grid displacement.
 
 ## Presentation and shared ecosystem
 
@@ -105,7 +112,8 @@ High volume should not require one new permanent specimen per event. Repeated
 events may eventually strengthen, spread, bloom, mutate, or otherwise influence
 existing growth. Aggregate/background activity may instead become drizzle,
 rain, or heavy rain through the existing weather path. Richer specimen responses
-remain planned; the current path spawns one specimen when space is available.
+remain planned; the current path spawns one specimen when space is available or
+uses bounded vigor competition at saturation.
 
 An active viewing session should show meaningful change over roughly 30 minutes.
 The tuned prototype lifetimes retain recent visual history; longer-lived terrain

@@ -37,6 +37,7 @@ sandbox.Math.random = () => 0;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
 const run = code => vm.runInContext(code, sandbox);
 const reset = () => run('gardenState.specimens=[]; gardenState.grassCells=[]; nextGrassSpreadAt=1000000;');
 assert.equal(sources.length, 1); assert.equal(sources[0].url, '/api/garden/events');
@@ -61,7 +62,7 @@ assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`
 assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.row]))'), '[[0,0],[0,4],[0,8],[0,12],[0,16]]');
 assert(run('gardenState.grassCells.every(g => g.createdAt === 1000 && g.lastInfluencedAt === 1000)'));
 
-for (const [port, type] of [[443,'broadleaf'],[22,'redbloom'],[2222,'vine'],[5432,'mushroom'],[42069,'flower'],[65535,'flower']]) {
+for (const [port, type] of [[443,'broadleaf'],[445,'broadleaf'],[22,'redbloom'],[2222,'vine'],[70,'mushroom'],[5432,'flower'],[42069,'flower'],[65535,'flower']]) {
   for (const vigor of [0, 1, 2, 3]) {
   reset(); sandbox.Math.random = () => 0;
   source.emit('garden', { specimenType:type, listenPort:port, vigor });
@@ -299,5 +300,113 @@ assert.equal(run('gardenState.specimens.length'),1);
 assert.equal(run('gardenState.specimens[0].type'),'redbloom', 'weighted fake traffic now emits port22-probe');
 assert.equal(run('gardenState.grassCells.length'),0);
 element('#automatic-traffic').handlers.click(); assert.equal(timeouts.size,0);
-console.log('PASS: five initial grass seeds, normalized growth/vigor validation, stable species-specific vigor details/lifecycles, shared clustering/connectivity, fake controls/traffic, DNS/HTTP-only grass, Manual/Live switching, one SSE connection, reconnect state retention.');
+// Synthetic saturation checks; sound requests are observed independently of synthesis.
+const soundRequests=[];
+const originalGrowthSound=run('gardenSound.maybePlayGrowthSound');
+sandbox.recordGrowthSound=type=>soundRequests.push(type);
+run('gardenSound.maybePlayGrowthSound=recordGrowthSound');
+const fillGarden=(vigor=3,type='broadleaf')=>{
+  reset(); soundRequests.length=0;
+  run(`gardenState.specimens=Array.from({length:columns*rows},(_,i)=>({type:'${type}',column:i%columns,row:Math.floor(i/columns),createdAt:900,vigor:${vigor}})); updateGardenStatus()`);
+};
+const occupant=(index,type,vigor,createdAt=900)=>run(`Object.assign(gardenState.specimens[${index}],{type:'${type}',vigor:${vigor},createdAt:${createdAt}})`);
+const snapshot=()=>run('JSON.stringify(gardenState)');
+const growAtCapacity=(type,vigor)=>{
+  sandbox.Math.random=()=>{throw new Error('Replacement selection must not use randomness');};
+  return run(`spawnSpecimen('${type}',null,${vigor})`);
+};
+
+// The helper must never run with available space, including space freed by expiry.
+const originalReplacement=run('findReplacementCandidate');
+sandbox.forbidReplacement=()=>{throw new Error('Replacement invoked with empty space');};
+run('findReplacementCandidate=forbidReplacement');
+reset(); sandbox.Math.random=()=>0;
+run("spawnSpecimen('vine',null,3); spawnSpecimen('vine',null,3)");
+assert.equal(run('gardenState.specimens.length'),2);
+assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column),Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'),1,'free-cell clustering unchanged');
+fillGarden(3,'ghostbloom');
+occupant(13,'ghostbloom',3,1000-360000);
+const otherOccupants=run('JSON.stringify(gardenState.specimens.filter((_,i)=>i!==13))');
+sandbox.Math.random=()=>0;
+const afterExpiry=run("spawnSpecimen('flower',null,0)");
+assert.equal(afterExpiry.column,13); assert.equal(afterExpiry.row,0);
+assert.equal(run('gardenState.specimens.length'),640,'expiry frees a normal placement cell before evaluating competition');
+assert.equal(run('JSON.stringify(gardenState.specimens.filter(s=>s.type!=="flower"))'),otherOccupants,'expiry does not force displacement');
+sandbox.restoreReplacement=originalReplacement;
+run('findReplacementCandidate=restoreReplacement');
+
+fillGarden(0);
+const unchanged=snapshot();
+assert.equal(growAtCapacity('flower',0),undefined);
+assert.equal(snapshot(),unchanged,'vigor 0 cannot displace equal vigor');
+assert.equal(soundRequests.length,0,'dropped growth never requests sound');
+assert.match(element('#garden-status').textContent,/640 broad-leaf plants/);
+assert.match(element('#garden-status').textContent,/Garden full — stronger growth may displace weaker plants/);
+assert.equal(element('#fake-dns').disabled,true,'vigor-0 fake controls remain disabled at capacity');
+assert.equal(growAtCapacity('ghostbloom',0),undefined,'incoming rare growth gets no special admission override');
+
+for(const incoming of [1,2,3]) {
+  fillGarden();
+  occupant(3,'vine',1,0); // Older, but not in the lowest vigor tier.
+  occupant(7,'flower',0,800);
+  occupant(11,'mushroom',0,100);
+  const beforeVictim=JSON.parse(run('JSON.stringify(gardenState.specimens[11])'));
+  const replacement=growAtCapacity('flower',incoming);
+  assert.equal(replacement.column,beforeVictim.column); assert.equal(replacement.row,beforeVictim.row);
+  assert.equal(replacement.type,'flower'); assert.equal(replacement.vigor,incoming);
+  assert.equal(replacement.createdAt,1000,'replacement gets a new creation timestamp');
+  assert.equal(run('gardenState.specimens[3].type'),'vine','lowest vigor wins over older higher-vigor occupant');
+  assert.equal(run('gardenState.specimens[7].createdAt'),800,'oldest in lowest tier wins');
+  assert.equal(run('gardenState.specimens.length'),640);
+  assert.equal(run('new Set(gardenState.specimens.map(s=>s.row*columns+s.column)).size'),640,'one occupant per exact victim cell');
+  assert.deepEqual(soundRequests,['flower'],'successful replacement requests incoming species sound');
+}
+fillGarden(); occupant(0,'flower',1,100);
+assert.equal(growAtCapacity('vine',2).column,0,'vigor 2 can use vigor 1 when no vigor 0 exists');
+fillGarden(); occupant(1,'flower',2,0); occupant(2,'flower',1,500);
+assert.equal(growAtCapacity('vine',3).column,2,'vigor 3 prefers the lowest available eligible vigor');
+fillGarden(3);
+const equalSnapshot=snapshot();
+assert.equal(growAtCapacity('flower',3),undefined);
+assert.equal(snapshot(),equalSnapshot,'vigor 3 cannot cause equal-vigor churn');
+assert.equal(soundRequests.length,0);
+fillGarden(); occupant(2,'flower',0,100); occupant(5,'flower',0,100);
+assert.equal(growAtCapacity('vine',1).column,2,'exact ties choose the first array entry deterministically');
+
+for(const type of ['ghostbloom','crystalfungus','blackthorn']) {
+  fillGarden(); occupant(0,type,0,0);
+  const protectedSnapshot=snapshot();
+  assert.equal(growAtCapacity('flower',3),undefined);
+  assert.equal(snapshot(),protectedSnapshot,`${type} is protected from forced replacement`);
+  assert.equal(soundRequests.length,0);
+}
+for(const type of ['flower','mushroom','broadleaf','vine','redbloom','weed']) {
+  fillGarden(); occupant(9,type,0,100);
+  assert.equal(growAtCapacity('vine',1).column,9,`${type} is replaceable`);
+}
+fillGarden(0);
+assert.equal(growAtCapacity('blackthorn',3).type,'blackthorn','incoming rare growth uses the same vigor gate');
+assert.deepEqual(soundRequests,['blackthorn']);
+
+fillGarden(); occupant(17,'flower',0,100);
+run('influenceGrassCell(17,0,500)');
+const grassBefore=run('JSON.stringify(gardenState.grassCells)');
+sandbox.Math.random=()=>{throw new Error('Real replacement must not request grass influence');};
+source.emit('garden',{specimenType:'broadleaf',listenPort:445,vigor:3});
+assert.equal(run('gardenState.specimens[17].type'),'broadleaf');
+assert.equal(run('JSON.stringify(gardenState.grassCells)'),grassBefore,'real forced growth never seeds/refreshes grass');
+assert.deepEqual(soundRequests,['broadleaf']);
+occupant(0,'flower',0,1000-240000);
+run('updateGarden()');
+assert.equal(run('gardenState.specimens.length'),639);
+assert(!element('#garden-status').textContent.includes('Garden full'),'saturation note disappears after natural expiry');
+assert.equal(element('#fake-dns').disabled,false);
+
+fillGarden(); occupant(0,'flower',0,100);
+sandbox.Math.random=()=>0;
+run("spawnSpecimen('flower','dns',3)");
+assert(run('gardenState.grassCells.length > 0'),'direct fake replacement preserves DNS grass semantics');
+sandbox.restoreGrowthSound=originalGrowthSound;
+run('gardenSound.maybePlayGrowthSound=restoreGrowthSound');
+console.log('PASS: five initial grass seeds, growth/vigor/rendering, saturated vigor competition/protection/status/sound isolation, free-cell clustering, fake controls/traffic, DNS/HTTP-only grass, Manual/Live and severe weather, one SSE connection.');
 require('./garden-audio.cjs')().catch(error => { console.error(error); process.exitCode=1; });

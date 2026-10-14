@@ -44,10 +44,11 @@ foreach (var input in new[] { "", "{", "null", "[]", "{}", good.Replace("tcpnois
 static string WithPort(string json, int port) => json.Replace("\"listenPort\":443", $"\"listenPort\":{port}");
 foreach (var (port, type) in new (int Port, string Type)[]
 {
-    (80, "broadleaf"), (443, "broadleaf"), (8080, "broadleaf"), (8443, "broadleaf"),
+    (80, "broadleaf"), (443, "broadleaf"), (445, "broadleaf"), (8080, "broadleaf"), (8443, "broadleaf"),
     (22, "redbloom"), (2222, "vine"), (23, "vine"), (2323, "vine"), (3389, "vine"), (5900, "vine"),
-    (21, "mushroom"), (445, "mushroom"), (5432, "mushroom"), (6379, "mushroom"), (9200, "mushroom"), (70, "mushroom"),
-    (25, "flower"), (420, "flower"), (42069, "flower"), (53, "flower"), (1, "flower"), (65535, "flower")
+    (21, "mushroom"), (70, "mushroom"),
+    (25, "flower"), (420, "flower"), (42069, "flower"), (53, "flower"),
+    (5432, "flower"), (6379, "flower"), (9200, "flower"), (1, "flower"), (65535, "flower")
 })
 {
     Check(Parse(WithPort(good, port)) == new GardenGrowth(type, port), $"Port {port} maps to {type}");
@@ -55,7 +56,7 @@ foreach (var (port, type) in new (int Port, string Type)[]
 }
 
 // Check the complete discrete roll space, as well as exact transition boundaries.
-foreach (var port in new[] { 443, 2222, 53, 12345 })
+foreach (var port in new[] { 443, 445, 2222, 21, 70, 53, 5432, 6379, 9200, 12345 })
 foreach (var ipv6 in new[] { false, true })
 foreach (var (sensor, bonus) in new[] { ("public", 0), ("overlay-dn42", 50), ("overlay-ygg", 100) })
 {
@@ -188,7 +189,7 @@ Check(first.Reader.TryRead(out var redA) && second.Reader.TryRead(out var redB) 
     && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 3 } },
     "Port-22 redbloom uses existing transient fanout");
 events.RemoveClient(first);
-events.Publish(new GardenGrowth("mushroom", 5432));
-Check(second.Reader.TryRead(out var c) && c.Data is GardenGrowth { SpecimenType: "mushroom", ListenPort: 5432 }, "Remaining client unaffected by disconnect");
+events.Publish(Parse(WithPort(good, 70))!);
+Check(second.Reader.TryRead(out var c) && c.Data is GardenGrowth { SpecimenType: "mushroom", ListenPort: 70 }, "Remaining client unaffected by disconnect");
 events.RemoveClient(second);
 Console.WriteLine("PASS: TCPNoise validation/mapping, optional bounded vigor independent of rarity, port-22 rarity bypass, port-2222 vine/rarity, exact rarity probabilities/boundaries/traits, sanitized growth fields, fanout, no replay, disconnect cleanup.");

@@ -204,6 +204,24 @@ const speciesConfig = new Map([
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
 const gardenState = { specimens: [], grassCells: [] };
+const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
+
+// Called only at saturation, after expiry. Equal vigor never churns the garden.
+function findReplacementCandidate(incomingVigor) {
+  let victimIndex = null;
+  for (let index = 0; index < gardenState.specimens.length; index++) {
+    const specimen = gardenState.specimens[index];
+    const vigor = specimen.vigor ?? 0;
+    if (protectedSpecimenTypes.has(specimen.type) || vigor >= incomingVigor) continue;
+    const victim = victimIndex === null ? null : gardenState.specimens[victimIndex];
+    if (victim === null || vigor < (victim.vigor ?? 0)
+      || (vigor === (victim.vigor ?? 0) && specimen.createdAt < victim.createdAt)) {
+      victimIndex = index;
+    }
+  }
+  // Exact ties retain the first array entry, without consuming randomness.
+  return victimIndex;
+}
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
@@ -224,33 +242,40 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0) {
   for (let cell = 0; cell < columns * rows; cell++) {
     if (!occupiedCells.has(cell)) emptyCells.push(cell);
   }
-  if (emptyCells.length === 0) return;
-
-  const adjacentCells = [];
-  const nearbyCells = [];
-  const sameSpecies = gardenState.specimens.filter(specimen => specimen.type === specimenType);
-  for (const cell of emptyCells) {
-    const column = cell % columns;
-    const row = Math.floor(cell / columns);
-    let distance = Infinity;
-    for (const specimen of sameSpecies) {
-      // Diagonals count as neighbors; coordinate distances never wrap at edges.
-      distance = Math.min(distance, Math.max(
-        Math.abs(column - specimen.column),
-        Math.abs(row - specimen.row)
-      ));
+  let replacementIndex = null;
+  let cell;
+  if (emptyCells.length === 0) {
+    replacementIndex = findReplacementCandidate(vigor);
+    if (replacementIndex === null) return;
+    const victim = gardenState.specimens[replacementIndex];
+    cell = victim.row * columns + victim.column;
+  } else {
+    const adjacentCells = [];
+    const nearbyCells = [];
+    const sameSpecies = gardenState.specimens.filter(specimen => specimen.type === specimenType);
+    for (const cell of emptyCells) {
+      const column = cell % columns;
+      const row = Math.floor(cell / columns);
+      let distance = Infinity;
+      for (const specimen of sameSpecies) {
+        // Diagonals count as neighbors; coordinate distances never wrap at edges.
+        distance = Math.min(distance, Math.max(
+          Math.abs(column - specimen.column),
+          Math.abs(row - specimen.row)
+        ));
+      }
+      if (distance === 1) adjacentCells.push(cell);
+      else if (distance === 2) nearbyCells.push(cell);
     }
-    if (distance === 1) adjacentCells.push(cell);
-    else if (distance === 2) nearbyCells.push(cell);
-  }
 
-  // Mostly extend a patch, with occasional small gaps rather than distant seeds.
-  const preferAdjacent = Math.random() < 0.9;
-  const preferredCells = preferAdjacent ? adjacentCells : nearbyCells;
-  const alternateCells = preferAdjacent ? nearbyCells : adjacentCells;
-  const candidates = preferredCells.length > 0 ? preferredCells
-    : alternateCells.length > 0 ? alternateCells : emptyCells;
-  const cell = candidates[Math.floor(Math.random() * candidates.length)];
+    // Mostly extend a patch, with occasional small gaps rather than distant seeds.
+    const preferAdjacent = Math.random() < 0.9;
+    const preferredCells = preferAdjacent ? adjacentCells : nearbyCells;
+    const alternateCells = preferAdjacent ? nearbyCells : adjacentCells;
+    const candidates = preferredCells.length > 0 ? preferredCells
+      : alternateCells.length > 0 ? alternateCells : emptyCells;
+    cell = candidates[Math.floor(Math.random() * candidates.length)];
+  }
   const specimen = {
     type: specimenType,
     column: cell % columns,
@@ -258,7 +283,8 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0) {
     createdAt: Date.now(),
     vigor
   };
-  gardenState.specimens.push(specimen);
+  if (replacementIndex === null) gardenState.specimens.push(specimen);
+  else gardenState.specimens[replacementIndex] = specimen;
   if (grassEventType) influenceGrass(grassEventType, specimen);
 
   updateGardenStatus();
@@ -344,7 +370,9 @@ function updateGardenStatus() {
     const speciesCount = gardenState.specimens.filter(specimen => specimen.type === type).length;
     return `${speciesCount} ${speciesCount === 1 ? config.singular ?? type : config.plural}`;
   }).join(", ");
-  gardenStatus.textContent = description;
+  gardenStatus.textContent = count === columns * rows
+    ? `${description}. Garden full — stronger growth may displace weaker plants`
+    : description;
   canvas.setAttribute("aria-label", `Rectangular soil garden with a subtle square grid and ${description}`);
   fakeDnsButton.disabled = count === columns * rows;
   fakeGopherButton.disabled = count === columns * rows;

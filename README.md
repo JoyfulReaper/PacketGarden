@@ -152,12 +152,27 @@ classifications. Rarity stays event-driven; no timer creates mutations. See the
 [probability policy](docs/EVENT-MAPPINGS.md#tcpnoise-rarity).
 TCPNoise `seenCount` becomes coarse visual vigor server-side: 0 for missing/unusable
 values or counts 0–1, 1 for 2–3, 2 for 4–9, and 3 for valid counts of 10 or more.
-Vigor adds bounded species-specific fullness/detail, independently of species and
-rarity. It is artistic recurrence, not a threat score, and affects appearance only;
-lifetimes and ecology stay the same. Fake controls use vigor 0.
+Vigor is coarse artistic recurrence, not a threat score. It adds bounded
+species-specific fullness/detail and, only when all 640 specimen cells are full,
+lets stronger recurring growth displace weaker ordinary growth. Species, rarity,
+lifetimes, and growth speed remain independent of vigor. Fake controls use vigor 0.
+
+TCPNoise mushrooms now have the narrower base-port set **21 and 70**. Port 445
+has a broadleaf base; 5432, 6379, and 9200 have flower bases. These mappings are
+aesthetic, without asserting application protocols; rarity odds are unchanged.
+
+Natural expiry remains the normal way space opens in the bounded 32×20 garden.
+When full, incoming vigor must be strictly greater than an eligible occupant's:
+choose the lowest eligible vigor, then its oldest specimen, and reuse that exact
+cell. Ghostbloom, crystal fungus, and blackthorn are protected from forced
+replacement but still expire normally. Weed and redbloom remain replaceable.
+Equal vigor cannot churn the garden, and incoming rare growth gets the same gate.
+Successful replacements use the normal growth sound/cooldowns; dropped events
+are silent. Real TCPNoise replacement does not seed or refresh grass. The existing
+status adds a full-garden note at capacity and removes it after space opens.
 The browser receives only `specimenType`, `listenPort`, and integer `vigor` (0–3),
 never exact repeat counts, sensor names, or IP details. Other discrete adapters, inspection, local-time lighting,
-persistence, and ecological competition remain planned work; see [MVP](docs/MVP.md).
+persistence, and richer ecological competition remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
 

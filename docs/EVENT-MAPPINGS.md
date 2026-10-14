@@ -66,14 +66,17 @@ Port 22 is an explicit signal; the other base mappings apply before the rarity r
 | Listening ports | Visual specimen |
 | --- | --- |
 | 22 | redbloom (always; bypasses rarity) |
-| 80, 443, 8080, 8443 | broadleaf |
+| 80, 443, 445, 8080, 8443 | broadleaf |
 | 2222, 23, 2323, 3389, 5900 | vine |
-| 21, 445, 5432, 6379, 9200, 70 | mushroom |
-| 25, 420, 42069, 53 | flower |
+| 21, 70 | mushroom |
+| 25, 53, 420, 42069, 5432, 6379, 9200 | flower |
 | Any other valid port (1–65535) | flower |
 
 53 and 70 are supported future ports even though the current fleet does not
 normally expose them. The planning inventory is in [Real data](REAL-DATA.md#tcpnoise-fleet-planning-inventory).
+The narrower mushroom set keeps noisy scan ports in ordinary background vegetation;
+mushrooms remain a normal base species. These are aesthetic choices, not claims
+about application protocol use.
 
 ## TCPNoise rarity
 
@@ -105,10 +108,10 @@ Their lifetimes are 6, 6, 7, and 12 minutes respectively (stages in the README).
 
 All rarity is event-driven and resolved before SSE. The browser receives only
 `specimenType`, `listenPort`, and coarse `vigor`, never sensor names or IP details, and uses shared
-placement/lifecycles without direct grass influence. Competition and mutations
+placement/lifecycles without direct grass influence. Richer competition and mutations
 of existing specimens remain future ecology work.
 
-## TCPNoise visual vigor
+## TCPNoise vigor
 
 After species/rarity selection, the backend independently maps optional `seenCount`
 to vigor: **0** for counts 0–1 or missing/unusable values, **1** for 2–3, **2** for
@@ -120,7 +123,18 @@ Higher vigor adds fuller petals/leaves, broader mushroom caps and spots, stronge
 vine stems/leaves/thorns, redbloom spikes, weed branches, ghostbloom fullness/halo,
 crystal facets, and blackthorn branches/thorns within roughly the same cell.
 The plum broadleaf palette stays intact. Vigor is fixed at spawn; fake controls
-use 0. Lifetimes, placement, clustering, grass, and weather do not depend on vigor.
+use 0. Lifetimes, free-cell placement/clustering, grass, and weather do not depend on vigor.
+
+Only at full 640-cell occupancy, coarse artistic recurrence also supplies a
+bounded competitive strength. After normal expiry, incoming vigor must exceed an
+unprotected occupant's vigor. Among eligible occupants, replace the oldest in the
+lowest vigor tier and reuse its cell with a fresh timestamp; exact ties retain
+array order. Ghostbloom, crystal fungus, and blackthorn are protected from forced
+displacement, while weed and redbloom are eligible. Incoming rare specimens use
+the same gate, and equal vigor never replaces. Natural expiry remains the usual
+source of space; this replacement rule exists only because the garden is bounded.
+Successful replacement uses shared growth sound/cooldowns; a dropped event is
+silent. Real TCPNoise replacement never seeds or refreshes grass.
 
 ## First prototype subset
 

@@ -84,8 +84,8 @@ are unsigned 64-bit JSON integers: 0–1 give vigor 0, 2–3 give 1, 4–9 give 
 10 through 18,446,744,073,709,551,615 give 3. Missing, null, strings, objects,
 negative, fractional/exponent representations, or overflowing numbers give vigor 0
 without rejecting a valid connection. No arithmetic on the raw count is needed.
-Vigor is artistic recurrence, not a threat score or rarity input; it affects only
-bounded rendering details. SSE emits only:
+Vigor is artistic recurrence, not a threat score or rarity input; it affects
+bounded rendering details and competition only at full specimen occupancy. SSE emits only:
 
 ```text
 event: garden
@@ -105,14 +105,21 @@ stream.
 The browser requires integer vigor 0–3 and ignores growth frames with missing or
 invalid vigor. Each specimen retains its received vigor throughout its lifetime;
 fake controls default to 0. Exact `seenCount`, sensor names, and IP-version/address
-information are never forwarded. Species selection, rarity, placement, grass,
-weather, and decay timings are independent of vigor.
+information are never forwarded. Species selection, rarity, free-cell placement,
+grass, weather, and decay timings are independent of vigor.
 
 Port hits use the [destination-port visual mapping](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
 They share placement, clustering, lifecycles, and occupancy with fake events, but
 do not inherit fake DNS/HTTP grass effects. Real TCPNoise growth does not directly
-seed or refresh grass in this slice. If specimen cells are full, the existing
-placement path cannot place another specimen.
+seed or refresh grass in this slice, including forced replacements. After expiry,
+if all 640 cells remain full, incoming vigor must strictly exceed an unprotected
+occupant's. Replacement targets the lowest eligible vigor and then its oldest
+specimen, reusing the exact cell with a fresh creation timestamp. Ghostbloom,
+crystal fungus, and blackthorn are protected from displacement but still expire
+normally; weed and redbloom are eligible. Incoming rare growth uses the same gate.
+Equal vigor cannot churn the grid. Successful replacement uses normal growth
+sound/cooldowns; a dropped saturated event is silent. Natural expiry remains the
+usual source of space, and the status notes saturation only while the grid is full.
 
 ## Discrete events and aggregate pressure
 
@@ -131,8 +138,9 @@ effects remain future work. Traffic quietness does not determine local-time ligh
 
 High volume should not necessarily create one new permanent specimen per event.
 Repeated events may strengthen, spread, bloom, mutate, or otherwise influence
-existing growth. The current main-specimen path only spawns into empty cells;
-richer specimen responses remain work to implement. Grass seeding/refresh is a
+existing growth. The current main-specimen path prefers empty cells and uses only
+the bounded vigor replacement rule at saturation; richer responses remain work to
+implement. Grass seeding/refresh is a
 separate existing effect of successful fake DNS/HTTP spawns; seeded turf grows
 and spreads locally through the browser update loop.
 
@@ -189,7 +197,7 @@ Live aggregate weather and NATS-backed TCPNoise growth are implemented.
 Event-driven weed/rare growth is implemented. Other protocol/auth-aware adapters,
 mutations of existing specimens, and richer specimen responses
 remain future work.
-Inspection, local-time lighting, persistence, and ecological competition remain
+Inspection, local-time lighting, persistence, and richer ecological competition remain
 separate unfinished MVP work; this plan does not imply they are implemented.
 
 See [MVP](MVP.md) for completed and remaining capabilities and
