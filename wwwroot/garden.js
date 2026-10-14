@@ -3,6 +3,7 @@ const context = canvas.getContext("2d");
 const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
+const fakeSshButton = document.querySelector("#fake-ssh");
 const gardenStatus = document.querySelector("#garden-status");
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
@@ -32,20 +33,28 @@ const broadleafTimings = {
   fadingAfterMs: 38_000,
   expiredAfterMs: 50_000
 };
+const vineTimings = {
+  growingAfterMs: 5_000,
+  matureAfterMs: 12_000,
+  dryingAfterMs: 45_000,
+  expiredAfterMs: 60_000
+};
 const updateEveryMs = 250;
 
 const eventSpecimenTypes = new Map([
   ["dns", "flower"],
   ["gopher", "mushroom"],
-  ["http", "broadleaf"]
+  ["http", "broadleaf"],
+  ["ssh", "vine"]
 ]);
 const speciesConfig = new Map([
   ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
-  ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }]
+  ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }],
+  ["vine", { timings: vineTimings, render: drawVine, plural: "vines" }]
 ]);
 
-/** @typedef {{ type: "dns" | "gopher" | "http" }} GardenEvent */
+/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" }} GardenEvent */
 const gardenState = { specimens: [] };
 
 /** @param {GardenEvent} event */
@@ -111,6 +120,7 @@ function updateGardenStatus() {
   fakeDnsButton.disabled = count === columns * rows;
   fakeGopherButton.disabled = count === columns * rows;
   fakeHttpButton.disabled = count === columns * rows;
+  fakeSshButton.disabled = count === columns * rows;
 }
 
 function updateGarden(now = Date.now()) {
@@ -139,6 +149,12 @@ fakeGopherButton.addEventListener("click", () => {
 fakeHttpButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
   const event = { type: "http" };
+  handleGardenEvent(event);
+});
+
+fakeSshButton.addEventListener("click", () => {
+  /** @type {GardenEvent} */
+  const event = { type: "ssh" };
   handleGardenEvent(event);
 });
 
@@ -243,6 +259,70 @@ function drawBroadleaf(specimen, now) {
     context.lineTo(11, 0);
     context.stroke();
     context.restore();
+  }
+  context.restore();
+}
+
+function drawVine(specimen, now) {
+  const ageMs = Math.max(0, now - specimen.createdAt);
+  if (ageMs >= vineTimings.expiredAfterMs) return;
+  const stage = ageMs < vineTimings.growingAfterMs ? "sprout"
+    : ageMs < vineTimings.matureAfterMs ? "growing"
+    : ageMs < vineTimings.dryingAfterMs ? "mature" : "drying";
+  const drying = stage === "drying";
+  const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : drying ? 0.55 : 1;
+
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  context.strokeStyle = drying ? "#857454" : "#527943";
+  context.lineWidth = drying ? 1 : stage === "mature" ? 2.5 : 1.5;
+  context.lineCap = "round";
+
+  if (stage !== "sprout") {
+    for (const neighbor of gardenState.specimens) {
+      if (neighbor === specimen || neighbor.type !== "vine") continue;
+      const neighborAge = now - neighbor.createdAt;
+      if (neighborAge < vineTimings.growingAfterMs || neighborAge >= vineTimings.expiredAfterMs) continue;
+      const dx = neighbor.column - specimen.column;
+      const dy = neighbor.row - specimen.row;
+      if (Math.max(Math.abs(dx), Math.abs(dy)) !== 1) continue;
+
+      // Each cell draws half the connection. Both halves meet at the same midpoint.
+      const endX = dx * cellSize / 2;
+      const endY = dy * cellSize / 2;
+      const bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
+      context.beginPath();
+      context.moveTo(0, 0);
+      context.quadraticCurveTo(endX / 2 - dy * bend, endY / 2 + dx * bend, endX, endY);
+      context.stroke();
+    }
+  }
+
+  context.beginPath();
+  context.moveTo(-8 * size, 6 * size);
+  context.bezierCurveTo(-9 * size, -3 * size, 8 * size, 4 * size, 8 * size, -7 * size);
+  context.stroke();
+
+  context.fillStyle = drying ? "#8c8056" : "#78934e";
+  context.beginPath();
+  context.ellipse(-5 * size, 4 * size, 4 * size, 1.8 * size, -Math.PI / 4, 0, Math.PI * 2);
+  context.fill();
+  context.beginPath();
+  context.ellipse(6 * size, -4 * size, 4 * size, 1.8 * size, Math.PI / 4, 0, Math.PI * 2);
+  context.fill();
+
+  if (stage !== "sprout") {
+    context.fillStyle = drying ? "#a08b67" : "#c3b080";
+    context.beginPath();
+    context.moveTo(-4 * size, 1 * size);
+    context.lineTo(-8 * size, -4 * size);
+    context.lineTo(-1 * size, 0);
+    context.closePath();
+    context.moveTo(3 * size, -1 * size);
+    context.lineTo(8 * size, 3 * size);
+    context.lineTo(5 * size, -3 * size);
+    context.closePath();
+    context.fill();
   }
   context.restore();
 }
