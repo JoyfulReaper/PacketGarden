@@ -93,6 +93,23 @@ Port 22 must still resolve to redbloom server-side and still bypass ordinary rar
 A port-22 event must not suddenly become evidence of malicious traffic, SSH auth,
 or anything beyond a connection to listening port 22.
 
+### Implemented Amanita muscaria loose drop
+
+An exact successful live mushroom gets a 1% cosmetic browser roll for a separate
+tiny Amanita muscaria drop after five seconds. The mushroom remains unchanged;
+removal/expiry/displacement before activation cancels the attempt. Drops live in
+their own transient array, with a max-three cap independent of curiosities and
+mutations and a 20-second active lifetime. A due attempt at the cap never retries.
+Logical cleanup shares the existing tick, while procedural red caps, white spots,
+and pale stems bob on the dynamic overlay without invalidating base ecology.
+They occupy no cells and affect no grass, puddles, gnomes, or Recent activity.
+Clicks collect curiosities before drops, then mutations before inspection.
+Collection says `You found Amanita muscaria. +0 points` with optional quiet sound;
+Score stays 0, with no inventory, persistence, use, or consumption mechanics.
+Only live successful mushroom growth triggers the roll; it says nothing about
+traffic protocol, payload, remote identity, or security. The small loose-drop
+registry is a future reuse seam, with only Amanita implemented now.
+
 ### Vine -> opium mutation
 
 This remains future work. Use the same semantic pattern for vines rather than
@@ -159,7 +176,6 @@ point is to parody a progression system, not quietly build one.
 
 Keep the pool small enough that finding one remains memorable. Candidates include:
 
-- **Amanita muscaria** — a future mushroom mutation/collectible, not yet implemented;
 - **mushroom cap** — a Gopher mushroom occasionally leaves a cap;
 - **rainbow leaf** — a rainbow broadleaf sheds a multicolored leaf;
 - **crystal shard** — crystal fungus leaves a glowing shard;

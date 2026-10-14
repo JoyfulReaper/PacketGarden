@@ -47,6 +47,7 @@ and additional sensor/service inputs remain goals.
 - Static `Score: 0` with no JavaScript scoring/persistence state. Collection briefly shows `You collected some weed. +0 points` and optionally uses the existing quiet collection sound.
 - First-seen curiosities: exact sanitized live `seenCount === "1"` tries to create one visitor beside the exact successfully spawned/replaced specimen. The uniform initial pool is ladybug, snail, moth, and shiny pebble; at most three live for 20 seconds, with no queue or catch-up when full. Separate browser-memory state consumes no cells and affects no specimens, grass, or Recent activity. Locally bounded motion and glints share the cached renderer's 30 FPS overlay. Scaled clicks collect before mutations/inspection, show type-specific `+0 points`, and reuse quiet optional audio. Gnomes and mutations remain independent. Source count one does not establish global first-ever observation or uniqueness.
 - A small standalone About page explaining the project, data flow, visual metaphors, privacy boundary, weather, ecology, inspection, and the fact that the gnomes mean absolutely nothing.
+- Amanita muscaria loose drops: successful live mushroom growth gets an independent 1% browser roll, scheduling a separate tiny collectible near the exact unchanged source after five seconds. Source removal/expiry/displacement before activation cancels it. Independent max-three cap at activation; skipped attempts never retry. Each drop lasts 20 active seconds on the shared overlay with no extra timers, base invalidation, cell occupancy, grass/puddle effects, or Recent activity rows. Click priority is curiosity, drop, mutation, inspection. Collection says `You found Amanita muscaria. +0 points`, reuses optional audio, and leaves Score at 0. Fake Gopher and saturated dropped growth do not roll. Gnomes, curiosities, and mutations stay independent.
 
 Very occasionally, a port-22 redbloom may itself become a collectible weed plant.
 Click it quickly enough and you collect some weed. This accomplishes absolutely
@@ -108,11 +109,10 @@ way space opens. Real TCPNoise growth does not directly seed or refresh grass.
 These are desired follow-ups, not descriptions of the code already implemented:
 
 - **Vine -> opium mutation / opium pod:** extend the specimen mutation helpers
-  with a rarer vine transformation and a separate bounded loose-drop layer.
-- **Mushroom -> Amanita muscaria collectible:** another future mutation/drop;
-  no behavior or assets for it are implemented yet.
+  with a rarer vine transformation and reuse the implemented bounded loose-drop layer.
 - **Additional curiosity/drop types:** odd seeds, worthless coin-shaped objects,
-  and other collectible drops remain future work beyond the four implemented visitors.
+  rainbow leaves, crystal shards, ghost petals, gnome hats, and other collectible
+  drops remain future work beyond the four visitors and Amanita.
 - **Stillbloom:** quiet-only growth remains future work.
 - **Water interactions:** frogs, water-specific snails, and gnome reactions remain future work; storm puddles themselves are implemented.
 

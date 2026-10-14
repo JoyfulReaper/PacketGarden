@@ -166,6 +166,21 @@ and curiosity spawn/collection/expiry adds no Recent activity row. Gnomes and
 redbloom mutations remain independent. Count one means only source-provided
 first-seen; it does not establish global uniqueness or first-ever history.
 
+Successful live TCPNoise mushroom growth also gets an independent 1% browser-only
+roll for a tiny Amanita muscaria loose drop, appearing beside that exact mushroom
+after five seconds. Removing/expiring/displacing the source before then cancels
+the attempt. The mushroom's type, color, vigor, provenance, cell, and lifetime
+remain unchanged. Up to three drops have their own 20-second active lifetime;
+due candidates at the cap are consumed without retry. Drops occupy no specimen
+cells, affect no grass or puddles, and share the dynamic overlay without repainting
+ecology. Click priority is curiosity, loose drop, mutation, then inspection.
+Collection says `You found Amanita muscaria. +0 points`, reuses optional quiet
+audio, and leaves Score at 0. Scheduling, activation, collection, and expiry add
+no Recent activity rows. This is cosmetic garden nonsense, with no protocol or
+security meaning; fake Gopher growth and dropped saturated events do not roll.
+Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
+Stillbloom, and frogs/water interactions remain future work.
+
 Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
 specimens (45% and 65% influence chances). Each successful influence affects
 the usual target and has a 35% chance to also affect a distinct adjacent cell near
@@ -188,7 +203,7 @@ drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather do
 not affect organisms or grass. A base ecology Canvas repaints on actual state
 changes and at a bounded one-second cadence for visual aging; logical cleanup
 still runs every 250 ms. A separate transparent overlay Canvas handles weather,
-gnomes, mutations, and curiosities through one roughly 30 FPS scheduler, without
+gnomes, mutations, curiosities, and loose drops through one roughly 30 FPS scheduler, without
 copying the base bitmap. Dense vines share one local cell lookup per base repaint.
 Hidden tabs pause painting and resume once at current time, without catch-up.
 Both canvases resize together, with backing resolution capped at DPR 2; the
@@ -330,6 +345,9 @@ Local vine-neighbor work and connection/lifecycle correctness checks run with
 `node tests/vine-rendering.cjs`.
 First-seen trigger, bounded visitors, clicking, and overlay performance checks run
 with `node tests/garden-curiosities.cjs`.
+Loose-drop timing, collection, independence, hidden tabs, and overlay isolation
+are checked with `node tests/garden-drops.cjs`; dense storm/drop rendering is also
+covered by `node tests/render-performance.cjs`.
 Storm-water lifecycle, isolation, and cached rendering checks run with
 `node tests/garden-puddles.cjs`; weighted vine hue boundaries are covered by
 `node tests/species-color-variants.cjs`.

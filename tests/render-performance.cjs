@@ -198,6 +198,11 @@ dense.run('gardenState.specimens=Array.from({length:640},(_,i)=>({type:"vine",co
 weather(dense, 'botnet_hurricane');
 dense.run('for(let i=0;i<8;i++) createStormPuddle(Date.now(),()=>0.5); drawGarden()');
 dense.run('for(let i=0;i<3;i++) createFirstSeenCuriosity(gardenState.specimens[i],()=>0.5); startGnomeIncident(Date.now(),()=>0.5)');
+// Direct deterministic seam: stress the independent loose layer beside dense ecology.
+dense.run('for(let i=0;i<3;i++) scheduleLooseDrop(gardenState.specimens[i],"amanita_muscaria",()=>0.5,Date.now()-5000); updateLooseDrops(); drawGardenOverlay(true); syncWeatherAnimation()');
+let denseDropRenders = 0;
+dense.sandbox.countDenseDrop = () => denseDropRenders++;
+dense.run('const denseDropRender=looseDropTypes.get("amanita_muscaria").render; looseDropTypes.get("amanita_muscaria").render=(drop,now)=>{countDenseDrop();denseDropRender(drop,now)}');
 const denseWork = instrument(dense), denseState = dense.run('JSON.stringify([gardenState.specimens,gardenState.grassCells,gardenState.puddles,gardenState.curiosities])');
 let fullVineScans = 0, baseCopies = 0;
 dense.sandbox.fullVineVisit = () => fullVineScans++;
@@ -216,6 +221,7 @@ assert.equal(denseWork.base, 1, 'four logical ticks cause only one slow visual r
 assert.equal(denseWork.water,1); assert.equal(denseWork.lookup,1);
 assert.equal(denseWork.species, 640); assert.equal(denseWork.grass, 640);
 assert.equal(denseWork.overlay,30); assert.equal(baseCopies,0);
+assert.equal(denseDropRenders,90, 'three loose drops animate on those same 30 overlay paints');
 assert.equal(denseWork.neighbor,640*8); assert.equal(fullVineScans,0, 'no per-vine full-specimen iteration');
 assert.equal(dense.run('JSON.stringify([gardenState.specimens,gardenState.grassCells,gardenState.puddles,gardenState.curiosities])'), denseState, 'dense rendering changes no ecology');
 const stressReport = `${denseWork.base} base rebuild, ${denseWork.species} specimen renders, ${denseWork.grass} grass renders, ${denseWork.overlay} overlay paints, ${denseWork.neighbor} neighbor checks, ${baseCopies} bitmap copies`;
@@ -262,4 +268,4 @@ weather(tint,'rain',20000);assert.equal(tintWork.base,0, 'saturated intensity le
 weather(tint,'rain',10);assert.equal(tintWork.base,1, 'changed soil tint paints immediately');
 tintWork.reset();tint.clock.now+=100000;tint.tick();assert.equal(tintWork.base,1, 'delayed tick paints once at current age, no replay');
 
-console.log(`PASS: dense garden + 8 puddles + 3 curiosities + gnomes: 120 RAF callbacks + 4 lifecycle ticks -> ${stressReport}; another 120 dropped events cause zero extra base rebuilds. Layer isolation/local vines/1Hz aging/immediate state changes/one scheduler/FPS/hidden/DPR/resize/hits/mutations/activity checks passed.`);
+console.log(`PASS: dense garden + 8 puddles + 3 curiosities + 3 loose drops + gnomes: 120 RAF callbacks + 4 lifecycle ticks -> ${stressReport}, 90 tiny drop renders; another 120 dropped events cause zero extra base rebuilds. Layer isolation/local vines/1Hz aging/immediate state changes/one scheduler/FPS/hidden/DPR/resize/hits/mutations/activity checks passed.`);

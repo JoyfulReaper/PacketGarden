@@ -109,6 +109,11 @@ canvas.addEventListener("click", event => {
     collectFirstSeenCuriosity(curiosity);
     return;
   }
+  const drop = typeof looseDropAt === "function" ? looseDropAt(point) : null;
+  if (drop) {
+    collectLooseDrop(drop);
+    return;
+  }
   const specimen = specimenAtGardenPoint(point);
   if (specimen && typeof isCollectibleMutationHit === "function" && isCollectibleMutationHit(specimen, point)) {
     collectSpecimenMutation(specimen);

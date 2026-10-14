@@ -173,7 +173,26 @@ Recent activity continues to describe the original redbloom event, with no extra
 mutation/collection row. Collection says `You collected some weed. +0 points`;
 the permanent static `Score: 0` has no scoring or persistence state. Ordinary
 TCPNoise weeds are independent of this browser-only mutation. Vine/opium and
-mushroom/Amanita mutations or loose drops remain future work.
+opium pod drops remain future work.
+
+Successful live mushroom growth gets a separate 1% browser-only Amanita muscaria
+drop roll using the exact authoritative spawned/replaced specimen. The candidate
+activates after five seconds only if that same source still lives in the garden;
+it never changes the source's type, color, vigor, cell, provenance, or lifecycle.
+Active drops store only type, creation/expiry times, logical x/y, and phase in
+`gardenState.drops`; pending attempts hold the exact source reference without
+copying the event. The independent cap is three, checked at activation; due
+attempts skipped at the cap are consumed without retry. Each drop lasts 20 active
+seconds, consumes no specimen cell, and affects no grass or puddles. It shares
+the dynamic overlay and existing logical tick, with no per-drop timer or base
+invalidation. Hidden tabs paint nothing; resume processes current due attempts
+once, bounded by the cap, without replaying missed frames. Expired sources cancel.
+Clicks route curiosity, loose drop, mutation, inspection. Collection says
+`You found Amanita muscaria. +0 points` with optional existing audio. Score stays 0;
+no drop lifecycle action adds Recent activity, inventory, counters, or saved state.
+Fake Gopher and dropped saturated events do not roll. Chance has no vigor,
+rarity, sensor, weather, first-seen, or security meaning. Curiosity/mutation caps
+and gnome ownership remain separate.
 
 A second implemented use is an exact sanitized `seenCount === "1"` first-seen curiosity:
 
@@ -283,10 +302,11 @@ specimen, not a security identity or threat classification.
 
 Live aggregate weather, NATS-backed TCPNoise growth, event-driven weed/rare growth,
 click inspection of live specimen provenance, Recent activity, delayed collectible
-weed mutations, bounded first-seen curiosities, temporary storm-water terrain,
+weed mutations, Amanita loose drops, bounded first-seen curiosities, temporary storm-water terrain,
 and the static zero score are implemented.
 
-Vine/opium and mushroom/Amanita mutations/drops, other collectibles, Stillbloom,
+Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
+other collectibles, Stillbloom,
 water/creature interactions, local-time lighting, persistence, other protocol/auth-aware adapters, and
 richer specimen responses remain future work.
 

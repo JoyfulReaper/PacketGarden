@@ -1,4 +1,4 @@
-// Collectible mutations belong to their exact specimen. Loose drops are a future layer.
+// Collectible mutations belong to their exact specimen, independently of loose drops.
 const specimenMutationConfig = {
   port22WeedChance: 0.05,
   mutationDelayMs: 3_000,
