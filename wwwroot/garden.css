@@ -60,19 +60,38 @@ footer {
   color: #a9b5a2;
 }
 
-button {
+button, select, input {
   font: inherit;
   color: #e1e6d7;
   background: #354337;
   border: 1px solid #71816a;
   border-radius: 4px;
   padding: 6px 10px;
+}
+
+button, select {
   cursor: pointer;
 }
 
-button:focus-visible {
+button:focus-visible, select:focus-visible, input:focus-visible {
   outline: 2px solid #e1e6d7;
   outline-offset: 3px;
+}
+
+.weather-controls {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  padding-top: 8px;
+  color: #a9b5a2;
+  font-size: 13px;
+}
+
+#weather-intensity {
+  width: 100px;
 }
 
 button:disabled {

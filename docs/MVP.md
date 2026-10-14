@@ -16,6 +16,7 @@ goals, with the existing browser garden as the starting point.
 - All five initial mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and failed-authentication red blooms.
 - Simple procedural art, including visual connections between neighboring vine cells.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
+- Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
 - One normalized browser event path: `GardenEvent -> handler -> specimen state -> update -> renderer`.
 - Cluster-first placement: usually an empty touching cell near the same species, occasionally a cell two steps away, with an empty-cell fallback.
 - Shared occupancy of one specimen per cell across all species.

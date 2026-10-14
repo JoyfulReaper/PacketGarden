@@ -17,6 +17,19 @@
       An empty rectangular soil garden with a subtle square grid.
     </canvas>
   </main>
+  <div class="weather-controls" aria-label="Temporary weather controls">
+    <label for="weather-level">Weather</label>
+    <select id="weather-level">
+      <option value="quiet">Quiet</option>
+      <option value="drizzle">Drizzle</option>
+      <option value="rain">Rain</option>
+      <option value="heavy_rain">Heavy rain</option>
+      <option value="botnet_thunderstorm">Botnet thunderstorm</option>
+      <option value="botnet_hurricane">Botnet hurricane</option>
+    </select>
+    <label for="weather-intensity">Events/min</label>
+    <input id="weather-intensity" type="number" min="0" max="1000000" step="100" value="1200">
+  </div>
   <footer aria-label="Temporary development controls">
     <button id="fake-dns" type="button">Generate fake DNS event</button>
     <button id="fake-gopher" type="button">Generate fake Gopher event</button>

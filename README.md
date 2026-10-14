@@ -118,8 +118,12 @@ the new specimen, for at most two grass cells per event. Grass does not occupy
 specimen slots or affect their counts. Strength is capped at 3; grass fades after 20 minutes
 without influence and disappears after 30. Re-influence refreshes that timer.
 
+Manual browser weather previews quiet, drizzle, rain, heavy rain, botnet
+thunderstorm, and botnet hurricane. The Events/min input adjusts visual intensity;
+weather does not affect organisms or grass.
+
 Real sensors, NATS adapters, and SSE are not implemented. Inspection, local-time
-lighting, persistence, ecological competition, and aggregate weather effects
+lighting, persistence, ecological competition, and real aggregate weather input
 remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
@@ -137,6 +141,12 @@ to add a vine, or **Generate fake failed-auth event** to add a red bloom.
 Click **Start automatic fake traffic** to leave the garden running, and
 **Stop automatic fake traffic** to pause arrivals without resetting the garden.
 Manual buttons remain available while automatic traffic runs.
+
+Use the **Weather** selector and **Events/min** input to preview environmental
+rain separately from fake specimen traffic. Quiet restores the normal garden;
+zero intensity also removes the rain and dampening tint. Larger values increase
+rain density, speed, and soil darkening, saturating visually at 10,000 events/min.
+Storm levels currently scale the same rainfall, without lightning or damage.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and failed auth 2.

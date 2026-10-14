@@ -4,8 +4,8 @@
 
 The browser prototype already has five event mappings, clustered placement,
 species lifecycles, and weighted fake traffic. The backend currently serves static
-files. Real sensor ingestion, NATS adapters, SSE, and environmental weather are
-not implemented.
+files. Manual browser weather is a visual preview only. Real sensor ingestion,
+NATS adapters, SSE, and aggregate environmental weather input are not implemented.
 
 The intended path is:
 

@@ -4,7 +4,8 @@ These mappings are intentionally playful and provisional. The goal is to create 
 
 The five mappings listed in the prototype subset below are implemented with fake
 events. Other effects in this table are proposals; real telemetry adapters,
-weather, weeds, and mutations are not implemented.
+aggregate weather input, weeds, and mutations are not implemented. Manual weather
+controls preview rainfall without consuming telemetry or affecting ecology.
 
 | Event | Garden effect | Notes |
 | --- | --- | --- |

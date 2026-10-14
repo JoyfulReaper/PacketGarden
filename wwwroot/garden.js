@@ -7,6 +7,48 @@ const fakeSshButton = document.querySelector("#fake-ssh");
 const fakeFailedAuthButton = document.querySelector("#fake-failed-auth");
 const automaticTrafficButton = document.querySelector("#automatic-traffic");
 const gardenStatus = document.querySelector("#garden-status");
+const weatherLevelControl = document.querySelector("#weather-level");
+const weatherIntensityControl = document.querySelector("#weather-intensity");
+
+const weatherState = { level: "quiet", eventsPerMinute: 1200 };
+const weatherLevels = new Map([
+  ["quiet", { drops: 0, speed: 0, darkening: 0, length: 0, opacity: 0 }],
+  ["drizzle", { drops: 16, speed: 120, darkening: 0.04, length: 5, opacity: 0.18 }],
+  ["rain", { drops: 48, speed: 260, darkening: 0.09, length: 8, opacity: 0.35 }],
+  ["heavy_rain", { drops: 100, speed: 430, darkening: 0.14, length: 11, opacity: 0.4 }],
+  ["botnet_thunderstorm", { drops: 170, speed: 570, darkening: 0.18, length: 13, opacity: 0.42 }],
+  ["botnet_hurricane", { drops: 256, speed: 720, darkening: 0.22, length: 16, opacity: 0.44 }]
+]);
+let weatherAnimationFrame = null;
+
+function weatherIntensity() {
+  return Math.min(1, Math.log1p(weatherState.eventsPerMinute) / Math.log1p(10_000));
+}
+
+function updateWeatherAnimation() {
+  if (weatherAnimationFrame !== null) {
+    window.cancelAnimationFrame(weatherAnimationFrame);
+    weatherAnimationFrame = null;
+  }
+  drawGarden();
+  if (weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0) {
+    weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
+  }
+}
+
+function animateWeather() {
+  drawGarden();
+  weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
+}
+
+weatherLevelControl.addEventListener("change", () => {
+  weatherState.level = weatherLevelControl.value;
+  updateWeatherAnimation();
+});
+weatherIntensityControl.addEventListener("input", () => {
+  weatherState.eventsPerMinute = Math.min(1_000_000, Math.max(0, Number(weatherIntensityControl.value) || 0));
+  updateWeatherAnimation();
+});
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
 const gardenWidth = 960;
@@ -547,6 +589,44 @@ function drawGrass(grass, now) {
   context.restore();
 }
 
+function drawWeatherSoil() {
+  const intensity = weatherIntensity();
+  const weather = weatherLevels.get(weatherState.level);
+  if (weather.darkening === 0 || intensity === 0) return;
+  context.save();
+  context.fillStyle = "#172c28";
+  context.globalAlpha = weather.darkening * (0.5 + intensity * 0.5);
+  context.fillRect(0, 0, gardenWidth, gardenHeight);
+  context.restore();
+}
+
+function drawRain(now) {
+  const intensity = weatherIntensity();
+  const weather = weatherLevels.get(weatherState.level);
+  if (weather.drops === 0 || intensity === 0) return;
+  const drops = Math.min(256, Math.round(weather.drops * (0.25 + intensity * 0.75)));
+  const speed = weather.speed * (0.6 + intensity * 0.4);
+
+  context.save();
+  context.beginPath();
+  context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
+  context.clip();
+  context.strokeStyle = "#b7cdd0";
+  context.globalAlpha = weather.opacity;
+  context.lineWidth = 1;
+  context.beginPath();
+  for (let drop = 0; drop < drops; drop++) {
+    // Fixed seeds plus elapsed time animate a bounded layer without particle/ecology state.
+    const x = (drop * 137.508 + (drop % 7) * 19) % gardenWidth;
+    const y = (drop * 127.7 + now / 1000 * speed * (0.85 + (drop % 5) * 0.05))
+      % (gardenHeight + 30) - 15;
+    context.moveTo(x, y);
+    context.lineTo(x + 2, y + weather.length);
+  }
+  context.stroke();
+  context.restore();
+}
+
 function drawGarden() {
   const { width, height } = canvas.getBoundingClientRect();
   if (width <= 0 || height <= 0) return;
@@ -569,6 +649,8 @@ function drawGarden() {
 
   context.fillStyle = "#685b45";
   context.fillRect(0, 0, gardenWidth, gardenHeight);
+
+  drawWeatherSoil();
 
   context.beginPath();
   for (let x = cellSize; x < gardenWidth; x += cellSize) {
@@ -594,6 +676,7 @@ function drawGarden() {
   for (const specimen of gardenState.specimens) {
     speciesConfig.get(specimen.type).render(specimen, now);
   }
+  drawRain(now);
 }
 
 new ResizeObserver(drawGarden).observe(canvas);
