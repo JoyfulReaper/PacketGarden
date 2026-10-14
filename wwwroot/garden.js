@@ -509,11 +509,11 @@ function drawBroadleaf(specimen, now) {
     const angle = leaf * Math.PI * 2 / leafCount - Math.PI / 4;
     context.save();
     context.rotate(angle);
-    context.fillStyle = fading ? "#8d8653" : leaf % 2 === 0 ? "#6e9a56" : "#527c44";
+    context.fillStyle = fading ? "#8f7a76" : leaf % 2 === 0 ? "#8d6f9f" : "#6f567f";
     context.beginPath();
     context.ellipse(6, 0, 7, 4, 0, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = fading ? "#a59a67" : "#9bbb76";
+    context.strokeStyle = fading ? "#b29b92" : "#c4a9d3";
     context.lineWidth = 1;
     context.beginPath();
     context.moveTo(1, 0);
@@ -779,9 +779,15 @@ function drawGarden() {
   drawRain(now);
 }
 
-function seedInitialGrass(now = Date.now()) {
-  const cell = Math.floor(Math.random() * columns * rows);
-  influenceGrassCell(cell % columns, Math.floor(cell / columns), now);
+function seedInitialGrass(count = 5, now = Date.now()) {
+  const totalCells = columns * rows;
+  const seeds = Math.min(count, totalCells);
+  for (let seed = 0; seed < seeds; seed++) {
+    const start = Math.floor(seed * totalCells / seeds);
+    const end = Math.floor((seed + 1) * totalCells / seeds);
+    const cell = start + Math.floor(Math.random() * (end - start));
+    influenceGrassCell(cell % columns, Math.floor(cell / columns), now);
+  }
 }
 
 seedInitialGrass();
