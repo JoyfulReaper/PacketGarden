@@ -127,8 +127,15 @@ Automatic traffic is off initially. It generates one event every 1.2–2.8 secon
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and failed auth 2.
 Tune the delays and weights together in `fakeTrafficConfig` in `wwwroot/garden.js`.
 
-The whole garden scales to fit the window, and specimens survive
-resizing. Development lifecycles last
-35 seconds for flowers, 42 seconds for mushrooms, 50 seconds for broad-leaf
-plants, 60 seconds for vines, and 10 seconds for red blooms. Red blooms wilt after
-4 seconds. State is held only in browser memory; reloading starts an empty garden.
+The whole garden scales to fit the window, and specimens survive resizing.
+Lifecycle thresholds below are elapsed time since creation:
+
+| Species | Starts growing | Becomes mature | Starts wilting/decaying | Removed |
+| --- | --- | --- | --- | --- |
+| Flower | 15 seconds | 45 seconds | Wilts at 3 minutes | 4 minutes |
+| Mushroom | 12 seconds | 40 seconds | Decays at 4 minutes | 5 minutes |
+| Broad-leaf plant | 20 seconds | 1 minute | Fades at 5 minutes | 6 minutes |
+| Vine | 20 seconds | 1 minute | Dries at 8 minutes | 10 minutes |
+| Red bloom | Blooms immediately | — | Wilts at 10 seconds | 30 seconds |
+
+State is held only in browser memory; reloading starts an empty garden.

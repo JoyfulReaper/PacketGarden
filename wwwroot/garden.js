@@ -16,34 +16,34 @@ const margin = 16;
 const columns = gardenWidth / cellSize;
 const rows = gardenHeight / cellSize;
 
-// Short development timings, measured from each specimen's creation.
+// Lifecycle thresholds, measured from each specimen's creation.
 const flowerTimings = {
-  growingAfterMs: 5_000,
-  matureAfterMs: 12_000,
-  wiltingAfterMs: 25_000,
-  expiredAfterMs: 35_000
+  growingAfterMs: 15_000,
+  matureAfterMs: 45_000,
+  wiltingAfterMs: 180_000,
+  expiredAfterMs: 240_000
 };
 const mushroomTimings = {
-  growingAfterMs: 4_000,
-  matureAfterMs: 10_000,
-  decayingAfterMs: 30_000,
-  expiredAfterMs: 42_000
+  growingAfterMs: 12_000,
+  matureAfterMs: 40_000,
+  decayingAfterMs: 240_000,
+  expiredAfterMs: 300_000
 };
 const broadleafTimings = {
-  growingAfterMs: 6_000,
-  matureAfterMs: 14_000,
-  fadingAfterMs: 38_000,
-  expiredAfterMs: 50_000
+  growingAfterMs: 20_000,
+  matureAfterMs: 60_000,
+  fadingAfterMs: 300_000,
+  expiredAfterMs: 360_000
 };
 const vineTimings = {
-  growingAfterMs: 5_000,
-  matureAfterMs: 12_000,
-  dryingAfterMs: 45_000,
-  expiredAfterMs: 60_000
+  growingAfterMs: 20_000,
+  matureAfterMs: 60_000,
+  dryingAfterMs: 480_000,
+  expiredAfterMs: 600_000
 };
 const redbloomTimings = {
-  wiltingAfterMs: 4_000,
-  expiredAfterMs: 10_000
+  wiltingAfterMs: 10_000,
+  expiredAfterMs: 30_000
 };
 const updateEveryMs = 250;
 
