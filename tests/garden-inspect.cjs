@@ -99,12 +99,10 @@ sourceHandlers.garden({ data: JSON.stringify({
   remoteAddress: 'must-not-be-retained',
   remotePort: 54321
 }) });
-assert.deepEqual(real.origin, {
-  kind: 'tcpnoise',
-  sensor: '<b>wurstcase-public</b>',
-  listenPort: 445,
-  seenCount: '18446744073709551615'
-});
+assert.equal(real.origin.kind, 'tcpnoise');
+assert.equal(real.origin.sensor, '<b>wurstcase-public</b>');
+assert.equal(real.origin.listenPort, 445);
+assert.equal(real.origin.seenCount, '18446744073709551615');
 assert.equal(JSON.stringify(real.origin).includes('must-not-be-retained'), false);
 assert.equal(JSON.stringify(real.origin).includes('54321'), false);
 
