@@ -95,9 +95,9 @@ The visual simulation is the interesting part. Avoid building infrastructure bef
 
 ## Privacy
 
-PacketGarden should consume sanitized event summaries rather than raw packet payloads or sensitive telemetry.
+PacketGarden consumes normalized event summaries rather than raw packet payloads or sensitive telemetry.
 
-The renderer should not need raw IP addresses, credentials, request payloads, or secrets to make the garden interesting.
+Live click inspection deliberately receives a bounded sensor label and exact TCPNoise `seenCount` in addition to specimen type, listening port, and coarse vigor. Raw remote IP addresses, remote source ports, credentials, banners, and packet/request payloads are not sent to the browser.
 
 ## Planning docs
 
@@ -165,6 +165,14 @@ species-specific fullness/detail and, only when all 640 specimen cells are full,
 lets stronger recurring growth displace weaker ordinary growth. Species, rarity,
 lifetimes, and growth speed remain independent of vigor. Fake controls use vigor 0.
 
+Clicking a living specimen opens a small information card. Live TCPNoise growth
+shows the normalized species, sensor label, listening port, exact `seenCount`,
+coarse vigor, color scheme, and age. Valid counts are transported as decimal text
+so JavaScript cannot round a large UInt64 value. Fake-development growth is marked
+as simulated and does not invent sensor or port provenance. Clicking empty soil,
+pressing Escape, or using the close button dismisses the card; it also closes if
+the inspected specimen expires or is displaced.
+
 TCPNoise mushrooms now have the narrower base-port set **21 and 70**. Port 445
 has a broadleaf base; 5432, 6379, and 9200 have flower bases. These mappings are
 aesthetic, without asserting application protocols; rarity odds are unchanged.
@@ -178,9 +186,11 @@ Equal vigor cannot churn the garden, and incoming rare growth gets the same gate
 Successful replacements use the normal growth sound/cooldowns; dropped events
 are silent. Real TCPNoise replacement does not seed or refresh grass. The existing
 status adds a full-garden note at capacity and removes it after space opens.
-The browser receives only `specimenType`, `listenPort`, and integer `vigor` (0–3),
-never exact repeat counts, sensor names, or IP details. Other discrete adapters, inspection, local-time lighting,
-persistence, and richer ecological competition remain planned work; see [MVP](docs/MVP.md).
+The browser-facing TCPNoise growth contract is `specimenType`, `listenPort`, and
+integer `vigor` (0–3), plus optional bounded `sensor` and exact decimal-string
+`seenCount` for inspection. Remote endpoint/IP and payload details remain excluded.
+Other discrete adapters, local-time lighting, persistence, and richer ecological
+competition remain planned work; see [MVP](docs/MVP.md).
 
 ## Run the prototype
 
@@ -196,7 +206,8 @@ add a flower, **Generate fake Gopher event** to add a mushroom,
 to add a vine, or **Fake port 22 probe** to add a red bloom without grass influence.
 Click **Start automatic fake traffic** to leave the garden running, and
 **Stop automatic fake traffic** to pause arrivals without resetting the garden.
-Manual buttons remain available while automatic traffic runs.
+Manual buttons remain available while automatic traffic runs. Click any living
+specimen in the Canvas to inspect its provenance and visual details.
 
 Weather source defaults to **Live**, with manual weather inputs disabled.
 Choose **Manual** to enable the inputs and override weather locally. A small
@@ -234,8 +245,9 @@ with no replay after reconnection; fake controls remain available in either mode
 See [Real data](docs/REAL-DATA.md) for validation, mapping, and fleet inventory.
 
 Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Checks`,
-browser-path checks with `node tests/garden-events.cjs`, and focused grass ecology
-checks with `node tests/grass-ecology.cjs`.
+browser-path checks with `node tests/garden-events.cjs`, focused inspection checks
+with `node tests/garden-inspect.cjs`, and focused grass ecology checks with
+`node tests/grass-ecology.cjs`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.
