@@ -588,7 +588,7 @@ function drawVine(specimen, now) {
 
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
-  context.strokeStyle = drying ? "#857454" : "#527943";
+  context.strokeStyle = drying ? "#857454" : "#a8b84f";
   context.lineWidth = (drying ? 1 : stage === "mature" ? 2.5 : 1.5) + vigor * 0.4;
   context.lineCap = "round";
 
@@ -617,7 +617,7 @@ function drawVine(specimen, now) {
   context.bezierCurveTo(-9 * size, -3 * size, 8 * size, 4 * size, 8 * size, -7 * size);
   context.stroke();
 
-  context.fillStyle = drying ? "#8c8056" : "#78934e";
+  context.fillStyle = drying ? "#8c8056" : "#c0cf57";
   context.beginPath();
   context.ellipse(-5 * size, 4 * size, (4 + vigor * 0.3) * size, (1.8 + vigor * 0.2) * size, -Math.PI / 4, 0, Math.PI * 2);
   context.fill();
@@ -631,7 +631,7 @@ function drawVine(specimen, now) {
   }
 
   if (stage !== "sprout") {
-    context.fillStyle = drying ? "#a08b67" : "#c3b080";
+    context.fillStyle = drying ? "#a08b67" : "#d5c96a";
     context.beginPath();
     context.moveTo(-4 * size, 1 * size);
     context.lineTo((-8 - vigor * 0.4) * size, (-4 - vigor * 0.4) * size);
