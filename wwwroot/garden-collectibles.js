@@ -1,9 +1,6 @@
 // Collectible mutations belong to their exact specimen, independently of loose drops.
 const specimenMutationConfig = {
-  port22WeedChance: 0.05,
-  mutationDelayMs: 3_000,
-  maxActive: 3,
-  collectibleLifetimeMs: 20_000,
+  ...window.PacketGardenMutations.config,
   messageDurationMs: 2_000,
   hitRadius: 12
 };
@@ -32,50 +29,24 @@ function updateCollectionMessage(now = Date.now()) {
 }
 
 function scheduleSpecimenMutation(specimen, type, now = Date.now()) {
-  if (!gardenState.specimens.includes(specimen) || !specimenMutationTypes.has(type)
-    || specimen.pendingMutation || specimen.mutation
-    || now - specimen.createdAt >= speciesConfig.get(specimen.type).timings.expiredAfterMs) return false;
-  specimen.pendingMutation = { type, activateAt: now + specimenMutationConfig.mutationDelayMs };
-  return true;
+  return gardenMutations.scheduleMutation(specimen, type, now);
 }
 
 function maybeSchedulePort22Mutation(specimen, roll, now = Date.now()) {
-  if (specimen?.type !== "redbloom" || specimen.origin?.kind !== "tcpnoise"
-    || specimen.origin.listenPort !== 22 || !gardenState.specimens.includes(specimen)) return false;
-  roll ??= Math.random();
-  if (!Number.isFinite(roll) || roll < 0 || roll >= specimenMutationConfig.port22WeedChance) return false;
-  return scheduleSpecimenMutation(specimen, "collectible_weed", now);
+  return gardenMutations.maybeSchedulePort22Mutation(specimen, roll, now);
 }
 
 function activateSpecimenMutation(specimen, now = Date.now()) {
-  const pending = specimen.pendingMutation;
-  if (!pending || now < pending.activateAt || !gardenState.specimens.includes(specimen)) return false;
-  // A due attempt is consumed even at the cap. There is no retry queue.
-  delete specimen.pendingMutation;
-  if (specimen.mutation || !specimenMutationTypes.has(pending.type)
-    || now - specimen.createdAt >= speciesConfig.get(specimen.type).timings.expiredAfterMs) return false;
-  const active = gardenState.specimens.filter(item => item.mutation && now < item.mutation.expiresAt).length;
-  if (active >= specimenMutationConfig.maxActive) return false;
-  specimen.mutation = {
-    type: pending.type,
-    createdAt: now,
-    expiresAt: now + specimenMutationConfig.collectibleLifetimeMs
-  };
-  return true;
+  return gardenMutations.activateMutation(specimen, now);
 }
 
 // Called by updateGarden after expired specimens are removed, before drawing.
 function updateSpecimenMutations(now) {
-  let changed = false;
-  for (const specimen of gardenState.specimens) {
-    if (activateSpecimenMutation(specimen, now)) changed = true;
-  }
-  return changed;
+  return gardenMutations.tick(now);
 }
 
 function specimenMutationLabel(specimen, now = Date.now()) {
-  return specimen.mutation && now < specimen.mutation.expiresAt
-    ? specimenMutationTypes.get(specimen.mutation.type)?.label ?? "None" : "None";
+  return window.PacketGardenMutations.mutationLabel(specimen, now);
 }
 
 function isCollectibleMutationHit(specimen, point, now = Date.now()) {

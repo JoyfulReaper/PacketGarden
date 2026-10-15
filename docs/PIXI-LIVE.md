@@ -1,4 +1,161 @@
-# Pixi live garden with shared ambient state
+# Pixi live garden with shared specimen mutations
+
+The latest 2026-10-15 slice adds the existing `collectible_weed` specimen mutation
+to `/pixi-live.html`. Production `/` remains Canvas. The synthetic stress page,
+backend, SSE payloads, core specimen lifecycle, ecology and ambient modules are
+unchanged. Opium is not implemented. Pixi mutation appearance and lifecycle now
+have parity; collection and inspection remain deferred.
+
+## Shared mutation ownership and rules
+
+`garden-mutations.js` is separate from ambient objects: a mutation belongs to an
+exact existing specimen, never another object or occupied cell. It exports
+`config`, `isMutationActive(specimen, at?)`, `mutationLabel(specimen, at?)` and
+`createMutationModel({ garden, now?, random?, onChange? })`. The model exposes
+`maybeSchedulePort22Mutation`, `scheduleMutation`, `activateMutation`, `tick`,
+`removed`, `snapshot`, constant-size `counts`, and `clear` (which clears the owning
+garden). No source map, timer, event history or rendering dependency is retained.
+
+Only a present redbloom with `origin.kind === "tcpnoise"` and integer port `22`
+qualifies on the real-event path. A finite, nonnegative roll strictly below
+`0.05` schedules `{ type: "collectible_weed", activateAt: now + 3000 }` on that
+exact specimen. Ineligible sources consume no roll; eligible duplicates retain
+the previous roll ordering and cannot gain a second marker. Fake growth never
+passes this provenance gate.
+
+After the garden reconciles expiry, the existing 250ms logical cadence consumes
+due markers in specimen order. At most three activate. A fourth due attempt is
+consumed and skipped permanently, with no backlog/retry. Activation attaches only
+`{ type, createdAt: now, expiresAt: now + 20000 }`; id, cell, coordinates, vigor,
+source creation time, palette and origin remain intact. Core `lifecycleStage` and
+`nextChangeAt` already make the absolute mutation expiry authoritative, even past
+ordinary redbloom expiry. Expiry removes the exact specimen and occupancy entry;
+it never reverts to redbloom. Core rules were left unchanged.
+Incoming Pixi events also reconcile due mutations before placement/competition,
+matching Canvas's `updateGarden` ordering between logical scheduler ticks.
+
+Both adapters forward core removal notifications synchronously to `removed`.
+Pending state is deleted for natural expiry, saturation replacement, explicit
+removal, collection and clear. No same-cell replacement can inherit it. Active
+mutations retain current production saturation behavior: canonical redblooms are
+still eligible for ordinary strictly-higher-vigor displacement. No protection was
+added. Loose Amanita pending state remains independent in `garden-ambient.js`.
+
+Canvas's existing mutation functions are thin adapters. Its art, 12px hit radius,
+animation scheduler, click priority, inspection, collection sound, exact-specimen
+removal and `You collected some weed. +0 points` message are unchanged. Score and
+activity are unchanged. A frozen oracle captured from `934089d` before extraction
+compares full state and drawing commands through pending/activation/animation,
+including palette/RNG ordering and collection output.
+
+## Pixi mutation presentation and controls
+
+Activation swaps the existing specimen Sprite's texture to one cached rooted
+ochre/green plant with paired leaves, a pale bud and glint. No extra Sprite,
+container or cell is created. A bounded map of at most three active views receives
+subtle rotation/alpha updates each RAF; no garden reconciliation, Graphics rebuild
+or texture generation happens there. The whole-plant transform/glint approximates
+Canvas's moving stem/glint. Pending state remains visually ordinary. At absolute
+expiry the view becomes invisible until the next logical removal, preventing a
+late-tick flash; that exact Sprite is then destroyed. Weather never recreates it.
+
+The specimen atlas has **763 frames** (762 existing + one mutation frame), with
+the same 2048×1536 backing and GPU source. Ecology still has 13 frames and ambient
+five: **781 total cached frames across three sources**, up from 780. A full dense
+seed with three mutations still has **1,372 display objects**: 640 specimen
+Sprites, 640 grass, eight puddles, six ambient, 64 vine Graphics, 14 fixed objects.
+The 400 hurricane particles are unchanged. Counts subsequently follow natural
+expiry and real-event churn.
+
+`Seed 3 mutations` locally prepares up to three simulated redblooms and activates
+due fixtures. `Seed 4 pending mutations` prepares up to four ordinary sources,
+waits the real three seconds, and exercises the cap. Fixture source age is prepared
+as 20 seconds *before scheduling*, making survival past ordinary expiry visible.
+These controls send no traffic and never give simulated provenance access to the
+real probability gate. Existing eligible simulated redblooms keep their views;
+if necessary, ordinary model placement creates sources subject to saturation.
+The HUD reports active/pending/views/activations/cap skips/cancellations/expiries;
+diagnostics remain transient and local. Clear removes every pending/active/view.
+
+## Validation for the mutation slice
+
+Changed runtime files: `garden-mutations.js` (new), `garden.js`,
+`garden-collectibles.js`, `index.html`, `pixi-live-core.js`, `pixi-live.js`, and
+`pixi-live.html`, all under `wwwroot/`. Documentation: this file. Changed existing
+test loaders/suites: `tests/garden-audio.cjs`, `tests/garden-events.cjs`,
+`tests/gnome-events.cjs`, `tests/pixi-ecology-integration.cjs`, and
+`tests/pixi-live.cjs`. New tests: `tests/garden-mutations.cjs`,
+`tests/mutation-canvas-parity.cjs`, `tests/pixi-mutations.cjs`, and frozen fixture
+`tests/fixtures/mutation-canvas-934089d.json`.
+
+All 30 Node suites pass, including shared mutation rules, exact cancellation and
+replacement, frozen Canvas parity, same-Sprite Pixi activation/expiry, bounded
+atlas cardinality, dense ecology/ambient/weather isolation, actual entry-point
+controls/SSE/visibility callbacks, and all previous scheduling/interaction suites.
+`dotnet build` passes with zero warnings/errors; `dotnet run --project
+tests/PacketGarden.Checks` passes. An initial build encountered the running preview
+DLL's file lock; stopping that preview and rebuilding resolved it.
+
+### Browser observations (local WebGL, 2026-10-15)
+
+The real collector connection used the supplied NATS endpoint. Live growth and
+weather shared the existing single SSE stream; no synthetic backend events were
+published. The first attempt was visibly throttled near 1 FPS between interactions
+despite `document.hidden === false`. After the user foregrounded the Codex preview,
+normal ticking returned. That throttled attempt is excluded from the comparison.
+
+| Foreground run | Duration | Recent/session FPS | Worst interval | >50ms / >300ms |
+| --- | ---: | ---: | ---: | ---: |
+| Initial dense hurricane + real SSE | 288.7s | 60.0 / 59.9 | 50.4ms | 2 / 0 |
+| Final code, including resize and real SSE | 211.2s | 60.0 / 59.9 | 33.4ms | 0 / 0 |
+
+The first run preceded the small incoming-event ordering correction described
+above; the second used the final code. A separate fresh-page startup had one
+100.2ms gap, consistent with the previous startup observation, and none over
+300ms. No recurring 300–500ms stalls appeared. At 34.5s after the isolated
+390×844 → 1280×1000 resize, worst interval was 17.2ms with zero >50ms gaps.
+Later full-page screenshot capture also changed presentation width temporarily;
+the reported final-run 33.4ms maximum includes that normal tool activity.
+
+Full dense seeding started at 640 specimens, 640 grass, eight puddles, six ambient,
+three mutation views, 64 vine Graphics and 400 hurricane particles: 1,372 display
+objects. Temporary ambient/mutation fixtures were replenished periodically, then
+allowed to expire naturally. Counts were not held artificially constant. The
+final run ended at 603 specimens (98 accepted live), 640 grass, eight puddles,
+126 vine Graphics and one real curiosity: 1,392 display objects. Cache cardinality
+stayed 763 + 13 + 5. Console warnings/errors were absent during the final check.
+
+Forced pending controls showed ordinary redblooms, then three rooted mutation
+plants and a consumed fourth cap attempt. Active plants survived seeded ordinary
+expiry and disappeared naturally. Resize preserved presentation, and clear/refill
+removed pending markers, active views and occupancy; empty scene returned to 14
+fixed objects. Unit/entry-point tests establish exact Sprite/reference identity
+and boundary timing more precisely than visual sampling.
+
+Canvas was checked on `/` with fake DNS/Gopher/HTTP growth, grass, real SSE input,
+and manual hurricane weather. A temporary local page using the exact production
+scripts provided an explicitly labelled, forced aged port-22 fixture without
+backend traffic. It showed the mutation inspection label at source age **32s**,
+past normal redbloom expiry. Clicking its center removed only that specimen,
+closed its card, left the ordinary neighbor and displayed the exact +0 message.
+Sound was enabled; audible output was not independently verified. Automated
+tests assert the unchanged collection sound call, click priority and occupancy.
+The temporary served fixture was removed; production has no forced-mutation UI.
+
+These were sampled observations of actual rendered rain/probes/visitors/mutation
+appearance, plus bounded ticker metrics, not uninterrupted human observation or
+GPU-completion measurements. No naturally occurring rare mutation is claimed;
+mutation visual checks used explicitly forced local fixtures. Browser-level
+background suspension was not independently demonstrated; actual registered
+visibility callbacks are covered with injected time in the entry-point suite.
+
+The next slice should add unified Pixi hit testing and interaction, preserving
+Canvas's visitor → loose drop → mutation → specimen inspection priority. Pixi
+collection, inspection, audio, activity, score and gnomes remain deferred.
+
+---
+
+# Historical: shared ambient state slice
 
 The 2026-10-15 slice adds real first-seen visitors and loose Amanita muscaria to
 the opt-in `/pixi-live.html` garden. `/` remains production Canvas;

@@ -2,6 +2,7 @@
 (function () {
   'use strict';
   const garden = typeof module !== 'undefined' && module.exports ? require('./garden-core.js') : window.PacketGardenCore;
+  const mutationCore = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
   const { dimensions, timings, species, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
@@ -51,18 +52,40 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
+      else if (kind === 'removed') { mutations.removed(specimen, reason); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
-    return { specimens: model.specimens, byCell: model.byCell, counts, tick: model.tick, clear: model.clear,
+    const mutations = mutationCore.createMutationModel({ garden: model, now, random });
+    function tick(at = now()) {
+      model.tick(at);
+      if (mutations.tick(at)) model.tick(at); // Publish the mutation stage on the existing specimen view.
+    }
+    return { specimens: model.specimens, byCell: model.byCell, counts, mutations, tick, clear: model.clear,
       accept(raw) {
         const event = normalizeGarden(raw); if (!event) return null;
         if (paused) { counts.pausedEvents++; return null; }
+        tick(); // Match Canvas: reconcile due mutations before incoming growth competes for a cell.
         const result = model.addEvent(event);
         if (!result) return null;
-        counts.acceptedLive++; onLive(result.specimen); return result.specimen;
+        counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); onLive(result.specimen); return result.specimen;
       },
       setPaused(value) { paused = value; },
+      seedMutations(pending = false) {
+        // Explicit local fixtures, independent of SSE, its provenance gate and probability.
+        const at = now(), sources = model.specimens.filter(p => p.type === 'redbloom' && p.origin?.kind === 'simulated'
+          && !p.mutation && !p.pendingMutation).slice(0, pending ? 4 : 3);
+        while (sources.length < (pending ? 4 : 3)) {
+          const result = model.addSpecimen('redbloom', 3, at, { kind: 'simulated' });
+          if (!result) break;
+          sources.push(result.specimen);
+        }
+        for (const source of sources) {
+          // Prepare age before scheduling so the active fixture demonstrably outlives normal expiry.
+          source.createdAt = at - 20000;
+          mutations.scheduleMutation(source, 'collectible_weed', pending ? at : at - mutationCore.config.mutationDelayMs);
+        }
+        tick(at);
+      },
       seed() {
         const at = now();
         model.seed(Array.from({ length: dimensions.capacity }, (_, cell) => {

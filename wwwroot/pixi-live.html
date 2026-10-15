@@ -7,6 +7,7 @@
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
+  <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js" defer></script>
   <script src="garden-ambient.js" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
@@ -21,6 +22,8 @@
       <button id="clear" type="button">Clear garden</button>
       <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>
+      <button id="seed-mutations" type="button">Seed 3 mutations (local simulated)</button>
+      <button id="seed-pending-mutations" type="button">Seed 4 pending mutations (local simulated)</button>
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
@@ -35,7 +38,9 @@
     <p class="note">Opt-in prototype. SSE growth and weather are real; dense seeding is local simulated state.
       Grass, puddles, first-seen visitors and loose Amanita use shared production rules.
       Ambient seeding cycles all four visitor types; visitors and drops expire after 20 seconds.
-      Collection interaction, mutations, gnomes, inspection, activity, audio and score are deferred.
+      Mutation appearance and lifetime use shared production rules. Pending seeds stay ordinary for 3 seconds;
+      three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
+      Collection interaction, gnomes, inspection, activity, audio and score are deferred.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>
 </body>

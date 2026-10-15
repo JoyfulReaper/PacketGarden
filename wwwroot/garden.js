@@ -220,7 +220,12 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random() });
+const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random(), onChange(change) {
+  if (change.kind === 'removed') gardenMutations.removed(change.specimen, change.reason);
+}});
+const gardenMutations = window.PacketGardenMutations.createMutationModel({
+  garden: gardenModel, now: () => Date.now(), random: () => Math.random()
+});
 const gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(), onChange({ kind }) {
   gardenBaseDirty = true; gardenPerf?.reason(kind.startsWith('grass-') ? 'grass-change' : 'puddle-change');
 }});

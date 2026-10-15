@@ -43,6 +43,19 @@
       }
     }
     for (const key of ['rain', 'probe']) { const object = new P.Sprite(base.frames.get(key)); object.anchor.set(.5, .9); object.scale.set(.5); tile(key, object); }
+    // One finite cached tile. Coordinates match Canvas's compact rooted ochre plant.
+    const mutation = new P.Graphics();
+    mutation.moveTo(-4, -2).lineTo(0, -5).lineTo(4, -2).moveTo(0, -5).lineTo(0, -21).stroke({ color: 0x94704c, width: 1.5 });
+    for (const [x, y, angle, color] of [[-4, 2, .5, 0xaab557], [4, -1, -.5, 0xc2b66a], [-3, -5, .4, 0x8e9e46]]) {
+      const points = [];
+      for (let i = 0; i < 16; i++) {
+        const a = i * Math.PI / 8, dx = Math.cos(a) * 4.5, dy = Math.sin(a) * 2.2;
+        points.push(x + dx * Math.cos(angle) - dy * Math.sin(angle), y - 12 + dx * Math.sin(angle) + dy * Math.cos(angle));
+      }
+      mutation.poly(points).fill(color);
+    }
+    mutation.circle(0, -21, 1.5).fill(0xd8c782).rect(2, -22, 1.5, 1.5).fill({ color: 0xf9efbb, alpha: .5 });
+    tile('collectible_weed', mutation);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     sheet.destroy({ children: true });
     for (const frame of base.frames.values()) frame.destroy(false); base.atlas.destroy(true);
@@ -65,7 +78,7 @@
     const probe = new P.Sprite(frames.get('probe')); probe.anchor.set(.5); probe.position.set(12, 10);
     const clip = new P.Graphics().rect(0, 0, width, height).fill(0xffffff);
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
-    const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(); let connectionHalves = 0;
+    const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(); let connectionHalves = 0;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
     const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout';
@@ -98,21 +111,24 @@
         if (neighbor?.type === 'vine') refreshVine(neighbor, byCell);
       }
     }
-    const texture = specimen => frames.get(`${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
-    return { root, byId, vineLinks, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : `${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
+    return { root, byId, vineLinks, mutationViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
+        if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
           const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize);
           links.addChild(graphic); vineLinks.set(specimen.id, graphic); refreshNeighborhood(specimen, byCell);
         }
       },
       update(specimen, byCell) { byId.get(specimen.id).texture = texture(specimen); counters.stageUpdates++;
+        if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
         if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell); },
       remove(specimen, byCell) {
         const sprite = byId.get(specimen.id); sprite.destroy(); byId.delete(specimen.id); counters.destroyed++;
+        mutationViews.delete(specimen.id);
         const graphic = vineLinks.get(specimen.id);
         if (graphic) {
           connectionHalves -= halfCurvesById.get(specimen.id) ?? 0; halfCurvesById.delete(specimen.id);
@@ -132,16 +148,22 @@
         }
         rain.update();
       },
-      animate(seconds, elapsed) {
+      animate(seconds, elapsed, at = Date.now()) {
+        for (const { specimen, sprite } of mutationViews.values()) {
+          // Only the <=3 active views move; expired ones stay invisible until the logical removal.
+          sprite.visible = at < specimen.mutation.expiresAt;
+          const phase = (at - specimen.mutation.createdAt) / 800;
+          sprite.rotation = Math.sin(phase) * .012; sprite.alpha = .94 + Math.sin(phase) * .06;
+        }
         for (const particle of particles) { particle.x = (particle.x + settings.drift * elapsed) % 1040; particle.y = (particle.y + settings.speed * elapsed) % 680; }
         probe.x = 12 + (Math.sin(seconds * Math.PI / 4 - Math.PI / 2) + 1) / 2 * 936;
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+        return { sprites: byId.size, mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
           displayObjects: 14 + byId.size + vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
-      destroy() { root.destroy({ children: true }); byId.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
+      destroy() { root.destroy({ children: true }); byId.clear(); mutationViews.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
     };
   }
   async function start() {
@@ -181,6 +203,8 @@
     let ambientSeedVariant = 0;
     const seedAmbient = () => ambientPresentation.seedAmbient(ambient, Date.now(), ambientSeedVariant++ % 4);
     document.querySelector('#seed-ambient').addEventListener('click', seedAmbient);
+    document.querySelector('#seed-mutations').addEventListener('click', () => model.seedMutations());
+    document.querySelector('#seed-pending-mutations').addEventListener('click', () => model.seedMutations(true));
     document.querySelector('#clear').addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); });
     document.querySelector('#seed').addEventListener('click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
@@ -195,7 +219,7 @@
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
     document.querySelector('#reset').addEventListener('click', () => { measurements.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
-      const data = measurements.snapshot(), counts = view.snapshot(), ec = ecologyView.snapshot(), ac = ambientView.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
+      const data = measurements.snapshot(), counts = view.snapshot(), ec = ecologyView.snapshot(), ac = ambientView.snapshot(), mc = model.mutations.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
       hud.textContent = [`Pixi ${P.VERSION} · ${P.RendererType?.[app.renderer.type] || app.renderer.constructor.name} · native ticker`,
         `FPS current ${data.currentFps.toFixed(1)} · recent avg ${data.averageFps.toFixed(1)} · session avg ${data.sessionAverageFps.toFixed(1)}`,
         `Frame ms recent avg ${data.averageMs.toFixed(2)} / worst ${data.worstMs.toFixed(2)} · session worst ${data.sessionWorstMs.toFixed(2)}`,
@@ -210,6 +234,7 @@
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Amanita ${ambient.drops.length}/3 · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · collection interaction deferred`,
+        `Mutations ${mc.active}/3 · pending ${mc.pending} · views ${counts.mutationViews} · activations ${mc.activations} · cap skips ${mc.capSkips} · cancellations ${mc.cancellations} · expiries ${mc.expiries} · 1 cached frame in specimen atlas`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
         'Local transient CPU/ticker intervals; not GPU completion. Dense/ambient seeding is local simulated state; temporary visitors expire normally.'
       ].join('\n');

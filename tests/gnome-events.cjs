@@ -29,7 +29,7 @@ function createGarden() {
   };
   sandbox.Math.random=()=>0;
   vm.createContext(sandbox);
-  for(const file of ['garden-audio.js','garden-core.js','garden-ecology.js','garden-ambient.js','garden.js','garden-grass.js','garden-actors.js'])
+  for(const file of ['garden-audio.js','garden-core.js','garden-mutations.js','garden-ecology.js','garden-ambient.js','garden.js','garden-grass.js','garden-actors.js'])
     vm.runInContext(fs.readFileSync('wwwroot/'+file,'utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   const fill=count=>run(`gardenState.specimens=Array.from({length:${count}},(_,i)=>({type:'broadleaf',column:i%columns,row:Math.floor(i/columns),createdAt:Date.now(),vigor:0}))`);
