@@ -149,7 +149,10 @@ collect(capped,capped.run('gardenState.drops[0]')); assert.equal(count(capped),2
 step(capped,250); assert.equal(count(capped),2); assert.equal(pending(capped),0);
 const cappedSources = json(capped,'gardenState.specimens'), cappedRecent = json(capped,'gardenState.recentEvents');
 capped.clock.now = capped.run('gardenState.drops[0].expiresAt'); capped.tick();
-assert.equal(count(capped),0); assert.equal(json(capped,'gardenState.specimens'),cappedSources);
+assert.equal(count(capped),0);
+const agedSources = JSON.parse(json(capped,'gardenState.specimens'));
+assert(agedSources.every(s => s.stage === 'growing'), 'sources continue their shared lifecycle while loose drops expire');
+assert.deepEqual(agedSources.map((s,i)=>({...s,stage:JSON.parse(cappedSources)[i].stage})),JSON.parse(cappedSources), 'drop expiry preserves every non-stage specimen field');
 assert.equal(json(capped,'gardenState.recentEvents'),cappedRecent);
 assert.equal(capped.element('#collection-message').hidden,true,'expiry shows no message');
 assert.equal(capped.element('#garden-score').textContent,'Score: 0');
@@ -244,6 +247,7 @@ assert.equal(count(n),1);assert.equal(n.run('gardenState.drops[0]'),bottom,'newe
 // Independent caps and state, including gnome starts/finishes and existing terrain.
 const independent=createGarden();force(independent);independent.fill(0);
 independent.run('for(let i=0;i<3;i++)createFirstSeenCuriosity(gardenState.specimens[i],()=>.875); startGnomeIncident(Date.now(),()=>.5); for(let i=0;i<3;i++){gardenState.specimens[i].vigor=3; gardenState.specimens[i].mutation={type:"collectible_weed",createdAt:Date.now(),expiresAt:Date.now()+20000}} createStormPuddle(Date.now(),()=>.5)');
+independent.run('gardenModel.tick()'); // Reconcile the manually installed mutation stages before testing drop isolation.
 const coexist=json(independent,'[gardenState.actors,gardenState.curiosities,gardenState.puddles,gardenState.specimens.slice(0,3)]');
 for(let i=0;i<3;i++)live(independent,{vigor:1,seenCount:'1'});
 independent.clock.now+=5000;independent.run('updateLooseDrops()');assert.equal(count(independent),3);

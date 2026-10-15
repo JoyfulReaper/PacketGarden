@@ -64,19 +64,7 @@ gardenEventSource.addEventListener("garden", message => {
   } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
 
-function normalizeLiveGardenEvent(event) {
-  if (typeof event?.specimenType !== "string" || !speciesConfig.has(event.specimenType)
-    || !Number.isInteger(event.listenPort) || event.listenPort < 1 || event.listenPort > 65535
-    || !Number.isInteger(event.vigor) || event.vigor < 0 || event.vigor > 3) return null;
-  // Whitelist the current browser contract; never retain the raw frame.
-  return {
-    specimenType: event.specimenType,
-    listenPort: event.listenPort,
-    vigor: event.vigor,
-    sensor: typeof event.sensor === "string" && event.sensor.length > 0 ? event.sensor : null,
-    seenCount: typeof event.seenCount === "string" && /^\d+$/.test(event.seenCount) ? event.seenCount : null
-  };
-}
+function normalizeLiveGardenEvent(event) { return window.PacketGardenCore.normalizeGarden(event); }
 
 function handleLiveGardenEvent(frame) {
   const event = normalizeLiveGardenEvent(frame);
@@ -176,53 +164,23 @@ weatherIntensityControl.addEventListener("input", () => {
 });
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
-const gardenWidth = 960;
-const gardenHeight = 600;
-const cellSize = 30;
+const gardenCore = window.PacketGardenCore;
+const { width: gardenWidth, height: gardenHeight, cellSize } = gardenCore.dimensions;
 const margin = 16;
 const columns = gardenWidth / cellSize;
 const rows = gardenHeight / cellSize;
 
-// Lifecycle thresholds, measured from each specimen's creation.
-const flowerTimings = {
-  growingAfterMs: 15_000,
-  matureAfterMs: 45_000,
-  wiltingAfterMs: 180_000,
-  expiredAfterMs: 240_000
-};
-const mushroomTimings = {
-  growingAfterMs: 12_000,
-  matureAfterMs: 40_000,
-  decayingAfterMs: 240_000,
-  expiredAfterMs: 300_000
-};
-const broadleafTimings = {
-  growingAfterMs: 20_000,
-  matureAfterMs: 60_000,
-  fadingAfterMs: 300_000,
-  expiredAfterMs: 360_000
-};
-const wirefernTimings = {
-  growingAfterMs: 18_000,
-  matureAfterMs: 50_000,
-  fadingAfterMs: 300_000,
-  expiredAfterMs: 360_000
-};
-const vineTimings = {
-  growingAfterMs: 20_000,
-  matureAfterMs: 60_000,
-  dryingAfterMs: 480_000,
-  expiredAfterMs: 600_000
-};
-const redbloomTimings = {
-  wiltingAfterMs: 10_000,
-  expiredAfterMs: 30_000
-};
-// TCPNoise variants use the same placement/expiry loop: 6, 6, 7, and 12 minutes.
-const weedTimings = { growingAfterMs: 20_000, matureAfterMs: 60_000, fadingAfterMs: 300_000, expiredAfterMs: 360_000 };
-const ghostbloomTimings = { growingAfterMs: 15_000, matureAfterMs: 45_000, fadingAfterMs: 300_000, expiredAfterMs: 360_000 };
-const crystalfungusTimings = { growingAfterMs: 12_000, matureAfterMs: 40_000, fadingAfterMs: 360_000, expiredAfterMs: 420_000 };
-const blackthornTimings = { growingAfterMs: 20_000, matureAfterMs: 60_000, fadingAfterMs: 600_000, expiredAfterMs: 720_000 };
+// Lifecycle timing aliases remain for existing ecology/UI integrations.
+const flowerTimings = gardenCore.timings.flower;
+const mushroomTimings = gardenCore.timings.mushroom;
+const broadleafTimings = gardenCore.timings.broadleaf;
+const vineTimings = gardenCore.timings.vine;
+const wirefernTimings = gardenCore.timings.wirefern;
+const redbloomTimings = gardenCore.timings.redbloom;
+const weedTimings = gardenCore.timings.weed;
+const ghostbloomTimings = gardenCore.timings.ghostbloom;
+const crystalfungusTimings = gardenCore.timings.crystalfungus;
+const blackthornTimings = gardenCore.timings.blackthorn;
 const updateEveryMs = 250;
 
 const grassConfig = {
@@ -277,25 +235,13 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [], puddles: [], actors: [], curiosities: [], drops: [], recentEvents: [] };
-const protectedSpecimenTypes = new Set(["ghostbloom", "crystalfungus", "blackthorn"]);
-
-// Called only at saturation, after expiry. Equal vigor never churns the garden.
-function findReplacementCandidate(incomingVigor) {
-  let victimIndex = null;
-  for (let index = 0; index < gardenState.specimens.length; index++) {
-    const specimen = gardenState.specimens[index];
-    const vigor = specimen.vigor ?? 0;
-    if (protectedSpecimenTypes.has(specimen.type) || vigor >= incomingVigor) continue;
-    const victim = victimIndex === null ? null : gardenState.specimens[victimIndex];
-    if (victim === null || vigor < (victim.vigor ?? 0)
-      || (vigor === (victim.vigor ?? 0) && specimen.createdAt < victim.createdAt)) {
-      victimIndex = index;
-    }
-  }
-  // Exact ties retain the first array entry, without consuming randomness.
-  return victimIndex;
-}
+const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random() });
+// Keep object references used by inspection and ecology; fixture assignment goes through the model too.
+const gardenState = {
+  get specimens() { return gardenModel.specimens; },
+  set specimens(entries) { gardenModel.seed(entries); },
+  grassCells: [], puddles: [], actors: [], curiosities: [], drops: [], recentEvents: []
+};
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
@@ -317,57 +263,10 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0, onCreated
 
   updateGarden();
 
-  const occupiedCells = new Set(
-    gardenState.specimens.map(specimen => specimen.row * columns + specimen.column)
-  );
-  const emptyCells = [];
-  for (let cell = 0; cell < columns * rows; cell++) {
-    if (!occupiedCells.has(cell)) emptyCells.push(cell);
-  }
-  let replacementIndex = null;
-  let cell;
-  if (emptyCells.length === 0) {
-    replacementIndex = findReplacementCandidate(vigor);
-    if (replacementIndex === null) return;
-    const victim = gardenState.specimens[replacementIndex];
-    cell = victim.row * columns + victim.column;
-  } else {
-    const adjacentCells = [];
-    const nearbyCells = [];
-    const sameSpecies = gardenState.specimens.filter(specimen => specimen.type === specimenType);
-    for (const cell of emptyCells) {
-      const column = cell % columns;
-      const row = Math.floor(cell / columns);
-      let distance = Infinity;
-      for (const specimen of sameSpecies) {
-        // Diagonals count as neighbors; coordinate distances never wrap at edges.
-        distance = Math.min(distance, Math.max(
-          Math.abs(column - specimen.column),
-          Math.abs(row - specimen.row)
-        ));
-      }
-      if (distance === 1) adjacentCells.push(cell);
-      else if (distance === 2) nearbyCells.push(cell);
-    }
-
-    // Mostly extend a patch, with occasional small gaps rather than distant seeds.
-    const preferAdjacent = Math.random() < 0.9;
-    const preferredCells = preferAdjacent ? adjacentCells : nearbyCells;
-    const alternateCells = preferAdjacent ? nearbyCells : adjacentCells;
-    const candidates = preferredCells.length > 0 ? preferredCells
-      : alternateCells.length > 0 ? alternateCells : emptyCells;
-    cell = candidates[Math.floor(Math.random() * candidates.length)];
-  }
-  const specimen = {
-    type: specimenType,
-    column: cell % columns,
-    row: Math.floor(cell / columns),
-    createdAt: Date.now(),
-    vigor
-  };
-  if (replacementIndex === null) gardenState.specimens.push(specimen);
-  else gardenState.specimens[replacementIndex] = specimen;
-  if (onCreated) onCreated(specimen, replacementIndex === null ? "spawned" : "replaced");
+  const result = gardenModel.addSpecimen(specimenType, vigor);
+  if (!result) return;
+  const { specimen, replaced } = result;
+  if (onCreated) onCreated(specimen, replaced ? "replaced" : "spawned");
   if (grassEventType) influenceGrass(grassEventType, specimen);
 
   updateGardenStatus();
@@ -471,13 +370,8 @@ function updateGardenStatus() {
 }
 
 function updateGarden(now = Date.now()) {
-  const remaining = gardenState.specimens.filter(specimen => {
-    if (specimen.mutation) return now < specimen.mutation.expiresAt;
-    const expiresAfterMs = speciesConfig.get(specimen.type).timings.expiredAfterMs;
-    return now - specimen.createdAt < expiresAfterMs;
-  });
-  if (remaining.length !== gardenState.specimens.length) {
-    gardenState.specimens = remaining;
+  const changes = gardenModel.tick(now);
+  if (changes.removed) {
     gardenBaseDirty = true;
     gardenPerf?.reason("specimen-change");
     updateGardenStatus();
@@ -563,11 +457,9 @@ function drawFlower(specimen, now) {
   const vigor = specimen.vigor ?? 0;
   const x = (specimen.column + 0.5) * cellSize;
   const y = (specimen.row + 0.5) * cellSize;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= flowerTimings.expiredAfterMs) return;
-  const stage = ageMs < flowerTimings.growingAfterMs ? "sprout"
-    : ageMs < flowerTimings.matureAfterMs ? "growing"
-    : ageMs < flowerTimings.wiltingAfterMs ? "mature" : "wilting";
+  const logicalStage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (logicalStage === "expired") return;
+  const stage = logicalStage === "fading" ? "wilting" : logicalStage;
   const wilting = stage === "wilting";
   const leafSize = stage === "sprout" ? 0.4 : stage === "growing" ? 0.75 : wilting ? 0.65 : 1;
 
@@ -606,9 +498,9 @@ function drawFlower(specimen, now) {
 // Compact upright fronds; no neighbor lookups, connections, or per-frame motion.
 function drawWirefern(specimen, now) {
   const vigor = specimen.vigor ?? 0;
-  const age = Math.max(0, now - specimen.createdAt);
-  const frondPairs = age < wirefernTimings.growingAfterMs ? 1 + Math.floor(vigor / 2)
-    : age < wirefernTimings.matureAfterMs ? 2 + vigor : 3 + vigor;
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  const frondPairs = stage === "sprout" ? 1 + Math.floor(vigor / 2)
+    : stage === "growing" ? 2 + vigor : 3 + vigor;
   drawVariant(specimen, now, fading => {
     context.strokeStyle = fading ? "#827b52" : "#65b975";
     context.lineWidth = 1.1 + vigor * 0.2;
@@ -649,11 +541,9 @@ function drawWirefern(specimen, now) {
 
 function drawMushroom(specimen, now) {
   const vigor = specimen.vigor ?? 0;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= mushroomTimings.expiredAfterMs) return;
-  const stage = ageMs < mushroomTimings.growingAfterMs ? "sprout"
-    : ageMs < mushroomTimings.matureAfterMs ? "growing"
-    : ageMs < mushroomTimings.decayingAfterMs ? "mature" : "decaying";
+  const logicalStage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (logicalStage === "expired") return;
+  const stage = logicalStage === "fading" ? "decaying" : logicalStage;
   const decaying = stage === "decaying";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : decaying ? 0.65 : 1;
 
@@ -685,11 +575,8 @@ function drawMushroom(specimen, now) {
 
 function drawBroadleaf(specimen, now) {
   const vigor = specimen.vigor ?? 0;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= broadleafTimings.expiredAfterMs) return;
-  const stage = ageMs < broadleafTimings.growingAfterMs ? "sprout"
-    : ageMs < broadleafTimings.matureAfterMs ? "growing"
-    : ageMs < broadleafTimings.fadingAfterMs ? "mature" : "fading";
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
   const fading = stage === "fading";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.7 : 1;
   const leafCount = (stage === "sprout" ? 2 : stage === "growing" ? 4 : 6) + Math.floor(vigor * 2 / 3);
@@ -719,11 +606,9 @@ function drawBroadleaf(specimen, now) {
 
 function drawVine(specimen, now) {
   const vigor = specimen.vigor ?? 0;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= vineTimings.expiredAfterMs) return;
-  const stage = ageMs < vineTimings.growingAfterMs ? "sprout"
-    : ageMs < vineTimings.matureAfterMs ? "growing"
-    : ageMs < vineTimings.dryingAfterMs ? "mature" : "drying";
+  const logicalStage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (logicalStage === "expired") return;
+  const stage = logicalStage === "fading" ? "drying" : logicalStage;
   const drying = stage === "drying";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : drying ? 0.55 : 1;
 
@@ -787,11 +672,10 @@ function drawVine(specimen, now) {
 
 // Shared lifecycle drawing setup; no species rarity decisions in the browser.
 function drawVariant(specimen, now, paint) {
-  const timings = speciesConfig.get(specimen.type).timings;
-  const age = Math.max(0, now - specimen.createdAt);
-  if (age >= timings.expiredAfterMs) return;
-  const fading = age >= timings.fadingAfterMs;
-  const size = age < timings.growingAfterMs ? 0.4 : age < timings.matureAfterMs ? 0.7 : fading ? 0.65 : 1;
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
+  const fading = stage === "fading";
+  const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.65 : 1;
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
   context.scale(size, size);
@@ -954,9 +838,9 @@ function drawBlackthorn(specimen, now) {
 
 function drawRedbloom(specimen, now) {
   const vigor = specimen.vigor ?? 0;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= redbloomTimings.expiredAfterMs) return;
-  const wilting = ageMs >= redbloomTimings.wiltingAfterMs;
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
+  const wilting = stage === "fading";
 
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
@@ -1118,13 +1002,7 @@ const animatedSpecimens = [];
 // Active mutations render entirely on the overlay and are removed by logical cleanup.
 function nextSpecimenVisualChangeAt(specimen, now) {
   if (specimen.mutation) return null;
-  const timings = speciesConfig.get(specimen.type).timings;
-  let next = Infinity;
-  for (const stage in timings) {
-    const at = specimen.createdAt + timings[stage];
-    if (at > now) next = Math.min(next, at);
-  }
-  return Number.isFinite(next) ? next : null;
+  return gardenCore.nextChangeAt(specimen, now);
 }
 
 function nextGrassVisualChangeAt(grass, now) {
@@ -1166,8 +1044,8 @@ function buildVineCellLookup(now) {
   const lookup = new Map();
   for (const specimen of gardenState.specimens) {
     if (specimen.type !== "vine") continue;
-    const age = now - specimen.createdAt;
-    if (age >= vineTimings.growingAfterMs && age < vineTimings.expiredAfterMs) {
+    const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+    if (stage !== "sprout" && stage !== "expired") {
       lookup.set(specimen.row * columns + specimen.column, specimen);
     }
   }

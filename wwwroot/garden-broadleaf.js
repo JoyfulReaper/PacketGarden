@@ -32,11 +32,8 @@ function chooseBroadleafVariant(vigor, isFakeHttp = false, roll = Math.random())
 
 function drawBroadleafVariant(specimen, now) {
   const vigor = specimen.vigor ?? 0;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= broadleafTimings.expiredAfterMs) return;
-  const stage = ageMs < broadleafTimings.growingAfterMs ? "sprout"
-    : ageMs < broadleafTimings.matureAfterMs ? "growing"
-    : ageMs < broadleafTimings.fadingAfterMs ? "mature" : "fading";
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
   const fading = stage === "fading";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.7 : 1;
   const leafCount = (stage === "sprout" ? 2 : stage === "growing" ? 4 : 6) + Math.floor(vigor * 2 / 3);

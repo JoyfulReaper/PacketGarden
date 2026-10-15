@@ -51,16 +51,17 @@
     return { frames, atlas };
   }
   function createView(P, app, frames, core, shared) {
+    const { width, height, cellSize, columns, rows } = core.dimensions;
     const root = new P.Container(); root.eventMode = 'none'; app.stage.addChild(root);
-    const soil = new P.Graphics().rect(0, 0, 960, 600).fill(0x555436), grid = new P.Graphics();
-    for (let x = 0; x <= 960; x += 30) grid.moveTo(x, 0).lineTo(x, 600);
-    for (let y = 0; y <= 600; y += 30) grid.moveTo(0, y).lineTo(960, y);
+    const soil = new P.Graphics().rect(0, 0, width, height).fill(0x555436), grid = new P.Graphics();
+    for (let x = 0; x <= width; x += cellSize) grid.moveTo(x, 0).lineTo(x, height);
+    for (let y = 0; y <= height; y += cellSize) grid.moveTo(0, y).lineTo(width, y);
     grid.stroke({ color: 0xb4ac72, alpha: .10, width: 1 });
-    const darkening = new P.Sprite(P.Texture.WHITE); darkening.width = 960; darkening.height = 600; darkening.tint = 0x000000; darkening.alpha = 0;
+    const darkening = new P.Sprite(P.Texture.WHITE); darkening.width = width; darkening.height = height; darkening.tint = 0x000000; darkening.alpha = 0;
     const links = new P.Container(), plants = new P.Container();
     const rain = new P.ParticleContainer({ dynamicProperties: { position: true, rotation: false, vertex: false, color: false }, boundsArea: new P.Rectangle(-40, -40, 1040, 680) });
     const probe = new P.Sprite(frames.get('probe')); probe.anchor.set(.5); probe.position.set(12, 10);
-    const clip = new P.Graphics().rect(0, 0, 960, 600).fill(0xffffff);
+    const clip = new P.Graphics().rect(0, 0, width, height).fill(0xffffff);
     root.addChild(soil, grid, darkening, links, plants, rain, probe, clip); root.mask = clip;
     const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(); let connectionHalves = 0;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
@@ -76,8 +77,8 @@
         if (!dx && !dy) continue;
         counters.vineNeighborChecks++;
         const column = specimen.column + dx, row = specimen.row + dy;
-        if (column < 0 || column >= 32 || row < 0 || row >= 20 || !eligible(byCell.get(row * 32 + column))) continue;
-        const x = dx * 15, y = dy * 15, bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
+        if (column < 0 || column >= columns || row < 0 || row >= rows || !eligible(byCell.get(row * columns + column))) continue;
+        const x = dx * cellSize / 2, y = dy * cellSize / 2, bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
         graphic.moveTo(0, 0).quadraticCurveTo(x / 2 - dy * bend, y / 2 + dx * bend, x, y)
           .stroke({ color, width: (specimen.stage === 'fading' ? 1 : specimen.stage === 'mature' ? 2.5 : 1.5) + specimen.vigor * .4,
             alpha: specimen.stage === 'fading' ? .55 : 1 });
@@ -90,8 +91,8 @@
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dy) continue;
         const column = specimen.column + dx, row = specimen.row + dy;
-        if (column < 0 || column >= 32 || row < 0 || row >= 20) continue;
-        const neighbor = byCell.get(row * 32 + column);
+        if (column < 0 || column >= columns || row < 0 || row >= rows) continue;
+        const neighbor = byCell.get(row * columns + column);
         if (neighbor?.type === 'vine') refreshVine(neighbor, byCell);
       }
     }
@@ -99,10 +100,10 @@
     return { root, byId, vineLinks, counters,
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
-        sprite.position.set((specimen.column + .5) * 30, (specimen.row + .5) * 30 + 12);
+        sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
         if (specimen.type === 'vine') {
-          const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * 30, (specimen.row + .5) * 30);
+          const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize);
           links.addChild(graphic); vineLinks.set(specimen.id, graphic); refreshNeighborhood(specimen, byCell);
         }
       },
@@ -122,7 +123,7 @@
         rain.removeParticles(); particles = [];
         const random = shared.seededRandom(7357);
         for (let i = 0; i < settings.count; i++) {
-          const particle = new P.Particle({ texture: frames.get('rain'), x: random() * 960, y: random() * 600,
+          const particle = new P.Particle({ texture: frames.get('rain'), x: random() * width, y: random() * height,
             anchorX: .5, anchorY: .5, rotation: -Math.atan2(settings.slant, settings.length || 1),
             alpha: settings.opacity, scaleX: 1, scaleY: settings.length / 10 });
           particles.push(particle); rain.addParticle(particle);

@@ -83,7 +83,7 @@ assert.equal(replaced.specimen.origin.sensor, 'replacement');
 assert.equal(full.run('gardenState.specimens.length'), 640);
 assert.equal(full.element('#recent-event-0').textContent, 'replacement · :22 · redbloom · seen 17 · now');
 full.fill(3);
-full.run('gardenState.specimens[639]={type:"redbloom",column:31,row:19,createdAt:Date.now(),vigor:3}');
+full.run('gardenState.specimens = gardenState.specimens.map((s,i)=>i===639 ? {type:"redbloom",column:31,row:19,createdAt:Date.now(),vigor:3} : s)');
 const unattributed = full.run('gardenState.specimens[639]');
 const beforeDrop = full.run('JSON.stringify(gardenState.specimens)');
 const dropped = full.run('handleLiveGardenEvent({specimenType:"redbloom",listenPort:22,vigor:3,sensor:"dropped-sensor",seenCount:"100"})');

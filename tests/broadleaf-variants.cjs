@@ -9,6 +9,7 @@ const context = new Proxy({}, {
 });
 const state = { redraws: 0, spawns: [] };
 const sandbox = {
+  gardenCore: require('../wwwroot/garden-core.js'),
   Math: Object.create(Math),
   context,
   cellSize: 30,

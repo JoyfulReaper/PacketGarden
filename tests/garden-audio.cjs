@@ -56,6 +56,7 @@ function createGarden(options = {}) {
   sandbox.Math.random=()=>0.5;
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
+  vm.runInContext(fs.readFileSync('wwwroot/garden-core.js', 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js','utf8'),sandbox);

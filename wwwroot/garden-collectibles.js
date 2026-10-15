@@ -89,7 +89,7 @@ function collectSpecimenMutation(specimen, now = Date.now()) {
   const index = gardenState.specimens.indexOf(specimen);
   const config = specimenMutationTypes.get(specimen?.mutation?.type);
   if (index < 0 || !config || now >= specimen.mutation.expiresAt) return false;
-  gardenState.specimens.splice(index, 1);
+  gardenModel.remove(specimen, "collected");
   if (typeof inspectedSpecimen !== "undefined" && inspectedSpecimen === specimen) closeSpecimenCard();
   showCollectionMessage(config.message, now);
   updateGardenStatus();

@@ -8,7 +8,7 @@ assert.equal(run('speciesConfig.has("wirefern")'),true);
 assert.equal(json('wirefernTimings'),JSON.stringify({growingAfterMs:18000,matureAfterMs:50000,fadingAfterMs:300000,expiredAfterMs:360000}));
 assert.equal(run('speciesConfig.get("wirefern").singular'),'wirefern');
 assert.equal(run('speciesConfig.get("wirefern").plural'),'wireferns');
-assert.equal(run('protectedSpecimenTypes.has("wirefern")'),false,'ordinary unprotected species');
+assert.equal(run('gardenCore.isProtected("wirefern")'),false,'ordinary unprotected species');
 assert.equal(json('speciesColorVariants.get("wirefern").common.map(color=>color.name)'), '["phosphor","moss","cyan","amber"]');
 assert.equal(run('speciesColorVariants.get("wirefern").rare.name'),'afterglow');
 assert.equal(run('speciesColorVariants.get("wirefern").rareChance'),0.01);

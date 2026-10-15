@@ -36,6 +36,7 @@ const sandbox = { Date: { now: () => 1000 }, Math: Object.create(Math), EventSou
 sandbox.Math.random = () => 0;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('wwwroot/garden-core.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js', 'utf8'), sandbox);
@@ -206,7 +207,9 @@ for (const type of run('Array.from(speciesConfig.keys())')) {
   source.emit('garden',{specimenType:type,listenPort:type==='redbloom'?22:443,vigor:3});
   const before = run('JSON.stringify(gardenState.specimens[0])');
   run(`drawGarden(); updateGarden(${1000 + timing.expiredAfterMs - 1})`);
-  assert.equal(run('JSON.stringify(gardenState.specimens[0])'),before,'vigor retained through redraw and aging');
+  const aged = JSON.parse(run('JSON.stringify(gardenState.specimens[0])'));
+  assert.equal(aged.stage, 'fading', 'shared lifecycle reaches the final living stage');
+  assert.deepEqual({...aged, stage: JSON.parse(before).stage}, JSON.parse(before), 'identity, vigor and all non-stage fields retained through redraw and aging');
   assert.equal(run('gardenState.grassCells.length'),0,'every real species at high vigor remains grass-free');
   run(`updateGarden(${1000 + timing.expiredAfterMs})`);
   assert.equal(run('gardenState.specimens.length'),0,'high vigor leaves lifecycle removal unchanged');
@@ -318,9 +321,9 @@ const growAtCapacity=(type,vigor)=>{
 };
 
 // The helper must never run with available space, including space freed by expiry.
-const originalReplacement=run('findReplacementCandidate');
+const originalReplacement=run('gardenModel.findReplacementCandidate');
 sandbox.forbidReplacement=()=>{throw new Error('Replacement invoked with empty space');};
-run('findReplacementCandidate=forbidReplacement');
+run('gardenModel.findReplacementCandidate=forbidReplacement');
 reset(); sandbox.Math.random=()=>0;
 run("spawnSpecimen('vine',null,3); spawnSpecimen('vine',null,3)");
 assert.equal(run('gardenState.specimens.length'),2);
@@ -334,7 +337,7 @@ assert.equal(afterExpiry.column,13); assert.equal(afterExpiry.row,0);
 assert.equal(run('gardenState.specimens.length'),640,'expiry frees a normal placement cell before evaluating competition');
 assert.equal(run('JSON.stringify(gardenState.specimens.filter(s=>s.type!=="flower"))'),otherOccupants,'expiry does not force displacement');
 sandbox.restoreReplacement=originalReplacement;
-run('findReplacementCandidate=restoreReplacement');
+run('gardenModel.findReplacementCandidate=restoreReplacement');
 
 fillGarden(0);
 const unchanged=snapshot();

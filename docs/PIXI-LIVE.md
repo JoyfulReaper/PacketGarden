@@ -36,10 +36,10 @@ are made locally. Malformed frames leave the stream and last valid weather intac
 
 ## Parity and persistent views
 
-`pixi-live-core.js` contains **temporary copied parity code** from `garden.js`,
-avoiding a production refactor. Its tests compare all ten species' timing values
-and deterministic placement outcomes against the actual production scripts.
-The garden is 960×600, 30px cells, 32×20, capacity 640.
+`garden-core.js` is now the authoritative renderer-neutral browser model used by
+both production Canvas and the Pixi live adapter. Both HTML entry points load it
+before their renderer scripts. The garden is 960×600, 30px cells, 32×20, capacity
+640. Production still loads no Pixi code; the synthetic stress page is unchanged.
 
 Placement preserves Chebyshev-distance same-species clustering: 90% adjacent
 preference, otherwise distance-two nearby, then the alternate band, then empty
@@ -61,6 +61,82 @@ A cell map gives constant-time lookup of the eight surrounding cells. Only the
 changed vine and its immediate neighbors update on appearance, growth eligibility,
 visual-stage change, or removal; no vine topology work runs per animation frame.
 Both halves preserve production midpoint/bend and orthogonal/diagonal behavior.
+
+## Shared model API and integration
+
+`PacketGardenCore.createGardenModel({ now, random, onChange })` accepts optional
+clock/random functions for deterministic verification and a synchronous logical
+change callback. It owns `specimens` (ordered objects) and `byCell` (occupied
+cells), with these operations:
+
+- `addEvent(raw, at?)` validates the five safe SSE fields and attaches normalized
+  provenance before the added notification. `addSpecimen(type, vigor, at?)` is
+  the production fake/live spawn integration primitive. Both return
+  `{ specimen, replaced }` on success or `null` on rejection/drop.
+- `tick(at?)` reconciles stages and expiry, returning removed/updated counts.
+  `remove(specimen, reason?)` removes an exact object, including collected mutations.
+- `clear()` removes all occupants. `seed(entries, at?)` imports a validated local
+  fixture array atomically; it is never used to import SSE frames or raw network data.
+- `getCell(column, row)` and `getNeighbors(column, row)` provide bounded logical
+  lookup without wrapping. `findReplacementCandidate(vigor)` exposes the shared
+  selection query, used only at saturation by insertion.
+- Shared exports include frozen dimensions/species/timing tables,
+  `normalizeGarden`, `isProtected`, `stageAt`, `lifecycleStage`, and `nextChangeAt`.
+
+Callbacks contain `{ kind, specimen, reason, previousStage }`: `added`, `updated`,
+`removed`, or `dropped`. Replacement reports removal and addition with reason
+`replaced`, and returns the exact victim. A dropped event creates no object/id/view.
+No change history is retained. Callbacks consume each change immediately; the
+core contains no timers, animation loop, rendering, weather, audio, or DOM code.
+Consumers should change occupancy through the model, not mutate the exposed
+array/map. Specimen references remain usable for existing presentation metadata.
+
+Numeric identities are local to one model and never reused for another object,
+including after clear. The same object/id survives stage changes and neighbor
+queries; replacement gets a new identity. A weak identity association also
+preserves ids when local fixtures reuse existing object references, without
+retaining removed specimens. `createdAt` and array ordering retain the production
+oldest/first-entry tie semantics.
+
+Canvas keeps its existing `spawnSpecimen` wrappers, safe provenance callback,
+grass influence, sound, status, Recent activity, inspection, and drawing paths.
+`gardenState.specimens` refers to model-owned objects; fixture assignment delegates
+to `seed`. Collection now calls model removal so the occupied-cell map stays
+correct. The existing 250ms aggregate tick performs logical cleanup. Renderers
+and the existing aggregate visual deadline query shared stage/boundary helpers;
+the Canvas artwork, palette rolls, redraw scheduling, and overlay remain intact.
+The core honors the existing mutation `expiresAt` override, so a mutated
+redbloom still outlives its normal 30-second lifespan until mutation expiry.
+
+The Pixi adapter no longer owns dimensions, timing tables, stage calculation,
+placement/clustering, occupied cells, victim selection, expiry, or identity
+allocation. It translates notifications to the existing persistent view methods,
+selects cosmetic variants, supplies dense seed descriptors, counts outcomes,
+and handles pause/SSE/weather controls. The view uses shared cell dimensions;
+local vine geometry remains presentation-specific. Normal ticks allocate no
+full-garden snapshots and animation frames do not reconcile the model.
+
+Safe garden normalization is shared too. Only `specimenType`, `listenPort`,
+`vigor`, `sensor`, and `seenCount` survive validation. Both consumers now apply
+the existing backend/Pixi 128-character sensor bound (Canvas formerly relied on
+the backend for that bound). No backend source, endpoint, or serialized contract
+changed. Weather normalization/settings and cosmetic palettes deliberately
+remain renderer-specific. Grass/puddles, mutation activation/collection rules,
+curiosities, loose drops, actors, inspection, Recent activity, and audio remain in
+their existing Canvas modules; none were migrated to Pixi in this slice.
+
+`tests/garden-core.cjs` checks all ten production timing tables and exact stage
+boundaries, unique 640-cell capacity, expiry before competition, every saturation
+rule, mutation lifetime, identity, clear/refill, edge neighbors, safe fields, and
+architectural imports/no timers. `tests/fixtures/production-placement.json` holds
+480 cell choices captured from unchanged production at `c92ed92`, across three
+random sequences and all species. Both Canvas and the core must match those
+frozen results, including production cosmetic random consumption outside the core.
+Existing tests still cover drawing/visual deadlines, grass, puddles, mutations,
+drops, curiosities, gnomes, inspection, activity, sound, and persistent Pixi ownership.
+Harnesses load the new dependency; aging assertions preserve every non-stage
+field and explicitly verify the newly exposed stage instead of treating it as
+immutable. Test fixtures that insert objects now initialize their model metadata.
 
 ## Rendering and bounded resources
 

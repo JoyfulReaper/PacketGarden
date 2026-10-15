@@ -7,7 +7,7 @@ assert.doesNotMatch(read('wwwroot/index.html'), /pixi/i);
 assert.match(read('wwwroot/pixi-stress.html'), /pixi-stress\.js/);
 const html = read('wwwroot/pixi-live.html'), script = read('wwwroot/pixi-live.js'), modelScript = read('wwwroot/pixi-live-core.js');
 assert.match(html, /data-pixi-library/); assert.match(html, /pixi-live-core\.js/); assert.match(html, /pixi-live\.js/);
-assert.doesNotMatch(html, /src="garden/); assert.match(modelScript, /new Source\('\/api\/garden\/events'\)/);
+assert.match(html, /src="garden-core\.js"/); assert.doesNotMatch(html, /src="garden\.js"/); assert.match(modelScript, /new Source\('\/api\/garden\/events'\)/);
 assert.doesNotMatch(script + modelScript, /setTimeout|setInterval|localStorage|sessionStorage|fetch\(/);
 assert.match(script, /backgroundAlpha: 1/); assert.match(script, /nextLogicalAt = Date\.now\(\) \+ 250/);
 assert.deepEqual(Object.values(core.dimensions), [960,600,30,32,20,640]);
