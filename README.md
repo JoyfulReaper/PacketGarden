@@ -67,11 +67,19 @@ rain using locally served PixiJS 8.22.0. It does not replace or load into the
 production garden. See [the spike notes](docs/PIXI-STRESS.md) for controls,
 dependency reproduction and measurement limits.
 
-`/pixi-live.html` is a second opt-in prototype using real garden/weather SSE,
-production placement/competition/lifecycle rules, and persistent Pixi specimens.
-Its local seed, weather and pause controls support live soaks. Grass and the
-remaining interaction systems are deferred; `/` still uses Canvas. See
-[Pixi live soak](docs/PIXI-LIVE.md).
+`/pixi-live.html` is a second opt-in prototype using real garden/weather SSE and
+shared production placement, competition, lifecycle, ecology, ambient, and
+mutation rules. It explored persistent Pixi/WebGL rendering while `/` remained
+Canvas. Stress and live-soak measurements were often excellent, but visible
+stutter could still be reproduced in actual use without a convincing explanation
+from the browser timing instrumentation. The renderer migration is therefore
+paused rather than treated as a production cutover. See [Pixi live soak](docs/PIXI-LIVE.md).
+
+If PacketGarden's presentation layer is revisited later, a small desktop/native
+renderer may be worth considering instead of another browser renderer rewrite.
+Godot is one possible candidate: the backend/SSE feed and renderer-neutral garden
+rules could potentially be reused while moving animation and presentation out of
+the browser compositor. This is only a future option, not a planned rewrite.
 
 The first useful milestone is intentionally small:
 
