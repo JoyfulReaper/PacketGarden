@@ -7,6 +7,8 @@
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
+  <script src="garden-ecology.js" defer></script>
+  <script src="pixi-live-ecology.js" defer></script>
   <script src="pixi-live-core.js" defer></script><script src="pixi-live.js" defer></script>
 </head>
 <body>
@@ -15,7 +17,8 @@
       <h1>Pixi live soak</h1><p id="connection" role="status">connecting</p></header>
     <section class="controls" aria-label="Live soak controls">
       <button id="clear" type="button">Clear garden</button>
-      <button id="seed" type="button">Seed dense garden (simulated)</button>
+      <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
+      <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
       <label><input id="pause" type="checkbox"> Pause live garden events</label>
@@ -27,7 +30,7 @@
     <div id="view" aria-label="Pixi live garden"></div>
     <pre id="hud" role="status">Initializing Pixi…</pre>
     <p class="note">Opt-in prototype. SSE growth and weather are real; dense seeding is local simulated state.
-      Grass, puddles, curiosities, drops, mutations, gnomes, inspection, activity, audio, score and collection are deferred.
+      Grass and puddles use shared production rules. Curiosities, drops, mutations, gnomes, inspection, activity, audio, score and collection are deferred.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>
 </body>

@@ -183,22 +183,9 @@ const crystalfungusTimings = gardenCore.timings.crystalfungus;
 const blackthornTimings = gardenCore.timings.blackthorn;
 const updateEveryMs = 250;
 
-const grassConfig = {
-  influenceChances: { dns: 0.45, http: 0.65 },
-  secondCellChance: 0.35,
-  sameCellChance: 0.5,
-  influenceRadius: 1,
-  growingAfterMs: 10_000,
-  matureAfterMs: 30_000,
-  fadingAfterMs: 20 * 60_000,
-  dyingAfterMs: 27 * 60_000,
-  deadAfterMs: 32 * 60_000,
-  expiredAfterMs: 35 * 60_000,
-  spreadEveryMs: 5_000,
-  spreadChance: 0.35
-};
+const gardenEcologyCore = window.PacketGardenEcology;
+const grassConfig = gardenEcologyCore.grassConfig;
 let nextGrassSpreadAt = 0;
-
 // Browser-only development traffic: about 30 events per minute at these defaults.
 const fakeTrafficConfig = {
   minDelayMs: 1_200,
@@ -236,11 +223,18 @@ const speciesConfig = new Map([
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
 const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random() });
+const gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(), onChange({ kind }) {
+  gardenBaseDirty = true; gardenPerf?.reason(kind.startsWith('grass-') ? 'grass-change' : 'puddle-change');
+}});
 // Keep object references used by inspection and ecology; fixture assignment goes through the model too.
 const gardenState = {
   get specimens() { return gardenModel.specimens; },
   set specimens(entries) { gardenModel.seed(entries); },
-  grassCells: [], puddles: [], actors: [], curiosities: [], drops: [], recentEvents: []
+  get grassCells() { return gardenEcology.grassCells; },
+  set grassCells(entries) { gardenEcology.grassCells = entries; },
+  get puddles() { return gardenEcology.puddles; },
+  set puddles(entries) { gardenEcology.puddles = entries; },
+  actors: [], curiosities: [], drops: [], recentEvents: []
 };
 
 /** @param {GardenEvent} event */
@@ -275,81 +269,11 @@ function spawnSpecimen(specimenType, grassEventType = null, vigor = 0, onCreated
   return specimen;
 }
 
-function influenceGrass(eventType, specimen, now = Date.now()) {
-  const chance = grassConfig.influenceChances[eventType] ?? 0;
-  if (chance === 0 || Math.random() >= chance) return;
-
-  let column = specimen.column;
-  let row = specimen.row;
-  const neighbors = grassNeighbors(column, row);
-  if (Math.random() >= grassConfig.sameCellChance) {
-    if (neighbors.length > 0) {
-      const neighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
-      column = neighbor.column;
-      row = neighbor.row;
-    }
-  }
-
-  influenceGrassCell(column, row, now);
-  if (Math.random() < grassConfig.secondCellChance) {
-    const otherNeighbors = neighbors.filter(cell => cell.column !== column || cell.row !== row);
-    if (otherNeighbors.length > 0) {
-      const second = otherNeighbors[Math.floor(Math.random() * otherNeighbors.length)];
-      influenceGrassCell(second.column, second.row, now);
-    }
-  }
-}
-
-function grassNeighbors(column, row) {
-  const neighbors = [];
-  for (let dy = -grassConfig.influenceRadius; dy <= grassConfig.influenceRadius; dy++) {
-    for (let dx = -grassConfig.influenceRadius; dx <= grassConfig.influenceRadius; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const neighborColumn = column + dx;
-      const neighborRow = row + dy;
-      if (neighborColumn >= 0 && neighborColumn < columns && neighborRow >= 0 && neighborRow < rows) {
-        neighbors.push({ column: neighborColumn, row: neighborRow });
-      }
-    }
-  }
-  return neighbors;
-}
-
-function influenceGrassCell(column, row, now) {
-  const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
-  if (grass) {
-    if (grass.lastInfluencedAt !== now) {
-      grass.lastInfluencedAt = now;
-      gardenBaseDirty = true;
-      gardenPerf?.reason("grass-change");
-    }
-  } else {
-    gardenState.grassCells.push({ column, row, createdAt: now, lastInfluencedAt: now });
-    gardenBaseDirty = true;
-    gardenPerf?.reason("grass-change");
-  }
-}
-
+function influenceGrass(eventType, specimen, now = Date.now()) { gardenEcology.influenceGrass(eventType, specimen, now); }
+function influenceGrassCell(column, row, now) { return gardenEcology.influenceGrassCell(column, row, now); }
 function spreadGrass(now) {
-  if (now < nextGrassSpreadAt) return;
-  // One attempt for the whole garden, with no catch-up bursts after a paused tab.
-  nextGrassSpreadAt = now + grassConfig.spreadEveryMs;
-  if (Math.random() >= grassConfig.spreadChance) return;
-
-  const occupied = new Set(gardenState.grassCells.map(cell => cell.row * columns + cell.column));
-  const candidates = [];
-  for (const grass of gardenState.grassCells) {
-    if (now - grass.createdAt < grassConfig.matureAfterMs
-      || now - grass.lastInfluencedAt >= grassConfig.fadingAfterMs) continue;
-    const neighbors = grassNeighbors(grass.column, grass.row).filter(
-      cell => !occupied.has(cell.row * columns + cell.column)
-    );
-    if (neighbors.length > 0) candidates.push(neighbors);
-  }
-  if (candidates.length === 0) return;
-  const neighbors = candidates[Math.floor(Math.random() * candidates.length)];
-  const target = neighbors[Math.floor(Math.random() * neighbors.length)];
-  influenceGrassCell(target.column, target.row, now);
+  gardenEcology.nextGrassSpreadAt = nextGrassSpreadAt;
+  gardenEcology.spreadGrass(now); nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
 }
 
 function updateGardenStatus() {
@@ -377,14 +301,8 @@ function updateGarden(now = Date.now()) {
     updateGardenStatus();
   }
   if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) { gardenBaseDirty = true; gardenPerf?.reason("specimen-change"); }
-  const grassCount = gardenState.grassCells.length;
-  gardenState.grassCells = gardenState.grassCells.filter(
-    grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
-  );
-  if (gardenState.grassCells.length !== grassCount) { gardenBaseDirty = true; gardenPerf?.reason("grass-change"); }
-  const remainingGrassCount = gardenState.grassCells.length;
-  if (gardenState.grassCells.length > 0) spreadGrass(now);
-  if (gardenState.grassCells.length !== remainingGrassCount) { gardenBaseDirty = true; gardenPerf?.reason("grass-change"); }
+  gardenEcology.removeExpiredGrass(now);
+  if (gardenState.grassCells.length) spreadGrass(now);
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -878,24 +796,8 @@ function drawRedbloom(specimen, now) {
 }
 
 function drawGrass(grass, now) {
-  const ageMs = Math.max(0, now - grass.createdAt);
-  const idleMs = Math.max(0, now - grass.lastInfluencedAt);
-  if (idleMs >= grassConfig.expiredAfterMs) return;
-  const growing = Math.min(1, ageMs / grassConfig.growingAfterMs);
-  const expansion = Math.min(1, Math.max(0,
-    (ageMs - grassConfig.growingAfterMs) / (grassConfig.matureAfterMs - grassConfig.growingAfterMs)));
-  const growth = 0.18 + growing * 0.12 + expansion * 0.7;
-  const decline = Math.min(1, Math.max(0,
-    (idleMs - grassConfig.fadingAfterMs) / (grassConfig.expiredAfterMs - grassConfig.fadingAfterMs)));
-  // Green -> yellow -> brown -> dead turf; interpolate rather than jumping colors.
-  const colors = [[86, 127, 71], [144, 137, 74], [133, 105, 67], [112, 93, 69]];
-  const thresholds = [grassConfig.fadingAfterMs, grassConfig.dyingAfterMs,
-    grassConfig.deadAfterMs, grassConfig.expiredAfterMs];
-  const colorStage = idleMs < thresholds[1] ? 0 : idleMs < thresholds[2] ? 1 : 2;
-  const colorProgress = Math.min(1, Math.max(0,
-    (idleMs - thresholds[colorStage]) / (thresholds[colorStage + 1] - thresholds[colorStage])));
-  const color = colors[colorStage].map((channel, index) => Math.round(
-    channel + (colors[colorStage + 1][index] - channel) * colorProgress));
+  const { growth, decline, color, opacity, stage } = gardenEcologyCore.grassVisualState(grass, now);
+  if (stage === 'expired') return;
   const x = (grass.column + 0.5) * cellSize;
   const y = (grass.row + 0.5) * cellSize;
 
@@ -905,7 +807,7 @@ function drawGrass(grass, now) {
   context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
   context.clip();
   context.fillStyle = `rgb(${color.join(", ")})`;
-  context.globalAlpha = 0.6 * (1 - 0.65 * decline);
+  context.globalAlpha = opacity;
   context.beginPath();
   const seed = grass.column * 37 + grass.row * 61;
   for (let blob = 0; blob < 9; blob++) {
@@ -1006,18 +908,7 @@ function nextSpecimenVisualChangeAt(specimen, now) {
 }
 
 function nextGrassVisualChangeAt(grass, now) {
-  const maturity = grass.createdAt + grassConfig.matureAfterMs;
-  const fade = grass.lastInfluencedAt + grassConfig.fadingAfterMs;
-  const expiry = grass.lastInfluencedAt + grassConfig.expiredAfterMs;
-  if (now >= expiry) return null;
-  let next = expiry;
-  // Geometry interpolates through growth, and geometry/opacity/color interpolate through fade.
-  if (now < maturity || now >= fade) next = Math.min(next, now + rendererConfig.continuousVisualRefreshMs);
-  for (const at of [grass.createdAt + grassConfig.growingAfterMs, maturity, fade,
-    grass.lastInfluencedAt + grassConfig.dyingAfterMs, grass.lastInfluencedAt + grassConfig.deadAfterMs]) {
-    if (at > now) next = Math.min(next, at);
-  }
-  return next;
+  return gardenEcologyCore.nextGrassVisualChangeAt(grass, now, rendererConfig.continuousVisualRefreshMs);
 }
 
 // Recompute only with a rebuilt base. The 250 ms logical tick reads this one stored deadline.

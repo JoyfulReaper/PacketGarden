@@ -58,11 +58,12 @@
     for (let y = 0; y <= height; y += cellSize) grid.moveTo(0, y).lineTo(width, y);
     grid.stroke({ color: 0xb4ac72, alpha: .10, width: 1 });
     const darkening = new P.Sprite(P.Texture.WHITE); darkening.width = width; darkening.height = height; darkening.tint = 0x000000; darkening.alpha = 0;
+    const grassLayer = new P.Container(), puddleLayer = new P.Container();
     const links = new P.Container(), plants = new P.Container();
     const rain = new P.ParticleContainer({ dynamicProperties: { position: true, rotation: false, vertex: false, color: false }, boundsArea: new P.Rectangle(-40, -40, 1040, 680) });
     const probe = new P.Sprite(frames.get('probe')); probe.anchor.set(.5); probe.position.set(12, 10);
     const clip = new P.Graphics().rect(0, 0, width, height).fill(0xffffff);
-    root.addChild(soil, grid, darkening, links, plants, rain, probe, clip); root.mask = clip;
+    root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, rain, probe, clip); root.mask = clip;
     const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(); let connectionHalves = 0;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
@@ -97,7 +98,7 @@
       }
     }
     const texture = specimen => frames.get(`${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
-    return { root, byId, vineLinks, counters,
+    return { root, byId, vineLinks, counters, grassLayer, puddleLayer,
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
@@ -137,18 +138,24 @@
       setProbes(value) { probe.visible = value; },
       snapshot() {
         return { sprites: byId.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 10 + byId.size + vineLinks.size, textures: frames.size, counters: { ...counters } }; },
+          displayObjects: 12 + byId.size + vineLinks.size + grassLayer.children.length + puddleLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() { root.destroy({ children: true }); byId.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
     };
   }
   async function start() {
     const P = window.PIXI, shared = window.PacketGardenPixi, core = window.PacketGardenPixiLiveCore;
+    const ecologyCore = window.PacketGardenEcology, ecologyPresentation = window.PacketGardenPixiEcology;
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
     await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
       backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
     viewElement.appendChild(app.canvas);
     const cache = makeLiveAtlas(P, app.renderer, shared, core), view = createView(P, app, cache.frames, core, shared), model = core.createModel(view);
+    const ecologyCache = ecologyPresentation.makeEcologyAtlas(P, app.renderer);
+    const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames);
+    const ecology = ecologyCore.createEcologyModel({ onChange(change) { ecologyView.change(change, Date.now()); } });
+    // Production begins with five distributed grass seeds; real TCPNoise never gains grass influence.
+    for (let i = 0; i < 5; i++) { const cell = i * 128 + Math.floor(Math.random() * 128); ecology.influenceGrassCell(cell % 32, Math.floor(cell / 32)); }
     const measurements = shared.frameWindow(), sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
     const weatherStatus = document.querySelector('#weather-status'); let latestWeather = null, status = 'connecting';
     let currentWeather = { level: 'quiet', eventsPerMinute: 0 };
@@ -156,14 +163,17 @@
       const live = sourceControl.value === 'live'; levelControl.disabled = live;
       currentWeather = live ? latestWeather ?? { level: 'quiet', eventsPerMinute: 0 } : { level: levelControl.value, eventsPerMinute: 10000 };
       view.setWeather(currentWeather);
+      ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
     const stream = core.connectStream(EventSource, model, state => { latestWeather = state; if (sourceControl.value === 'live') updateWeather(); }, value => {
       status = value; connection.textContent = value; if (sourceControl.value === 'live') updateWeather();
     });
     sourceControl.addEventListener('change', updateWeather); levelControl.addEventListener('change', updateWeather); updateWeather();
-    document.querySelector('#clear').addEventListener('click', () => model.clear());
-    document.querySelector('#seed').addEventListener('click', () => model.seed());
+    document.querySelector('#clear').addEventListener('click', () => { model.clear(); ecology.clear(); });
+    document.querySelector('#seed').addEventListener('click', () => {
+      model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
+    });
     document.querySelector('#pause').addEventListener('change', event => model.setPaused(event.target.checked));
     const updateProbes = () => { const value = document.querySelector('#probes').checked; view.setProbes(value); document.body.classList.toggle('probes-off', !value); };
     document.querySelector('#probes').addEventListener('change', updateProbes); updateProbes();
@@ -173,7 +183,7 @@
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
     document.querySelector('#reset').addEventListener('click', () => { measurements.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
-      const data = measurements.snapshot(), counts = view.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
+      const data = measurements.snapshot(), counts = view.snapshot(), ec = ecologyView.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
       hud.textContent = [`Pixi ${P.VERSION} · ${P.RendererType?.[app.renderer.type] || app.renderer.constructor.name} · native ticker`,
         `FPS current ${data.currentFps.toFixed(1)} · recent avg ${data.averageFps.toFixed(1)} · session avg ${data.sessionAverageFps.toFixed(1)}`,
         `Frame ms recent avg ${data.averageMs.toFixed(2)} / worst ${data.worstMs.toFixed(2)} · session worst ${data.sessionWorstMs.toFixed(2)}`,
@@ -182,24 +192,35 @@
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
+        `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
+        `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
-        'Local transient CPU/ticker intervals; not GPU completion. No deferred ecology/UI systems loaded.'
+        'Local transient CPU/ticker intervals; not GPU completion. Shared real grass/puddles; other deferred systems absent.'
       ].join('\n');
     }
     app.ticker.maxFPS = 0;
     app.ticker.add(ticker => {
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
       if (elapsed > 0) { measurements.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
-      if (Date.now() >= nextLogicalAt) { model.tick(); nextLogicalAt = Date.now() + 250; } // one scheduler, never replay missed ticks
+      if (Date.now() >= nextLogicalAt) {
+        const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
+        nextLogicalAt = Date.now() + 250;
+      } // one scheduler, never replay missed ticks
+      ecologyView.animate(Date.now());
       view.animate(seconds, elapsed / 1000); if (now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
     document.addEventListener('visibilitychange', () => {
       document.body.classList.toggle('page-hidden', document.hidden);
-      if (document.hidden) app.stop(); else { model.tick(); lastTick = null; app.start(); }
+      const at = Date.now(); ecology.resetCadence(at);
+      if (document.hidden) app.stop(); else {
+        model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
+        nextLogicalAt = at + 250; lastTick = null; app.start();
+      }
     });
     window.addEventListener('pagehide', event => {
       app.stop(); stream.close(); if (event.persisted) return;
-      observer.disconnect(); window.removeEventListener('resize', resize); view.destroy();
+      observer.disconnect(); window.removeEventListener('resize', resize); ecology.clear(); ecologyView.destroy(); view.destroy(); ecologyCache.destroy();
       for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true); app.destroy(true);
     });
     window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });

@@ -133,3 +133,4 @@ streamModel.setPaused(true);stream.handlers.garden({data:JSON.stringify(event())
 stream.handlers.weather({data:'bad'});assert.equal(appliedWeather.level,'rain');
 view.destroy();assert.equal(live.size,1);assert.equal(textureCount,762);
 console.log('PASS: Pixi live isolation/SSE/safe contract; production timing and placement parity; capacity/protected vigor competition; persistent views/local vine curves; bounded atlas/particles/timing; clear/seed/pause/lifecycle/resize.');
+module.exports = { P, renderer, cache, live, textureCount: () => textureCount, generated: () => generated };

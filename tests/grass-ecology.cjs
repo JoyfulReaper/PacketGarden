@@ -2,43 +2,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 
-const sandbox = {
-  grassConfig: {
-    matureAfterMs: 30_000,
-    fadingAfterMs: 20 * 60_000,
-    spreadEveryMs: 5_000,
-    spreadChance: 0.35
-  },
-  gardenState: { grassCells: [] },
-  columns: 32,
-  nextGrassSpreadAt: 0,
-  Math: Object.create(Math)
-};
-
-sandbox.grassNeighbors = (column, row) => {
-  const neighbors = [];
-  for (let dy = -1; dy <= 1; dy++) {
-    for (let dx = -1; dx <= 1; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const neighborColumn = column + dx;
-      const neighborRow = row + dy;
-      if (neighborColumn >= 0 && neighborColumn < 32 && neighborRow >= 0 && neighborRow < 20) {
-        neighbors.push({ column: neighborColumn, row: neighborRow });
-      }
-    }
-  }
-  return neighbors;
-};
-
-sandbox.influenceGrassCell = (column, row, now) => {
-  const existing = sandbox.gardenState.grassCells.find(
-    cell => cell.column === column && cell.row === row
-  );
-  if (existing) existing.lastInfluencedAt = now;
-  else sandbox.gardenState.grassCells.push({ column, row, createdAt: now, lastInfluencedAt: now });
-};
-
-sandbox.spreadGrass = () => { throw new Error('original spreadGrass should be replaced'); };
+const ecology = require("../wwwroot/garden-ecology.js");
+const sandbox = { grassConfig: ecology.grassConfig, nextGrassSpreadAt: 0, Math: Object.create(Math) };
+const model = ecology.createEcologyModel({ random: () => sandbox.Math.random() });
+sandbox.gardenState = model;
+sandbox.grassSpreadAttemptCount = model.grassSpreadAttemptCount;
+sandbox.spreadGrass = now => { model.nextGrassSpreadAt = sandbox.nextGrassSpreadAt; model.spreadGrass(now); sandbox.nextGrassSpreadAt = model.nextGrassSpreadAt; };
 sandbox.Math.random = () => 0;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
