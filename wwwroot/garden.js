@@ -85,12 +85,10 @@ function handleLiveGardenEvent(frame) {
     && typeof maybeSchedulePort22Mutation === "function") {
     maybeSchedulePort22Mutation(result.specimen);
   }
-  if (result.specimen?.type === "mushroom" && typeof maybeScheduleAmanitaDrop === "function") {
-    maybeScheduleAmanitaDrop(result.specimen);
-  }
-  if (result.specimen && event.seenCount === "1" && typeof createFirstSeenCuriosity === "function") {
-    createFirstSeenCuriosity(result.specimen);
-  }
+  if (result.specimen) gardenAmbient.acceptLiveSpecimen(result.specimen, Date.now(), {
+    scheduleAmanita: source => { if (typeof maybeScheduleAmanitaDrop === "function") maybeScheduleAmanitaDrop(source); },
+    createCuriosity: source => { if (typeof createFirstSeenCuriosity === "function") createFirstSeenCuriosity(source); }
+  });
   return result;
 }
 
@@ -226,6 +224,9 @@ const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random
 const gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(), onChange({ kind }) {
   gardenBaseDirty = true; gardenPerf?.reason(kind.startsWith('grass-') ? 'grass-change' : 'puddle-change');
 }});
+const gardenAmbient = window.PacketGardenAmbient.createAmbientModel({
+  now: () => Date.now(), random: () => Math.random(), getSpecimens: () => gardenModel.specimens
+});
 // Keep object references used by inspection and ecology; fixture assignment goes through the model too.
 const gardenState = {
   get specimens() { return gardenModel.specimens; },
@@ -234,7 +235,11 @@ const gardenState = {
   set grassCells(entries) { gardenEcology.grassCells = entries; },
   get puddles() { return gardenEcology.puddles; },
   set puddles(entries) { gardenEcology.puddles = entries; },
-  actors: [], curiosities: [], drops: [], recentEvents: []
+  get curiosities() { return gardenAmbient.curiosities; },
+  set curiosities(entries) { gardenAmbient.curiosities = entries; },
+  get drops() { return gardenAmbient.drops; },
+  set drops(entries) { gardenAmbient.drops = entries; },
+  actors: [], recentEvents: []
 };
 
 /** @param {GardenEvent} event */

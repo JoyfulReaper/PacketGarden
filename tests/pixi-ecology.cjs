@@ -31,7 +31,7 @@ for(let cycle=0;cycle<10;cycle++){
   for(const p of m.puddles)m.refreshStormPuddle(p,now);
   for(const [k,s] of puddleViews)assert.equal(ev.puddleViews.get(k),s);
   assert.equal(harness.textureCount(),startTextures+13);assert.equal(harness.generated(),startGenerated+1);
-  assert.equal(view.snapshot().displayObjects,1364);
+  assert.equal(view.snapshot().displayObjects,1366);
   m.clear();assert.equal(ev.grassViews.size,0);assert.equal(ev.puddleViews.size,0);
 }
 // Healthy mature grass has no visual transform work until its first fading boundary.
@@ -44,7 +44,7 @@ m.clear();m.influenceGrassCell(0,0,now);const before=ev.counters.grassVisualUpda
 for(let at=now;at<now+1000;at+=10){ev.tick(at);ev.animate(at);}assert.equal(ev.counters.grassVisualUpdates,before);
 ev.tick(now+1000);assert.equal(ev.counters.grassVisualUpdates,before+1);
 presentation.seedDenseEcology(m,now,false);assert.equal(m.puddles.length,0);assert.equal(ev.puddleViews.size,0);
-model.clear();m.clear();assert.equal(view.snapshot().displayObjects,12);
+model.clear();m.clear();assert.equal(view.snapshot().displayObjects,14);
 ev.destroy();view.destroy();atlas.destroy();assert.equal(harness.textureCount(),startTextures);
 const script=fs.readFileSync('wwwroot/pixi-live.js','utf8'),ec=fs.readFileSync('wwwroot/pixi-live-ecology.js','utf8');
 assert.doesNotMatch(ec,/EventSource|fetch\(|setTimeout|setInterval|localStorage|sessionStorage/);

@@ -1,6 +1,6 @@
 // Source-provided count one earns a tiny visitor, not a claim of global uniqueness.
 // Separate from specimen cells, mutations, and the gnome-owned actor array.
-const firstSeenCuriosityConfig = { maxActive: 3, lifetimeMs: 20_000, hitRadius: 9, placementPadding: 14 };
+const firstSeenCuriosityConfig = window.PacketGardenAmbient.curiosityConfig;
 const firstSeenCuriosityTypes = new Map([
   ["ladybug", { render: drawCuriosityLadybug, message: "You caught a ladybug. +0 points" }],
   ["snail", { render: drawCuriositySnail, message: "You collected a snail. It seems annoyed. +0 points" }],
@@ -9,54 +9,14 @@ const firstSeenCuriosityTypes = new Map([
 ]);
 const firstSeenCuriosityPool = Array.from(firstSeenCuriosityTypes.keys());
 
-// The live handler supplies its exact successful result. Tests may call this seam directly.
+// Canvas repainting stays here; logical creation/expiry/movement is shared.
 function createFirstSeenCuriosity(specimen, random = Math.random, now = Date.now()) {
-  if (!gardenState.specimens.includes(specimen)
-    || now - specimen.createdAt >= speciesConfig.get(specimen.type).timings.expiredAfterMs) return null;
-  updateFirstSeenCuriosities(now);
-  if (gardenState.curiosities.length >= firstSeenCuriosityConfig.maxActive) return null;
-  const type = firstSeenCuriosityPool[Math.floor(random() * firstSeenCuriosityPool.length)];
-  const origin = { x: (specimen.column + 0.5) * cellSize, y: (specimen.row + 0.5) * cellSize };
-  const angle = random() * Math.PI * 2;
-  const radius = 18 + random() * 4;
-  let dx = Math.cos(angle) * radius, dy = Math.sin(angle) * radius;
-  const padding = firstSeenCuriosityConfig.placementPadding;
-  // Reflect outward offsets at edges so the visitor stays visible beside its source.
-  if (origin.x + dx < padding || origin.x + dx > gardenWidth - padding) dx = -dx;
-  if (origin.y + dy < padding || origin.y + dy > gardenHeight - padding) dy = -dy;
-  const curiosity = {
-    type, createdAt: now, expiresAt: now + firstSeenCuriosityConfig.lifetimeMs, origin,
-    x: origin.x + dx, y: origin.y + dy, phase: random() * Math.PI * 2,
-    direction: Math.cos(angle) < 0 ? -1 : 1
-  };
-  gardenState.curiosities.push(curiosity);
-  drawGardenOverlay(true, now);
-  syncWeatherAnimation();
-  return curiosity;
+  const item = gardenAmbient.createFirstSeenCuriosity(specimen, random, now);
+  if (item) { drawGardenOverlay(true, now); syncWeatherAnimation(); }
+  return item;
 }
-
-// Cleanup shares the garden's existing 250 ms tick. Nothing is queued or replayed.
-function updateFirstSeenCuriosities(now = Date.now()) {
-  const active = gardenState.curiosities.filter(curiosity => now < curiosity.expiresAt);
-  if (active.length === gardenState.curiosities.length) return false;
-  gardenState.curiosities = active;
-  return true;
-}
-
-function firstSeenCuriosityPosition(curiosity, now = Date.now()) {
-  const elapsed = Math.max(0, Math.min(now - curiosity.createdAt, firstSeenCuriosityConfig.lifetimeMs));
-  let dx = 0, dy = 0;
-  if (curiosity.type === "ladybug") {
-    dx = Math.sin(elapsed / 1800 + curiosity.phase) * 3;
-    dy = Math.sin(elapsed / 2600 + curiosity.phase) * 2;
-  } else if (curiosity.type === "snail") {
-    dx = curiosity.direction * elapsed / firstSeenCuriosityConfig.lifetimeMs * 6;
-  } else if (curiosity.type === "moth") {
-    dx = Math.sin(elapsed / 900 + curiosity.phase) * 4;
-    dy = Math.sin(elapsed / 600 + curiosity.phase) * 3;
-  }
-  return { x: curiosity.x + dx, y: curiosity.y + dy };
-}
+function updateFirstSeenCuriosities(now = Date.now()) { return gardenAmbient.expireCuriosities(now); }
+function firstSeenCuriosityPosition(item, now = Date.now()) { return window.PacketGardenAmbient.curiosityPosition(item, now); }
 
 function firstSeenCuriosityAt(point, now = Date.now()) {
   if (!point) return null;
@@ -73,7 +33,7 @@ function firstSeenCuriosityAt(point, now = Date.now()) {
 function collectFirstSeenCuriosity(curiosity, now = Date.now()) {
   const index = gardenState.curiosities.indexOf(curiosity);
   if (index < 0 || now >= curiosity.expiresAt) return false;
-  gardenState.curiosities.splice(index, 1);
+  gardenAmbient.removeCuriosity(curiosity, "collected");
   showCollectionMessage(firstSeenCuriosityTypes.get(curiosity.type).message, now);
   drawGardenOverlay(true, now);
   syncWeatherAnimation();
@@ -93,7 +53,7 @@ function drawFirstSeenCuriosities(now) {
 }
 
 function drawCuriosityLadybug(curiosity, now) {
-  context.rotate(Math.sin((now - curiosity.createdAt) / 1800 + curiosity.phase) * 0.2);
+  context.rotate(window.PacketGardenAmbient.curiosityAppearance(curiosity, now).rotation);
   context.strokeStyle = "#292725";
   context.lineWidth = 1;
   context.beginPath();
@@ -126,7 +86,7 @@ function drawCuriositySnail(curiosity) {
 }
 
 function drawCuriosityMoth(curiosity, now) {
-  const flutter = 0.55 + (Math.sin((now - curiosity.createdAt) / 90 + curiosity.phase) + 1) * 0.225;
+  const flutter = window.PacketGardenAmbient.curiosityAppearance(curiosity, now).flutter;
   context.fillStyle = "#e2e3d1";
   context.beginPath();
   context.ellipse(-3 * flutter, 0, 3.5 * flutter, 3, -0.4, 0, Math.PI * 2);
@@ -145,9 +105,9 @@ function drawCuriosityPebble(curiosity, now) {
   context.strokeStyle = "#cecec0";
   context.lineWidth = 1;
   context.beginPath(); context.moveTo(-2, -1); context.lineTo(1, -2); context.lineTo(2, 0); context.stroke();
-  const glint = Math.sin((now - curiosity.createdAt) / 1100 + curiosity.phase);
-  if (glint > 0.92) {
-    context.strokeStyle = `rgba(249, 246, 211, ${(glint - 0.92) / 0.08})`;
+  const glint = window.PacketGardenAmbient.curiosityAppearance(curiosity, now).glint;
+  if (glint > 0) {
+    context.strokeStyle = `rgba(249, 246, 211, ${glint})`;
     context.beginPath(); context.moveTo(1, -4); context.lineTo(1, 0);
     context.moveTo(-1, -2); context.lineTo(3, -2); context.stroke();
   }

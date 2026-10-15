@@ -41,7 +41,7 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, onLive = () => {}, onRemoved = () => {} } = {}) {
     let paused = false;
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
     const model = garden.createGardenModel({ now, random, onChange(change) {
@@ -51,7 +51,7 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { view.remove(specimen, model.byCell); if (reason === 'expired') counts.lifecycleRemovals++; }
+      else if (kind === 'removed') { view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
     return { specimens: model.specimens, byCell: model.byCell, counts, tick: model.tick, clear: model.clear,
@@ -60,7 +60,7 @@
         if (paused) { counts.pausedEvents++; return null; }
         const result = model.addEvent(event);
         if (!result) return null;
-        result.specimen.origin.kind = 'live'; counts.acceptedLive++; return result.specimen;
+        counts.acceptedLive++; onLive(result.specimen); return result.specimen;
       },
       setPaused(value) { paused = value; },
       seed() {

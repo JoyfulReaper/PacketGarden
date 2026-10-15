@@ -1,3 +1,264 @@
+# Pixi live garden with shared ambient state
+
+The 2026-10-15 slice adds real first-seen visitors and loose Amanita muscaria to
+the opt-in `/pixi-live.html` garden. `/` remains production Canvas;
+`/pixi-stress.html`, the backend, SSE contracts, specimen core and ecology rules
+are unchanged. Pixi collection interaction is still deferred. Visitors and drops
+expire normally and do not affect occupancy, score, audio or other gameplay.
+
+## Shared ambient architecture
+
+`garden-ambient.js` owns the authoritative state, eligibility, placement,
+movement and lifetime rules used by both renderers. It is separate from
+`garden-ecology.js`: temporary visitors and source-bound pending drops have
+different ownership from long-lived turf and weather residue. This keeps the
+ecology module focused. The ambient module depends only on shared garden
+dimensions/timing queries, injected clock/random functions, and callbacks.
+It has no rendering, DOM, timers, storage, audio or inspection dependency.
+
+`PacketGardenAmbient.createAmbientModel({ now?, random?, getSpecimens?, onChange? })`
+exposes:
+
+- `curiosities`, `drops`, `pendingDrops` and constant-size diagnostic `counts`.
+- `acceptLiveSpecimen(source, at?, hooks?)`, the common success-only live trigger.
+  Optional creation hooks retain Canvas repainting and its existing test seams.
+- `createFirstSeenCuriosity(source, random?, at?)`, `maybeScheduleAmanita(source,
+  roll?, random?, at?)`, and `scheduleLooseDrop(source, type, random?, at?)`.
+  Direct creation/scheduling remain explicit local/test seams, as before.
+- `tick(at?, { hidden?, living? })`, `expireCuriosities(at?)`, `tickDrops(...)`,
+  `activateLooseDrop(source, at?, living?, hidden?)`, `prunePendingDrops(...)`,
+  `isSourceAlive(...)`, and `cancelSource(source)`.
+- `removeCuriosity(exactObject, reason?)`, `removeDrop(exactObject, reason?)`,
+  `clear()` and a validated, known-fields-only local `seed(...)` import.
+- `idFor(object)`: stable, monotonically allocated browser-local identity through
+  a WeakMap. Existing logical object fields/JSON shapes remain unchanged; no
+  removed-object history is retained. IDs are not reused after clear.
+
+Shared exports include both original config tables, the exact four-type pool,
+`curiosityPosition`, `looseDropPosition`, and presentation-neutral
+`curiosityAppearance` values for rotation, flutter and glint. Synchronous
+notifications contain `{ kind, item, id, reason }`, with `curiosity-added`,
+`curiosity-removed`, `drop-added`, and `drop-removed`. Pending changes need no
+display object or notification log. Source references in the bounded pending map
+are pruned on logical passes and explicitly cancelled by Pixi removal callbacks.
+
+## Preserved visitor and Amanita semantics
+
+Only a successful live TCPNoise specimen whose normalized `seenCount` is exactly
+the string `"1"` can trigger a first-seen visitor. This is source-provided count
+one, not global uniqueness. Rejected/saturated frames, fake/local events, and
+other count representations do not trigger it. Ladybug, snail, moth and shiny
+pebble retain equal selection through the original random pool, cap three,
+20-second lifetime, 9px hit radius and 14px placement padding. Cap skips do not
+roll placement or queue a retry. Origin remains the exact source cell center;
+type, angle, radius 18–22px and phase retain their original random-call order,
+with the same edge reflection. Movement is derived without mutating state:
+ladybug wander, slow directional snail movement, moth flutter/wander, static
+pebble. Active visitors remain independent of their source's later lifetime.
+
+Only successful real TCPNoise mushrooms receive the independent 1% Amanita roll;
+the exact boundary remains `0 <= roll < .01`. A success records one pending
+attempt keyed by the **exact specimen reference**, activating after five seconds.
+Angle, radius and phase are selected when scheduled, never rerolled at activation.
+The ordinary shared species timing query plus the original mutation-expiry guard
+preserve source-liveness semantics. Natural expiry, replacement, manual removal
+and clear cancel an attempt; a new object in the same cell cannot inherit it.
+
+Pending attempts are separate from active drops and are bounded by living source
+capacity (640), with one entry per reference. Each pass prunes dead sources.
+Hidden documents still prune and expire active objects, but defer due activation.
+Resume activates currently eligible pending objects once, using resume time for
+their new 20-second lifetime. Every due attempt is consumed, including cap-three
+skips; no retry backlog or missed-tick replay exists. Active Amanita is an
+independent six-field object with its original 9px hit radius, 14px padding and
+0.6px vertical sine bob. It never mutates its source or claims a cell, and does
+not contain network provenance.
+
+For mushrooms with count one, the shared trigger retains production ordering:
+drop chance and schedule placement first, then curiosity type and placement.
+The Pixi transport adapter now leaves the shared specimen core's `tcpnoise`
+origin kind intact, instead of renaming it `live`; HUD live/simulated labels are
+unchanged. Its success callback triggers ambient rules only after insertion,
+and its exact-object removal callback immediately cancels pending source state.
+The shared specimen model itself was not edited.
+
+## Canvas adapters and persistent Pixi views
+
+`garden-curiosities.js` and `garden-drops.js` retain Canvas artwork, newest-first
+hit helpers, exact collection messages, collection sound calls and repainting.
+Creation/lifetime/movement delegate to the shared ambient model; collection calls
+its exact-object removal APIs. `gardenState` compatibility accessors expose the
+shared arrays, and `pendingLooseDrops` aliases the shared map. Existing global
+function seams remain available. No Canvas renderer, FPS budget, base dirty flag,
+or overlay scheduling redesign was introduced.
+
+Pixi's `pixi-live-ambient.js` builds one startup atlas containing **five frames**:
+ladybug, snail, moth, shiny pebble and Amanita. A single 320×64 source at 2x
+resolution uses about 80 KiB RGBA before driver overhead. Temporary construction
+geometry is destroyed immediately. Total retained caches are now **780 frames
+across three GPU sources**: 762 specimen/rain/probe, 13 ecology, five ambient.
+No event, activation, animation frame, glint or collection creates a texture.
+
+Each active ambient object has one persistent Sprite, mapped by its logical ID.
+Only its position/rotation/scale changes during animation; expiry/removal destroys
+that exact Sprite. At most three visitors plus three drops are traversed per
+animation frame. No specimen/grass scan or scene rebuild accompanies those
+transforms. Moth flutter scales the cached whole Sprite, a small artwork
+approximation; the cached pebble highlight is static rather than periodically
+glinting. Canvas art/animation remains exact, including its glint.
+
+Root order follows production's overlay intent: soil/grid/darkness → grass →
+puddles → vine links/specimens → **loose drops → curiosities → rain** → probe/mask.
+Two lightweight ambient containers are added, with no additional canvas. Clear
+leaves **14 fixed display objects**. Full dense seeding produces 640 specimens,
+640 grass, eight puddles, three visitors, three Amanita and 64 vine Graphics:
+**1,372 display objects**, plus 400 lightweight hurricane particles. With ambient
+objects expired, the same otherwise unchanged state has 1,366 display objects.
+
+The dense button includes one local simulated 3+3 ambient sample. The separate
+**Seed 3 visitors + 3 Amanita (local simulated)** button cycles through the four
+visitor types while respecting each three-object cap. Samples use normal
+20-second lifetimes; they do not freeze, extend or repeatedly respawn themselves.
+No backend traffic is sent. Pixi still has no collection/click routing, messages,
+inventory, Score, audio or inspection card. Its HUD reports active/view counts,
+pending count, creation/expiry and schedule/activation/cancellation/cap-skip
+counters, plus the fixed five-frame cache.
+
+## Verification for the ambient slice
+
+`tests/fixtures/production-ambient.json` freezes the pre-refactor implementation
+at `dbca0cc`: all four visitor types plus Amanita, corner/interior placement,
+original logical object/pending fields, movement and exact Canvas commands/styles
+at **75 samples** through flutter/glint/bob/expiry. The extracted shared rules and
+Canvas adapters match those fixtures exactly.
+
+New `tests/garden-ambient.cjs` checks the frozen oracle, exact configs/live
+eligibility/RNG order, identity, cap consumption, timings, exact-source
+expiry/removal/clear/same-cell replacement, hidden deferral/resume and lack of
+timers. New `tests/pixi-ambient.cjs` checks persistent view ownership, exact
+removal, static pebble, repeated seed/expiry/clear cycles, bounded textures and
+immediate exact-source replacement cancellation. The existing Pixi entry-point
+test now drives real ambient controls and live callbacks, preserves views across
+weather changes, tests hidden pending activation and expiry, and verifies
+1,372 dense / 14 cleared display objects. Headless tests make no GPU FPS claims.
+
+Existing Canvas curiosity/drop suites retain all expectations, including +0
+messages, optional sound, scaled click priority, provenance independence,
+hidden behavior, zero base rebuilds and the existing 30 FPS overlay scheduling.
+Independent browser harnesses load the new shared dependency; resource-count
+expectations account explicitly for two added Pixi containers.
+
+`dotnet build` passed with zero warnings/errors, .NET checks passed, all **27**
+Node/browser entry suites passed, and `git diff --check` passed. An initial
+preview launch hit the existing preview process's apphost file lock; stopping
+that old preview and rerunning the normal build resolved it. The refreshed
+preview runs through the DLL host. Backend sources, shared specimen core,
+ecology modules and synthetic stress files have no diff.
+
+### Observed ambient browser run (2026-10-15)
+
+The preview received actual collector input from the previously supplied NATS
+endpoint and real weather over the existing single SSE connection. No synthetic
+publisher or fake SSE stream was substituted. WebGL/native ticker at 1280×1000,
+1218×650 presentation/backing, DPR 1. Timings are local ticker intervals, not GPU
+completion measurements.
+
+| Case | Duration | Session average FPS | Session worst interval | >50ms / >300ms |
+| --- | ---: | ---: | ---: | ---: |
+| Isolated dense hurricane, including normal narrow/restore resize | 69.6s | 60.0 | 22.8ms | 0 / 0 |
+| Dense ecology + ambient lifecycle samples + hurricane + actual SSE | 375.8s | 60.0 | 19.1ms | 0 / 0 |
+
+The second sample reset measurements after seed/weather setup. Initial state:
+640 specimens, 640 grass, eight puddles, three visitors, three Amanita, 64 vine
+Graphics, 1,372 display objects and 400 rain particles. One additional **ambient
+only** local 3+3 batch was seeded during the continuing run. Each batch expired
+normally after 20 seconds; no lifetimes were frozen or extended, and there was
+no automatic ambient reseeding. Naturally triggered first-seen visitors also
+appeared. Thus six ambient objects were present during finite lifecycle windows,
+not continuously for six minutes.
+
+At the final observation there were 354 specimens (185 simulated, 169 live),
+640 grass, eight puddles, zero active visitors/drops, 177 vine Graphics with 278
+connection halves, **1,193 display objects**, and 400 rain particles. Natural
+specimen expiry/replacement reduced density without periodic garden reseeding.
+Grass briefly reached 639 during ordinary expiry/spread and returned to 640.
+Cache counts remained **762 + 13 + 5 = 780 frames / three sources** throughout.
+
+The run accepted **171 additional actual events**, made 20 additional specimen
+replacements and 437 lifecycle removals, and refreshed puddles 23 additional
+times. Visitor counters recorded eight naturally triggered first-seen creations
+beyond the known local seed batches. A live moth was visible in a sampled
+screenshot. No natural Amanita roll succeeded in this run (`dropsScheduled`
+remained zero); its live gate, 1% boundary, activation and cancellation are
+verified deterministically rather than claimed as rare manual observations.
+
+All four local visitor visuals and red-cap/white-spot Amanita were inspected.
+Sampled views showed small visitor movement, moth flutter, static pebble position
+and slight drop bobbing; natural expiry removed their views. Rain/probe/vine/live
+updates remained coherent in samples, without recurring 300–500ms gaps. No
+browser errors or warnings were captured. No continuous video, GPU profile or
+heap profile was recorded, so these observations do not certify uninterrupted
+subjective presentation smoothness or long-duration driver memory behavior.
+
+Normal isolated resize to 390×844 and back retained one canvas, contain layout
+and bounded caches. The prior 250.7ms special concurrent Canvas/Pixi anomaly was
+**not reproduced** in this normal isolated workflow; no broad resize profiling
+was undertaken. Clear/refill and live/manual weather switching are covered by
+the actual entry-point test and browser controls; Pixi collection remains absent.
+Hidden/resume source cancellation, deferred activation and exact expiry are
+tested through the actual registered callbacks with deterministic clocks;
+browser-level suspension was not manually verified in this slice.
+
+A sequential production Canvas check observed real specimen growth, grass
+patches, fake DNS/HTTP/Gopher growth, a storm puddle, hurricane rain and switching
+back to Live weather, with no browser errors. Rare Canvas visitor collection,
+Amanita source cancellation/collection and their messages were not individually
+observed manually; the unchanged integration suites and frozen oracle verify
+those paths deterministically. No audible collection sound was manually checked.
+After returning to Pixi, Clear removed all seeded views and left 14 fixed display
+objects with all caches retained. A fresh-page startup/clear workflow recorded
+one 100ms startup interval, without recurring stalls or any >300ms gap; it is
+separate from the reset 375.8s steady-state benchmark.
+After unpausing, actual input refilled 63 live specimens; five additional real
+visitors appeared and expired, while grass stayed at zero as required for real
+TCPNoise events. Cleared terrain/ambient views did not remain in the scene.
+
+Ignored local evidence: `artifacts/pixi-ambient-observations.json`,
+`artifacts/pixi-ambient-dense-start.jpg`, `artifacts/pixi-ambient-six.jpg`,
+`artifacts/pixi-ambient-expiry.jpg`, `artifacts/pixi-ambient-soak.jpg`, and
+`artifacts/ambient-production.jpg`.
+
+### Changed files in this slice
+
+- Shared model: `wwwroot/garden-ambient.js` (new).
+- Canvas adapters/integration: `wwwroot/garden-curiosities.js`,
+  `wwwroot/garden-drops.js`, `wwwroot/garden.js`, `wwwroot/index.html`.
+- Pixi adapter/presentation: `wwwroot/pixi-live-ambient.js` (new),
+  `wwwroot/pixi-live-core.js`, `wwwroot/pixi-live.js`, `wwwroot/pixi-live.html`.
+- New verification: `tests/garden-ambient.cjs`, `tests/pixi-ambient.cjs`,
+  `tests/fixtures/production-ambient.json`.
+- Existing harnesses: `tests/garden-audio.cjs`, `tests/garden-events.cjs`,
+  `tests/gnome-events.cjs`, `tests/pixi-ecology-integration.cjs`,
+  `tests/pixi-ecology.cjs`.
+- Documentation: `docs/PIXI-LIVE.md` (this file; earlier observations retained).
+
+## Remaining parity and next slice
+
+Specimen mutations/collectible weed, opium, gnomes, inspection card, Recent
+activity UI, general interaction/collection routing, Score and audio remain
+deferred in Pixi. Recommended next slice: shared mutation/pending lifecycle and
+persistent mutation presentation, followed by unified interaction once all
+collectible state is represented. Keep production Canvas and preserve the
+separate synthetic stress benchmark.
+
+---
+
+# Historical ecology slice (2026-10-14)
+
+The following architecture/measurements describe the prior ecology slice, before
+ambient state was added. Its deferred-curiosity/drop statements and counts are
+historical; current ambient behavior and cardinalities are described above.
+
 # Pixi live garden with shared ecology
 
 `/` remains production Canvas. `/pixi-live.html` now includes the real shared
