@@ -1,4 +1,216 @@
-# Pixi live garden with shared specimen mutations
+# Interactive Pixi garden (2026-10-15)
+
+`/pixi-live.html` now supports the production interaction order, exact collection,
+specimen inspection, two-second feedback, Recent activity and permanent `Score: 0`.
+`/` remains Canvas. Backend/SSE contracts, synthetic stress assets, core specimen
+rules, ecology, ambient lifecycle and mutation rules are unchanged. Audio, gnomes
+and opium are not implemented in Pixi by this slice. All earlier observations
+remain below as historical records.
+
+## Shared interaction and coordinate conversion
+
+`garden-interaction.js` owns logical hit testing and explicit priority:
+**curiosity → loose drop → active mutation → specimen inspection**. It exports
+`curiosityAt`, `looseDropAt`, `mutationHit`, `specimenAt`, `resolve`, `validPoint`
+and the pure `pointFromClient` conversion. Canvas retains its existing action
+functions as adapters and now calls the same resolver. The module has no DOM,
+Canvas, Pixi, audio, storage or scheduler dependency.
+
+Curiosities and loose drops use their shared movement position *at click time*,
+inclusive 9px radii, expiry guards, and reverse array order (newest/topmost first).
+Mutation collection uses the existing inclusive 12px radius within the occupied
+logical cell. Ordinary inspection uses the entire cell, including the area outside
+that radius. Pending mutations remain ordinary inspectable redblooms. One resolve
+returns at most one action; no display-tree z-order or Sprite bounds are consulted.
+
+Pixi registers exactly **one native canvas `click` listener**. Root `eventMode`
+remains `none`; specimens, ambient objects and rain gain no event listeners.
+The handler reads the canvas CSS rectangle once on click, converts client pixels
+to renderer presentation pixels using `renderer.screen`, then inverts the actual
+root offset and scale. Backing pixels/DPR do not enter the logical result:
+
+```
+presentationX = (clientX - rect.left) * screen.width / rect.width
+logicalX = (presentationX - root.position.x) / root.scale.x
+```
+
+Y follows the same rule. Bounds are `[0,960) × [0,600)`. Pixi letterbox/outside
+clicks do nothing, as required for this prototype; valid empty soil closes the
+card. Canvas retains its prior outside-click close behavior. Resize updates the
+existing root/renderer, never listener or view ownership. No hit scan runs each
+RAF; a bounded specimen scan happens only for a click or selected-reference check
+on the existing logical cadence.
+
+## Collection and DOM UI
+
+`pixi-live-ui.js` is the DOM adapter. Curiosity/drop collection calls the existing
+ambient `removeCuriosity(item, "collected")` / `removeDrop(item, "collected")`.
+Mutation collection calls the exposed garden `remove(specimen, "collected")`.
+Those authoritative APIs synchronously destroy exactly the corresponding view.
+Amanita collection preserves its mushroom. Mutation collection clears occupancy,
+mutation view diagnostics, and that exact inspection reference without first
+restoring a redbloom. Other views, vines, ecology, particles and cached textures
+are untouched. Ambient collection preserves an inspected source, matching Canvas.
+
+`garden-ui-core.js` shares message strings, the 2000ms duration, age formatting,
+inspection field formatting, source/vigor labels, Recent text and bounded safe
+entry copying. Exact messages remain:
+
+- `You caught a ladybug. +0 points`
+- `You collected a snail. It seems annoyed. +0 points`
+- `You caught a moth. +0 points`
+- `You found a rock. +0 points`
+- `You found Amanita muscaria. +0 points`
+- `You collected some weed. +0 points`
+
+One message and deadline are held; a newer message replaces/reset the deadline.
+The existing 250ms logical cycle hides/clears it when due, including reconciliation
+on resume. No message/object timers were added. The card stores the exact specimen
+reference, closes synchronously on removal/replacement/collection/clear, supports
+the existing close button and Escape, and refreshes age/mutation at most once per
+second. Unchanged DOM text is not rewritten. Closing/inspection create no Pixi
+objects and change no garden state.
+
+The card copies production markup/classes: Source, Sensor, Listening port, Seen
+count, Vigor, Color scheme, Age and Mutation. Real source wording is `Live TCPNoise`;
+missing live sensor is `Not supplied`. Simulated seeds/fixtures are explicitly
+labelled `Simulated garden seed` / `Simulated interaction fixture`, with
+`Development controls` and `—` for missing sensor/port/count information. Existing
+simulated event names (DNS/Gopher/HTTP/SSH/probe) are shared. Seen count stays an
+exact string. Vigor uses logical 0–3. Color uses a stable renderer-owned `Pixi …`
+finite palette name, including orchid/periwinkle/sage rather than claiming Canvas
+rainbow/art parity. Inspection never rerolls. Active mutation formatting uses the
+existing shared `Collectible weed` helper; normal/pending shows `None`.
+
+The production UI rules moved verbatim from `garden.css` to `garden-ui.css`, loaded
+by both pages. `pixi-live.css` adds only stage positioning/cursor/card integration.
+The card/status/live-region roles, real close button, labelled native checkbox and
+DOM score remain accessible. `Score: 0` is static markup and never updated. There
+is no hidden score, inventory, progression or persistence. As on Canvas, the
+Recent events toggle hides the whole activity panel, including its static score.
+
+## Safe Recent activity and transport outcomes
+
+The same single EventSource still supplies garden and weather. The Pixi adapter's
+new `acceptEvent` exposes actual `spawned`, `replaced`, `dropped`, `invalid` or
+`paused` outcomes. Existing `accept` still returns specimen/null for compatibility.
+The frame is normalized once, then safe fields go to core `addSpecimen`; actual
+`result.replaced` determines replacement, not garden size. Valid saturated events
+record a `dropped` entry even when no specimen is returned. Invalid/malformed and
+paused callbacks add no activity. Pausing still allows weather through.
+
+Recent activity retains exactly the newest three safe entries in memory. Real
+rows show optional sensor, port, species, optional seen count and age. Spawn and
+replacement have the same visible format as Canvas; drops append `no growth`.
+Explicit simulated entries use their existing source wording. Collection messages
+are not network activity. Dense, ambient, mutation and overlap fixture imports do
+not generate activity; clear/refill preserves the bounded current rows. Toggle
+visibility preserves/continues those rows. Ages share the one bounded UI cadence.
+
+Neither specimen provenance nor Recent entries retain raw frames, remote endpoints,
+payloads, banners or credentials. The normalized safe fields are copied explicitly;
+the UI formats only these known fields and writes via `textContent`, never HTML.
+Sensor text containing markup is displayed literally. No telemetry/storage was added.
+
+`Seed overlap fixture` is local-only, replaces simulated specimen state with one
+mutation and an ordinary mushroom, and cycles the four visitor types over a single
+Amanita/mutation position. It uses shared creation/removal rules, adds no traffic,
+and makes the three-action priority reproducible. Existing pending controls still
+allow ordinary-before-activation inspection. Seed fixtures expire normally.
+
+## Interaction validation and remaining work
+
+All **33 Node suites** pass, including the new pure interaction/mapping matrix,
+DOM+real-view ownership/activity suite, frozen `cf2a3de` Canvas interaction oracle,
+and actual Pixi entry-point surface/controls/resize/DPR/teardown tests. The full
+previous ecology/ambient/mutation/art/scheduling suites pass. `dotnet build` has
+zero warnings/errors, `dotnet run --project tests/PacketGarden.Checks` passes, and
+`git diff --check` passes. The preview was briefly stopped for build file ownership,
+then restarted against the supplied NATS endpoint.
+
+Manual Canvas checks on `/` covered real specimen inspection, safe fields, fake
+HTTP/DNS input, Recent rows/toggle, empty close, static score and hurricane input.
+A temporary local page using the exact production scripts forced a curiosity,
+Amanita and mutation overlap; successive clicks produced the three exact messages,
+removed only the intended objects, and preserved the ordinary mushroom. Inspection
+and card formatting worked after resizing to 390×844. That served fixture was
+removed; no forced collection controls were added to production.
+
+Manual Pixi checks covered all four curiosity messages, Amanita, mutation, pending
+redbloom inspection, active field formatting outside the collection radius,
+ordinary/simulated/real inspection, close, empty clicks, Recent visibility,
+clear/refill and real activity during hurricane. The same protected ghostbloom was
+successfully inspected after settled 1600×900 and 390×844 resize; letterbox clicks
+preserved its card. An initial automation pass reused stale coordinates; recomputing
+them locally corrected the test, with no product mapping change required. DPR 1/2,
+CSS scaling, boundary edges, newest overlaps, expiry/replacement stale references,
+exact cache/view counts and deterministic saturated outcomes are covered in tests.
+The browser also displayed real saturated `no growth` entries. Rare collections
+were explicitly forced locally; no natural rare collection is claimed.
+
+Interaction adds **zero Pixi display objects or texture frames**. The dense baseline
+remains 1,372 display objects and 781 cached frames across three atlas sources,
+with 400 hurricane particles. Natural lifecycle and real-event/vine churn change
+the live object count normally. Inspection, closing and DOM updates create/destroy
+no scene objects; collection destroys one exact view. No recurring 300–500ms stall
+was observed.
+
+### Interaction soak measurements
+
+The recorded foreground run lasted **376.8 seconds**, with manual hurricane at
+10,000 events/min, 400 particles, dense ecology, periodic ambient/mutation seeding,
+and real NATS/SSE traffic. During the run cards were opened/closed repeatedly,
+visitors/drops/mutations were collected, the Recent toggle was exercised, wide and
+narrow resize checks ran, and a final full local refill closed the old inspection
+reference before another three-category collection cycle.
+
+| Phase | FPS | Worst interval | >50ms / >300ms |
+| --- | ---: | ---: | ---: |
+| Recorded 376.8s interaction run | session 60.0; recent 59.9 | 17.2ms | 0 / 0 |
+| Resize observations during that run | approximately 60 | 17.0ms at 206.7s | 0 / 0 |
+| Separate fresh-page startup samples | settled to 60 | 83.24–83.50ms | 1 / 0 each |
+
+There was no steady-state >50ms gap or 300–500ms stall in the recorded interval.
+The first background attempt was throttled near 1 FPS and excluded; the user
+foregrounded the preview before measurement. The full local baseline started at
+1,372 display objects, 640 specimens/grass, eight puddles, six ambient and three
+mutation views. Counts then followed collection, natural expiry, real-event/vine
+churn and refill. At 205.2s it held 620 specimens, 640 grass, eight puddles and 88
+vine Graphics (1,370 display objects). After the final refill the HUD again showed
+1,372 before collections. Cached frames stayed 763 + 13 + 5 across three sources.
+The recorded final counter sample had 801 cumulative accepted live events, 289
+replacements and 43 saturated drops; these counters include the page's pre-reset
+events, while the timing window starts at measurement reset.
+
+The collector continued during UI work. Performance observations sampled actual
+rendered rain/probes/visitor positions and card/collection behavior; they are not
+uninterrupted human observation or GPU-completion measurements. The browser's
+native DPR was not forced to 2; DPR 2 was verified in the deterministic handler
+and mapping harness. Hidden-resume and expiry/replacement races are similarly
+covered by the registered-callback tests rather than claimed as natural manual
+observations. A final descriptive palette-name adjustment (orchid and blackthorn
+hue names) changes only inspection text, with no rendering/timing code change.
+
+Audio remains intentionally absent from Pixi (no `garden-audio.js` import or sound
+call), while all Canvas collection sound calls remain. Gnomes and exact Canvas art
+parity remain deferred. **Opium was not implemented.** A focused opt-in audio
+adapter preserving production mute/volume/cooldown semantics is the recommended
+next slice, followed separately by gnome presentation and finite cached art parity.
+
+Changed runtime files: new `garden-interaction.js`, `garden-ui-core.js`,
+`garden-ui.css`, `pixi-live-ui.js`, `pixi-live.css`; updated `garden.js`,
+`garden-inspect.js`, `garden-curiosities.js`, `garden-drops.js`,
+`garden-collectibles.js`, `garden-activity.js`, `garden.css`, `index.html`,
+`pixi-live-core.js`, `pixi-live.js`, `pixi-live.html` (all under `wwwroot/`). Test
+changes: new `garden-interaction.cjs`, `pixi-interaction.cjs`,
+`interaction-canvas-parity.cjs`, `fixtures/interaction-canvas-cf2a3de.json`;
+updated `garden-inspect.cjs`, `garden-audio.cjs`, `garden-events.cjs`,
+`gnome-events.cjs`, `pixi-ecology-integration.cjs` (all under `tests/`). This document
+contains the current architecture/results and preserves the earlier sections.
+
+---
+
+# Historical: shared specimen mutation slice
 
 The latest 2026-10-15 slice adds the existing `collectible_weed` specimen mutation
 to `/pixi-live.html`. Production `/` remains Canvas. The synthetic stress page,

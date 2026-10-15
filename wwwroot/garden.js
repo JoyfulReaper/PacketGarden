@@ -92,18 +92,10 @@ function handleLiveGardenEvent(frame) {
   return result;
 }
 
-const recentEventLimit = 3;
-const fakeSourceNames = {
-  dns: "Simulated DNS",
-  gopher: "Simulated Gopher",
-  http: "Simulated HTTP",
-  ssh: "Simulated SSH",
-  "port22-probe": "Simulated port 22 probe"
-};
+const fakeSourceNames = window.PacketGardenUiCore.fakeSourceNames;
 
 function recordRecentGardenEvent(entry) {
-  gardenState.recentEvents.unshift(entry);
-  gardenState.recentEvents.length = Math.min(gardenState.recentEvents.length, recentEventLimit);
+  window.PacketGardenUiCore.appendRecent(gardenState.recentEvents, entry);
   if (typeof renderRecentActivity === "function") renderRecentActivity();
 }
 

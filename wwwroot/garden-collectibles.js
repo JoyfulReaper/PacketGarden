@@ -1,14 +1,14 @@
 // Collectible mutations belong to their exact specimen, independently of loose drops.
 const specimenMutationConfig = {
   ...window.PacketGardenMutations.config,
-  messageDurationMs: 2_000,
+  messageDurationMs: window.PacketGardenUiCore.messageDurationMs,
   hitRadius: 12
 };
 const specimenMutationTypes = new Map([
   ["collectible_weed", {
     label: "Collectible weed",
     render: drawCollectibleWeed,
-    message: "You collected some weed. +0 points"
+    message: window.PacketGardenUiCore.messages.collectible_weed
   }]
 ]);
 const collectionMessage = document.querySelector("#collection-message");
@@ -50,10 +50,7 @@ function specimenMutationLabel(specimen, now = Date.now()) {
 }
 
 function isCollectibleMutationHit(specimen, point, now = Date.now()) {
-  if (!point || !specimen.mutation || now >= specimen.mutation.expiresAt
-    || !specimenMutationTypes.has(specimen.mutation.type)) return false;
-  return Math.hypot(point.x - (specimen.column + 0.5) * cellSize,
-    point.y - (specimen.row + 0.5) * cellSize) <= specimenMutationConfig.hitRadius;
+  return window.PacketGardenInteraction.mutationHit(specimen, point, now);
 }
 
 function collectSpecimenMutation(specimen, now = Date.now()) {

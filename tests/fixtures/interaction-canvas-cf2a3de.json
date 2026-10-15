@@ -1,0 +1,242 @@
+[
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "ladybug,snail,moth,shiny_pebble",
+    "drops": 1,
+    "message": "",
+    "messageHidden": true,
+    "cardHidden": false,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "ladybug,snail,moth,shiny_pebble",
+    "drops": 1,
+    "message": "",
+    "messageHidden": true,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "ladybug,snail,moth",
+    "drops": 1,
+    "message": "You found a rock. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "ladybug,snail",
+    "drops": 1,
+    "message": "You caught a moth. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "ladybug",
+    "drops": 1,
+    "message": "You collected a snail. It seems annoyed. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "",
+    "drops": 1,
+    "message": "You caught a ladybug. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"redbloom\",\"column\":15,\"row\":10,\"vigor\":2,\"createdAt\":10000,\"colorVariant\":\"crimson\",\"origin\":{\"kind\":\"tcpnoise\",\"listenPort\":22,\"sensor\":\"<b>safe text</b>\",\"seenCount\":\"12\"},\"id\":1,\"cell\":335,\"stage\":\"mature\",\"mutation\":{\"type\":\"collectible_weed\",\"createdAt\":10000,\"expiresAt\":30000}}]",
+    "curiosities": "",
+    "drops": 0,
+    "message": "You found Amanita muscaria. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[]",
+    "curiosities": "",
+    "drops": 0,
+    "message": "You collected some weed. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[]",
+    "curiosities": "",
+    "drops": 0,
+    "message": "You collected some weed. +0 points",
+    "messageHidden": false,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[]",
+    "curiosities": "",
+    "drops": 0,
+    "message": "",
+    "messageHidden": true,
+    "cardHidden": true,
+    "title": "Red bloom",
+    "fields": {
+      "source": "Live TCPNoise",
+      "sensor": "<b>safe text</b>",
+      "port": "22",
+      "seen-count": "12",
+      "vigor": "2 — frequent",
+      "color": "Crimson",
+      "age": "0s",
+      "mutation": "Collectible weed"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"broadleaf\",\"vigor\":0,\"cell\":320,\"column\":0,\"row\":10,\"createdAt\":12000,\"stage\":\"sprout\",\"id\":2,\"broadleafVariant\":\"teal\",\"origin\":{\"kind\":\"simulated\",\"eventType\":\"http\"}}]",
+    "curiosities": "",
+    "drops": 0,
+    "message": "",
+    "messageHidden": true,
+    "cardHidden": false,
+    "title": "Broad-leaf plant",
+    "fields": {
+      "source": "Simulated HTTP",
+      "sensor": "Development controls",
+      "port": "—",
+      "seen-count": "—",
+      "vigor": "0 — one-off",
+      "color": "Teal",
+      "age": "0s",
+      "mutation": "None"
+    },
+    "score": "Score: 0"
+  },
+  {
+    "specimens": "[{\"type\":\"broadleaf\",\"vigor\":0,\"cell\":320,\"column\":0,\"row\":10,\"createdAt\":12000,\"stage\":\"sprout\",\"id\":2,\"broadleafVariant\":\"teal\",\"origin\":{\"kind\":\"simulated\",\"eventType\":\"http\"}}]",
+    "curiosities": "",
+    "drops": 0,
+    "message": "",
+    "messageHidden": true,
+    "cardHidden": true,
+    "title": "Broad-leaf plant",
+    "fields": {
+      "source": "Simulated HTTP",
+      "sensor": "Development controls",
+      "port": "—",
+      "seen-count": "—",
+      "vigor": "0 — one-off",
+      "color": "Teal",
+      "age": "0s",
+      "mutation": "None"
+    },
+    "score": "Score: 0"
+  }
+]

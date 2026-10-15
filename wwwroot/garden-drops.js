@@ -1,7 +1,7 @@
 // Canvas-only drawing, hit helpers and collection feedback around the shared model.
 const looseDropConfig = window.PacketGardenAmbient.dropConfig;
 const looseDropTypes = new Map([
-  ["amanita_muscaria", { render: drawAmanitaDrop, message: "You found Amanita muscaria. +0 points" }]
+  ["amanita_muscaria", { render: drawAmanitaDrop, message: window.PacketGardenUiCore.messages.amanita_muscaria }]
 ]);
 const pendingLooseDrops = gardenAmbient.pendingDrops;
 function isLooseDropSourceAlive(specimen, now, living = null) { return gardenAmbient.isSourceAlive(specimen, now, living); }
@@ -13,14 +13,7 @@ function updateLooseDrops(now = Date.now()) { return gardenAmbient.tickDrops(now
 function looseDropPosition(drop, now = Date.now()) { return window.PacketGardenAmbient.looseDropPosition(drop, now); }
 
 function looseDropAt(point, now = Date.now()) {
-  if (!point) return null;
-  for (let index = gardenState.drops.length - 1; index >= 0; index--) {
-    const drop = gardenState.drops[index];
-    if (now >= drop.expiresAt) continue;
-    const position = looseDropPosition(drop, now);
-    if (Math.hypot(point.x - position.x, point.y - position.y) <= looseDropConfig.hitRadius) return drop;
-  }
-  return null;
+  return window.PacketGardenInteraction.looseDropAt(point, gardenState.drops, now);
 }
 
 function collectLooseDrop(drop, now = Date.now()) {

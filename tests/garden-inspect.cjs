@@ -73,6 +73,8 @@ const sandbox = {
   }
 };
 vm.createContext(sandbox);
+for (const name of ['garden-core','garden-mutations','garden-ambient','garden-interaction','garden-ui-core'])
+  vm.runInContext(fs.readFileSync(`wwwroot/${name}.js`, 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-inspect.js', 'utf8'), sandbox);
 const run = code => vm.runInContext(code, sandbox);
 

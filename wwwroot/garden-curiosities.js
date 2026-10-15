@@ -2,10 +2,10 @@
 // Separate from specimen cells, mutations, and the gnome-owned actor array.
 const firstSeenCuriosityConfig = window.PacketGardenAmbient.curiosityConfig;
 const firstSeenCuriosityTypes = new Map([
-  ["ladybug", { render: drawCuriosityLadybug, message: "You caught a ladybug. +0 points" }],
-  ["snail", { render: drawCuriositySnail, message: "You collected a snail. It seems annoyed. +0 points" }],
-  ["moth", { render: drawCuriosityMoth, message: "You caught a moth. +0 points" }],
-  ["shiny_pebble", { render: drawCuriosityPebble, message: "You found a rock. +0 points" }]
+  ["ladybug", { render: drawCuriosityLadybug, message: window.PacketGardenUiCore.messages.ladybug }],
+  ["snail", { render: drawCuriositySnail, message: window.PacketGardenUiCore.messages.snail }],
+  ["moth", { render: drawCuriosityMoth, message: window.PacketGardenUiCore.messages.moth }],
+  ["shiny_pebble", { render: drawCuriosityPebble, message: window.PacketGardenUiCore.messages.shiny_pebble }]
 ]);
 const firstSeenCuriosityPool = Array.from(firstSeenCuriosityTypes.keys());
 
@@ -19,15 +19,7 @@ function updateFirstSeenCuriosities(now = Date.now()) { return gardenAmbient.exp
 function firstSeenCuriosityPosition(item, now = Date.now()) { return window.PacketGardenAmbient.curiosityPosition(item, now); }
 
 function firstSeenCuriosityAt(point, now = Date.now()) {
-  if (!point) return null;
-  // Newest draws on top, so it also wins overlapping clicks.
-  for (let index = gardenState.curiosities.length - 1; index >= 0; index--) {
-    const curiosity = gardenState.curiosities[index];
-    if (now >= curiosity.expiresAt) continue;
-    const position = firstSeenCuriosityPosition(curiosity, now);
-    if (Math.hypot(point.x - position.x, point.y - position.y) <= firstSeenCuriosityConfig.hitRadius) return curiosity;
-  }
-  return null;
+  return window.PacketGardenInteraction.curiosityAt(point, gardenState.curiosities, now);
 }
 
 function collectFirstSeenCuriosity(curiosity, now = Date.now()) {

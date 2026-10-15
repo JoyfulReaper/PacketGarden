@@ -4,12 +4,17 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PacketGarden · Pixi live soak</title>
   <link rel="stylesheet" href="pixi-stress.css">
+  <link rel="stylesheet" href="garden-ui.css">
+  <link rel="stylesheet" href="pixi-live.css">
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js" defer></script>
   <script src="garden-ambient.js" defer></script>
+  <script src="garden-interaction.js" defer></script>
+  <script src="garden-ui-core.js" defer></script>
+  <script src="pixi-live-ui.js" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-ecology.js" defer></script>
   <script src="pixi-live-core.js" defer></script><script src="pixi-live.js" defer></script>
@@ -24,24 +29,54 @@
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>
       <button id="seed-mutations" type="button">Seed 3 mutations (local simulated)</button>
       <button id="seed-pending-mutations" type="button">Seed 4 pending mutations (local simulated)</button>
+      <button id="seed-interaction" type="button">Seed overlap fixture (local simulated)</button>
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
       <label><input id="pause" type="checkbox"> Pause live garden events</label>
       <label><input id="probes" type="checkbox" checked> Probe dots</label>
+      <label class="recent-activity-toggle" for="show-recent-activity"><input id="show-recent-activity" type="checkbox" checked> Recent events</label>
       <button id="reset" type="button">Reset measurements</button>
     </section>
     <p id="weather-status" role="status">Live weather connecting</p>
     <div id="probe-track" aria-label="CSS red and Pixi green motion probes"><span id="css-probe"></span></div>
-    <div id="view" aria-label="Pixi live garden"></div>
+    <div class="pixi-garden-stage">
+      <div id="view" aria-label="Pixi live garden"></div>
+    <div id="collection-message" class="collection-message" role="status" hidden></div>
+    <section id="recent-activity" class="recent-activity" aria-label="Recent activity">
+      <h2>Recent activity</h2>
+      <ol>
+        <li id="recent-event-0" hidden></li>
+        <li id="recent-event-1" hidden></li>
+        <li id="recent-event-2" hidden></li>
+      </ol>
+      <p id="garden-score">Score: 0</p>
+    </section>
+    </div>
     <pre id="hud" role="status">Initializing Pixi…</pre>
     <p class="note">Opt-in prototype. SSE growth and weather are real; dense seeding is local simulated state.
       Grass, puddles, first-seen visitors and loose Amanita use shared production rules.
       Ambient seeding cycles all four visitor types; visitors and drops expire after 20 seconds.
       Mutation appearance and lifetime use shared production rules. Pending seeds stay ordinary for 3 seconds;
       three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
-      Collection interaction, gnomes, inspection, activity, audio and score are deferred.
+      Overlap seeding replaces local garden state and cycles visitor types over one Amanita and mutation.
+      Click priority: visitors, Amanita, active mutation, then cell inspection. Score stays zero.
+      Audio and gnomes remain deferred; Pixi artwork is approximate.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>
+  <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>
+    <button id="specimen-card-close" class="specimen-card-close" type="button" aria-label="Close specimen information">×</button>
+    <h2 id="specimen-card-title">Specimen</h2>
+    <dl>
+      <div><dt>Source</dt><dd id="specimen-source">—</dd></div>
+      <div><dt>Sensor</dt><dd id="specimen-sensor">—</dd></div>
+      <div><dt>Listening port</dt><dd id="specimen-port">—</dd></div>
+      <div><dt>Seen count</dt><dd id="specimen-seen-count">—</dd></div>
+      <div><dt>Vigor</dt><dd id="specimen-vigor">—</dd></div>
+      <div><dt>Color scheme</dt><dd id="specimen-color">—</dd></div>
+      <div><dt>Age</dt><dd id="specimen-age">—</dd></div>
+      <div><dt>Mutation</dt><dd id="specimen-mutation">None</dd></div>
+    </dl>
+  </aside>
 </body>
 </html>

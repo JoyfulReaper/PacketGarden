@@ -1,0 +1,6 @@
+/* Presentation integration only; the card/activity/message rules are shared with Canvas. */
+.pixi-garden-stage { position: relative; }
+#view canvas { cursor: pointer; }
+.specimen-card { box-sizing: border-box; }
+.specimen-card-close { cursor: pointer; }
+.specimen-card-close:focus-visible { outline: 2px solid #e1e6d7; outline-offset: 3px; }

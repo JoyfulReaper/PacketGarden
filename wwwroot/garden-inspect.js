@@ -13,7 +13,7 @@ const specimenCardFields = {
 };
 let inspectedSpecimen = null;
 
-const vigorNames = ["one-off", "repeated", "frequent", "persistent"];
+const vigorNames = window.PacketGardenUiCore.vigorNames;
 
 function specimenDisplayName(specimen) {
   const config = speciesConfig.get(specimen.type);
@@ -28,11 +28,7 @@ function specimenColorName(specimen) {
 }
 
 function formatSpecimenAge(ageMs) {
-  const seconds = Math.max(0, Math.floor(ageMs / 1000));
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return remainder === 0 ? `${minutes}m` : `${minutes}m ${remainder}s`;
+  return window.PacketGardenUiCore.formatAge(ageMs);
 }
 
 function positionSpecimenCard(clientX, clientY) {
@@ -51,19 +47,9 @@ function renderSpecimenCard(specimen, clientX = null, clientY = null) {
     return;
   }
 
-  const origin = specimen.origin ?? {};
+  const info = window.PacketGardenUiCore.inspection(specimen, Date.now(), { colorName: specimenColorName(specimen), sourceNames: fakeSourceNames });
   specimenCardTitle.textContent = specimenDisplayName(specimen);
-  specimenCardFields.source.textContent = origin.kind === "tcpnoise"
-    ? "Live TCPNoise" : fakeSourceNames[origin.eventType] ?? "Garden event";
-  specimenCardFields.sensor.textContent = origin.sensor ?? (origin.kind === "tcpnoise" ? "Not supplied" : "Development controls");
-  specimenCardFields.port.textContent = Number.isInteger(origin.listenPort) ? String(origin.listenPort) : "—";
-  specimenCardFields.seenCount.textContent = origin.seenCount ?? "—";
-  const vigor = specimen.vigor ?? 0;
-  specimenCardFields.vigor.textContent = `${vigor} — ${vigorNames[vigor] ?? "unknown"}`;
-  specimenCardFields.color.textContent = specimenColorName(specimen);
-  specimenCardFields.age.textContent = formatSpecimenAge(Date.now() - specimen.createdAt);
-  specimenCardFields.mutation.textContent = typeof specimenMutationLabel === "function"
-    ? specimenMutationLabel(specimen) : "None";
+  for (const key of Object.keys(specimenCardFields)) specimenCardFields[key].textContent = info[key];
   inspectedSpecimen = specimen;
   specimenCard.hidden = false;
 
@@ -93,10 +79,7 @@ function gardenPointFromClient(clientX, clientY) {
 }
 
 function specimenAtGardenPoint(point) {
-  if (!point) return null;
-  const column = Math.floor(point.x / cellSize);
-  const row = Math.floor(point.y / cellSize);
-  return gardenState.specimens.find(specimen => specimen.column === column && specimen.row === row) ?? null;
+  return window.PacketGardenInteraction.specimenAt(point, gardenState.specimens);
 }
 
 function specimenAtCanvasPoint(clientX, clientY) {
@@ -105,26 +88,24 @@ function specimenAtCanvasPoint(clientX, clientY) {
 
 canvas.addEventListener("click", event => {
   const point = gardenPointFromClient(event.clientX, event.clientY);
-  const curiosity = typeof firstSeenCuriosityAt === "function" ? firstSeenCuriosityAt(point) : null;
-  if (curiosity) {
-    collectFirstSeenCuriosity(curiosity);
+  const hit = window.PacketGardenInteraction.resolve(point, gardenState);
+  if (hit?.kind === "curiosity") {
+    collectFirstSeenCuriosity(hit.object);
     return;
   }
-  const drop = typeof looseDropAt === "function" ? looseDropAt(point) : null;
-  if (drop) {
-    collectLooseDrop(drop);
+  if (hit?.kind === "drop") {
+    collectLooseDrop(hit.object);
     return;
   }
-  const specimen = specimenAtGardenPoint(point);
-  if (specimen && typeof isCollectibleMutationHit === "function" && isCollectibleMutationHit(specimen, point)) {
-    collectSpecimenMutation(specimen);
+  if (hit?.kind === "mutation") {
+    collectSpecimenMutation(hit.specimen);
     return;
   }
-  if (!specimen) {
+  if (!hit) {
     closeSpecimenCard();
     return;
   }
-  renderSpecimenCard(specimen, event.clientX, event.clientY);
+  renderSpecimenCard(hit.specimen, event.clientX, event.clientY);
 });
 
 specimenCardClose.addEventListener("click", closeSpecimenCard);

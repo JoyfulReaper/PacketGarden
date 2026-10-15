@@ -3,6 +3,7 @@
   'use strict';
   const garden = typeof module !== 'undefined' && module.exports ? require('./garden-core.js') : window.PacketGardenCore;
   const mutationCore = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
+  const uiCore = typeof module !== 'undefined' && module.exports ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
   const { dimensions, timings, species, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
@@ -35,6 +36,14 @@
     const commonRoll = (roll - .01) / .99;
     return commonRoll < .70 ? 0 : commonRoll < .85 ? 1 : commonRoll < .95 ? 2 : 3;
   }
+  const paletteNames = {
+    flower: ['cream','blush','sky','marigold','moonflower'], mushroom: ['rust','violet','teal','gold','bioluminescent'],
+    broadleaf: ['lavender','mint','amber','rose','orchid'], vine: ['aqua','lime','chartreuse','olive','silvervine'],
+    wirefern: ['phosphor','moss','cyan','amber','afterglow'], redbloom: ['crimson','scarlet','magenta','ember','solar'],
+    weed: ['mustard','lime','rust','bluegreen','toxic'], ghostbloom: ['ice','violet','mint','rose','spectral'],
+    crystalfungus: ['cyan','emerald','rose','gold','aurora'], blackthorn: ['lavender','rose','periwinkle','sage','gold']
+  };
+  const colorName = specimen => `Pixi ${paletteNames[specimen.type]?.[specimen.colorVariant] ?? 'default'}`;
   function weatherSettings(state) {
     const base = weatherLevels[state.level], intensity = Math.min(1, Math.log1p(state.eventsPerMinute) / Math.log1p(10000));
     return { count: state.eventsPerMinute > 0 ? Math.round(base.count * (.25 + .75 * intensity)) : 0,
@@ -42,8 +51,9 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, onLive = () => {}, onRemoved = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
+    const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
     const model = garden.createGardenModel({ now, random, onChange(change) {
       const { kind, specimen, reason } = change;
@@ -60,22 +70,38 @@
       model.tick(at);
       if (mutations.tick(at)) model.tick(at); // Publish the mutation stage on the existing specimen view.
     }
-    return { specimens: model.specimens, byCell: model.byCell, counts, mutations, tick, clear: model.clear,
-      accept(raw) {
-        const event = normalizeGarden(raw); if (!event) return null;
-        if (paused) { counts.pausedEvents++; return null; }
-        tick(); // Match Canvas: reconcile due mutations before incoming growth competes for a cell.
-        const result = model.addEvent(event);
-        if (!result) return null;
-        counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); onLive(result.specimen); return result.specimen;
-      },
+    function acceptEvent(raw) {
+      const event = normalizeGarden(raw); if (!event) return { outcome: 'invalid', specimen: null };
+      if (paused) { counts.pausedEvents++; return { outcome: 'paused', specimen: null }; }
+      const at = now(); tick(at); // Reconcile due mutations before incoming growth competes for a cell.
+      // Already normalized once; construct the safe provenance without retaining the raw frame.
+      const result = model.addSpecimen(event.specimenType, event.vigor, at,
+        { kind: 'tcpnoise', sensor: event.sensor, listenPort: event.listenPort, seenCount: event.seenCount });
+      const outcome = result ? result.replaced ? 'replaced' : 'spawned' : 'dropped';
+      const entry = uiCore.appendRecent(recentEvents, { kind: 'tcpnoise', ...event, receivedAt: at, outcome });
+      onActivity(entry);
+      if (result) { counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); onLive(result.specimen); }
+      return { outcome, specimen: result?.specimen ?? null };
+    }
+    return { specimens: model.specimens, byCell: model.byCell, counts, mutations, recentEvents, tick,
+      clear: model.clear, remove: model.remove, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedInteraction() {
+        const at = now();
+        model.seed([
+          { type: 'redbloom', column: 15, row: 10, vigor: 2, createdAt: at - 20000, origin: { kind: 'simulated', eventType: 'interaction-test' } },
+          { type: 'mushroom', column: 19, row: 10, vigor: 1, createdAt: at - 60000, origin: { kind: 'simulated', eventType: 'interaction-test' } }
+        ], at);
+        const source = model.specimens[0];
+        mutations.scheduleMutation(source, 'collectible_weed', at - mutationCore.config.mutationDelayMs); tick(at);
+        return source;
+      },
       seedMutations(pending = false) {
         // Explicit local fixtures, independent of SSE, its provenance gate and probability.
         const at = now(), sources = model.specimens.filter(p => p.type === 'redbloom' && p.origin?.kind === 'simulated'
           && !p.mutation && !p.pendingMutation).slice(0, pending ? 4 : 3);
         while (sources.length < (pending ? 4 : 3)) {
-          const result = model.addSpecimen('redbloom', 3, at, { kind: 'simulated' });
+          const result = model.addSpecimen('redbloom', 3, at, { kind: 'simulated', eventType: 'mutation-test' });
           if (!result) break;
           sources.push(result.specimen);
         }
@@ -92,7 +118,7 @@
           const type = species[cell % species.length], vigor = Math.floor(cell / species.length) % 4;
           const age = type === 'redbloom' ? cell % 8000 : timings[type].matureAfterMs + cell % 1000;
           return { type, vigor, column: cell % dimensions.columns, row: Math.floor(cell / dimensions.columns), createdAt: at - age,
-            origin: { kind: 'simulated', listenPort: null, sensor: null, seenCount: null } };
+            origin: { kind: 'simulated', eventType: 'seed', listenPort: null, sensor: null, seenCount: null } };
         }), at);
       }
     };
@@ -104,6 +130,6 @@
     stream.addEventListener('weather', message => { try { const state = normalizeWeather(JSON.parse(message.data)); if (state) onWeather(state); } catch { /* preserve last good weather */ } });
     return stream;
   }
-  const api = { dimensions, timings, species, palettes, stageAt, normalizeGarden, normalizeWeather, colorVariant, weatherLevels, weatherSettings, createModel, connectStream };
+  const api = { dimensions, timings, species, palettes, stageAt, normalizeGarden, normalizeWeather, colorVariant, colorName, weatherLevels, weatherSettings, createModel, connectStream };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenPixiLiveCore = api;
 })();

@@ -170,6 +170,7 @@
     const P = window.PIXI, shared = window.PacketGardenPixi, core = window.PacketGardenPixiLiveCore;
     const ecologyCore = window.PacketGardenEcology, ecologyPresentation = window.PacketGardenPixiEcology;
     const ambientCore = window.PacketGardenAmbient, ambientPresentation = window.PacketGardenPixiAmbient;
+    const interaction = window.PacketGardenInteraction;
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
     await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
@@ -180,7 +181,16 @@
     const ambientView = ambientPresentation.createAmbientView(P, view.curiosityLayer, view.dropLayer, ambientCache.frames);
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
       onChange(change) { ambientView.change(change, Date.now()); } });
-    const model = core.createModel(view, { onLive: source => ambient.acceptLiveSpecimen(source), onRemoved: source => ambient.cancelSource(source) });
+    let ui;
+    const model = core.createModel(view, { onLive: source => ambient.acceptLiveSpecimen(source),
+      onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
+    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName });
+    const clickGarden = event => {
+      const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
+        { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
+      ui.click(point, { x: event.clientX, y: event.clientY });
+    };
+    app.canvas.addEventListener('click', clickGarden);
     const ecologyCache = ecologyPresentation.makeEcologyAtlas(P, app.renderer);
     const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames);
     const ecology = ecologyCore.createEcologyModel({ onChange(change) { ecologyView.change(change, Date.now()); } });
@@ -205,6 +215,14 @@
     document.querySelector('#seed-ambient').addEventListener('click', seedAmbient);
     document.querySelector('#seed-mutations').addEventListener('click', () => model.seedMutations());
     document.querySelector('#seed-pending-mutations').addEventListener('click', () => model.seedMutations(true));
+    let interactionSeedVariant = 0;
+    document.querySelector('#seed-interaction').addEventListener('click', () => {
+      const source = model.seedInteraction(), at = Date.now(); ecology.clear();
+      const point = { x: (source.column + .5) * 30, y: (source.row + .5) * 30 };
+      const item = { ...point, createdAt: at, expiresAt: at + ambientCore.curiosityConfig.lifetimeMs, phase: 0 };
+      ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
+        drops: [{ ...item, type: 'amanita_muscaria' }] });
+    });
     document.querySelector('#clear').addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); });
     document.querySelector('#seed').addEventListener('click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
@@ -214,7 +232,7 @@
     const updateProbes = () => { const value = document.querySelector('#probes').checked; view.setProbes(value); document.body.classList.toggle('probes-off', !value); };
     document.querySelector('#probes').addEventListener('change', updateProbes); updateProbes();
     const resize = () => { const box = viewElement.getBoundingClientRect(); app.renderer.resize(Math.max(1, Math.round(box.width)), Math.max(1, Math.round(box.height)), Math.min(window.devicePixelRatio || 1, 2));
-      const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); };
+      const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); ui.position(); };
     const observer = new ResizeObserver(resize); observer.observe(viewElement); window.addEventListener('resize', resize); resize();
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
     document.querySelector('#reset').addEventListener('click', () => { measurements.reset(); lastTick = null; lastHud = -Infinity; });
@@ -233,7 +251,7 @@
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Amanita ${ambient.drops.length}/3 · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
-        `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · collection interaction deferred`,
+        `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · unified logical click priority`,
         `Mutations ${mc.active}/3 · pending ${mc.pending} · views ${counts.mutationViews} · activations ${mc.activations} · cap skips ${mc.capSkips} · cancellations ${mc.cancellations} · expiries ${mc.expiries} · 1 cached frame in specimen atlas`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
         'Local transient CPU/ticker intervals; not GPU completion. Dense/ambient seeding is local simulated state; temporary visitors expire normally.'
@@ -246,6 +264,7 @@
       if (Date.now() >= nextLogicalAt) {
         const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
         ambient.tick(at, { hidden: document.hidden });
+        ui.tick(at);
         nextLogicalAt = Date.now() + 250;
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
@@ -258,12 +277,14 @@
       if (document.hidden) app.stop(); else {
         model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
         ambient.tick(at, { hidden: false }); ambientView.animate(at);
+        ui.tick(at);
         nextLogicalAt = at + 250; lastTick = null; app.start();
       }
     });
     window.addEventListener('pagehide', event => {
       app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
+      app.canvas.removeEventListener('click', clickGarden); ui.destroy();
       ecology.clear(); ecologyView.destroy(); view.destroy(); ecologyCache.destroy();
       for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true); app.destroy(true);
     });
