@@ -10,6 +10,7 @@ const assetPath = url => url.split('?')[0];
 assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath), 'both pages use the same renderer, modules and load order');
 assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
 assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
+assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather normalizer must bypass cached code that drops hourly data');
 for (const id of ['hud','seed','clear','seed-ambient','seed-mutations','seed-pending-mutations','seed-interaction','seed-puddles','pause','probes','probe-track','reset','weather-source','weather-level','automatic-traffic']) {
   assert(!html.includes(`id="${id}"`), `default page has no ${id} development control`);
 }
@@ -74,6 +75,27 @@ async function start(failInit = false) {
   assert.equal(g.element('#view').children.length, 1);
   const source = g.sources[0], root = g.app.stage.children[0], plants = root.children[6];
   const emit = (name, data) => source.handlers.get(name)({data:JSON.stringify(data)});
+  const stats = () => ['#network-events-minute','#network-events-hour'].map(id => g.element(id).textContent);
+  assert.deepEqual(stats(), ['Waiting…','Waiting…']);
+  emit('weather', {level:'quiet',eventsPerMinute:0,eventsLastHour:null,hasSnapshot:false});
+  assert.deepEqual(stats(), ['Waiting…','Waiting…'], 'fallback is not a measurement');
+  emit('weather', {level:'rain',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true});
+  assert.deepEqual(stats(), [new Intl.NumberFormat(undefined,{maximumFractionDigits:1}).format(29.8),new Intl.NumberFormat().format(4321)]);
+  const rain = root.children[9].particleChildren.slice();
+  emit('weather', {level:'rain',eventsPerMinute:29.8,eventsLastHour:4322,hasSnapshot:true});
+  assert.equal(g.element('#network-events-hour').textContent,new Intl.NumberFormat().format(4322));
+  assert.equal(root.children[9].particleChildren.length,rain.length);
+  rain.forEach((particle,i) => assert.equal(root.children[9].particleChildren[i],particle,'hourly-only changes preserve particle identity'));
+  source.onerror(); assert.equal(g.element('#connection').textContent,'disconnected/reconnecting');
+  assert.equal(g.element('#network-events-hour').textContent,new Intl.NumberFormat().format(4322),'disconnect retains last measurement');
+  emit('weather', {level:'quiet',eventsPerMinute:0});
+  assert.deepEqual(stats(), ['0','Unavailable'],'legacy snapshot has a known rate but no fabricated hourly count');
+  emit('weather', {level:'quiet',eventsPerMinute:0,eventsLastHour:0});
+  assert.deepEqual(stats(), ['0','0']);
+  emit('weather', {level:'quiet',eventsPerMinute:0,eventsLastHour:-1});
+  assert.deepEqual(stats(), ['0','Unavailable']);
+  source.handlers.get('weather')({data:'bad'}); assert.deepEqual(stats(), ['0','Unavailable']);
+  assert.equal(plants.children.length,0,'aggregate traffic creates no specimens');
   source.onopen(); assert.equal(g.element('#connection').textContent, 'connected');
   source.onerror(); assert.equal(g.element('#connection').textContent, 'disconnected/reconnecting');
   source.onopen();

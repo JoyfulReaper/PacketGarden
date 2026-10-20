@@ -1,3 +1,27 @@
+# Aggregate network activity restored (2026-10-20)
+
+The default Pixi footer now shows **Observatory traffic**: Events/min explicitly
+labels its five-minute average, and Last hour displays the source's actual
+`eventsLastHour`. Both arrive through the existing weather SSE connection, with
+no new browser requests, timers or scene changes. Hourly-only changes update the
+text without rebuilding weather particles. Waiting distinguishes startup from
+valid zero activity; missing hourly data displays Unavailable. Failures retain
+the previous normalized snapshot and normal SSE reconnection remains unchanged.
+These values count aggregate retained Observatory events, not accepted specimens;
+its 5,000-event store can truncate busy windows. See
+[sources and limits](REAL-DATA.md#activity-statistics-and-source-limits).
+The diagnostic page keeps its existing controls and weather HUD. This change
+does not explain the historical stuttering or resolve the known Pixi teardown
+exception documented below.
+
+Verification for this pass: all default JavaScript checks, the .NET checks/build,
+and the isolated ASP.NET polling/SSE integration passed. Installed headless Chrome
+verified `/` and `/index.html`, actual/hourly-only/zero/unavailable display, SSE
+reconnection, inspection, and 320px/390px/desktop layouts; diagnostic, Canvas and
+stress pages remained functional. Sources were local deterministic fixtures, not
+production Observatory/NATS traffic. The build reported the existing NU1900
+vulnerability-feed warning. No new performance-equivalence claim is made.
+
 # Plant size and visual presence review (2026-10-20)
 
 The live/default renderer now enlarges existing cached specimen Sprites, without

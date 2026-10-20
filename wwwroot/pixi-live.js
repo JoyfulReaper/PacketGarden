@@ -348,6 +348,15 @@
     const measurements = hud ? shared.frameWindow() : null;
     const sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
     const weatherStatus = document.querySelector('#weather-status'); let latestWeather = null, status = 'connecting';
+    const minuteStat = document.querySelector('#network-events-minute'), hourStat = document.querySelector('#network-events-hour');
+    const rateFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+    const countFormat = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+    function updateNetworkActivity(state) {
+      if (minuteStat) minuteStat.textContent = state.hasSnapshot ? rateFormat.format(state.eventsPerMinute) : 'Waiting…';
+      if (hourStat) hourStat.textContent = !state.hasSnapshot ? 'Waiting…'
+        : state.eventsLastHour === null ? 'Unavailable' : countFormat.format(state.eventsLastHour);
+    }
+    updateNetworkActivity({ hasSnapshot: false });
     let currentWeather = { level: 'quiet', eventsPerMinute: 0 };
     function updateWeather() {
       const live = !sourceControl || sourceControl.value === 'live';
@@ -357,7 +366,7 @@
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
-    const stream = core.connectStream(EventSource, model, state => { latestWeather = state; if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
+    const stream = core.connectStream(EventSource, model, state => { latestWeather = state; updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
       status = value; connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
     });
     sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();

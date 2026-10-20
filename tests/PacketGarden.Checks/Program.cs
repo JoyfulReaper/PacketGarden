@@ -22,6 +22,35 @@ static void Check(bool condition, string message)
 }
 static GardenGrowth? Parse(string text, int roll = 0, int rareChoice = 0) =>
     TcpNoiseAdapter.Normalize(Encoding.UTF8.GetBytes(text), roll, rareChoice);
+static GardenWeather? ParseWeather(string text)
+{
+    using var document = JsonDocument.Parse(text);
+    return WeatherAdapter.Normalize(document.RootElement);
+}
+var weatherJson = """{"level":"rain","eventsPerMinute":29.8,"eventsLastFiveMinutes":149,"eventsLastHour":4321,"recentEvents":["private"]}""";
+var weather = ParseWeather(weatherJson)!;
+Check(weather == new GardenWeather("rain", 29.8, 4321), "Real source hour forwarded independently of rate (not rate * 60)");
+Check(ParseWeather(weatherJson.Replace("4321", "4322")) != weather, "Hourly-only changes participate in weather change detection");
+Check(new GardenWeather("quiet", 0, HasSnapshot: false) != ParseWeather("""{"level":"quiet","eventsPerMinute":0,"eventsLastHour":0}"""),
+    "First valid zero snapshot differs from unobserved quiet/0 fallback");
+foreach (var hour in new[] { "null", "-1", "1.5", "\"4321\"", "{}", "true", "9007199254740992", "1e1000" })
+    Check(ParseWeather(weatherJson.Replace("\"eventsLastHour\":4321", $"\"eventsLastHour\":{hour}")) == weather with { EventsLastHour = null },
+        "Invalid optional hour is unavailable without rejecting valid weather");
+Check(ParseWeather("""{"level":"rain","eventsPerMinute":29.8}""") == weather with { EventsLastHour = null }, "Older snapshot remains compatible");
+Check(ParseWeather(weatherJson.Replace("4321", "0"))?.EventsLastHour == 0, "Source zero is a real measurement");
+Check(ParseWeather(weatherJson.Replace("29.8", "1000001"))?.EventsPerMinute == 1000000, "Existing rate clamp preserved");
+Check(ParseWeather(weatherJson.Replace("29.8", "-1"))?.EventsPerMinute == 0, "Existing negative rate clamp preserved");
+foreach (var bad in new[] { "null", "[]", "{}", weatherJson.Replace("rain", "unknown"), weatherJson.Replace("29.8", "null"),
+    weatherJson.Replace("29.8", "\"29.8\""), weatherJson.Replace("29.8", "1e1000") })
+    Check(ParseWeather(bad) is null, "Invalid required weather fields remain rejected");
+using (var document = JsonDocument.Parse(JsonSerializer.Serialize(weather, new JsonSerializerOptions(JsonSerializerDefaults.Web))))
+{
+    Check(document.RootElement.EnumerateObject().Select(p => p.Name).Order()
+        .SequenceEqual(new[] { "eventsLastHour", "eventsPerMinute", "hasSnapshot", "level" }), "Only normalized weather/availability fields serialized to SSE");
+    Check(document.RootElement.GetProperty("eventsLastHour").GetInt64() == 4321, "SSE camel-case hour serialization");
+    Check(document.RootElement.GetProperty("hasSnapshot").GetBoolean(), "Validated source is available");
+}
+Console.WriteLine("PASS: weather normalization, optional actual hour/zero, hourly-only equality, startup availability, compatible rendering clamp and minimal SSE serialization.");
 var good = """{"EventType":"tcpnoise.connection","Source":"tcpnoise","SchemaVersion":1,"Payload":{"listenPort":443,"remoteAddress":"sensitive-test-marker","remotePort":12345,"banner":"private","payload":"secret"}}""";
 Check(Parse(good) == new GardenGrowth("broadleaf", 443), "Valid message normalization");
 var json = JsonSerializer.Serialize(Parse(good), new JsonSerializerOptions(JsonSerializerDefaults.Web));

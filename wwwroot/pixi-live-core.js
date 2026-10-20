@@ -28,7 +28,9 @@
   };
   function normalizeWeather(event) {
     if (!event || !Object.hasOwn(weatherLevels, event.level) || typeof event.eventsPerMinute !== 'number' || !Number.isFinite(event.eventsPerMinute)) return null;
-    return { level: event.level, eventsPerMinute: Math.min(1000000, Math.max(0, event.eventsPerMinute)) };
+    return { level: event.level, eventsPerMinute: Math.min(1000000, Math.max(0, event.eventsPerMinute)),
+      eventsLastHour: Number.isSafeInteger(event.eventsLastHour) && event.eventsLastHour >= 0 ? event.eventsLastHour : null,
+      hasSnapshot: event.hasSnapshot !== false };
   }
   function colorVariant(type, vigor, roll) {
     if (roll < .01) return 4; // cosmetic only, never alters species or backend rarity

@@ -16,18 +16,20 @@ The adapter polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with
 does not reproduce its category thresholds. Supported levels are `quiet`,
 `drizzle`, `rain`, `heavy_rain`, `botnet_thunderstorm`, and `botnet_hurricane`.
 
-Only the latest normalized pair is retained. Unsupported levels, missing fields,
+Only the latest normalized state is retained. Unsupported levels, missing required fields,
 invalid JSON, and non-finite/non-numeric rates are rejected. Finite rates are
 clamped to 0–1,000,000 without changing the source level. Fetch/parsing failures
 retain the last valid state. Before the first successful fetch, the fallback is
-quiet/0. One warning per outage and a recovery message avoid repeated stack logs.
+quiet/0 with `hasSnapshot: false`, so the UI shows Waiting rather than treating
+the fallback as a zero measurement. One warning per outage and a recovery message
+avoid repeated stack logs.
 
 `/api/garden/events` sends the current state immediately and sends another frame
-only when the normalized pair changes. SSE framing is:
+only when the normalized state changes, including hourly-only changes. SSE framing is:
 
 ```text
 event: weather
-data: {"level":"rain","eventsPerMinute":29.8}
+data: {"level":"rain","eventsPerMinute":29.8,"eventsLastHour":4321,"hasSnapshot":true}
 
 ```
 
@@ -38,8 +40,48 @@ SSE disconnection shows a small status, retains weather/ecology, and uses normal
 EventSource reconnection. Switching source modes does not reset the garden.
 Weather still has no ecological effects.
 
-The full Observatory response is never forwarded. Browser-facing weather has only
-`level` and `eventsPerMinute`; this is separate from discrete garden growth.
+The full Observatory response is never forwarded. Weather rendering still uses
+only `level` and `eventsPerMinute`; optional aggregate activity is separate from
+discrete garden growth. Older clients can ignore the additive fields, and older
+snapshots without an hourly field remain valid weather.
+
+### Activity statistics and source limits
+
+The default Pixi homepage labels these read-only values **Observatory traffic**:
+
+- **Events/min (5-min avg)** is the snapshot's `eventsPerMinute`, defined by the
+  Observatory as `eventsLastFiveMinutes / 5`. The existing 0–1,000,000 rate clamp
+  is unchanged (the current source store bounds the rate below this limit).
+- **Last hour** is the snapshot's actual `eventsLastHour`, copied without rate
+  extrapolation. PacketGarden never multiplies the minute rate by 60. A missing,
+  null, negative, fractional, nonnumeric or browser-unsafe integer becomes null
+  and displays Unavailable; an actual source zero displays 0. An unusable optional
+  hour does not reject otherwise valid weather.
+
+The Observatory currently counts windows over a **5,000-event in-memory store**
+(`NoiseEventStore.MaxEvents`), evicting older events at capacity. Both windows can
+therefore undercount when relevant events have already been evicted; after a
+source restart they reflect only the retained events received since restart.
+These are retained aggregate observations, not durable full traffic totals or
+accepted PacketGarden specimen counts. Garden growth has its own validation,
+mapping and placement/competition outcomes.
+
+`hasSnapshot` means a valid source snapshot has been received, not that it is
+fresh: startup is false; successful fetches set it true, including valid zero
+activity; an outage retains the entire last valid state. Existing connection
+status still reports browser SSE disconnection/reconnection. There is no new
+freshness timer or browser polling. The default page updates both values from the
+same weather SSE callback; manual diagnostic weather never supplies activity
+statistics. Diagnostic controls/HUD and Canvas rendering remain unchanged.
+
+Verification: `dotnet run --project tests/PacketGarden.Checks` checks weather
+normalization/serialization alongside existing TCPNoise checks. After building,
+`node tests/weather-sse.cjs --run bin/Debug/net10.0/PacketGarden.dll` runs an
+isolated ASP.NET host against a local snapshot stub, exercising hourly-only
+updates, startup, outage retention, reconnect and older-source recovery.
+`node tests/pixi-default.cjs` covers DOM integration and particle reuse; the
+optional Chrome test `node tests/pixi-default-browser.cjs --run` also checks
+the real display/SSE updates and a 320px viewport (see PIXI-LIVE.md for runtime setup).
 
 ## Implemented TCPNoise port hits
 
@@ -300,7 +342,8 @@ Normalized input may include only safe fields useful to the garden and inspectio
 - timestamp, duration, aggregation window, or sanitized coarse tags for future adapters.
 
 These fields describe both the current adapters and possible future ones. Current
-weather has only `level`/`eventsPerMinute`; TCPNoise browser growth has
+weather has `level`/`eventsPerMinute`, optional `eventsLastHour`, and snapshot
+availability (`hasSnapshot`); TCPNoise browser growth has
 `specimenType`/`listenPort`/`vigor` plus optional `sensor`/`seenCount`, and fake
 events still originate from local development controls.
 

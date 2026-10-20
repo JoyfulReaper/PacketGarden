@@ -6,7 +6,7 @@
   <title>PacketGarden</title>
   <link rel="stylesheet" href="garden.css">
   <link rel="stylesheet" href="garden-ui.css">
-  <link rel="stylesheet" href="pixi-live.css?v=phase1b-1">
+  <link rel="stylesheet" href="pixi-live.css?v=network-stats-1">
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
@@ -18,8 +18,8 @@
   <script src="pixi-live-ui.js" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-ecology.js?v=grass-art-2c-1" defer></script>
-  <script src="pixi-live-core.js" defer></script>
-  <script src="pixi-live.js?v=plant-size-1" defer></script>
+  <script src="pixi-live-core.js?v=network-stats-1" defer></script>
+  <script src="pixi-live.js?v=network-stats-1" defer></script>
 </head>
 <body class="pixi-default">
   <header>
@@ -59,6 +59,11 @@
     </dl>
   </aside>
   <footer aria-label="Garden status">
+    <section class="network-activity" aria-label="Noise Observatory traffic" title="Aggregate Noise Observatory traffic, separate from accepted garden growth.">
+      <span>Observatory traffic</span>
+      <span>Events/min (5-min avg): <span id="network-events-minute">Waiting…</span></span>
+      <span>Last hour: <span id="network-events-hour">Waiting…</span></span>
+    </section>
     <span>Live connection: <span id="connection" role="status">connecting</span></span>
     <span id="weather-status" role="status">Live weather connecting</span>
     <label class="recent-activity-toggle" for="show-recent-activity">

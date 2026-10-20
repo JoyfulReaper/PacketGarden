@@ -381,9 +381,17 @@ alerts. Ordinary sounds have a 400 ms cooldown and rare flourishes an independen
 preferences are not saved, and weather has no continuous audio.
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
-5-second timeout. It trusts the source level and exposes only `level` and
-`eventsPerMinute` at `/api/garden/events`. Failures retain the last valid pair;
-before the first valid fetch, the backend starts with quiet/0. For local adapter
+5-second timeout. It trusts the source level and exposes `level`,
+`eventsPerMinute`, optional `eventsLastHour`, and `hasSnapshot` in the existing
+weather SSE frames at `/api/garden/events`. The default Pixi footer shows compact
+**Observatory traffic** statistics: Events/min is the source's five-minute count
+divided by five; Last hour is its actual retained last-hour count, never a minute
+rate multiplied by 60. These aggregate metrics are separate from accepted garden
+growth. The Observatory's bounded 5,000-event store can undercount busy windows;
+see [metric sources and limits](docs/REAL-DATA.md#activity-statistics-and-source-limits).
+Missing hourly data displays Unavailable. Failures retain the last valid state;
+before the first valid fetch, quiet/0 remains the rendering fallback while metrics
+display Waiting. For local adapter
 testing, override the source using the ASP.NET configuration key
 `Weather:SnapshotUrl` (environment variable `Weather__SnapshotUrl`).
 

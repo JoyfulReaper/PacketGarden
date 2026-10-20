@@ -39,7 +39,7 @@ async function run() {
       if (file === 'api/garden/events') {
         connections++; streams.add(res); res.on('close', () => streams.delete(res));
         res.writeHead(200, {'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
-        res.write('event: weather\ndata: {"level":"quiet","eventsPerMinute":0}\n\n'); return;
+        res.write('event: weather\ndata: {"level":"quiet","eventsPerMinute":0,"eventsLastHour":null,"hasSnapshot":false}\n\n'); return;
       }
       if (!promoted && legacy.has(file)) {
         res.writeHead(200, {'Content-Type':file.endsWith('.js') ? 'text/javascript' : 'text/css',
@@ -79,6 +79,7 @@ async function run() {
     await warm.close();
     promoted = true;
     const broadcast = event => { for (const stream of streams) stream.write(`event: garden\ndata: ${JSON.stringify(event)}\n\n`); };
+    const weather = data => { for (const stream of streams) stream.write(`event: weather\ndata: ${JSON.stringify(data)}\n\n`); };
     for (const route of ['/','/index.html']) {
       const page = await context.newPage(), errors = [];
       page.on('pageerror', error => errors.push(String(error.stack)));
@@ -102,6 +103,14 @@ async function run() {
       assert(state.started && state.paints > 0); assert(state.soilInstructions && state.gridInstructions);
       assert([...state.scale,...state.position].every(Number.isFinite)); assert(state.scale.every(n => n > 0));
       assert(state.css.every(n => n > 0) && state.backing.every(n => n > 0)); assert.deepEqual(errors,[]);
+      assert.equal(await page.locator('#network-events-minute').textContent(),'Waiting…');
+      assert.equal(await page.locator('#network-events-hour').textContent(),'Waiting…');
+      weather({level:'quiet',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true});
+      await page.waitForFunction(() => document.querySelector('#network-events-hour').textContent === new Intl.NumberFormat().format(4321));
+      assert.equal(await page.locator('#network-events-minute').textContent(),await page.evaluate(() => new Intl.NumberFormat(undefined,{maximumFractionDigits:1}).format(29.8)));
+      weather({level:'quiet',eventsPerMinute:29.8,eventsLastHour:4322,hasSnapshot:true});
+      await page.waitForFunction(() => document.querySelector('#network-events-hour').textContent === new Intl.NumberFormat().format(4322));
+      assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');
       broadcast({specimenType:'flower',listenPort:53,vigor:2,sensor:'browser-fixture',seenCount:'12'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 1);
       await page.waitForFunction(before => window.__gardenTestPaints > before+2,state.paints);
@@ -114,7 +123,7 @@ async function run() {
         }
       }
       assert(changed > 5, 'SSE insertion must change displayed specimen pixels');
-      for (const viewport of [{width:390,height:844},{width:1280,height:900}]) {
+      for (const viewport of [{width:320,height:700},{width:390,height:844},{width:1280,height:900}]) {
         await page.setViewportSize(viewport);
         await page.waitForFunction(() => {
           const app=window.__gardenTestApp,r=document.querySelector('#view').getBoundingClientRect();
@@ -125,12 +134,20 @@ async function run() {
         assert.equal(await page.locator('#specimen-sensor').textContent(),'browser-fixture');
         await page.getByRole('button',{name:'Close specimen information'}).click();
         assert(soilPixels(png(await page.locator('#view canvas').screenshot())).coverage > .7);
+        assert(await page.locator('.network-activity').isVisible());
+        assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow from activity section');
+        if (viewport.width === 320) await page.screenshot({path:path.join(output,route === '/' ? 'root-small-stats.png' : 'index-small-stats.png')});
       }
       const beforeReconnect = connections;
       for (const stream of streams) stream.destroy();
       await page.waitForFunction(() => document.querySelector('#connection').textContent === 'disconnected/reconnecting');
       await page.waitForFunction(() => document.querySelector('#connection').textContent === 'connected',null,{timeout:15000});
       assert(connections > beforeReconnect);
+      weather({level:'quiet',eventsPerMinute:0});
+      await page.waitForFunction(() => document.querySelector('#network-events-hour').textContent === 'Unavailable');
+      assert.equal(await page.locator('#network-events-minute').textContent(),'0');
+      weather({level:'quiet',eventsPerMinute:0,eventsLastHour:0});
+      await page.waitForFunction(() => document.querySelector('#network-events-hour').textContent === '0');
       broadcast({specimenType:'flower',listenPort:53,vigor:0,sensor:'reconnected',seenCount:'2'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 2);
       assert.deepEqual(errors,[]); await page.close();
@@ -156,7 +173,7 @@ async function run() {
     assert(await unsupported.locator('#connection').isVisible());
     assert(await unsupported.getByRole('link',{name:'Canvas garden',exact:true}).isVisible());
     await unsupported.close();
-    console.log('PASS: real Chrome HTTP-cache upgrade, root/index soil+grid pixels before events, visible SSE growth, inspection, DPR 2/resizes/reconnection, retained diagnostic/Canvas/stress pages.');
+    console.log('PASS: real Chrome HTTP-cache upgrade, root/index soil+grid pixels, SSE-only actual hour/hour-only updates/waiting/unavailable/zero, 320px readable activity, Score 0, visible growth, inspection, DPR 2/resizes/reconnection, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
   }

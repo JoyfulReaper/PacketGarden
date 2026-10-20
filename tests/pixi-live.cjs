@@ -20,6 +20,13 @@ assert.equal(core.normalizeGarden(event()).seenCount,'18446744073709551615');
 for (const invalid of [null, {}, {level:'bogus',eventsPerMinute:12}, {level:'rain',eventsPerMinute:NaN}, {level:'rain',eventsPerMinute:'12'}]) assert.equal(core.normalizeWeather(invalid),null);
 assert.equal(core.normalizeWeather({level:'rain',eventsPerMinute:1e8}).eventsPerMinute,1e6);
 assert.equal(core.normalizeWeather({level:'rain',eventsPerMinute:-1}).eventsPerMinute,0);
+assert.deepEqual(core.normalizeWeather({level:'rain',eventsPerMinute:29.8,eventsLastHour:4321}),
+  {level:'rain',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true});
+for (const hour of [undefined,null,-1,1.5,'4321',NaN,Infinity,Number.MAX_SAFE_INTEGER+1]) {
+  assert.equal(core.normalizeWeather({level:'rain',eventsPerMinute:29.8,eventsLastHour:hour}).eventsLastHour,null);
+}
+assert.equal(core.normalizeWeather({level:'quiet',eventsPerMinute:0,eventsLastHour:0}).eventsLastHour,0);
+assert.equal(core.normalizeWeather({level:'quiet',eventsPerMinute:0,hasSnapshot:false}).hasSnapshot,false);
 assert.equal(core.weatherSettings({level:'quiet',eventsPerMinute:10000}).count,0);
 assert.equal(core.weatherSettings({level:'botnet_hurricane',eventsPerMinute:1e6}).count,400);
 assert.equal(core.weatherSettings({level:'rain',eventsPerMinute:0}).darkening,0);
