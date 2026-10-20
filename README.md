@@ -72,9 +72,9 @@ explicit fallback rather than switched to automatically.
 `/canvas.html` preserves the original Canvas garden, including manual and
 automatic fake traffic, manual weather/intensity controls, optional audio,
 gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
-and collection audio, plus the same Gnome Incident rules. Pixi retains
-its existing approximate artwork/palettes. No artwork or model rules changed
-as part of this promotion.
+and collection audio, plus the same Gnome Incident rules. Subsequent Pixi-only
+art passes made plants larger and more distinctive and grass more tuft-like,
+without changing the 32×20 model, ecology, or specimen lifetimes.
 
 An isolated GPU rendering feasibility page is available at `/pixi-stress.html`.
 It defaults to 640 synthetic plants, dense grass, puddles, actors and hurricane
@@ -88,6 +88,11 @@ seeding, forced mutations/overlap fixtures, manual weather, pause, motion probes
 and performance measurements. These controls and the timing HUD are absent from
 the homepage. Both Pixi pages use real garden/weather SSE and shared placement,
 competition, lifecycle, ecology, ambient, mutation and interaction rules.
+The production status area includes Noise Observatory events/minute (five-minute
+average) and its actual last-hour event count, distinct from specimen growth.
+Rare lightning and optional thunder for the strongest storms, as well as an
+optional desktop/screensaver edition, remain ideas rather than implemented
+features; see [Ideas](docs/IDEAS.md).
 
 Earlier investigations sometimes recorded excellent timing while visible
 stutter persisted, so migration was paused. The user subsequently reported a
