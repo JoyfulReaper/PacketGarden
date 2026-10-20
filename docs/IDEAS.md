@@ -75,6 +75,33 @@ Possible gnome incidents:
 - a few gnomes build a tiny temporary campfire;
 - a much rarer **Gnome Civil War** as an escalated spectacle.
 
+### Gnome Landscaping Department — vine control (wishlist)
+
+When vines begin taking over the **living garden**, a couple of gnomes with
+hedge clippers could emerge and perform completely unsolicited maintenance.
+One of them may do the cutting while the other supervises.
+
+**Provisional tuning, not implemented:** consider an incident when vines make up
+roughly **40% of living specimens** (explore 30–50%) *and* at least **20 living
+vines** exist. On a bounded, infrequent eligibility check with a substantial
+cooldown (e.g. 5–10 minutes), the crew trims about **25% of current vines**,
+capped at eight targets per visit. These are starting values to tune visually,
+not an obligation to prune every time the threshold is crossed.
+
+The targeted vines should actually be removed through the shared specimen
+model, one synchronized snip at a time, freeing their logical cells. Pick only
+currently living ordinary vines; if a target expired, was replaced or was
+otherwise removed before the snip, skip it safely. Do not touch rare plants or
+other species, or change the TCPNoise event stream, existing acceptance
+statistics, rarity, competition or provenance. This is local, playful ecology,
+not meaningful intrusion response or a gardening chore.
+
+Keep the incident brief, bound the actors and animations, prevent overlapping
+landscaping crews, and coordinate with the existing Gnome Incident rather than
+interrupting the four-gnome battle. Respect reduced-motion settings and make
+the visual action understandable without optional audio. No new per-frame
+population scan, persistence, score, or gameplay system.
+
 Ambient incidents should not claim to represent attacks, failures, threat levels,
 or specific protocols unless an event is explicitly designed around trustworthy
 telemetry. Most of them can simply be garden nonsense.
@@ -453,6 +480,21 @@ Ideas already discussed include:
 
 This should remain light ecology, not a hidden strategy game. Natural expiry should
 continue to matter and equal-strength traffic should not cause constant churn.
+
+## Fuller, greener wild grass (wishlist)
+
+The current denser grass tufts and grass-clearing behavior are implemented,
+but the grass artwork still looks somewhat sparse and insufficiently green.
+Consider a deliberate **visual-art pass**, not another blind increase in blade
+count: fuller irregular clumps, broader overlapping blades, a richer natural
+green palette with subtle depth variation, and fewer exposed thin stalks.
+It should read as soft living turf rather than isolated spikes or neon carpet.
+
+Compare real **before/after screenshots** of sparse, growing, mature and fading
+patches at normal garden scale (both Pixi and the Canvas fallback). Preserve
+visible soil, specimen legibility, lifecycle color/state cues, bounded cached
+textures, and performance. Do not change grass ecology, occupancy, probabilities,
+timers or specimen dimensions just to improve the artwork.
 
 ## Visual variation
 
