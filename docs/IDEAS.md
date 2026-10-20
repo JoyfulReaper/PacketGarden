@@ -26,6 +26,25 @@ and occasionally notice, rather than adding chores or optimization. In particula
 The Gnome Incident is the model: it is funny because it can be forgotten about
 until four tiny idiots suddenly have a territorial dispute and then leave.
 
+## Current presentation baseline (implemented)
+
+The production homepage now uses PixiJS/WebGL, with the original Canvas garden
+preserved at `/canvas.html` and development controls at `/pixi-live.html`.
+The Pixi presentation has revised vine, broadleaf, blackthorn, weed and other
+plant artwork, larger specimen sprites, and separated grass tufts. The logical
+32×20 grid, capacity, ecology and lifetimes have not been enlarged or changed
+by those visual passes.
+
+Both renderers now share opt-in Web Audio (Off initially, 12% initial volume)
+for successful growth, rare flourishes, pointless collections and the original
+Gnome Incident. Its shared model retains the 30-specimen threshold, 2% check
+every 45 seconds, four actors and 12-second cleanup. The homepage also shows
+Noise Observatory's five-minute-average events/minute and actual reported
+last-hour count over the existing SSE feed. Exact TCPNoise listening ports
+420 and 42069 use an ordinary weed base, distinct from the collectible port-22
+mutation. These are implemented features, not wishlist tasks; see [MVP](MVP.md)
+and [Pixi live notes](PIXI-LIVE.md) for exact behavior and limitations.
+
 ## Ambient actors and incidents
 
 The browser now has a transient actor/event layer because of The Gnome Incident.
@@ -329,6 +348,29 @@ Still-planned presentation work:
 - make luminous/rare specimens more noticeable after dark;
 - subtle transitions rather than abrupt time-of-day switches.
 
+### Storm lightning and thunder (future experiment)
+
+The existing rain, wind, storm darkening and temporary puddles have **no**
+lightning or thunder effects today. Explore a rare atmospheric effect only for
+`botnet_thunderstorm` and `botnet_hurricane`, not ordinary/heavy rain:
+
+- thunderstorm: occasional distant or localized cloud illumination and soft,
+  delayed thunder; hurricane: somewhat stronger wind-lit skies and deeper but
+  still infrequent thunder, without constant flashing;
+- use gently shaped, short light transitions rather than strobing or repeated
+  full-screen white frames; make flashes independently disableable and respect
+  reduced-motion preferences;
+- thunder stays silent until the user explicitly enables the existing sound
+  controller, obeys its volume/mute/device-failure behavior, and remains optional;
+- use bounded, testable intervals and no missed-event bursts after hidden-tab
+  suspension; no additional render loop or per-frame texture generation;
+- do not damage plants, change weather classification, affect ecology, create
+  network events or imply that botnet-named visual weather proves an attack.
+
+This is a wishlist item to prototype and assess, not a promise to ship it. The
+original omission of flashes was deliberate; usability, performance and
+photosensitivity safety take priority over spectacle.
+
 Possible later audio polish:
 
 - quiet opt-in weather ambience;
@@ -337,6 +379,22 @@ Possible later audio polish:
 
 None of these should turn into alert sounds. PacketGarden audio should remain
 pleasant enough to leave enabled.
+
+## Optional desktop / screensaver experience (exploratory)
+
+A windowed or full-screen desktop terrarium could eventually be useful for
+people who want to leave PacketGarden open as an idle screensaver-like companion.
+Consider packaging the existing Pixi browser experience before contemplating a
+renderer rewrite. Godot is only a possible later alternative, not an approved
+migration. Preserve the browser version and its existing event/SSE path.
+
+An optional clearly labeled simulated/demo input would let people without
+TCPNoise sensors enjoy a garden without suggesting the generated events are
+real telemetry. Explore simple installer/startup controls, privacy expectations,
+reasonable idle CPU/GPU use, and whether Steam/itch.io distribution or a small
+paid edition would be worthwhile. No release, pricing or storefront commitment
+has been made. Do not introduce quests, mandatory interaction, a meaningful
+score or a resource economy just to make it a "game."
 
 ## Ecology and event pressure
 
@@ -475,8 +533,10 @@ aggregate traffic pressure -> severe weather -> temporary puddles -> slow draina
 
 That adds environmental history without pretending the rain is a damaging event.
 
-Lightning/flashing was intentionally omitted from severe weather and should not be
-added casually; the current storms communicate intensity without strobing.
+Lightning/flashing was intentionally omitted from the implemented severe-weather
+slice. The guarded storm-lighting proposal above reopens that decision only as
+future experimentation; current storms still communicate intensity without
+strobing.
 
 ## Keep the weirdness earned
 
