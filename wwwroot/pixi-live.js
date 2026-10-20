@@ -345,8 +345,9 @@
     const ambientView = ambientPresentation.createAmbientView(P, view.curiosityLayer, view.dropLayer, ambientCache.frames);
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
       onChange(change) { ambientView.change(change, Date.now()); } });
-    let ui;
-    const model = core.createModel(view, { onLive: source => {
+    // Both factories start empty. Bind ecology before startup grass or live input.
+    let ui, ecology = null;
+    const model = core.createModel(view, { onAdded: source => ecology?.removeGrassCell(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
@@ -379,7 +380,11 @@
     app.canvas.addEventListener('click', clickGarden);
     const ecologyCache = ecologyPresentation.makeEcologyAtlas(P, app.renderer);
     const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames);
-    const ecology = ecologyCore.createEcologyModel({ onChange(change) { ecologyView.change(change, Date.now()); } });
+    ecology = ecologyCore.createEcologyModel({ isCellOccupied: (column, row) => model.byCell.has(row * core.dimensions.columns + column),
+      onChange(change) {
+        ecologyView.change(change, Date.now());
+        if (change.kind === 'grass-removed') ui.grassRemoved(change.item);
+      } });
     // Production begins with five distributed grass seeds; real TCPNoise never gains grass influence.
     for (let i = 0; i < 5; i++) { const cell = i * 128 + Math.floor(Math.random() * 128); ecology.influenceGrassCell(cell % 32, Math.floor(cell / 32)); }
     // The default garden omits development controls and timing collection entirely.

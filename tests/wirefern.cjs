@@ -60,9 +60,10 @@ assert(glowing.some(call=>call[0]==='filter'&&call[1].includes('brightness(1.4)'
 run('buildVineCellLookup=priorWireLookup;vineNeighborAt=priorWireNeighbor');garden.sandbox.Math.random=()=>.5;
 
 // The existing SSE trusts backend species, attaches exact provenance, and uses generic UI paths.
-const grassBefore=json('gardenState.grassCells');
+const initialGrass=json('gardenState.grassCells');
 garden.sources[0].emit({specimenType:'wirefern',listenPort:23,vigor:3,sensor:'wirefern-test',seenCount:'12'});
 const source=run('gardenState.specimens[0]'), original=json('gardenState.specimens[0]');
+const grassBefore=JSON.stringify(JSON.parse(initialGrass).filter(g=>g.column!==source.column||g.row!==source.row));
 assert.equal(source.type,'wirefern');assert.equal(source.colorVariant,'amber');
 assert.equal(json('gardenState.grassCells'),grassBefore);
 assert.match(garden.element('#garden-status').textContent,/1 wirefern(?:,|$)/);

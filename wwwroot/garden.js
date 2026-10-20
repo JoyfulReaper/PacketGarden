@@ -212,13 +212,17 @@ const speciesConfig = new Map([
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
+// Factories start empty; the ecology binding is installed before any growth/seed.
+let gardenEcology = null;
 const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random(), onChange(change) {
+  if (change.kind === 'added') gardenEcology?.removeGrassCell(change.specimen.column, change.specimen.row);
   if (change.kind === 'removed') gardenMutations.removed(change.specimen, change.reason);
 }});
 const gardenMutations = window.PacketGardenMutations.createMutationModel({
   garden: gardenModel, now: () => Date.now(), random: () => Math.random()
 });
-const gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(), onChange({ kind }) {
+gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(),
+  isCellOccupied: (column, row) => gardenModel.byCell.has(row * columns + column), onChange({ kind }) {
   gardenBaseDirty = true; gardenPerf?.reason(kind.startsWith('grass-') ? 'grass-change' : 'puddle-change');
 }});
 const gardenAmbient = window.PacketGardenAmbient.createAmbientModel({

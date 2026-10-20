@@ -245,12 +245,20 @@ security meaning; fake Gopher growth and dropped saturated events do not roll.
 Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
 Stillbloom, and frogs/water interactions remain future work.
 
-Successful fake DNS and HTTP spawns can seed or refresh grass beneath the
-specimens (45% and 65% influence chances). Each successful influence affects
-the usual target and has a 35% chance to also affect a distinct adjacent cell near
-the new specimen, for at most two grass cells per event. Real TCPNoise growth does
-not directly seed or refresh grass. Grass does not occupy specimen slots or affect
-specimen counts. Once seeded, sparse grass expands into ragged, near-full turf
+Successful growth or stronger replacement clears wild grass from exactly the
+selected specimen cell, in both Canvas and Pixi, before presenting the new plant.
+Neighbors remain untouched, and invalid, paused or saturated/dropped events do
+not clear grass. An open Pixi Wild grass card closes immediately on removal.
+
+Successful fake DNS and HTTP spawns retain their 45% and 65% grass-influence
+chances and 35% chance of a second distinct nearby attempt. Occupied targets
+(including the new plant's own cell) are skipped without retrying or rerouting
+the roll, so only available neighboring soil can be seeded/refreshed. Real
+TCPNoise growth does not directly seed or refresh grass. Grass does not occupy
+specimen slots or affect specimen counts. Natural spread also skips specimen
+cells. Removing/expiring a specimen creates no grass automatically; neighboring
+turf may reclaim the newly available soil on a later ordinary spread attempt.
+Once seeded, sparse grass expands into ragged turf on available soil
 over 30 seconds without further traffic. Healthy mature grass now receives 1–4
 bounded spread attempts every 4 seconds as active mature coverage grows; each
 attempt has a 50% chance to seed an immediate empty neighbor. When neglected turf
@@ -350,7 +358,8 @@ cell. Ghostbloom, crystal fungus, and blackthorn are protected from forced
 replacement but still expire normally. Weed and redbloom remain replaceable.
 Equal vigor cannot churn the garden, and incoming rare growth gets the same gate.
 Successful replacements use the normal growth sound/cooldowns; dropped events
-are silent. Real TCPNoise replacement does not seed or refresh grass. The existing
+are silent. Real TCPNoise replacement clears destination grass but does not seed
+or refresh grass. The existing
 status adds a full-garden note at capacity and removes it after space opens.
 The browser-facing TCPNoise growth contract is `specimenType`, `listenPort`, and
 integer `vigor` (0–3), plus optional bounded `sensor` and exact decimal-string

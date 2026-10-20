@@ -408,40 +408,31 @@ paid edition would be worthwhile. No release, pricing or storefront commitment
 has been made. Do not introduce quests, mandatory interaction, a meaningful
 score or a resource economy just to make it a "game."
 
-## Grass clearing when a specimen takes a cell (wishlist)
+<a id="grass-clearing-when-a-specimen-takes-a-cell-wishlist"></a>
 
-Today grass and specimens use separate layers and can occupy the same logical
-cell. Grass renders beneath a plant, but exposed blades may compete visually
-with the larger artwork, especially when a specimen is small or fading.
+## Grass clearing when a specimen takes a cell (implemented)
 
-**Proposed behavior:** When a plant **successfully spawns or replaces** another
-specimen, check its destination cell. If that cell already has grass, remove
-the grass from that cell as part of the successful placement, before presenting
-the new plant. The result should be a clean patch of soil around the new
-specimen, while neighboring grass remains untouched.
+The original wishlist proposed clear soil around new plants so exposed blades
+would not compete with the specimen artwork. Canvas and Pixi now remove grass
+from exactly the selected destination on successful growth/replacement, before
+presenting the new specimen. This is real shared-ecology removal through the
+existing `grass-removed` notification, with Canvas invalidation/Pixi Sprite
+cleanup and immediate closure of a removed Wild grass inspection card.
 
-Important implementation choices for a future focused pass:
+Invalid, paused and saturated/dropped events leave grass untouched. Neighboring
+grass is not cleared. Natural spread and fake DNS/HTTP influence now consult
+the specimen cell map; occupied targets are skipped with no retry or extra roll.
+The existing chance thresholds and cadence remain unchanged. Plant expiry or
+collection creates no grass automatically; neighboring spread may reclaim that
+soil later. Fixture imports also skip occupied cells, so the full 640-specimen
+diagnostic seed starts with zero grass and gains available soil as plants expire.
+With no surviving grass nearby, expiry alone cannot restart a grass population.
 
-- Prefer actual removal from the shared grass ecology model, with the normal
-  grass-removed notification and renderer cleanup, rather than merely hiding a
-  sprite in Pixi. Confirm the visual result against a mask-only approach before
-  committing to an ecology change.
-- Never clear grass for invalid, paused or saturated/dropped events; the plant
-  must actually occupy the chosen cell first. Replacement clears the
-  destination once, not a second/random cell.
-- Keep planting, clearing, and the visible update in one logical operation,
-  without making an empty-looking frame or changing specimen placement, rarity,
-  vigor, capacity or lifetimes.
-- Decide explicitly how grass can return: it should not instantly respawn
-  beneath the same occupied cell through grass spread or fake DNS/HTTP influence.
-  After the plant expires, ordinary neighboring spread could recolonize the
-  cleared soil; removal alone should not magically generate new grass.
-- Apply the same rule to Canvas and Pixi through shared model integration,
-  and test new growth, replacement, expiry, rejected growth, nearby spread
-  and visual/cache cleanup. Avoid added per-frame work.
-
-This is a visual/ecological polish proposal, **not currently implemented**.
-The existing separation of grass and specimen cell capacity remains valuable.
+The integration uses successful placement callbacks and event-driven removal,
+without a new animation loop or per-frame occupancy sweep. Placement, rarity,
+vigor, capacity, lifetimes, grass artwork and separate specimen counts remain.
+Deterministic and browser checks cover new growth/replacement, failed events,
+occupied influence/spread, later reclamation, inspection and renderer cleanup.
 
 ## Ecology and event pressure
 

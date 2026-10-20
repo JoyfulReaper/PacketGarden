@@ -53,13 +53,14 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
     const model = garden.createGardenModel({ now, random, onChange(change) {
       const { kind, specimen, reason } = change;
       if (kind === 'added') {
+        onAdded(specimen); // Placement succeeded; clear its soil before presenting the plant.
         specimen.colorVariant = colorVariant(specimen.type, specimen.vigor, random());
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;

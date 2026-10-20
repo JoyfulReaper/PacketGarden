@@ -88,7 +88,7 @@ garden.sandbox.performance.now=()=>garden.clock.now;
 garden.run('gardenState.grassCells[0].createdAt=Date.now();drawGarden();gardenPerf.reset()');tick(garden,1000);
 let data=snapshot(garden);assert.deepEqual(data.lastReasons,['visual-deadline']);
 assert.equal(data.counts.deadlineOnlyRebuilds,1);assert.equal(data.samples.deadlineOnly,1);
-garden.run('influenceGrassCell(0,0,Date.now()+1)');tick(garden,1000);
+garden.run('gardenEcology.removeGrassCell(31,19)');tick(garden,1000);
 data=snapshot(garden);assert(data.lastReasons.includes('grass-change'));assert(data.lastReasons.includes('visual-deadline'));
 assert.equal(data.counts.deadlineOnlyRebuilds,1,'mixed causes are not counted as solely deadline refresh');
 garden.run('refreshStormPuddle(gardenState.puddles[0],Date.now())');tick(garden);

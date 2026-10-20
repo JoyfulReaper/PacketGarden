@@ -39,7 +39,7 @@ assert.equal(originsAtFirstDraw.length, 2);
 assert.deepEqual(originsAtFirstDraw.map(JSON.parse), [JSON.parse(JSON.stringify(first.origin)), JSON.parse(JSON.stringify(second.origin))], 'provenance precedes first rendering');
 assert.deepEqual(originsAtSound.map(JSON.parse), originsAtFirstDraw.map(JSON.parse), 'provenance precedes sound');
 assert.equal(run('gardenState.specimens.length'), 2);
-assert.equal(run('JSON.stringify(gardenState.grassCells)'), grassBefore);
+assert.equal(run('JSON.stringify(gardenState.grassCells)'), JSON.stringify(JSON.parse(grassBefore).filter(g=>![first,second].some(p=>p.column===g.column&&p.row===g.row))), 'live growth only removes destination grass');
 assert.equal(run('gardenState.recentEvents.length'), 2);
 assert.deepEqual(Object.keys(run('gardenState.recentEvents[1]')).sort(),
   ['kind', 'listenPort', 'outcome', 'receivedAt', 'seenCount', 'sensor', 'specimenType'], 'only normalized display fields are retained');

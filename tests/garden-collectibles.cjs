@@ -19,9 +19,10 @@ assert.equal(run('specimenMutationConfig.maxActive'), 3);
 assert.equal(run('typeof maybeSpawnPort22Collectible'), 'undefined', 'old sprig producer removed');
 assert.equal(run('Object.hasOwn(gardenState,"collectibles")'), false, 'no unused loose-drop state');
 
-const grassBefore = run('JSON.stringify(gardenState.grassCells)');
+const initialGrass = run('JSON.stringify(gardenState.grassCells)');
 garden.forceRoll(0.049999); garden.emit();
 const source = run('gardenState.specimens[0]');
+const grassBefore = JSON.stringify(JSON.parse(initialGrass).filter(g=>g.column!==source.column||g.row!==source.row));
 const originalCell = JSON.stringify([source.column, source.row]);
 const originalOrigin = JSON.stringify(source.origin), originalColor = source.colorVariant;
 const originalRecent = run('JSON.stringify(gardenState.recentEvents)');

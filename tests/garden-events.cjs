@@ -89,7 +89,7 @@ for (const [type, expires, color] of [['weed',360000,'#bec04c'],['ghostbloom',36
   assert(run(`gardenState.specimens.every(s => s.type === '${type}')`));
   assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1, 'variants share clustered placement');
   assert.equal(run('gardenState.grassCells.length'), 0, 'real variants never seed grass');
-  run('influenceGrassCell(0, 0, 500)');
+  run('influenceGrassCell(31, 19, 500)');
   source.emit('garden', { specimenType:type, listenPort:443, vigor:3 });
   assert.equal(run('gardenState.grassCells.length'), 1);
   assert.equal(run('gardenState.grassCells[0].lastInfluencedAt'), 500, 'real variants never refresh grass');
@@ -152,8 +152,7 @@ element('#fake-port22-probe').handlers.click();
 assert.equal(run('gardenState.specimens.length'), 2);
 assert(run("gardenState.specimens.every(s => s.type === 'redbloom')"));
 assert.equal(run('Math.max(Math.abs(gardenState.specimens[0].column-gardenState.specimens[1].column), Math.abs(gardenState.specimens[0].row-gardenState.specimens[1].row))'), 1, 'real/fake redblooms share clustering');
-assert.equal(run('gardenState.grassCells.length'), 1);
-assert.equal(run('gardenState.grassCells[0].lastInfluencedAt'), 500, 'real/fake port-22 growth never refreshes grass');
+assert.equal(run('gardenState.grassCells.length'), 0, 'real port-22 growth clears its destination and fake growth never reseeds it');
 for (const age of [0, 9999, 10000, 29999, 30000]) {
   drawing.length = 0;
   run(`drawRedbloom(gardenState.specimens[0], ${1000 + age})`);
@@ -414,7 +413,7 @@ assert.equal(element('#fake-dns').disabled,false);
 fillGarden(); occupant(0,'flower',0,100);
 sandbox.Math.random=()=>0;
 run("spawnSpecimen('flower','dns',3)");
-assert(run('gardenState.grassCells.length > 0'),'direct fake replacement preserves DNS grass semantics');
+assert.equal(run('gardenState.grassCells.length'),0,'fake influence cannot seed beneath a saturated occupied garden');
 sandbox.restoreGrowthSound=originalGrowthSound;
 run('gardenSound.maybePlayGrowthSound=restoreGrowthSound');
 console.log('PASS: five initial grass seeds, growth/vigor/rendering, saturated vigor competition/protection/status/sound isolation, free-cell clustering, fake controls/traffic, DNS/HTTP-only grass, Manual/Live and severe weather, one SSE connection.');

@@ -1,3 +1,59 @@
+# Grass clears when specimens occupy soil (2026-10-20)
+
+Canvas and Pixi now remove destination grass from the shared ecology model on
+successful placement/replacement, through `removeGrassCell` and `grass-removed`.
+Pixi's added callback runs before `view.add`; Canvas invalidates its existing base
+before the next specimen paint. No intermediate empty frame is scheduled. The
+original shared placement, competition, lifecycle, provenance and random color
+selection code remains unchanged. Failed/invalid/paused/dropped events never
+invoke placement cleanup, and neighboring grass objects remain untouched.
+
+The ecology model accepts an `isCellOccupied` predicate backed by each garden's
+existing cell Map. Direct grass influence and neighbor spread skip occupied
+destinations without retrying or rerouting a roll; thresholds/cadence remain.
+Fixture imports validate first, then skip occupied cells. The full 640-specimen
+diagnostic seed therefore has zero grass (735 HUD display objects including
+puddles/ambient/lighting), rather than overlapping 640 grass Sprites. After expiry,
+grass can reclaim empty soil only from surviving neighbors on normal spread;
+plant removal never synthesizes it. With all grass gone, expiry cannot restart it.
+
+Grass Sprite destruction uses the existing notification path and closes an exact
+Wild grass card synchronously. Specimen inspection and collection priority are
+unchanged. Factories start empty and ecology bindings are installed before startup
+grass, fixtures or live input, avoiding initialization-order callbacks. Updated
+asset versions cover shared ecology, both adapters, UI and Pixi startup; Noise
+Observatory navigation links, grass artwork and all atlas layouts are unchanged.
+
+`tests/grass-occupancy.cjs` covers exact-cell growth and replacement, failure
+isolation, occupancy-aware fake influence and spread (including fading seeds),
+unchanged roll counts, later reclamation after actual specimen expiry, Canvas
+paint ordering, Pixi add ordering and repeated Sprite/frame/source ownership.
+Existing mutation/activity/wirefern tests now allow destination clearing while
+still checking exact neighbor state and no unrelated grass creation/refresh.
+All 49 Node files pass (optional runners require `--run`). Installed headless
+Chrome passed `/`, `/index.html`, diagnostic, Canvas and stress pages, SSE fixture
+growth, immediate card/Sprite cleanup, resizing, reconnection and retained ambient,
+storm and sound checks. These browser events are synthetic SSE, not a new live
+NATS soak. .NET build/backend checks and `git diff --check` pass; the existing
+NU1900 vulnerability-feed warning remains.
+
+New removal scans at most 640 grass cells once per accepted placement. Occupancy
+checks use the existing specimen Map and the existing influence/spread cadence;
+no extra per-frame sweep, timer, texture or display object is added. Twenty
+synthetic grow/remove cycles release each grass Sprite and keep the same atlas
+generation/frame counts. Chrome's 120-frame quiet samples before/after one SSE
+plant (640 grass → 639 grass + one plant, same build) measured:
+
+| Route | Mean interval before / after | Mean CPU submission before / after |
+| --- | --- | --- |
+| `/` | 16.679 / 16.682ms | .237 / .229ms |
+| `/index.html` | 16.679 / 16.680ms | .216 / .201ms |
+
+These are different scene contents within the revised implementation, not a
+code-before/after speedup benchmark. Short noisy submission/ticker samples do not
+prove GPU/compositor or long-soak equivalence. Ignored screenshots/timing data are
+under `artifacts/grass-clearing/pages/`. Historical findings below remain intact.
+
 # Fuller grass and grass-only inspection (2026-10-20)
 
 The default Pixi garden and `/pixi-live.html` now use 5–7 pointed blades per tuft

@@ -16,7 +16,7 @@ for (const id of ['hud','seed','clear','seed-ambient','seed-mutations','seed-pen
 }
 assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/);
 assert.match(read('about.html'), /href="index.html"/);
-assert.match(read('canvas.html'), /src="garden.js"/);
+assert.match(read('canvas.html'), /src="garden\.js\?v=.+"/);
 assert(!scripts.includes('garden.js'));
 for (const id of ['trigger-gnomes','gnome-test-status','trigger-lightning','lightning-test-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])

@@ -32,10 +32,11 @@ const {start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
     seed(60000);click();g.ecology.clearGrass();g.frame(250);assert(g.element('#specimen-card').hidden,'removal closes exact grass reference');
     seed(60000);click();seed(60000);g.frame(250);assert(g.element('#specimen-card').hidden,'replacement cell object closes stale card');
     click();g.model.seed();g.frame(250);
-    assert(g.element('#specimen-card').hidden,'new occupant closes grass card');click();
+    assert(g.element('#specimen-card').hidden,'new occupant closes grass card');assert.equal(g.ecology.grassCells.length,0);click();
     assert.equal(g.element('#specimen-card-title').textContent,'Flower');assert(!g.element('#specimen-details').hidden);
     assert(g.element('#grass-details').hidden,'specimen fields restore normally');
-    g.model.clear();click();assert.equal(g.element('#specimen-card-title').textContent,'Wild grass');
+    g.model.clear();click();assert(g.element('#specimen-card').hidden,'cleared plant does not create grass');
+    seed(60000);click();assert.equal(g.element('#specimen-card-title').textContent,'Wild grass');
     g.ecology.clearGrass();g.frame(250);assert(g.element('#specimen-card').hidden);
     g.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(g.errors,[]);
   }

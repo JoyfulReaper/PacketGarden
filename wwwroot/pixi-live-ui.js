@@ -40,6 +40,7 @@
       inspected = specimen; inspectedGrass = null; anchor = client; renderInspection(at); card.hidden = false; position(); return true;
     }
     function removed(specimen) { if (inspected === specimen) close(); }
+    function grassRemoved(grass) { if (inspectedGrass === grass) close(); }
     function showMessage(value, at = now()) {
       message.textContent = value; message.hidden = false; messageUntil = at + text.messageDurationMs;
     }
@@ -85,7 +86,7 @@
       }
       return hit;
     }
-    return { click, inspect, close, removed, activity, tick, position, showMessage, get inspected() { return inspected; }, get inspectedGrass() { return inspectedGrass; },
+    return { click, inspect, close, removed, grassRemoved, activity, tick, position, showMessage, get inspected() { return inspected; }, get inspectedGrass() { return inspectedGrass; },
       destroy() { close(); closeButton.removeEventListener('click', close); toggle.removeEventListener('change', visibility); window.removeEventListener('keydown', keydown); } };
   }
   const api = { createUi };

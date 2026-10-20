@@ -161,9 +161,15 @@ async function run() {
       // Native AudioParam.value can retain a rendered quantum's value while the
       // graph is inactive. Check the actual scheduled target, not that stale getter.
       await page.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===2*.12**1.25);
+      await page.evaluate(()=>{const at=Date.now();__gardenTestEcology.seed({grassCells:Array.from({length:640},(_,cell)=>({column:cell%32,row:Math.floor(cell/32),createdAt:at-60000,lastInfluencedAt:at}))});__gardenTestEcology.resetCadence();});
+      const grassBeforeGrowth=await sample(page);
       broadcast({specimenType:'flower',listenPort:53,vigor:2,sensor:'browser-fixture',seenCount:'12'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 1);
       await page.waitForFunction(() => __gardenAudioTones.length === 1);
+      assert.equal(await page.evaluate(()=>__gardenTestEcology.grassCells.length),639,'SSE growth clears exactly one grass cell');
+      assert(await page.evaluate(()=>{const p=__gardenTestGarden.specimens[0];return !__gardenTestEcology.grassCells.some(g=>g.column===p.column&&g.row===p.row)&&__gardenTestApp.stage.children[0].children[3].children.length===639;}));
+      const grassAfterGrowth=await sample(page);
+      await fs.writeFile(path.join(output,route==='/'?'root-grass-clearing-timing.json':'index-grass-clearing-timing.json'),JSON.stringify({grassBeforeGrowth,grassAfterGrowth},null,2));
       await page.waitForFunction(before => window.__gardenTestPaints > before+2,state.paints);
       const point = await specimenPoint(page);
       const grown = png(await page.locator('#view canvas').screenshot());
@@ -242,7 +248,7 @@ async function run() {
     const soundOff=await sample(diagnostic);
     await diagnostic.getByRole('button',{name:'Sound: Off',exact:true}).click();
     const soundOnAgain=await sample(diagnostic);
-    const timing={scene:'640 mixed specimens + dense ecology + manual hurricane; no incoming growth',soundOn,soundOff,soundOnAgain};
+    const timing={scene:'640 mixed specimens + puddles + manual hurricane; occupied cells have no grass; no incoming growth',soundOn,soundOff,soundOnAgain};
     await fs.writeFile(path.join(output,'audio-timing.json'),JSON.stringify(timing,null,2)); console.log(JSON.stringify(timing));
     assert.equal(await diagnostic.evaluate(() => __gardenAudioContexts.length),1);
     await diagnostic.getByRole('button',{name:'Seed overlap fixture (local simulated)',exact:true}).click();
@@ -306,7 +312,12 @@ async function run() {
     }
     // Pick exposed soil above the floating card, rather than clicking through it.
     await click();await click(1,1);assert(!(await page.locator('#specimen-card').isVisible()),'bare soil does not inspect grass');
-    await page.evaluate(()=>__gardenTestGarden.seed([{type:'broadleaf',column:12,row:9,vigor:0,createdAt:Date.now()}]));
+    await click();
+    const transition=await page.evaluate(()=>{const oldGrass=__gardenTestApp.stage.children[0].children[3].children.find(s=>s.position.x===375&&s.position.y===285);
+      __gardenTestGarden.seed([{type:'broadleaf',column:12,row:9,vigor:0,createdAt:Date.now()}]);
+      return {grass:__gardenTestEcology.grassCells.length,cardClosed:document.querySelector('#specimen-card').hidden,destroyed:oldGrass.destroyed,
+        specimens:__gardenTestApp.stage.children[0].children[6].children.length};});
+    assert.deepEqual(transition,{grass:0,cardClosed:true,destroyed:true,specimens:1},'grass and card clear in the same operation as plant presentation');
     await click();await page.getByRole('heading',{name:'Broad-leaf plant',exact:true}).waitFor();
     assert(await page.locator('#specimen-details').isVisible());assert(!(await page.locator('#grass-details').isVisible()));
     assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),0,'grass/specimen inspection stays silent');

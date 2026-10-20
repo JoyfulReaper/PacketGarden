@@ -150,10 +150,13 @@
         picture, not a permanent record of all past connections.
       </p>
       <p>
-        Grass is its own ecology layer <strong>beneath</strong> specimens, so it does
-        not occupy the 640 cells. In the original <a href="canvas.html">Canvas
+        Grass has its own ecology state and uses no specimen slots. Successful
+        plant growth or replacement clears grass from its cell, leaving nearby
+        tufts alone. In the original <a href="canvas.html">Canvas
         development garden</a>, successful fake DNS/HTTP events can seed or refresh
-        it. Mature grass can then spread by itself, age and eventually disappear.
+        it on available soil. Mature grass can then spread by itself, age and
+        eventually disappear. Occupied cells stay clear; after a plant expires,
+        ordinary neighboring spread may reclaim its cell, without automatic reseeding.
         Real TCPNoise growth does not directly seed or refresh grass.
         In the default Pixi garden, wild grass has fuller blade tufts. Click or
         tap a grass-covered empty tile to see its state. Grass is background
