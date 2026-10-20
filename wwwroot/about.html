@@ -19,152 +19,236 @@
     <section>
       <h2>What is this?</h2>
       <p>
-        PacketGarden is a living visualization of background network activity. Instead of turning
-        every connection and traffic spike into another table, graph, or scrolling log, it turns
-        them into flowers, mushrooms, vines, weeds, strange mutations, weather, and occasionally
-        a completely unnecessary gnome territorial dispute.
+        PacketGarden turns <strong>real, observed network activity</strong> into a small living
+        terrarium. Incoming connections become plants; aggregate traffic becomes weather.
+        The garden changes as plants age, grass spreads, storms pass, and tiny creatures appear.
       </p>
       <p>
-        It is meant to be something you can leave open and glance at. The garden slowly changes as
-        traffic arrives, plants age and die, grass spreads, storms roll through, and odd little
-        events happen on their own.
+        This is meant to be watched, not managed. It is not a packet-capture tool, intrusion
+        detector or security dashboard. You do not need to water plants, fight enemies or earn points.
       </p>
     </section>
 
     <section>
       <h2>How does it work?</h2>
-      <div class="about-flow" aria-label="PacketGarden data flow">
-        <span>Network sensors</span>
-        <span aria-hidden="true">→</span>
-        <span>NATS</span>
-        <span aria-hidden="true">→</span>
-        <span>PacketGarden backend</span>
-        <span aria-hidden="true">→</span>
-        <span>SSE</span>
-        <span aria-hidden="true">→</span>
-        <span>Your browser garden</span>
+      <p>Two independent sources feed the garden. Your browser receives both over a single
+        <strong>Server-Sent Events (SSE)</strong> connection to PacketGarden.</p>
+      <h3>Individual connections → plants</h3>
+      <div class="about-flow" aria-label="Connection to plant data flow">
+        <span>TCPNoise sensors</span><span aria-hidden="true">→</span>
+        <span>NATS</span><span aria-hidden="true">→</span>
+        <span>PacketGarden backend</span><span aria-hidden="true">→</span>
+        <span>SSE</span><span aria-hidden="true">→</span>
+        <span>Your garden</span>
       </div>
       <p>
-        TCPNoise sensors observe connections to listening ports and publish small event summaries.
-        PacketGarden consumes those events through NATS, normalizes them on the server, and streams
-        only the information the browser needs over Server-Sent Events (SSE).
+        TCPNoise sensors observe incoming connections to listening ports. The backend receives
+        <code>tcpnoise.connection</code> summaries through NATS, validates them, chooses an
+        artistic species based on the listening port and a rarity roll, and converts the
+        reported seen count to a visual vigor value. It sends only the sanitized growth event
+        to the browser. Each browser attempts to grow one specimen for that event.
       </p>
       <p>
-        The browser then grows the appropriate specimen, chooses its visual details, and updates the
-        ecology. Optional sounds are available in the retained <a href="canvas.html">Canvas garden</a>.
-        No page refresh or direct browser connection to
-        the sensors is required.
+        <strong>Not every accepted event results in a plant.</strong> If the garden is full
+        and no weaker eligible specimen can be replaced, it remains a
+        <em>no growth</em> entry in Recent activity.
+      </p>
+      <h3>Aggregate traffic → weather</h3>
+      <div class="about-flow" aria-label="Aggregate traffic to weather data flow">
+        <span>Noise Observatory</span><span aria-hidden="true">→</span>
+        <span>PacketGarden backend</span><span aria-hidden="true">→</span>
+        <span>SSE</span><span aria-hidden="true">→</span>
+        <span>Rain and activity counters</span>
+      </div>
+      <p>
+        Separately, PacketGarden checks Noise Observatory's aggregate snapshot about
+        every 10 seconds. The Observatory supplies the current weather category and
+        traffic counts. Those totals do <strong>not</strong> create additional plants.
+        The browser connects only to PacketGarden, not directly to the sensors or NATS.
       </p>
     </section>
 
     <section>
       <h2>What do the plants mean?</h2>
+      <p>The <strong>listening port</strong> sets a starting plant family. These are the
+        current real TCPNoise mappings, not claims about which application or protocol ran:</p>
+      <div class="about-table-wrap">
+        <table class="about-table">
+          <thead><tr><th scope="col">Listening port</th><th scope="col">Starting species</th></tr></thead>
+          <tbody>
+            <tr><td>22</td><td>Redbloom, always</td></tr>
+            <tr><td>2222</td><td>Redbloom, normal rarity</td></tr>
+            <tr><td>80, 443, 445, 8080, 8443</td><td>Broadleaf</td></tr>
+            <tr><td>23, 2323</td><td>Wirefern</td></tr>
+            <tr><td>3389, 5900</td><td>Vine</td></tr>
+            <tr><td>21, 70</td><td>Mushroom</td></tr>
+            <tr><td>420, 42069</td><td>Ordinary weed</td></tr>
+            <tr><td>25, 53, 5432, 6379, 9200</td><td>Flower</td></tr>
+            <tr><td>Other valid ports</td><td>Flower</td></tr>
+          </tbody>
+        </table>
+      </div>
       <p>
-        Ports are mapped to plant families for visual variety. Common web-facing traffic tends to
-        produce broad-leaf plants, Gopher/port 70 can produce mushrooms, several remote-access style
-        ports map to vines, and other ports commonly become flowers. Port 22 has its own brief red
-        bloom so those hits are easy to notice.
+        Except for exact port 22, a rarity roll can swap the starting species for a
+        weed or one of three rarities: <strong>ghostbloom, crystal fungus, or blackthorn</strong>.
+        Unknown ports have slightly higher rarity odds; IPv6, DN42 or Yggdrasil traits
+        can nudge them too. Ports 420 and 42069 are two exact port numbers, not a range.
       </p>
       <p>
-        These are artistic mappings, not protocol detection and not security classifications. A red
-        bloom means a TCP connection hit the public listener on port 22; it does not mean somebody
-        supplied credentials, completed SSH negotiation, or successfully attacked anything.
+        <strong>Plants aren't threat classifications.</strong> A redbloom says a connection
+        reached listening port 22. It does not prove SSH negotiation, credentials,
+        authentication or an attack. Weeds and rare species are artistic variations,
+        not evidence of malicious activity.
       </p>
     </section>
 
     <section>
       <h2>Click a plant</h2>
       <p>
-        Specimens grown from live TCPNoise events can be clicked for a small provenance card. It
-        shows the specimen, the sensor that observed it, listening port, exact collector seen count,
-        coarse vigor, color scheme, and current age. Development/fake specimens identify themselves
-        as simulated instead of pretending to have network provenance.
+        Click a living specimen to inspect its species, sensor label, listening port,
+        valid exact <code>seenCount</code>, vigor, color and age. Counts are displayed as
+        exact text to avoid rounding large integers. Fake development specimens
+        identify themselves as simulated instead of inventing network provenance.
       </p>
       <p>
-        The seen count is shown exactly as reported by TCPNoise, while vigor remains the bounded 0–3
-        value used by the visual ecology. The inspection card is informational only; clicking a
-        plant does not change the garden.
+        Inspection is read-only. Click empty soil, press Escape or use the close
+        button to dismiss it. Clicking a temporary collectible instead collects it.
+        <strong>Recent activity</strong> shows only the newest three safe events,
+        including events marked <em>no growth</em> at saturation. It is not a durable log.
       </p>
     </section>
 
     <section>
       <h2>Vigor, rarity, and weird colors</h2>
       <p>
-        Repeated observations are reduced to a coarse <strong>vigor</strong> value from 0 to 3.
-        Higher vigor makes specimens a little fuller or more detailed and, when every specimen cell
-        is occupied, can allow stronger recurring growth to displace weaker ordinary plants.
+        The collector's seen count is converted into a coarse <strong>vigor</strong> value:
+        <strong>0</strong> for 0–1 or missing/unusable counts, <strong>1</strong> for
+        2–3, <strong>2</strong> for 4–9, and <strong>3</strong> for 10 or more.
+        Higher vigor makes plants a little fuller. It is <em>not</em> a threat score,
+        and it does not affect species rarity or lifetime.
       </p>
       <p>
-        TCPNoise also has an artistic rarity roll that can produce weeds or rare species such as
-        ghostblooms, crystal fungi, and blackthorns. Separately, specimens have browser-side color
-        variation. Common colors follow vigor for live traffic, while very occasionally a specimen
-        gets a rare cosmetic color scheme. A rainbow broad-leaf plant is one example. Color rarity
-        is just decoration and does not change the network meaning of the event.
+        The garden has <strong>32 × 20 cells (640 maximum specimens)</strong>, one
+        specimen per cell. New plants tend to cluster near others of their species.
+        When full, an incoming plant can only displace a strictly weaker eligible
+        resident, starting with the weakest and oldest. Ghostbloom, crystal fungus
+        and blackthorn are protected from forced displacement but still die naturally.
+      </p>
+      <p>
+        Rarity is decided by the backend per connection. Color variation is a
+        separate browser-only visual choice: a rainbow broadleaf or unusual vine
+        doesn't mean anything special happened on the network.
       </p>
     </section>
 
     <section>
       <h2>Grass and ecology</h2>
       <p>
-        Grass is its own layer beneath the specimens. Development DNS and HTTP events can seed or
-        refresh it, and healthy mature grass can spread naturally. Old turf fades, browns, and
-        eventually disappears, with a small final chance to seed a neighbor before it goes.
+        Species grow through stages, then wilt, fade and expire, freeing their cell.
+        A redbloom lasts about 30 seconds; most plants last a few minutes, and
+        some vines and rare blackthorns last longer. The garden is a changing
+        picture, not a permanent record of all past connections.
       </p>
       <p>
-        Plants also have their own lifetimes. The result is intentionally temporary: the garden
-        keeps recycling itself rather than becoming a permanent historical database of everything
-        that ever touched the network.
+        Grass is its own ecology layer <strong>beneath</strong> specimens, so it does
+        not occupy the 640 cells. In the original <a href="canvas.html">Canvas
+        development garden</a>, successful fake DNS/HTTP events can seed or refresh
+        it. Mature grass can then spread by itself, age and eventually disappear.
+        Real TCPNoise growth does not directly seed or refresh grass.
+      </p>
+      <p>
+        All specimen and ambient state currently lives in each visitor's browser
+        memory. Reloading starts a new garden; there is no saved planting history.
       </p>
     </section>
 
     <section>
       <h2>What is the weather?</h2>
       <p>
-        Weather comes from aggregate activity rather than individual connection events. The backend
-        polls Noise Observatory for a current level and events-per-minute rate, then streams that
-        small weather state to the browser. Higher activity can turn drizzle into heavy rain,
-        thunderstorms, or a botnet hurricane.
+        Weather reflects <strong>overall activity reported by Noise Observatory</strong>,
+        not the species or threat level of any particular connection. Its levels
+        range from quiet and drizzle through rain, heavy rain,
+        <code>botnet_thunderstorm</code>, and <code>botnet_hurricane</code>.
+        Busier conditions change rain, wind and darkness. Heavy rain and the
+        two strongest storms can also leave temporary puddles that slowly evaporate.
+        Weather does not damage plants or change the network events.
       </p>
+      <p>The homepage's <strong>Observatory traffic</strong> counters are separate
+        from successful garden growth:</p>
+      <ul>
+        <li><strong>Events/min (5-min avg)</strong> is the Observatory's
+          five-minute event count divided by five, not an instantaneous rate.</li>
+        <li><strong>Last hour</strong> is the actual reported one-hour count,
+          not events/min multiplied by 60.</li>
+      </ul>
       <p>
-        Weather is currently visual. It does not damage plants or change the meaning of traffic.
+        The Observatory retains up to <strong>5,000 events in memory</strong>.
+        Under heavy traffic its window counts may undercount evicted events;
+        a source restart also resets that history. <em>Waiting…</em> means
+        no valid snapshot has arrived; <em>Unavailable</em> means no usable
+        hourly count was supplied. Neither counter is a count of plants grown.
       </p>
     </section>
 
     <section>
       <h2>And the gnomes?</h2>
-      <p>Gnomes are currently available only in the Canvas garden; the default Pixi garden has no gnomes or audio yet.</p>
       <p>
-        The gnomes mean absolutely nothing.
+        The default Pixi garden <strong>does have gnomes and optional sound</strong>.
+        With at least 30 living specimens, one check every 45 seconds has a
+        2% chance to start The Gnome Incident. Two red-hat and two green-hat gnomes
+        approach, argue, fight, pick a random winner, and leave after 12 seconds.
+        They consume no cells and do not alter network traffic, plants or weather.
       </p>
       <p>
-        Once the garden is sufficiently populated, there is a small chance of a browser-only
-        ambient event in which two tiny red-hat gnomes and two green-hat gnomes settle a pointless
-        territorial disagreement. They do not consume plant cells, alter traffic, classify threats,
-        or affect the outcome of anything important. They just fight and leave.
+        Browser-only surprises include a ladybug, snail, moth or shiny pebble
+        near a successfully grown live specimen with exact seen count 1;
+        an occasional Amanita muscaria near a live mushroom; and a rare
+        collectible weed mutation of an actual port-22 redbloom.
+        They are short-lived, optional collectibles, not extra sensor events.
       </p>
+      <p>
+        Collection gives you <strong>+0 points</strong>. The displayed
+        <strong>Score: 0</strong> never changes. That's intentional.
+        Growth, rare plants, collection and gnome events have small synthesized
+        sounds, <strong>Off</strong> by default. You must click Sound On to
+        enable them; the volume slider starts at 12%.
+      </p>
+      <p>The gnomes mean absolutely nothing.</p>
     </section>
 
     <section>
       <h2>Privacy</h2>
       <p>
-        Live specimen events expose only the normalized specimen type, listening port, coarse vigor,
-        bounded sensor label, and exact TCPNoise seen count needed for visualization and click
-        inspection. The count is sent as text so large unsigned values are not rounded by JavaScript.
+        Browser growth events contain only the normalized plant type, listening port,
+        coarse vigor, optional bounded sensor label and optional valid exact TCPNoise
+        seen count. The count travels as text so large values are not rounded by
+        JavaScript. Aggregate weather and counters arrive in a separate SSE event.
       </p>
       <p>
-        Raw packet contents, credentials, banners, remote IP addresses, remote source ports, and
-        unrelated collector payload fields are not sent to the browser. PacketGarden is an ambient
-        visualization, not a packet inspector, SIEM, IDS, or forensic tool. If something looks
-        ominous, that is because the garden is dramatic, not because it has decided somebody is
-        malicious.
+        <strong>Remote IP addresses, remote source ports, packet contents,
+        credentials, banners and raw collector payloads are not sent to the browser.</strong>
+        The page doesn't know who made a connection or what they transmitted.
+        Each visitor sees a separate, temporary browser garden.
+      </p>
+      <p>
+        PacketGarden is not an IDS, SIEM, packet inspector or forensic record.
+        If something looks ominous, that's because the garden is dramatic, not
+        because it identified an attacker.
       </p>
     </section>
 
     <section>
       <h2>Why?</h2>
       <p>
-        Because the public internet produces an endless amount of unsolicited background noise, and
-        watching it grow mushrooms is more fun than staring at another dashboard.
+        Because the public internet produces an endless amount of unsolicited
+        background noise, and watching it grow mushrooms is more fun than
+        staring at another dashboard.
+      </p>
+      <p>
+        Want the detailed rules? Read the
+        <a href="https://github.com/JoyfulReaper/PacketGarden/blob/fix/tcpnoise-growth-boundary/docs/EVENT-MAPPINGS.md">port and rarity mappings</a>
+        or the
+        <a href="https://github.com/JoyfulReaper/PacketGarden/blob/fix/tcpnoise-growth-boundary/docs/REAL-DATA.md">real-data documentation</a>.
       </p>
     </section>
   </main>
