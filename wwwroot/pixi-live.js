@@ -1,5 +1,39 @@
 (function () {
   'use strict';
+  // Presentation seeds never consume the model's random stream. Five restrained
+  // colors retain the model's variant identity without its luminous wire palette.
+  const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
+  function vineNoise(seed) {
+    let n = Math.imul(seed ^ 0x45d9f3b, 0x45d9f3b); n = Math.imul(n ^ n >>> 16, 0x45d9f3b);
+    return ((n ^ n >>> 16) >>> 0) / 4294967296;
+  }
+  function vineOffset(specimen) {
+    const seed = specimen.row * 32 + specimen.column;
+    return { x: (vineNoise(seed + 11) - .5) * 8, y: (vineNoise(seed + 47) - .5) * 7 };
+  }
+  function vineTile(P, vigor, variant, stage) {
+    const g = new P.Graphics(), color = vineColors[variant], seed = vigor * 19 + variant * 71;
+    const lean = (vineNoise(seed) - .5) * 9, top = -20 - vigor * 1.5;
+    g.moveTo(0, -1).bezierCurveTo(-9, -9, 9 + lean, -13, lean, top)
+      .stroke({ color: 0x657851, width: 1.7 });
+    g.moveTo(0, -1).bezierCurveTo(-9, -9, 9 + lean, -13, lean, top)
+      .stroke({ color, width: .9 });
+    // One lateral branch and one open curl, baked once into the existing tile.
+    const side = variant % 2 ? -1 : 1;
+    g.moveTo(-1, -9).bezierCurveTo(side * 6, -8, side * 15, -18, side * 10, -20)
+      .bezierCurveTo(side * 6, -23, side * 4, -17, side * 8, -17)
+      .stroke({ color, width: .8, alpha: .8 });
+    for (let i = 0; i < 4 + vigor; i++) {
+      const y = -5 - i * 2.6, x = Math.sin(i * 1.7 + variant) * 3 + lean * i / 10;
+      const direction = i % 2 ? -1 : 1, length = 3.2 + vineNoise(seed + i + 3) * 2.4;
+      const tipX = x + direction * length, tipY = y - 3;
+      g.moveTo(x, y).quadraticCurveTo(x + direction * 1.5, y - 4, tipX, tipY)
+        .quadraticCurveTo(x + direction * length, y + 1, x, y).fill({ color, alpha: i % 3 ? .9 : .65 });
+    }
+    g.scale.set(stage === 'sprout' ? .42 : stage === 'growing' ? .72 : stage === 'fading' ? .66 : 1);
+    g.alpha = stage === 'fading' ? .55 : 1;
+    return g;
+  }
   function makeLiveAtlas(P, renderer, shared, core) {
     const extras = [];
     for (let vigor = 0; vigor <= 3; vigor++) {
@@ -29,13 +63,17 @@
         }
       }]);
     }
-    const base = shared.makeAtlas(P, renderer, extras), sheet = new P.Container(), keys = [];
+    const base = shared.makeAtlas(P, renderer, extras), sheet = new P.Container(), keys = [], vineTiles = [];
     function tile(key, object) {
       const index = keys.length; object.position.set(index % 32 * 32 + 16, Math.floor(index / 32) * 32 + 29);
       sheet.addChild(object); keys.push(key);
     }
     for (const type of core.species) for (let vigor = 0; vigor <= 3; vigor++) for (let variant = 0; variant < 5; variant++) {
       for (const stage of type === 'redbloom' ? ['mature', 'fading'] : ['sprout', 'growing', 'mature', 'fading']) {
+        if (type === 'vine') {
+          const object = vineTile(P, vigor, variant, stage); vineTiles.push(object);
+          tile(`${type}:${stage}:${vigor}:${variant}`, object); continue;
+        }
         const object = new P.Sprite(base.frames.get(`${type === 'redbloom' ? 'redbloom-star' : type}:${vigor}`)); object.anchor.set(.5, .9);
         object.scale.set(stage === 'sprout' ? .21 : stage === 'growing' ? .36 : stage === 'fading' ? .33 : .5);
         object.tint = core.palettes[type][variant]; object.alpha = stage === 'fading' ? .55 : 1;
@@ -57,6 +95,9 @@
     mutation.circle(0, -21, 1.5).fill(0xd8c782).rect(2, -22, 1.5, 1.5).fill({ color: 0xf9efbb, alpha: .5 });
     tile('collectible_weed', mutation);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
+    // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
+    // context. Release these one-time vine paths explicitly after rasterization.
+    for (const object of vineTiles) object.destroy();
     sheet.destroy({ children: true });
     for (const frame of base.frames.values()) frame.destroy(false); base.atlas.destroy(true);
     const frames = new Map(keys.map((key, i) => [key, new P.Texture({ source: atlas.source,
@@ -87,16 +128,28 @@
       connectionHalves -= halfCurvesById.get(specimen.id) ?? 0;
       halfCurvesById.set(specimen.id, 0); graphic.clear(); if (!eligible(specimen)) return;
       let halves = 0;
-      const color = core.palettes.vine[specimen.colorVariant];
+      const color = vineColors[specimen.colorVariant], own = vineOffset(specimen);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dy) continue;
         counters.vineNeighborChecks++;
         const column = specimen.column + dx, row = specimen.row + dy;
-        if (column < 0 || column >= columns || row < 0 || row >= rows || !eligible(byCell.get(row * columns + column))) continue;
-        const x = dx * cellSize / 2, y = dy * cellSize / 2, bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
-        graphic.moveTo(0, 0).quadraticCurveTo(x / 2 - dy * bend, y / 2 + dx * bend, x, y)
-          .stroke({ color, width: (specimen.stage === 'fading' ? 1 : specimen.stage === 'mature' ? 2.5 : 1.5) + specimen.vigor * .4,
-            alpha: specimen.stage === 'fading' ? .55 : 1 });
+        if (column < 0 || column >= columns || row < 0 || row >= rows) continue;
+        const neighbor = byCell.get(row * columns + column); if (!eligible(neighbor)) continue;
+        const cell = specimen.row * columns + specimen.column, otherCell = row * columns + column;
+        const first = cell < otherCell, seed = Math.min(cell, otherCell) * 641 + Math.max(cell, otherCell);
+        // Thin only the drawn network, symmetrically at both ends. Diagonals are
+        // occasional tendrils rather than an X in every occupied square.
+        if (vineNoise(seed) > (dx && dy ? .12 : .52)) continue;
+        const other = vineOffset(neighbor), x = dx * cellSize + other.x - own.x, y = dy * cellSize + other.y - own.y;
+        const length = Math.hypot(x, y), nx = -y / length, ny = x / length;
+        const bend = (vineNoise(seed + 701) - .5) * 12 * (first ? 1 : -1);
+        const midX = x / 2 + nx * bend, midY = y / 2 + ny * bend;
+        const curl = (vineNoise(seed + 1409) - .5) * 13;
+        // Canonical pair seed gives both halves the same midpoint and tangent.
+        graphic.moveTo(0, 0).bezierCurveTo(x * .18 + nx * curl, y * .18 + ny * curl,
+          midX - x * .18, midY - y * .18, midX, midY)
+          .stroke({ color, width: (specimen.stage === 'mature' ? 1.05 : .8) + specimen.vigor * .12,
+            alpha: specimen.stage === 'fading' ? .24 : .65 });
         halves++;
       }
       halfCurvesById.set(specimen.id, halves); connectionHalves += halves;
@@ -119,7 +172,11 @@
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
-          const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize);
+          const offset = vineOffset(specimen), seed = specimen.row * columns + specimen.column;
+          sprite.position.set(sprite.position.x + offset.x, sprite.position.y + offset.y);
+          sprite.rotation = (vineNoise(seed + 83) - .5) * .5;
+          sprite.scale.set(vineNoise(seed + 127) < .5 ? -1 : 1, 1);
+          const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize + offset.x, (specimen.row + .5) * cellSize + offset.y);
           links.addChild(graphic); vineLinks.set(specimen.id, graphic); refreshNeighborhood(specimen, byCell);
         }
       },

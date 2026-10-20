@@ -1,3 +1,92 @@
+# Pixi vine artwork review (2026-10-20, uncommitted)
+
+The shared default/live renderer now uses muted sage, moss, straw and silver
+vine colors, curved branching stems, small leaves and open tendril curls.
+Vigor and the five existing color identities still select finite cached tiles.
+Cell-seeded offsets, lean and mirroring vary the silhouettes without consuming
+model randomness or moving logical cells. Connections use thinner translucent
+curves with matching endpoints/tangents; a symmetric pair seed draws about half
+the orthogonal links and occasional diagonals, removing the repeated X lattice.
+This thins only the displayed network. Growth, placement, competition, lifetimes,
+model hue probabilities, interaction priority and other species are unchanged.
+
+The 80 vine tiles replace existing atlas slots: **763 live frames**, or **781
+frames across three retained atlas sources** including ecology/ambient, with
+unchanged atlas dimensions. One Sprite and one connection Graphics remain per
+vine. Temporary vine Graphics contexts are explicitly destroyed after baking;
+connection ownership/removal follows the existing path. Geometry and eight-cell
+neighbor checks still occur only on specimen changes; no new per-frame work,
+scheduling, filters, dependencies, controls or renderer architecture were added.
+The default and diagnostic pages advance only their renderer script cache token.
+Canvas and the separate synthetic stress artwork remain unchanged.
+
+## Reproduce the artwork comparison
+
+`tests/pixi-vine-art-browser.cjs` is optional and uses installed Chrome plus an
+already available Playwright runtime; it installs no dependencies. Make that
+runtime available through Node's normal module path (`NODE_PATH` if necessary):
+
+```sh
+node tests/pixi-vine-art-browser.cjs --run --baseline --seconds=20
+node tests/pixi-vine-art-browser.cjs --run --seconds=20
+```
+
+The baseline serves the immutable `a7e391cf0f8a614d763d6fa86f9f474d4a2dd075`
+renderer. Both runs use the current production page and the same deterministic
+640 cells, vigor/color samples, 640 grass patches and eight puddles at 1280x900,
+DPR 1. Cases are all vines/quiet, all vines/hurricane and mixed/hurricane, with
+400 rain particles for hurricanes. Screenshots and raw JSON are written to
+ignored `artifacts/vine-art/before/` and `after/`. Logical time is deliberately
+frozen to keep density/ages identical, while real animation timestamps and rain
+continue. This is a static synthetic rendering comparison, not a live NATS soak
+or an expiry/churn benchmark. Saved positions/variants are compared automatically.
+Use `--scene=vines-hurricane --label=after-repeat` for an isolated repeat.
+
+The new `pixi-vine-art.cjs` checks dense symmetry, endpoint/tangent continuity,
+non-wrapping, bounded links, arrival-order determinism, stage refresh and removal,
+unchanged logical specimens, and zero geometry/neighbor work during animation.
+The browser fixture also verifies that all 80 temporary vine contexts are
+released and no geometry or texture regeneration occurs during measured frames.
+
+## Local measurements and checks
+
+Installed headless Chrome, three 20-second samples per version (about 1,200
+frames each), before/after screenshots reviewed with identical logical positions:
+
+| Scene | Interval p99 before/after | Worst interval before/after | Mean render submission before/after |
+| --- | ---: | ---: | ---: |
+| 640 vines, quiet | 17.0 / 17.0 ms | 17.5 / 18.8 ms | 0.118 / 0.128 ms |
+| 640 vines, hurricane | 16.9 / 17.0 ms | 18.8 / 17.3 ms | 0.139 / 0.146 ms |
+| 640 mixed, hurricane | 16.9 / 17.0 ms | 17.3 / 17.4 ms | 0.134 / 0.134 ms |
+
+All six samples averaged approximately 60 FPS, with zero intervals above 50 or
+300 ms. Dense-vine display objects stayed **1,942**, mixed **1,366**, with rain
+particles counted separately (400). Drawn vine half-curves fell **4,812 -> 1,590**.
+No recurring geometry or texture generation was observed. The first revised-art
+run measured 0.163 ms mean hurricane submission, versus 0.139 ms baseline; a
+separate 20-second hurricane repeat measured 0.190 ms baseline and 0.170 ms revised.
+Small differences vary between runs; there is no consistent measured submission
+cost increase here. Submission timing brackets `app.render()` on the CPU and
+does not wait for GPU completion; sub-millisecond browser timing is coarse.
+
+All 35 standard Node suites pass, including the new vine suite. The optional
+real-Chrome cache/pixel test passes for root/index, visible SSE fixture growth,
+inspection, resize/DPR 2, reconnection and retained diagnostic/Canvas/stress
+controls. Its cache warm-up now explicitly uses the historical unversioned asset
+URLs, independent of the current diagnostic artwork version token. .NET build
+and backend checks pass using `dotnet build tests/PacketGarden.Checks --no-restore
+-o artifacts/vine-art/checks` followed by `dotnet
+artifacts/vine-art/checks/PacketGarden.Checks.dll`. Normal output was locked by
+the existing running server; it was left running. The build retained a NU1900
+warning about unavailable NuGet vulnerability data. `git diff --check` passes.
+
+These measurements do not explain the historical stutter or establish GPU/
+compositor smoothness. The finite texture silhouettes can still repeat; thin
+foliage has less contrast against dense grass, particularly at small sizes.
+Logical cell spacing remains, and this work adds no animated plant swaying.
+Normal-browser human aesthetic review and another live/high-DPI soak remain useful.
+The pre-existing Pixi teardown exception described below remains out of scope.
+
 # Default Pixi garden promotion (2026-10-20)
 
 Following the stability checkpoint `61090b7529b275e849b7fbad4e5fd3dcbead9d59`,

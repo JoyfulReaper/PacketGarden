@@ -51,6 +51,9 @@ async function run() {
       let body = await fs.readFile(absolute);
       if (file.endsWith('.html')) {
         let html = body.toString();
+        // Warm the checkpoint's original unversioned URLs, even when the current
+        // diagnostic page has acquired a newer artwork asset version.
+        if (!promoted && file === 'pixi-live.html') html = html.replace(/(pixi-live\.(?:js|css))\?v=[^"\s]+/g,'$1');
         if (unversioned && file === 'index.html') html = html.replace(/(pixi-live\.(?:js|css))\?v=[^"\s]+/g,'$1');
         // Capture the actual application without changing its scheduling or drawing.
         html = html.replace(/(<script src="pixi-live\.js(?:\?[^"]*)?" defer)/,
