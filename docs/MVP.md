@@ -6,23 +6,26 @@ Build the smallest browser prototype that proves the core idea:
 
 > Network-shaped events visibly grow and reshape a top-down garden that is interesting to watch.
 
-The prototype now has real TCPNoise input, live aggregate weather, lifecycles,
-grass ecology, color variation, bounded competition, click inspection, sound, a
-lightweight ambient actor layer, and the first pointless collectible. Persistence
-and additional sensor/service inputs remain goals.
+The prototype now has a default PixiJS/WebGL garden, an optional Canvas fallback,
+real TCPNoise input, live aggregate weather, lifecycles, grass ecology, color
+variation, bounded competition, click inspection, shared opt-in sound, a shared
+Gnome Incident, and pointless collectibles. Persistence and additional
+sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
 - ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
-- Canvas garden with a fixed 32×20 square grid, subtle soil seams, and the whole area visible when resized.
+- Default PixiJS/WebGL garden at `/` and `/index.html`, original Canvas at `/canvas.html`, and a separate Pixi diagnostic/live-soak page at `/pixi-live.html`; all retain the 32×20 logical garden, bounded capacity, and shared model rules.
+- Pixi has cached, larger and revised plant artwork (including vines, broadleaf, blackthorn and ordinary weed), tufted grass, collection/inspection, and bounded rendering resources; no logical cell-size or lifecycle change from visual polish.
 - Five development mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and port-22-probe red blooms.
 - Simple procedural art, including visual connections between neighboring vine cells.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
-- Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the manual renderer.
+- Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the existing garden renderers.
+- The default homepage shows Observatory events/minute as a five-minute average and the actual source-reported last-hour count via existing SSE; these are aggregate traffic statistics, not the number of successful garden spawns. A bounded 5,000-event Observatory store may undercount the last hour during high traffic.
 - Stronger severe visual weather with wind-driven hurricane rain; no lightning, flashing, or ecological damage.
 - Temporary storm-water terrain: heavy rain/thunderstorm/hurricane only, one check per 15 seconds with 35%/60%/85% chances. At most eight patches; existing water is usually refreshed/grown (60%), new patches often join nearby pools, and the cap forces refresh. Sizes grow gradually to a bounded maximum. Water holds for 30 seconds after refresh, then shrinks/fades over eight minutes. Hidden pages skip formation and resume on a fresh schedule without catch-up. Cached draw order is grass, water, specimens. No occupancy, provenance, plant damage, grass mutation, collection, extra Recent activity, or persistence.
-- Optional browser-local Web Audio growth sounds, Off by default at 12% volume, initialized by the user's enable gesture. Species tones and gentle rare chimes represent artistic garden traits, not security alerts; independent 400 ms ordinary / 900 ms rare cooldowns drop extra sounds without delaying growth.
+- Shared Canvas/Pixi browser-local Web Audio growth and collection sounds, Off by default at 12% volume and initialized only by an enable gesture. Species tones (including wirefern), gentle rare chimes and gnome battle/victory cues represent artistic events, not security alerts; independent 400 ms ordinary / 900 ms rare cooldowns drop extra sounds without delaying growth.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to normalized specimen growth on the same SSE stream.
 - Port-22 redbloom is an aesthetic signal that TCPNoise observed a connection to listening port 22. It does not prove SSH negotiation, attempted credentials, failed authentication, or malicious intent. Port 22 bypasses ordinary rarity; 2222 has a redbloom base with normal rarity and no port-22 collectible mutation.
 - Event-driven artistic TCPNoise rarity: weeds plus ghostblooms, crystal fungi, and blackthorns. IPv6 / DN42 / Ygg and fallback ports modify visual odds, never security classifications. See the [probability policy](EVENT-MAPPINGS.md#tcpnoise-rarity).
@@ -44,7 +47,7 @@ and additional sensor/service inputs remain goals.
 - Click-to-inspect information cards with scaled-canvas hit testing. Empty-soil click, Escape, or the close button dismisses the card; it also closes if the exact inspected specimen expires or is displaced. Fake specimens are labeled as simulated rather than inventing provenance.
 - One authoritative live garden handler: validate/sanitize the current contract, attach TCPNoise provenance directly to the exact specimen at creation before rendering, and expose spawned/replaced/dropped outcomes. No second inspection SSE listener or fresh-specimen search.
 - A small Recent activity view retaining the newest three normalized safe events in browser memory, including valid dropped-at-saturation events marked `no growth`. Fake events are explicitly simulated. Relative ages share the existing update loop; reload clears the list. No raw frames, expanded history, persistence, or replacement for monitoring.
-- A separate browser-only ambient actor layer and The Gnome Incident: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, weather, or network meaning. Tiny optional cues share existing sound controls.
+- A shared Canvas/Pixi browser-only Gnome Incident model: at least 30 living specimens, one 2% check every 45 seconds, no catch-up rolls, and at most one 12-second red/green gnome dispute. Pixi uses 12 cached artwork frames and at most four active sprites; actors approach, shove, retreat/celebrate, then disappear without affecting occupancy, plants, grass, weather, or network meaning. Tiny optional cues share existing sound controls.
 - Delayed collectible weed mutations: a 5% browser roll on the exact successfully created live port-22 redbloom schedules mutation after three seconds. Canonical type, cell, vigor, color, and safe provenance stay intact. At most three active mutations; cap-skipped candidates never retry. Collection or expiry after 20 active seconds removes the specimen entirely. No secondary sprig, extra cell, grass influence, inventory, or progression. Shared scaled clicks collect before inspecting and close that specimen's card. Ordinary TCPNoise weeds and gnomes remain independent.
 - Static `Score: 0` with no JavaScript scoring/persistence state. Collection briefly shows `You collected some weed. +0 points` and optionally uses the existing quiet collection sound.
 - First-seen curiosities: exact sanitized live `seenCount === "1"` tries to create one visitor beside the exact successfully spawned/replaced specimen. The uniform initial pool is ladybug, snail, moth, and shiny pebble; at most three live for 20 seconds, with no queue or catch-up when full. Separate browser-memory state consumes no cells and affects no specimens, grass, or Recent activity. Locally bounded motion and glints share the cached renderer's 30 FPS overlay. Scaled clicks collect before mutations/inspection, show type-specific `+0 points`, and reuse quiet optional audio. Gnomes and mutations remain independent. Source count one does not establish global first-ever observation or uniqueness.
@@ -117,6 +120,8 @@ These are desired follow-ups, not descriptions of the code already implemented:
   drops remain future work beyond the four visitors and Amanita.
 - **Stillbloom:** quiet-only growth remains future work.
 - **Water interactions:** frogs, water-specific snails, and gnome reactions remain future work; storm puddles themselves are implemented.
+- **Storm lighting/thunder experiment:** rare, non-strobing optional lightning and opt-in thunder for `botnet_thunderstorm`/`botnet_hurricane` only. Not currently implemented; no ecological or security meaning. See [Ideas](IDEAS.md#storm-lightning-and-thunder-future-experiment).
+- **Optional desktop/screensaver:** investigate packaging the existing Pixi garden and a clearly simulated input mode; no commitment to Godot, pricing, or distribution. See [Ideas](IDEAS.md#optional-desktop--screensaver-experience-exploratory).
 
 See [Ideas](IDEAS.md) for the broader pool and design constraints.
 
