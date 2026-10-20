@@ -3,7 +3,7 @@ const assert = require('node:assert/strict'), fs = require('node:fs');
 const { config, weather, sceneModel, contain, frameWindow, makeAtlas, createScene } = require('../wwwroot/pixi-stress.js');
 const read = file => fs.readFileSync(file, 'utf8');
 const html = read('wwwroot/pixi-stress.html'), script = read('wwwroot/pixi-stress.js');
-const index = read('wwwroot/index.html');
+const index = read('wwwroot/canvas.html');
 assert.match(index, /garden\.js/); assert.match(index, /garden-overlay/); assert.doesNotMatch(index, /pixi/i);
 assert.match(html, /vendor\/pixi\/pixi\.min\.js/); assert.match(html, /pixi-stress\.js/);
 assert.match(html, /value="mixed" selected/); assert.match(html, /value="hurricane" selected/);

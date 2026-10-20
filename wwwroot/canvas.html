@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PacketGarden</title>
+  <link rel="stylesheet" href="garden.css">
+  <link rel="stylesheet" href="garden-ui.css">
+  <script src="garden-audio.js" defer></script>
+  <script src="garden-perf.js" defer></script>
+  <script src="garden-core.js" defer></script>
+  <script src="garden-mutations.js" defer></script>
+  <script src="garden-ecology.js" defer></script>
+  <script src="garden-ambient.js" defer></script>
+  <script src="garden-interaction.js" defer></script>
+  <script src="garden-ui-core.js" defer></script>
+  <script src="garden.js" defer></script>
+  <script src="garden-broadleaf.js" defer></script>
+  <script src="garden-species-colors.js" defer></script>
+  <script src="garden-grass.js" defer></script>
+  <script src="garden-puddles.js" defer></script>
+  <script src="garden-actors.js" defer></script>
+  <script src="garden-collectibles.js" defer></script>
+  <script src="garden-curiosities.js" defer></script>
+  <script src="garden-drops.js" defer></script>
+  <script src="garden-activity.js" defer></script>
+  <script src="garden-inspect.js" defer></script>
+</head>
+<body>
+  <pre id="garden-perf" hidden aria-label="Browser performance diagnostics"></pre>
+  <header>
+    <h1>PacketGarden</h1>
+    <p>Packet Garden: Composting the internet's shit into something pretty.</p>
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="about.html">About</a>
+    </nav>
+  </header>
+  <main aria-label="Garden">
+    <div class="garden-stage">
+      <canvas id="garden-canvas" aria-label="An empty rectangular soil garden with a subtle square grid" role="img">
+        An empty rectangular soil garden with a subtle square grid.
+      </canvas>
+      <canvas id="garden-overlay" aria-hidden="true"></canvas>
+    </div>
+    <div id="collection-message" class="collection-message" role="status" hidden></div>
+    <section id="recent-activity" class="recent-activity" aria-label="Recent activity">
+      <h2>Recent activity</h2>
+      <ol>
+        <li id="recent-event-0" hidden></li>
+        <li id="recent-event-1" hidden></li>
+        <li id="recent-event-2" hidden></li>
+      </ol>
+      <p id="garden-score">Score: 0</p>
+    </section>
+  </main>
+  <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>
+    <button id="specimen-card-close" class="specimen-card-close" type="button" aria-label="Close specimen information">×</button>
+    <h2 id="specimen-card-title">Specimen</h2>
+    <dl>
+      <div><dt>Source</dt><dd id="specimen-source">—</dd></div>
+      <div><dt>Sensor</dt><dd id="specimen-sensor">—</dd></div>
+      <div><dt>Listening port</dt><dd id="specimen-port">—</dd></div>
+      <div><dt>Seen count</dt><dd id="specimen-seen-count">—</dd></div>
+      <div><dt>Vigor</dt><dd id="specimen-vigor">—</dd></div>
+      <div><dt>Color scheme</dt><dd id="specimen-color">—</dd></div>
+      <div><dt>Age</dt><dd id="specimen-age">—</dd></div>
+      <div><dt>Mutation</dt><dd id="specimen-mutation">None</dd></div>
+    </dl>
+  </aside>
+  <div class="weather-controls" aria-label="Temporary weather controls">
+    <label for="weather-source">Weather source</label>
+    <select id="weather-source">
+      <option value="manual">Manual</option>
+      <option value="live" selected>Live</option>
+    </select>
+    <label for="weather-level">Weather</label>
+    <select id="weather-level">
+      <option value="quiet">Quiet</option>
+      <option value="drizzle">Drizzle</option>
+      <option value="rain">Rain</option>
+      <option value="heavy_rain">Heavy rain</option>
+      <option value="botnet_thunderstorm">Botnet thunderstorm</option>
+      <option value="botnet_hurricane">Botnet hurricane</option>
+    </select>
+    <label for="weather-intensity">Events/min</label>
+    <input id="weather-intensity" type="number" min="0" max="1000000" step="100" value="1200">
+    <span id="weather-status" role="status">Live weather connecting</span>
+  </div>
+  <div class="sound-controls" aria-label="Garden sound controls">
+    <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
+    <label for="sound-volume">Volume</label>
+    <input id="sound-volume" type="range" min="0" max="100" value="12" aria-label="Growth sound volume">
+    <label class="recent-activity-toggle" for="show-recent-activity">
+      <input id="show-recent-activity" type="checkbox" checked>
+      Recent events
+    </label>
+  </div>
+  <footer aria-label="Temporary development controls">
+    <button id="fake-dns" type="button">Generate fake DNS event</button>
+    <button id="fake-gopher" type="button">Generate fake Gopher event</button>
+    <button id="fake-http" type="button">Generate fake HTTP event</button>
+    <button id="fake-ssh" type="button">Generate fake SSH event</button>
+    <button id="fake-port22-probe" type="button">Fake port 22 probe</button>
+    <button id="automatic-traffic" type="button" aria-pressed="false">Start automatic fake traffic</button>
+    <span id="garden-status" role="status">0 flowers, 0 mushrooms, 0 broad-leaf plants, 0 vines, 0 red blooms</span>
+  </footer>
+</body>
+</html>

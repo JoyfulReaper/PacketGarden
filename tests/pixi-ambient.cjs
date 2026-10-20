@@ -36,6 +36,6 @@ const replacement=model.accept(event('flower','2',1));assert.equal(replacement.c
 ambient.maybeScheduleAmanita(model.accept(event('mushroom','2',3)),0,()=>.5,now);model.clear();ambient.clear();assert.equal(ambient.pendingDrops.size,0);
 view.destroy();curiosityLayer.destroy();dropLayer.destroy();atlas.destroy();assert.equal(h.textureCount(),textureBefore);
 const sourceCode=fs.readFileSync('wwwroot/pixi-live-ambient.js','utf8');assert.doesNotMatch(sourceCode,/setTimeout|setInterval|EventSource|fetch\(|localStorage|sessionStorage/);
-assert.doesNotMatch(fs.readFileSync('wwwroot/index.html','utf8'),/pixi/i);
+assert.doesNotMatch(fs.readFileSync('wwwroot/canvas.html','utf8'),/pixi/i);
 assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-stress.html','utf8'),/ambient/);
 console.log('PASS: persistent visitor/drop views, movement identity/exact removal, 3+3 caps, five fixed frames across repeated seed/expiry/clear, pebble static, exact-source replacement cancellation, teardown and page isolation.');

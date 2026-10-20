@@ -2,7 +2,7 @@
 const fs = require('node:fs'), vm = require('node:vm');
 
 function createGarden(options = {}) {
-  const html = fs.readFileSync('wwwroot/index.html', 'utf8');
+  const html = fs.readFileSync('wwwroot/canvas.html', 'utf8');
   const clock = { now: 10_000 }, elements = new Map(), intervals = [], frames = new Map(), drawing = [];
   const documentHandlers = new Map(), windowHandlers = new Map();
   const addHandler = (handlers, name, handler) => {

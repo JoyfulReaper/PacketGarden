@@ -44,7 +44,7 @@ assert.equal(garden.frames.size, 0, 'quiet has no idle animation');
 assert.equal(garden.run('rendererConfig.animationFps'), 30);
 assert.equal(garden.run('rendererConfig.maxPixelRatio'), 2);
 assert.equal(garden.run('rendererConfig.continuousVisualRefreshMs'), 1000);
-const html = fs.readFileSync('wwwroot/index.html','utf8'), css = fs.readFileSync('wwwroot/garden.css','utf8');
+const html = fs.readFileSync('wwwroot/canvas.html','utf8'), css = fs.readFileSync('wwwroot/garden.css','utf8');
 assert.match(html, /class="garden-stage"[\s\S]*id="garden-canvas"[\s\S]*id="garden-overlay" aria-hidden="true"/);
 assert.match(css, /#garden-overlay\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*pointer-events:\s*none;/);
 assert.equal(garden.element('#garden-overlay').handlers.size,0, 'overlay has no duplicate pointer handlers');

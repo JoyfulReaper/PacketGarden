@@ -1,3 +1,121 @@
+# Default Pixi garden promotion (2026-10-20)
+
+Following the stability checkpoint `61090b7529b275e849b7fbad4e5fd3dcbead9d59`,
+`/` and `/index.html` use the existing PixiJS/WebGL garden. `/canvas.html`
+retains the original Canvas page, scripts and controls. `/pixi-live.html` remains
+the development/live-soak page; `/pixi-stress.html` and its implementation are
+unchanged. The historical sections below describe their earlier route layout.
+
+The default and diagnostic pages load the same Pixi renderer and shared modules
+in the same order. `pixi-live.js` treats development controls as optional DOM
+elements. Without weather selectors it follows live SSE weather, without a HUD
+it collects no frame timing samples, and without a probe checkbox it hides the
+green probe. The diagnostic page retains seeding, forced mutations/overlaps,
+manual weather, pause, probes and its timing HUD. The shared atlas helpers in
+`pixi-stress.js` load in library mode; its synthetic page never starts on either
+live garden. There is one EventSource and the same native ticker, 250ms logical
+cadence, persistent views, DPR cap, visibility reconciliation and cleanup.
+
+The homepage keeps PacketGarden branding, About/Canvas navigation, live
+connection/weather status, exact inspection/collection and Recent activity with
+its visibility toggle. It starts no simulated specimens. WebGL initialization
+failure is reported in the connection status; the Canvas link remains available
+for an explicit fallback. Audio, gnomes and exact Canvas artwork/palette parity
+remain absent from Pixi. This promotion changes no backend, event contract,
+models, artwork, species balancing or dependencies.
+
+The user-observed soak below supports promotion, not a root-cause explanation or
+a new performance-equivalence claim. Earlier visible stutter remains unexplained;
+the historical measurements and their GPU/compositor/heap limitations are retained.
+
+Validation for this promotion: all 34 Node suites pass (35 JavaScript files
+including the browser harness), `dotnet build PacketGarden.csproj` passes with
+zero warnings/errors, and `dotnet run --project tests/PacketGarden.Checks` passes.
+The checks project reported NU1900 because NuGet vulnerability data was
+unavailable; the checks themselves completed successfully. `git diff --check`
+passes. Existing Canvas tests now load `canvas.html`; `pixi-default.cjs` runs
+the homepage's actual script order against strict DOM lookup and injected
+Pixi/SSE/clock implementations. It covers missing development DOM, no timing
+collection or automatic simulated traffic, live weather/reconnection,
+inspection/collection, resize/DPR, visibility/expiry, teardown and visible
+WebGL initialization failure. The diagnostic entry-point suite still passes.
+
+Browser checks in the Codex in-app browser separately opened `/`, `/index.html`,
+`/canvas.html`, `/pixi-live.html`, `/pixi-stress.html` and `/about.html`. The default
+garden rendered with live weather SSE, its Recent toggle worked, and a 390×844
+viewport retained the whole garden and status controls. About returned to
+`/index.html`. Canvas fake DNS input grew a specimen. Diagnostic dense seeding,
+manual hurricane, specimen inspection and visitor → Amanita → mutation collection
+worked; stress scene/weather controls worked. No console warnings/errors were
+captured during these checks. A local ignored screenshot is saved at
+`artifacts/pixi-default-preview.jpg`.
+
+The local server had no `Nats:Url` configured, so no real TCPNoise arrivals were
+verified in this run. Production event processing is covered with injected SSE;
+the real browser collection checks used the diagnostic page's local fixtures.
+High-DPI mapping, actual visibility handlers and cleanup were verified with
+injected callbacks; browser-level suspension and a new Chrome/live-NATS soak
+were not tested. No GPU trace, long-duration memory profile or before/after
+performance-equivalence benchmark was collected. The homepage's larger drawable
+area can change GPU workload; the renderer's existing DPR cap remains unchanged.
+
+## Black homepage cache regression (2026-10-20)
+
+A fresh load rendered correctly in both the in-app browser and installed Chrome,
+including real NATS/TCPNoise growth. A real Chrome HTTP-cache upgrade test then
+reproduced the reported black homepage: first visit the checkpoint diagnostic
+page, caching its `pixi-live.js` and `pixi-live.css`, then load the promoted
+homepage. With the unchanged asset URLs, Chrome reused the old script without
+requesting its new body. That diagnostic-only script reads the absent weather
+selectors, and its rejection handler also reads the absent HUD. Captured errors
+were `Cannot read properties of null (reading 'value')` and
+`Cannot set properties of null (setting 'textContent')`.
+
+Initialization stopped before resizing and `app.start()`. The actual scene held
+visible soil/grid geometry with finite transforms, and the canvas was nonzero
+(960×600 CSS pixels), but the ticker was stopped and zero frames had painted.
+The connection could still say connected, masking the failed initialization.
+The original user's Chrome cache was not inspected; this is a controlled,
+reproducible checkpoint-to-promotion failure with the same visible symptom.
+
+The homepage now requests `pixi-live.js?v=phase1b-1` and
+`pixi-live.css?v=phase1b-1`, bypassing those pre-promotion cache entries. Only its
+asset URLs changed; renderer algorithms, artwork, models, backend, diagnostic
+page and stress implementation were untouched by this fix. Future incompatible
+changes to these assets must advance the homepage's version tokens.
+
+`tests/pixi-default-browser.cjs --run` exercises this upgrade with an installed
+Chrome and an already available Playwright runtime on Node's module path. It
+installs nothing. It uses a temporary local HTTP origin, the immutable checkpoint
+assets and real browser caching, rather than Playwright request interception
+(which disables caching). A test-only app observer records ticker/scene state;
+PNG pixels verify visible soil/grid before any growth and actual specimen pixel
+changes after a normalized SSE fixture. The test also checks root/index routes,
+DPR 2, narrow/wide resize, inspection, native SSE reconnect, retained diagnostic,
+Canvas and stress controls, and visible reporting of a simulated WebGL
+initialization failure.
+`--run --unversioned` is a negative control: it must fail with zero soil/grid
+pixel coverage and the cached-script exceptions. Normal Node suite runs skip
+this optional real-browser test unless `--run` is passed.
+
+Both the negative control and the fixed browser test behaved as expected. The
+existing default-page test now checks versioned asset URLs while comparing the
+shared script paths independent of query strings. A separate installed-Chrome
+check against the NATS-connected ASP.NET server verified visible live growth,
+inspection labelled `Live TCPNoise`, finite root scale/position, an active ticker
+and no runtime exceptions before teardown. Evidence is local/ignored under
+`artifacts/homepage-negative/`, `artifacts/homepage-browser/`, and
+`artifacts/chrome-real-nats-fixed.png`. These checks establish rendering and
+cache-transition correctness, not a new performance or long-soak claim.
+
+A separate pre-existing teardown exception was captured when closing Pixi pages:
+a visibility callback can call `app.stop()` after pagehide has destroyed its
+ticker (`Cannot read properties of null (reading 'stop')`). It also occurred on
+the unchanged stress page and was not the black-startup failure. It remains
+outside this homepage-only fix; pre-teardown page errors are checked separately.
+
+---
+
 # Stable Pixi renderer checkpoint (2026-10-20)
 
 On October 20, 2026, the user observed `/pixi-live.html` running smoothly in

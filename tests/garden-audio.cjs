@@ -30,7 +30,7 @@ function createGarden(options = {}) {
       state.oscillators.push(oscillator); return oscillator;
     }
   }
-  const html=fs.readFileSync('wwwroot/index.html','utf8');
+  const html=fs.readFileSync('wwwroot/canvas.html','utf8');
   const volume=html.match(/id="sound-volume"[^>]*value="([^"]+)"/)[1];
   const elements=new Map(), sources=[];
   const canvas=new Proxy({}, {get:()=>()=>{},set:()=>true});

@@ -3,7 +3,7 @@ const core = require('../wwwroot/pixi-live-core.js'), shared = require('../wwwro
 const { makeLiveAtlas, createView } = require('../wwwroot/pixi-live.js');
 const createGarden = require('./browser-garden.cjs');
 const read = file => fs.readFileSync(file, 'utf8');
-assert.doesNotMatch(read('wwwroot/index.html'), /pixi/i);
+assert.doesNotMatch(read('wwwroot/canvas.html'), /pixi/i);
 assert.match(read('wwwroot/pixi-stress.html'), /pixi-stress\.js/);
 const html = read('wwwroot/pixi-live.html'), script = read('wwwroot/pixi-live.js'), modelScript = read('wwwroot/pixi-live-core.js');
 assert.match(html, /data-pixi-library/); assert.match(html, /pixi-live-core\.js/); assert.match(html, /pixi-live\.js/);

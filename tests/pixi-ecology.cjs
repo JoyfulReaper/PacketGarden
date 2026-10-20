@@ -50,5 +50,5 @@ const script=fs.readFileSync('wwwroot/pixi-live.js','utf8'),ec=fs.readFileSync('
 assert.doesNotMatch(ec,/EventSource|fetch\(|setTimeout|setInterval|localStorage|sessionStorage/);
 assert.match(script,/ecology.resetCadence\(at\)/);assert.match(script,/ecology.tick\(at\)/);
 assert.equal((fs.readFileSync('wwwroot/pixi-live-core.js','utf8').match(/new Source/g)||[]).length,1);
-assert.doesNotMatch(fs.readFileSync('wwwroot/index.html','utf8'),/pixi/i);
+assert.doesNotMatch(fs.readFileSync('wwwroot/canvas.html','utf8'),/pixi/i);
 console.log('PASS: persistent grass/puddle identity/exact removal; 640+8 ownership; 13 fixed frames/one source across repeated births; static grass deadlines; unchanged weather ownership; local seed/clear; shared lifecycle/visibility; production isolation.');

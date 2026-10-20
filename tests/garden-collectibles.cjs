@@ -164,7 +164,7 @@ for (let i = 0; i < 3; i++) {
 }
 assert.equal(repeated.audioContexts(), 0, 'Sound Off never creates an AudioContext');
 assert(!Object.keys(repeated.run('gardenState')).some(key => /score|inventory|points|collected/i.test(key)), 'no scoring/inventory counters');
-const scripts = [...fs.readFileSync('wwwroot/index.html', 'utf8').matchAll(/<script src="([^"]+)" defer><\/script>/g)];
+const scripts = [...fs.readFileSync('wwwroot/canvas.html', 'utf8').matchAll(/<script src="([^"]+)" defer><\/script>/g)];
 for (const [, file] of scripts) assert(!/localStorage|sessionStorage|garden-score/.test(fs.readFileSync('wwwroot/' + file, 'utf8')), 'static score has no JavaScript updater or persistence');
 
 const gnomes = createGarden(); gnomes.fill(0); gnomes.forceRoll(0); gnomes.emit(22, 'redbloom', 3);

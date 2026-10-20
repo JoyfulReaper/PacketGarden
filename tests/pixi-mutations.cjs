@@ -60,6 +60,6 @@ assert(due.mutation,'incoming events reconcile due mutations before placement, a
 assert.equal(model.mutations.snapshot().activations,beforeActivation+1);
 model.clear();
 ambient.clear();ecology.clear();av.destroy();ev.destroy();v.destroy();ac.destroy();ec.destroy();
-assert.doesNotMatch(fs.readFileSync('wwwroot/index.html','utf8'),/pixi/i);
+assert.doesNotMatch(fs.readFileSync('wwwroot/canvas.html','utf8'),/pixi/i);
 assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-live.js','utf8'),/setTimeout|setInterval|addEventListener\(['"]pointer|addEventListener\(['"]click['"],.*collect/);
 console.log('PASS: pending stays ordinary, same Sprite/id/cell on activation, three cached mutation views, exact expiry/no flash, full dense 1372 objects and 781 frames/3 sources, weather/ecology/ambient isolation, clear/refill and independent real mutation/Amanita scheduling.');

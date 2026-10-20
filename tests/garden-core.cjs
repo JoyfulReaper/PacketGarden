@@ -130,7 +130,7 @@ assert.doesNotMatch(source,/setTimeout|setInterval|requestAnimationFrame|documen
 assert.doesNotMatch(live,/function stageAt|const timings\s*=|candidate\.vigor|victimIndex|preferAdjacent|protectedTypes/);
 assert.match(live,/garden\.createGardenModel/);assert.match(read('wwwroot/garden.js'),/gardenCore\.createGardenModel/);
 for(const page of ['index','pixi-live']) assert.match(read(`wwwroot/${page}.html`),/src="garden-core\.js"/);
-assert.doesNotMatch(read('wwwroot/index.html'),/pixi/i);
+assert.doesNotMatch(read('wwwroot/canvas.html'),/pixi/i);
 assert.match(live,/new Source\('\/api\/garden\/events'\)/);
 assert.match(read('wwwroot/garden.js'),/new EventSource\("\/api\/garden\/events"\)/);
 console.log('PASS: frozen production placement oracle; exact ten-species lifecycle boundaries/identity; 640 bounded unique cells; strict vigor/minimum/oldest/protected/weed/redbloom/reused-cell/drop parity; expiry first; mutations; clear/refill; local neighbors; safe fields; shared imports; no timers or duplicated Pixi rules.');

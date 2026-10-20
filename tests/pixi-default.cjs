@@ -1,0 +1,129 @@
+// Run the real default-page script order with strict DOM lookup and injected Pixi/SSE.
+// These checks cover integration and ownership, not GPU presentation or FPS.
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const h = require('./pixi-live.cjs');
+const read = file => fs.readFileSync(`wwwroot/${file}`, 'utf8');
+const html = read('index.html');
+const scripts = [...html.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
+const diagnosticScripts = [...read('pixi-live.html').matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
+const assetPath = url => url.split('?')[0];
+assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath), 'both pages use the same renderer, modules and load order');
+assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
+assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
+for (const id of ['hud','seed','clear','seed-ambient','seed-mutations','seed-pending-mutations','seed-interaction','seed-puddles','pause','probes','probe-track','reset','weather-source','weather-level','automatic-traffic']) {
+  assert(!html.includes(`id="${id}"`), `default page has no ${id} development control`);
+}
+assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/);
+assert.match(read('about.html'), /href="index.html"/);
+assert.match(read('canvas.html'), /src="garden.js"/);
+assert(!scripts.includes('garden.js')); assert(!scripts.includes('garden-audio.js'));
+
+async function start(failInit = false) {
+  let now = 100000, app, observer;
+  const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
+  for (const [, id] of html.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
+    textContent: '', hidden: ['#specimen-card','#collection-message'].includes(`#${id}`), checked: true,
+    style: {}, handlers: new Map(), children: [], offsetWidth: 280, offsetHeight: 240,
+    appendChild(child) { this.children.push(child); },
+    getBoundingClientRect: () => ({left:40,top:70,width:1218,height:650}),
+    addEventListener(name, handler) { this.handlers.set(name, handler); },
+    removeEventListener(name) { this.handlers.delete(name); }
+  });
+  const element = id => elements.get(id) ?? null;
+  class Application {
+    constructor() {
+      app = this; this.stage = new h.P.Container(); this.active = false;
+      this.canvas = {width:1218,height:650,handlers:new Map(),
+        getBoundingClientRect: () => ({left:40,top:70,width:1218,height:650}),
+        addEventListener(name, fn) { this.handlers.set(name, fn); }, removeEventListener(name) { this.handlers.delete(name); }};
+      this.renderer = {...h.renderer, screen:{width:1218,height:650}, resize:(w,v,dpr) => {
+        this.renderer.screen = {width:w,height:v}; this.canvas.width = w*dpr; this.canvas.height = v*dpr;
+      }};
+      this.ticker = {add:fn => this.frame = fn};
+    }
+    async init(options) { this.options = options; if (failInit) throw new Error('WebGL unavailable'); }
+    start() { this.active = true; } stop() { this.active = false; }
+    destroy() { this.stage.destroy({children:true}); }
+  }
+  class Source {
+    constructor(url) { this.url = url; this.handlers = new Map(); sources.push(this); }
+    addEventListener(name, fn) { this.handlers.set(name, fn); } close() { this.closed = true; }
+  }
+  const doc = {hidden:false, querySelector:element, currentScript:null,
+    body:{classList:{toggle(){}}}, addEventListener:(name, fn) => docHandlers.set(name, fn)};
+  const context = {document:doc, Date:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
+    EventSource:Source, console:{error:error => errors.push(error)},
+    ResizeObserver:class {constructor(fn){observer=this;this.callback=fn;} observe(){} disconnect(){this.disconnected=true;}},
+    window:{PIXI:{...h.P,Application},devicePixelRatio:1,innerWidth:1280,innerHeight:900,
+      addEventListener:(name,fn) => winHandlers.set(name,fn), removeEventListener:name => winHandlers.delete(name)}};
+  vm.createContext(context);
+  for (const script of scripts.filter(name => !name.startsWith('vendor/'))) {
+    doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && script === 'pixi-stress.js'};
+    vm.runInContext(read(assetPath(script)), context, {filename:script});
+    if (script === 'pixi-stress.js') context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+  }
+  await new Promise(resolve => setImmediate(resolve));
+  return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
+    advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+}
+
+(async () => {
+  const g = await start();
+  assert.deepEqual(g.errors, []); assert(g.app.active); assert.equal(g.app.options.preference, 'webgl');
+  assert.equal(g.sources.length, 1); assert.equal(g.sources[0].url, '/api/garden/events');
+  assert.equal(g.element('#view').children.length, 1);
+  const source = g.sources[0], root = g.app.stage.children[0], plants = root.children[6];
+  const emit = (name, data) => source.handlers.get(name)({data:JSON.stringify(data)});
+  source.onopen(); assert.equal(g.element('#connection').textContent, 'connected');
+  source.onerror(); assert.equal(g.element('#connection').textContent, 'disconnected/reconnecting');
+  source.onopen();
+  g.frame(5000); assert.equal(plants.children.length, 0, 'no automatic simulated specimens');
+  assert.equal(root.children[3].children.length, 5, 'same five initial grass seeds');
+  assert.equal(root.children[10].visible, false, 'no green probe');
+  for (const level of ['quiet','rain','botnet_hurricane']) {
+    emit('weather', {level,eventsPerMinute:10000});
+    assert.match(g.element('#weather-status').textContent, new RegExp(level));
+    assert.equal(root.children[9].particleChildren.length, level === 'quiet' ? 0 : level === 'rain' ? 48 : 400);
+  }
+  const hit = (x,y) => {
+    const r = g.app.canvas.getBoundingClientRect(), screen = g.app.renderer.screen;
+    g.app.canvas.handlers.get('click')({clientX:r.left+(root.position.x+x*root.scale.x)*r.width/screen.width,
+      clientY:r.top+(root.position.y+y*root.scale.y)*r.height/screen.height});
+  };
+  emit('garden', {specimenType:'flower',listenPort:53,vigor:2,sensor:'live-test',seenCount:'18446744073709551615'});
+  assert.equal(plants.children.length, 1); const flower = plants.children[0];
+  for (const [width,height,dpr] of [[1600,600,1],[390,740,2],[1218,650,1]]) {
+    g.element('#view').getBoundingClientRect = () => ({width,height});
+    g.context.window.devicePixelRatio = dpr; g.winHandlers.get('resize')(); g.observer.callback();
+    assert.equal(g.app.canvas.width, width*dpr); assert.equal(plants.children[0], flower);
+    hit(flower.position.x, flower.position.y-12);
+    assert.equal(g.element('#specimen-card').hidden, false);
+    assert.equal(g.element('#specimen-sensor').textContent, 'live-test');
+    assert.equal(g.element('#specimen-seen-count').textContent, '18446744073709551615');
+  }
+  g.winHandlers.get('keydown')({key:'Escape'}); assert.equal(g.element('#specimen-card').hidden, true);
+  const toggle = g.element('#show-recent-activity'); toggle.checked = false; toggle.handlers.get('change')();
+  assert.equal(g.element('#recent-activity').hidden,true); toggle.checked = true; toggle.handlers.get('change')();
+  assert.equal(g.element('#recent-activity').hidden,false);
+  assert.match(g.element('#recent-event-0').textContent, /live-test/);
+  emit('garden', {specimenType:'redbloom',listenPort:22,vigor:0}); g.frame(3000);
+  const mutation = plants.children[1]; hit(mutation.position.x, mutation.position.y-12);
+  assert.equal(g.element('#collection-message').textContent, 'You collected some weed. +0 points');
+  assert.equal(plants.children.length, 1);
+  emit('garden', {specimenType:'mushroom',listenPort:70,vigor:0,seenCount:'1'}); g.frame(5000);
+  const visitor = root.children[8].children[0]; hit(visitor.position.x,visitor.position.y);
+  assert.equal(g.element('#collection-message').textContent,'You caught a ladybug. +0 points');
+  const drop = root.children[7].children[0]; hit(drop.position.x,drop.position.y);
+  assert.equal(g.element('#collection-message').textContent,'You found Amanita muscaria. +0 points');
+  assert.equal(plants.children.length, 2, 'Amanita collection preserves its mushroom');
+  g.doc.hidden = true; g.docHandlers.get('visibilitychange')(); assert.equal(g.app.active,false);
+  g.advance(600000); g.doc.hidden = false; g.docHandlers.get('visibilitychange')();
+  assert(g.app.active); assert.equal(plants.children.length,0,'resume reconciles expiry');
+  assert.deepEqual(g.errors, []);
+  g.winHandlers.get('pagehide')({persisted:false});
+  assert(source.closed); assert(!g.app.active); assert(g.observer.disconnected); assert.equal(g.app.canvas.handlers.size,0);
+  const failed = await start(true);
+  assert.match(failed.element('#connection').textContent,/Garden initialization failed: WebGL unavailable/);
+  assert.equal(failed.sources.length,0); assert.equal(failed.errors.length,1);
+  console.log('PASS: default Pixi strict DOM/load order, no dev controls/metrics/fake traffic/probe, one SSE, weather/reconnect, inspection/collections, resize/DPR, visibility/expiry, teardown and visible WebGL failure.');
+})().catch(error => { console.error(error); process.exitCode = 1; });

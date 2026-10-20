@@ -59,21 +59,42 @@ PacketGarden backend. See [Real data](docs/REAL-DATA.md).
 
 A fake-event generator remains useful for development and demos and should feed the same normalized event model.
 
-## First prototype
+## Garden pages
+
+`/` and `/index.html` now open the PixiJS/WebGL garden by default. It uses the
+same renderer, shared models and SSE handling as `/pixi-live.html`, with the
+existing site branding, About navigation, live connection/weather status,
+specimen inspection, collection, and Recent activity toggle. Weather is live;
+manual previews remain on the development pages. No simulated specimen traffic
+starts automatically. WebGL is required; the Canvas garden is linked as an
+explicit fallback rather than switched to automatically.
+
+`/canvas.html` preserves the original Canvas garden, including manual and
+automatic fake traffic, manual weather/intensity controls, optional audio,
+gnomes, and `?perf=1` diagnostics. Pixi still omits audio and gnomes and retains
+its existing approximate artwork/palettes. No artwork or model rules changed
+as part of this promotion.
 
 An isolated GPU rendering feasibility page is available at `/pixi-stress.html`.
 It defaults to 640 synthetic plants, dense grass, puddles, actors and hurricane
-rain using locally served PixiJS 8.22.0. It does not replace or load into the
-production garden. See [the spike notes](docs/PIXI-STRESS.md) for controls,
+rain using locally served PixiJS 8.22.0. Its synthetic scene does not load into
+the default garden; the shared atlas/timing helpers are imported in library mode.
+See [the spike notes](docs/PIXI-STRESS.md) for controls,
 dependency reproduction and measurement limits.
 
-`/pixi-live.html` is a second opt-in prototype using real garden/weather SSE and
-shared production placement, competition, lifecycle, ecology, ambient, and
-mutation rules. It explored persistent Pixi/WebGL rendering while `/` remained
-Canvas. Stress and live-soak measurements were often excellent, but visible
-stutter could still be reproduced in actual use without a convincing explanation
-from the browser timing instrumentation. The renderer migration is therefore
-paused rather than treated as a production cutover. See [Pixi live soak](docs/PIXI-LIVE.md).
+`/pixi-live.html` remains the development/live-soak page, with simulated dense
+seeding, forced mutations/overlap fixtures, manual weather, pause, motion probes,
+and performance measurements. These controls and the timing HUD are absent from
+the homepage. Both Pixi pages use real garden/weather SSE and shared placement,
+competition, lifecycle, ecology, ambient, mutation and interaction rules.
+
+Earlier investigations sometimes recorded excellent timing while visible
+stutter persisted, so migration was paused. The user subsequently reported a
+smooth 655-second Chrome live soak on October 20, 2026, recorded at checkpoint
+`61090b7529b275e849b7fbad4e5fd3dcbead9d59`. That observation supports this focused
+promotion, but why the earlier lag disappeared remains unknown. Average FPS and
+ticker intervals do not prove smooth GPU/compositor presentation. Historical
+findings remain in [Pixi live soak](docs/PIXI-LIVE.md).
 
 If PacketGarden's presentation layer is revisited later, a small desktop/native
 renderer may be worth considering instead of another browser renderer rewrite.
@@ -103,7 +124,7 @@ PacketGarden uses:
 
 - ASP.NET Core / .NET for the application host and backend;
 - a lightweight browser frontend;
-- HTML/CSS plus Canvas for the garden;
+- HTML/CSS plus PixiJS/WebGL for the default garden, with the original Canvas fallback;
 - vanilla JavaScript.
 
 An HttpClient weather adapter polls Noise Observatory and streams normalized
@@ -128,6 +149,11 @@ Live click inspection deliberately receives a bounded sensor label and exact TCP
 - [Ideas and future directions](docs/IDEAS.md)
 
 ## Status
+
+The default Pixi garden shares the existing logical rules and interactions with
+Canvas. The detailed Canvas artwork, fake controls, audio and gnome behavior
+described below remain available at `/canvas.html`; Pixi's artwork is approximate
+and audio/gnomes are not implemented there.
 
 All five initial MVP mappings are implemented: DNS flowers, Gopher mushrooms,
 HTTP broad-leaf plants, SSH thorny vines, and brief port-22-probe red
@@ -319,7 +345,11 @@ Install the .NET 10 SDK, then run from the repository root:
 dotnet run --project PacketGarden.csproj --urls http://localhost:5080
 ```
 
-Open http://localhost:5080 in a browser and click **Generate fake DNS event** to
+Open http://localhost:5080 for the live Pixi garden. Use `/pixi-live.html` for
+development controls and live-soak measurements, or `/pixi-stress.html` for the
+unchanged synthetic stress test. The About page links back to the default garden.
+
+Open http://localhost:5080/canvas.html and click **Generate fake DNS event** to
 add a flower, **Generate fake Gopher event** to add a mushroom,
 **Generate fake HTTP event** to add a broad-leaf plant, **Generate fake SSH event**
 to add a vine, or **Fake port 22 probe** to add a red bloom without grass influence.
@@ -411,7 +441,7 @@ run with `node tests/wirefern.cjs` and the backend checks project.
 
 ## Browser performance diagnostics
 
-Open PacketGarden with `?perf=1` to show the compact browser-local profiler.
+Open `/canvas.html?perf=1` to show the compact Canvas browser-local profiler.
 It is off by default, is never saved, and sends no data to the server or elsewhere.
 The tool measures approximate `performance.now()` durations for base setup/layout,
 soil/grid/border, grass, puddles, specimens (vine/wirefern/other), and overlay
@@ -474,3 +504,10 @@ meaningful puddle steps, invalidation, and hidden/resume behavior. This removes
 known unnecessary work; it does not establish a fix for unexplained RAF gaps.
 The profiler also displays the existing session-longest RAF gap so earlier stalls
 remain visible after they leave the rolling 120-sample window.
+
+`node tests/pixi-default.cjs` checks the production Pixi page's actual script order
+with strict DOM lookup: absent development controls/metrics/probes, live weather
+and reconnection, inspection/collection, resize/DPR, visibility/expiry, cleanup,
+and visible WebGL initialization failure. Existing Canvas suites now load
+`canvas.html`; diagnostic Pixi suites continue to exercise `pixi-live.html`.
+These injected-browser checks do not measure GPU performance.

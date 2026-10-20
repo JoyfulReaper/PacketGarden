@@ -196,47 +196,51 @@
     const ecology = ecologyCore.createEcologyModel({ onChange(change) { ecologyView.change(change, Date.now()); } });
     // Production begins with five distributed grass seeds; real TCPNoise never gains grass influence.
     for (let i = 0; i < 5; i++) { const cell = i * 128 + Math.floor(Math.random() * 128); ecology.influenceGrassCell(cell % 32, Math.floor(cell / 32)); }
-    const measurements = shared.frameWindow(), sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
+    // The default garden omits development controls and timing collection entirely.
+    const measurements = hud ? shared.frameWindow() : null;
+    const sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
     const weatherStatus = document.querySelector('#weather-status'); let latestWeather = null, status = 'connecting';
     let currentWeather = { level: 'quiet', eventsPerMinute: 0 };
     function updateWeather() {
-      const live = sourceControl.value === 'live'; levelControl.disabled = live;
+      const live = !sourceControl || sourceControl.value === 'live';
+      if (levelControl) levelControl.disabled = live;
       currentWeather = live ? latestWeather ?? { level: 'quiet', eventsPerMinute: 0 } : { level: levelControl.value, eventsPerMinute: 10000 };
       view.setWeather(currentWeather);
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
-    const stream = core.connectStream(EventSource, model, state => { latestWeather = state; if (sourceControl.value === 'live') updateWeather(); }, value => {
-      status = value; connection.textContent = value; if (sourceControl.value === 'live') updateWeather();
+    const stream = core.connectStream(EventSource, model, state => { latestWeather = state; if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
+      status = value; connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
     });
-    sourceControl.addEventListener('change', updateWeather); levelControl.addEventListener('change', updateWeather); updateWeather();
+    sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();
     let ambientSeedVariant = 0;
     const seedAmbient = () => ambientPresentation.seedAmbient(ambient, Date.now(), ambientSeedVariant++ % 4);
-    document.querySelector('#seed-ambient').addEventListener('click', seedAmbient);
-    document.querySelector('#seed-mutations').addEventListener('click', () => model.seedMutations());
-    document.querySelector('#seed-pending-mutations').addEventListener('click', () => model.seedMutations(true));
+    document.querySelector('#seed-ambient')?.addEventListener('click', seedAmbient);
+    document.querySelector('#seed-mutations')?.addEventListener('click', () => model.seedMutations());
+    document.querySelector('#seed-pending-mutations')?.addEventListener('click', () => model.seedMutations(true));
     let interactionSeedVariant = 0;
-    document.querySelector('#seed-interaction').addEventListener('click', () => {
+    document.querySelector('#seed-interaction')?.addEventListener('click', () => {
       const source = model.seedInteraction(), at = Date.now(); ecology.clear();
       const point = { x: (source.column + .5) * 30, y: (source.row + .5) * 30 };
       const item = { ...point, createdAt: at, expiresAt: at + ambientCore.curiosityConfig.lifetimeMs, phase: 0 };
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    document.querySelector('#clear').addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); });
-    document.querySelector('#seed').addEventListener('click', () => {
+    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); });
+    document.querySelector('#seed')?.addEventListener('click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
     });
-    document.querySelector('#pause').addEventListener('change', event => model.setPaused(event.target.checked));
-    const updateProbes = () => { const value = document.querySelector('#probes').checked; view.setProbes(value); document.body.classList.toggle('probes-off', !value); };
-    document.querySelector('#probes').addEventListener('change', updateProbes); updateProbes();
+    document.querySelector('#pause')?.addEventListener('change', event => model.setPaused(event.target.checked));
+    const updateProbes = () => { const value = document.querySelector('#probes')?.checked ?? false; view.setProbes(value); document.body.classList.toggle('probes-off', !value); };
+    document.querySelector('#probes')?.addEventListener('change', updateProbes); updateProbes();
     const resize = () => { const box = viewElement.getBoundingClientRect(); app.renderer.resize(Math.max(1, Math.round(box.width)), Math.max(1, Math.round(box.height)), Math.min(window.devicePixelRatio || 1, 2));
       const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); ui.position(); };
     const observer = new ResizeObserver(resize); observer.observe(viewElement); window.addEventListener('resize', resize); resize();
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
-    document.querySelector('#reset').addEventListener('click', () => { measurements.reset(); lastTick = null; lastHud = -Infinity; });
+    document.querySelector('#reset')?.addEventListener('click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
+      if (!hud) return;
       const data = measurements.snapshot(), counts = view.snapshot(), ec = ecologyView.snapshot(), ac = ambientView.snapshot(), mc = model.mutations.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
       hud.textContent = [`Pixi ${P.VERSION} · ${P.RendererType?.[app.renderer.type] || app.renderer.constructor.name} · native ticker`,
         `FPS current ${data.currentFps.toFixed(1)} · recent avg ${data.averageFps.toFixed(1)} · session avg ${data.sessionAverageFps.toFixed(1)}`,
@@ -260,7 +264,7 @@
     app.ticker.maxFPS = 0;
     app.ticker.add(ticker => {
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
-      if (elapsed > 0) { measurements.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
+      if (elapsed > 0) { measurements?.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
       if (Date.now() >= nextLogicalAt) {
         const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
         ambient.tick(at, { hidden: document.hidden });
@@ -269,7 +273,7 @@
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
-      view.animate(seconds, elapsed / 1000); if (now - lastHud >= 500) { lastHud = now; updateHud(); }
+      view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
     document.addEventListener('visibilitychange', () => {
       document.body.classList.toggle('page-hidden', document.hidden);
@@ -292,5 +296,9 @@
     updateHud(); if (!document.hidden) app.start();
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { makeLiveAtlas, createView };
-  else start().catch(error => { document.querySelector('#hud').textContent = `Pixi live initialization failed: ${error.message}`; console.error(error); });
+  else start().catch(error => {
+    const status = document.querySelector('#hud') ?? document.querySelector('#connection');
+    status.textContent = `Garden initialization failed: ${error.message}`;
+    console.error(error);
+  });
 })();

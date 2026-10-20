@@ -1,6 +1,6 @@
 // Browser-path checks with controlled DOM, EventSource, clock, and random values.
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
-const html = fs.readFileSync('wwwroot/index.html', 'utf8');
+const html = fs.readFileSync('wwwroot/canvas.html', 'utf8');
 const sourceOptions = html.match(/<select id="weather-source">([\s\S]*?)<\/select>/)[1];
 const initialWeatherSource = sourceOptions.match(/<option value="([^"]+)" selected>/)[1];
 const initialSoundVolume = html.match(/id="sound-volume"[^>]*value="([^"]+)"/)[1];
