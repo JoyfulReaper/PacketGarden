@@ -1,3 +1,124 @@
+# Phase 2C grass tuft artwork review (2026-10-20)
+
+Pixi's spreading grass now uses small separated fans of narrow, curved, pointed
+blades instead of nine overlapping ellipse blobs per tile. Each of the twelve
+cached shapes contains two or three irregularly placed tufts, with varied heights,
+leans and blade counts, dark bases and restrained lighter tips. Neutral texture
+shades still inherit the shared green -> straw -> brown tint. Cell-hashed texture
+selection replaces the old repeating anti-diagonals without consuming model RNG.
+No cell is moved or removed; transparent artwork exposes soil between tufts and
+allows broadleaf, weed and vines to remain readable over dense grass.
+
+Only the grass artwork, decorative variant selection and construction cleanup
+change in `pixi-live-ecology.js`. Both live pages advance that script's cache
+token. Shared ecology configuration/model, grass influence, spread probabilities/
+intervals, growth/fade/expiry, counts, weather/puddles, specimen competition,
+placement, plant/mutation artwork, SSE/backend, controls and scheduling are
+unchanged. The Canvas and standalone synthetic stress implementations are intact.
+Historical blob-art descriptions below describe the earlier presentation.
+
+## Finite cache and lifecycle preservation
+
+The ecology atlas remains **12 grass frames + 1 puddle frame**, 64x64 per tile,
+**832x64 at resolution 2** (1664x128 physical pixels, about 0.81 MiB RGBA). All
+retained caches still total **781 frames across three sources**, with unchanged
+dimensions. Every grass cell retains one Sprite with the same anchor and world
+position. Growth and fading still use the exact shared scale, tint, opacity and
+visual deadlines; there are no separate stage textures or per-frame grass paths.
+Healthy mature grass remains static until its next boundary; young/fading grass
+keeps the existing approximately one-second transform updates. Puddle animation
+and ownership are unchanged.
+
+Startup grass construction now uses **12 Graphics instead of 120 Graphics plus
+12 patch Containers**. The twelve owned grass contexts are explicitly released
+after rasterization. Frame/source destruction follows the existing cache API.
+No geometry or texture regeneration occurs during measured animation frames.
+Pixel checks find clear grass tile borders and bounded geometry. Mean nonzero
+alpha coverage inside a grass tile falls from **29.66% to 2.33%**. This measures
+texture ink, not logical cell coverage: the dense fixture still contains all
+640 grass cells. The complete specimen/mutation/rain/probe atlas and puddle tile
+are pixel-identical to Phase 2B checkpoint
+`a90c779b5b8875aa446a780d3b6fef7562e0d62d`.
+
+## Reproduce the grass comparison
+
+The existing installed-Chrome artwork fixture adds a `--grass` mode, using already
+available Playwright/Sharp and installing nothing:
+
+```sh
+node tests/pixi-vine-art-browser.cjs --run --grass --baseline --seconds=20
+node tests/pixi-vine-art-browser.cjs --run --grass --seconds=20
+```
+
+Use Node's normal module path or `NODE_PATH` for the available runtimes. The
+baseline serves checkpoint `a90c779` ecology/renderer code. Six cases cover sparse
+grass (32 cells), young spreading patches (207 cells), mature grass (640), fading
+grass (640), mixed species over dense grass, and mixed/grass/eight puddles with
+400 hurricane particles. Grass cell coordinates/timestamps and specimen positions,
+vigor, color and stages match before/after and are checked automatically. Logical
+time/cadences are frozen for a reproducible static comparison; actual animation
+timestamps and rain continue. This is not a new live-NATS or growth/churn soak.
+
+Desktop 1280x900 and smaller 720x700 viewport screenshots, DPR 1, are saved under
+ignored `artifacts/grass-art/before/` and `after/`: `grass-sparse`, `grass-young`,
+`grass-mature`, `grass-fading`, `mixed-grass`, and `mixed-grass-hurricane`, each
+with `.png` and `-small.png`. Raw timing JSON, specimen/ecology atlas PNGs, grass
+geometry bounds and pixel-coverage checks are alongside. Screenshot readback and
+resizing are outside timing windows.
+
+`tests/pixi-grass-art.cjs` checks finite distinct curved tuft shapes, no carpet
+blobs/model RNG use, stable non-diagonal texture selection through clear/refill,
+unchanged world positions, exact shared growth/fade transforms and deadlines,
+zero recurring geometry/textures and correct view/frame/source cleanup. Existing
+ecology oracle/lifecycle/hidden-resume suites remain unchanged.
+
+## Phase 2C measured comparison and checks
+
+Installed headless Chrome 155.0.8059.80, native ticker, 20 seconds per fixture per
+version (about 1,200 frames per window), desktop DPR 1:
+
+| Scene | Interval p99 before/after | Worst interval before/after | Mean CPU render submission before/after |
+| --- | ---: | ---: | ---: |
+| Sparse grass | 17.2 / 17.0 ms | 17.5 / 17.2 ms | 0.171 / 0.148 ms |
+| Young spreading grass | 17.1 / 17.0 ms | 18.7 / 17.3 ms | 0.146 / 0.123 ms |
+| Mature dense grass | 17.0 / 17.0 ms | 17.8 / 17.5 ms | 0.126 / 0.114 ms |
+| Fading grass | 17.2 / 16.9 ms | 21.3 / 17.3 ms | 0.143 / 0.110 ms |
+| Mixed + dense grass | 17.1 / 17.0 ms | 17.9 / 17.5 ms | 0.147 / 0.125 ms |
+| Dense mixed + hurricane | 17.2 / 17.0 ms | 18.5 / 17.3 ms | 0.203 / 0.171 ms |
+
+All twelve windows averaged about 60 FPS, with zero >50ms or >300ms intervals.
+CPU submission p99 was 0.3–0.8ms before and 0.3–0.4ms after. The largest revised
+submission was 2.2ms (mixed/quiet). Sub-millisecond timings are coarse and
+environment-sensitive; these lower submission samples do not establish a general
+performance improvement or smooth GPU/compositor presentation. Timing brackets
+`app.render()` on the CPU, without waiting for GPU completion.
+
+Display objects before/after remain **46** sparse, **221** young, **654** mature
+or fading, **1,358** mixed/grass and **1,366** mixed/hurricane, plus 400 separately
+counted rain particles in hurricane. Atlas dimensions, source count and frame
+count match. No frame caused texture generation or Graphics geometry rebuilding;
+all twelve new grass construction contexts were destroyed after baking.
+
+All **37 standard JavaScript suites** pass (40 Node files including one harness
+and two optional-browser skips). The installed-Chrome cache/pixel suite passes
+root/index rendering, SSE fixture growth, inspection, DPR 2/resizes, reconnection
+and retained diagnostic/Canvas/stress controls. App/backend checks build and run
+successfully with isolated output:
+
+```sh
+dotnet build tests/PacketGarden.Checks/PacketGarden.Checks.csproj --no-restore -o artifacts/grass-art/checks
+dotnet artifacts/grass-art/checks/PacketGarden.Checks.dll
+```
+
+The build has no errors; NU1900 remains because NuGet vulnerability data was
+unavailable. `git diff --check` passes. No commit, push or deployment is included.
+
+Finite variants can still repeat, and the logical garden grid remains visible.
+Very young or late-fading blades become faint at small viewports under the
+unchanged growth/opacity rules. Grass has no new wind/sway animation. GPU memory
+over time, compositor presentation and a new real-traffic soak were not profiled;
+historical stutter uncertainty and the known Pixi teardown exception remain.
+
 # Phase 2B plant artwork and scale review (2026-10-20)
 
 The default and live-diagnostic gardens share a focused cached-artwork pass:
