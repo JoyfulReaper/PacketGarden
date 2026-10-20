@@ -1,3 +1,25 @@
+# Stable Pixi renderer checkpoint (2026-10-20)
+
+On October 20, 2026, the user observed `/pixi-live.html` running smoothly in
+Chrome with real NATS/TCPNoise events and an established SSE connection. The
+user reported no obvious visual stuttering during this observation. The reported
+screenshot showed PixiJS 8.22.0, WebGL, native ticker, 383 live specimens, and
+manual hurricane weather at the fixed 10,000 events/min test intensity.
+
+| Measured duration | Frames | Session / recent average FPS | Session worst interval | >50ms / >300ms |
+| --- | ---: | ---: | ---: | ---: |
+| 655 seconds | approximately 39,225 | 59.9 / 60.0 | 66.8ms | 4 / 0 |
+
+This user-observed live soak records a stable checkpoint of the existing Pixi
+implementation before visual redesign work. It is not a new automated benchmark
+or a confirmed root-cause fix. Why the previous lag disappeared remains unknown;
+ticker intervals and average FPS do not measure GPU completion or guarantee smooth
+presentation in other sessions. The earlier stutter findings and measurement
+limitations below remain valid historical evidence. This checkpoint changes
+documentation only; runtime behavior is unchanged.
+
+---
+
 # Interactive Pixi garden (2026-10-15)
 
 `/pixi-live.html` now supports the production interaction order, exact collection,
