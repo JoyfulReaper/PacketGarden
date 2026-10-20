@@ -3,6 +3,7 @@
 // Example: node tests/pixi-vine-art-browser.cjs --run --baseline --seconds=20
 // --plants compares Phase 2B against the committed vine renderer, including small views.
 // --grass compares Phase 2C against the committed plant renderer and ecology atlas.
+// --fuller-grass compares the small fullness pass against d91b7a1, preserving older artifacts.
 // --size compares specimen presentation scale against the committed tufted-grass garden.
 if (!process.argv.includes('--run')) console.log('SKIP: optional vine-art browser fixture; pass --run.');
 else run().catch(error => { console.error(error); process.exitCode = 1; });
@@ -11,7 +12,7 @@ async function run() {
   const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path');
   const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline'),plants=process.argv.includes('--plants');
-  const grassArt=process.argv.includes('--grass');assert(!(plants&&grassArt));
+  const fullerGrass=process.argv.includes('--fuller-grass'),grassArt=process.argv.includes('--grass')||fullerGrass;assert(!(plants&&grassArt));
   const sizeArt=process.argv.includes('--size');assert(!sizeArt||!plants&&!grassArt);
   const seconds=Number(process.argv.find(arg=>arg.startsWith('--seconds='))?.split('=')[1]??20);
   assert(seconds>=5&&seconds<=60);
@@ -21,9 +22,9 @@ async function run() {
   const onlyScene=process.argv.find(arg=>arg.startsWith('--scene='))?.split('=')[1];
   assert(!onlyScene||sceneNames.includes(onlyScene));
   assert(/^[a-z0-9-]+$/.test(label));
-  const artifactRoot=path.join(root,'artifacts',sizeArt?'plant-size':grassArt?'grass-art':plants?'plant-art':'vine-art');
+  const artifactRoot=path.join(root,'artifacts',fullerGrass?'grass-fullness':sizeArt?'plant-size':grassArt?'grass-art':plants?'plant-art':'vine-art');
   const output=path.join(artifactRoot,label);await fs.mkdir(output,{recursive:true});
-  const checkpoint=sizeArt?'8b60c29b44546d27a71a06766ae392aee555210c':grassArt?'a90c779b5b8875aa446a780d3b6fef7562e0d62d':plants?'916e7b969ea9218478202593088f6e9de614df26':'a7e391cf0f8a614d763d6fa86f9f474d4a2dd075';
+  const checkpoint=fullerGrass?'d91b7a1':sizeArt?'8b60c29b44546d27a71a06766ae392aee555210c':grassArt?'a90c779b5b8875aa446a780d3b6fef7562e0d62d':plants?'916e7b969ea9218478202593088f6e9de614df26':'a7e391cf0f8a614d763d6fa86f9f474d4a2dd075';
   const oldRenderer=baseline?execFileSync('git',['show',checkpoint+':wwwroot/pixi-live.js'],{cwd:root}):null;
   const oldEcology=baseline&&grassArt?execFileSync('git',['show',checkpoint+':wwwroot/pixi-live-ecology.js'],{cwd:root}):null;
   const capture=`
@@ -198,7 +199,7 @@ async function run() {
       },{plants,grassArt,sizeArt});
       assert.deepEqual(data.positions,fixture.positions);assert.equal(data.geometryDuringFrames,0);assert.equal(data.texturesDuringFrames,0);
       const vineCount=fixture.positions.filter(p=>p[0]==='vine').length;
-      assert.equal(data.objects,14+fixture.positions.length+vineCount+fixture.grass+fixture.puddles);assert.equal(data.particles,hurricane?400:0);
+      assert.equal(data.objects,14+(fullerGrass?3:0)+fixture.positions.length+vineCount+fixture.grass+fixture.puddles);assert.equal(data.particles,hurricane?400:0);
       if(grassArt||sizeArt)assert.deepEqual(data.grassState,fixture.grassState);
       if(!baseline){
         assert.equal(data.releasedVineContexts,80,'temporary vine Graphics contexts released after baking');
@@ -238,10 +239,12 @@ async function run() {
         else {
           assert(different);assert.equal(edge,0,'grass has transparent atlas margins');
           assert(ink/16384>.01&&ink/16384<.18,'bounded blade coverage, not a solid carpet');
-          assert(ink<oldInk/2,'soil gaps come from transparent artwork');
+          if(!fullerGrass)assert(ink<oldInk/2,'soil gaps come from transparent artwork');
           coverage.before.push(oldInk/16384);coverage.after.push(ink/16384);
         }
       }
+      if(fullerGrass){const sum=values=>values.reduce((a,b)=>a+b,0),ratio=sum(coverage.after)/sum(coverage.before);
+        assert(ratio>1.08&&ratio<1.6,'modest increase in transparent blade coverage');coverage.ratio=ratio;}
       const bounds=JSON.parse(await fs.readFile(path.join(output,'grass-bounds.json'),'utf8'));
       for(const b of bounds)assert(b.x>=1&&b.y>=1&&b.x+b.width<=63&&b.y+b.height<=63,'grass paths stay inside tiles');
       await fs.writeFile(path.join(output,'atlas-pixel-checks.json'),JSON.stringify(coverage,null,2));

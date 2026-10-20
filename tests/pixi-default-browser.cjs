@@ -45,6 +45,9 @@ async function run() {
         window.__gardenAudioGains.push(node); return node; }
     };
     const createGnomes = PacketGardenGnomes.createModel;
+    const createGarden=PacketGardenCore.createGardenModel,createEcology=PacketGardenEcology.createEcologyModel;
+    PacketGardenCore.createGardenModel=(...args)=>(window.__gardenTestGarden=createGarden(...args));
+    PacketGardenEcology.createEcologyModel=(...args)=>(window.__gardenTestEcology=createEcology(...args));
     PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
     const createStorm = PacketGardenPixiStorm.createModel;
     PacketGardenPixiStorm.createModel = options => (window.__gardenTestStorm = createStorm({...options,random:PacketGardenPixi.seededRandom(77332)}));
@@ -152,6 +155,7 @@ async function run() {
       assert.equal(await page.locator('#sound-toggle').textContent(),'Sound: Off');
       assert.equal(await page.locator('#sound-volume').inputValue(),'12');
       assert.equal(await page.evaluate(() => __gardenAudioContexts.length),0,'no context before enable gesture');
+      await checkGrass(page,route==='/'?'root':'index');
       await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
       await page.waitForFunction(() => __gardenAudioContexts.length === 1 && __gardenAudioContexts[0].state === 'running');
       // Native AudioParam.value can retain a rendered quantum's value while the
@@ -221,6 +225,8 @@ async function run() {
     const diagnostic = await context.newPage();
     const diagnosticErrors=[]; diagnostic.on('pageerror',error=>diagnosticErrors.push(String(error.stack)));
     await diagnostic.goto(origin + '/pixi-live.html');
+    await diagnostic.waitForFunction(()=>__gardenTestApp.ticker.started);
+    await checkGrass(diagnostic,'diagnostic');
     assert.equal(await diagnostic.evaluate(() => __gardenAudioContexts.length),0);
     await diagnostic.getByRole('button',{name:'Sound: Off',exact:true}).click();
     await diagnostic.waitForFunction(() => __gardenAudioContexts.length === 1 && __gardenAudioContexts[0].state === 'running');
@@ -277,6 +283,37 @@ async function run() {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
   }
 
+  async function checkGrass(page,label) {
+    const originalViewport=page.viewportSize();
+    await page.evaluate(()=>{__gardenTestGarden.clear();__gardenTestEcology.seed({grassCells:[{column:12,row:9,createdAt:Date.now()-60000,lastInfluencedAt:Date.now()}]});__gardenTestEcology.resetCadence();});
+    const click=async(column=12,row=9)=>{
+      await page.locator('#view canvas').scrollIntoViewIfNeeded();
+      const point=await page.evaluate(({column,row})=>{const app=__gardenTestApp,root=app.stage.children[0],box=app.canvas.getBoundingClientRect();
+        return {x:box.left+(root.position.x+(column+.5)*30*root.scale.x)*box.width/app.renderer.screen.width,
+          y:box.top+(root.position.y+(row+.5)*30*root.scale.y)*box.height/app.renderer.screen.height};},{column,row});
+      await page.mouse.click(point.x,point.y);
+    };
+    for(const viewport of [originalViewport,{width:320,height:700}]) {
+      await page.setViewportSize(viewport);await page.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
+      await click();await page.getByRole('heading',{name:'Wild grass',exact:true}).waitFor();
+      assert.equal(await page.locator('#grass-state').textContent(),'Mature');assert(await page.locator('#grass-details').isVisible());
+      assert(!(await page.locator('#specimen-details').isVisible()));
+      assert.match(await page.locator('#grass-details').textContent(),/Not a collectible plant specimen/);
+      const card=await page.locator('#specimen-card').boundingBox();assert(card.x>=0&&card.x+card.width<=viewport.width);
+      assert(card.y>=0&&card.y+card.height<=viewport.height);
+      await page.screenshot({path:path.join(output,`${label}-grass-card-${viewport.width}.png`)});
+      await page.getByRole('button',{name:'Close specimen information'}).click();
+    }
+    // Pick exposed soil above the floating card, rather than clicking through it.
+    await click();await click(1,1);assert(!(await page.locator('#specimen-card').isVisible()),'bare soil does not inspect grass');
+    await page.evaluate(()=>__gardenTestGarden.seed([{type:'broadleaf',column:12,row:9,vigor:0,createdAt:Date.now()}]));
+    await click();await page.getByRole('heading',{name:'Broad-leaf plant',exact:true}).waitFor();
+    assert(await page.locator('#specimen-details').isVisible());assert(!(await page.locator('#grass-details').isVisible()));
+    assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),0,'grass/specimen inspection stays silent');
+    await page.getByRole('button',{name:'Close specimen information'}).click();
+    await page.evaluate(()=>{__gardenTestGarden.clear();__gardenTestEcology.clear();});
+    await page.setViewportSize(originalViewport);await page.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
+  }
   async function specimenPoint(page) {
     return page.evaluate(() => {
       const app=window.__gardenTestApp,root=app.stage.children[0],sprite=root.children[6].children[0],r=app.canvas.getBoundingClientRect();

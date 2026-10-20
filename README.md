@@ -75,6 +75,10 @@ gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
 and collection audio, plus the same Gnome Incident rules. Subsequent Pixi-only
 art passes made plants larger and more distinctive and grass more tuft-like,
 without changing the 32×20 model, ecology, or specimen lifetimes.
+Pixi grass tufts now have slightly fuller fans of pointed blades. Clicking a
+grass-covered tile without a specimen or collectible hit opens a compact
+**Wild grass** card with its current state. This is background ecology, not a
+collectible specimen. Specimens retain priority; bare soil closes the card.
 
 An isolated GPU rendering feasibility page is available at `/pixi-stress.html`.
 It defaults to 640 synthetic plants, dense grass, puddles, actors and hurricane

@@ -25,7 +25,7 @@ for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['gar
 async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false } = {}) {
   let now = 100000, app, observer;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, gnomes, storm;
+  let model, gnomes, storm, ecology;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -74,6 +74,10 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create = context.window.PacketGardenPixiLiveCore.createModel;
       context.window.PacketGardenPixiLiveCore.createModel = (...args) => { model = create(...args); return model; };
     }
+    if (assetPath(script) === 'garden-ecology.js' && captureModel) {
+      const create = context.window.PacketGardenEcology.createEcologyModel;
+      context.window.PacketGardenEcology.createEcologyModel = (...args) => { ecology = create(...args); return ecology; };
+    }
     if (assetPath(script) === 'garden-gnomes.js' && captureModel) {
       const create = context.window.PacketGardenGnomes.createModel;
       context.window.PacketGardenGnomes.createModel = (...args) => { gnomes = create(...args); return gnomes; };
@@ -85,7 +89,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get gnomes(){return gnomes;},get storm(){return storm;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {

@@ -23,10 +23,10 @@
         bases.push({ x, y });
         patch.moveTo(x - 2, y + .3).quadraticCurveTo(x, y + 1, x + 2, y - .2)
           .stroke({ color: 0x6c795b, alpha: .4, width: 1 });
-        const blades = 4 + (variant + tuft) % 3;
+        const blades = 5 + (variant + tuft) % 3;
         for (let blade = 0; blade < blades; blade++) {
           const bx = x + (random() - .5) * 3, by = y + (random() - .5) * 2;
-          const lean = (blade / (blades - 1) - .5) * 9 + (random() - .5) * 5;
+          const lean = (blade / (blades - 1) - .5) * 10.5 + (random() - .5) * 5;
           const height = 6 + random() * 8, width = .65 + random() * .65;
           const tipX = bx + lean, tipY = by - height;
           patch.moveTo(bx - width * .5, by).quadraticCurveTo(bx + lean * .12 - width, by - height * .58, tipX, tipY)

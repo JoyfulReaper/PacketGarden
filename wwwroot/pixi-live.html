@@ -16,12 +16,12 @@
   <script src="garden-ambient.js" defer></script>
   <script src="garden-interaction.js" defer></script>
   <script src="garden-ui-core.js" defer></script>
-  <script src="pixi-live-ui.js?v=audio-1" defer></script>
+  <script src="pixi-live-ui.js?v=grass-details-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
-  <script src="pixi-live-ecology.js?v=grass-art-2c-1" defer></script>
-  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=storm-bolt-2" defer></script>
+  <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
+  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=grass-details-1" defer></script>
 </head>
 <body>
   <main>
@@ -81,7 +81,11 @@
   <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>
     <button id="specimen-card-close" class="specimen-card-close" type="button" aria-label="Close specimen information">×</button>
     <h2 id="specimen-card-title">Specimen</h2>
-    <dl>
+    <div id="grass-details" hidden>
+      <p>Background ecology that spreads in small tufts. Not a collectible plant specimen.</p>
+      <dl><div><dt>State</dt><dd id="grass-state">—</dd></div></dl>
+    </div>
+    <dl id="specimen-details">
       <div><dt>Source</dt><dd id="specimen-source">—</dd></div>
       <div><dt>Sensor</dt><dd id="specimen-sensor">—</dd></div>
       <div><dt>Listening port</dt><dd id="specimen-port">—</dd></div>

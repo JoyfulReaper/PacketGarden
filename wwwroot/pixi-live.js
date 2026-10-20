@@ -351,6 +351,7 @@
     },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
+      getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
     const gnomePresentation = window.PacketGardenPixiGnomes;
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);

@@ -1,3 +1,82 @@
+# Fuller grass and grass-only inspection (2026-10-20)
+
+The default Pixi garden and `/pixi-live.html` now use 5–7 pointed blades per tuft
+instead of 4–6, with a slightly wider fan (10.5 rather than 9 world units). Each
+variant retains its 2–3 tufts, restrained palette, transparent gaps and existing
+blade dimensions/opacity. This is a small artwork adjustment: spread, logical
+cells, growth, maturity, fading, expiry and all ecology settings are unchanged.
+Canvas grass is unchanged.
+
+Clicking/tapping grass without an existing specimen/collectible hit now reuses
+the inspection card, titled **Wild grass**, with a background-ecology description,
+explicit non-collectible label and state (Young/Growing/Mature/Fading/Dying/Dry).
+Specimen fields are hidden only for grass and restored for normal inspection.
+The existing curiosity → drop → mutation → specimen priority runs first; bare
+soil still closes the card, and outside/letterbox clicks retain their behavior.
+Grass inspection does not remove grass, produce sound, add Recent activity or
+change the score. Removal, expiry, replacement of the exact grass object or a
+new occupying specimen closes the card on the existing UI tick. Close/Escape
+and the existing small-screen card positioning work for both kinds of card.
+
+Picking reads existing ecology objects only when clicked; an open grass card
+uses the existing logical UI tick for validity/state. There are no additional
+timers, render loops, textures or display objects. The atlas remains 12 grass
+frames plus one unchanged puddle frame: 1664×128 backing, ~832 KiB RGBA. Each
+grass cell retains one Sprite, unchanged scale/tint/alpha and visual deadlines.
+Startup builds the finite artwork once and releases its construction contexts;
+existing view/frame/source cleanup is retained. Only Pixi supports grass cards.
+
+Deterministic entry-point tests cover grass-only and bare tiles, specimen
+priority, every displayed lifecycle group, close/Escape, removal/replacement,
+new occupancy, and no ecology/activity/audio/score or resource changes. Existing
+art tests check exact blade counts, finite curved variants, no blobs, model RNG
+isolation, unchanged lifecycle transforms/deadlines and cleanup.
+
+The existing Chrome artwork runner supports `--fuller-grass`, comparing against
+`d91b7a1` in separate ignored `artifacts/grass-fullness/before/` and `after/`
+directories. It preserves the older Phase 2C artifacts. Use the already available
+Playwright runtime/installed Chrome, without installing dependencies:
+
+```powershell
+node tests/pixi-vine-art-browser.cjs --run --fuller-grass --baseline --seconds=5
+node tests/pixi-vine-art-browser.cjs --run --fuller-grass --seconds=5
+```
+
+Fixtures cover sparse, young, mature, fading, mixed plants/grass and mixed with
+hurricane, at desktop and 720×700. Pixel checks protect specimen/puddle artwork,
+transparent frame borders, modest coverage increase and identical logical state,
+atlas dimensions and display-object counts. Average nontransparent grass tile
+coverage rose from **2.33% to 2.69%** (~15.7%), with clear borders on every frame.
+The specimen/mutation/rain/probe atlas and puddle frame remained pixel-identical.
+
+Five-second installed-Chrome samples per scene (mean CPU submission):
+
+| Scene | Before | After | Display objects, unchanged |
+| --- | --- | --- | --- |
+| Sparse grass | .167ms | .165ms | 49 |
+| Young grass | .118ms | .120ms | 224 |
+| Mature grass | .117ms | .130ms | 657 |
+| Fading grass | .105ms | .107ms | 657 |
+| Mixed plants/grass | .108ms | .135ms | 1361 |
+| Mixed with hurricane | .173ms | .197ms | 1369, plus 400 particles |
+
+Mean frame intervals remained ~16.68ms; p99 was 16.9–17.1ms. The revised worst
+interval was 18.5ms, and neither run had gaps over 50ms. Recurring geometry and
+texture generation both remained zero. Small CPU increases (up to ~.027ms mean)
+are retained as observations; these short noisy measurements are not proof of
+GPU/compositor or long-session equivalence. Historical performance findings
+below remain unchanged.
+
+All 48 Node files pass (optional runners require `--run`); the focused
+`pixi-grass-inspection.cjs` also checks open-card state updates. The real-Chrome
+page suite passes `/`, `/index.html` and `/pixi-live.html` grass picking, specimen
+priority, exposed bare-soil clicks and card bounds at desktop and 320px. The
+narrow diagnostic page is scrolled to its canvas before picking. Card screenshots
+are under `artifacts/grass-fullness/pages/*-grass-card-*.png`. Existing SSE growth,
+reconnection, collection, sound, gnome, lightning, Canvas and stress checks pass.
+.NET build/backend checks and `git diff --check` pass, with the existing NU1900
+vulnerability-feed warning. No backend or external-event contract changes.
+
 # Readable storm bolts and audible shared mix (2026-10-20)
 
 The original oval glow below was technically visible but did not read as a
