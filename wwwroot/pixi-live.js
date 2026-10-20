@@ -34,6 +34,71 @@
     g.alpha = stage === 'fading' ? .55 : 1;
     return g;
   }
+  // Artwork is rooted at (0,0), with a one-pixel inset inside the existing 32px
+  // tile at (16,29). These paths are rasterized once, never in the live ticker.
+  function foliageTile(P, type, vigor, variant, stage) {
+    const g = new P.Graphics(), lean = (variant - 2) * .35;
+    const shade = (color, amount) => [16, 8, 0].reduce((result, shift) => result | Math.min(255, Math.round((color >> shift & 255) * amount)) << shift, 0);
+    const leaf = (x, y, length, width, angle, color) => {
+      const point = (along, across) => [x + Math.cos(angle) * along - Math.sin(angle) * across, y + Math.sin(angle) * along + Math.cos(angle) * across];
+      g.moveTo(x, y).bezierCurveTo(...point(length * .2, -width), ...point(length * .75, -width * .8), ...point(length, 0))
+        .bezierCurveTo(...point(length * .7, width * .65), ...point(length * .25, width), x, y).fill(color);
+      g.moveTo(x, y).lineTo(...point(length * .75, 0)).stroke({ color: shade(color, 1.28), width: .4, alpha: .45 });
+    };
+    if (type === 'broadleaf') {
+      const color = [0x729357, 0x608c68, 0x829b59, 0x568476, 0x8fada0][variant];
+      g.ellipse(0, -1, 8, 1.4).fill({ color: 0x28351f, alpha: .16 });
+      g.moveTo(0, 0).bezierCurveTo(-2, -7, 3, -16, lean, -24).stroke({ color: 0x657847, width: 1.3 });
+      const leaves = [[-.5,-7,13,4.5,-2.78], [.5,-8,13,4.6,-.35], [-.5,-13,12.5,4.2,-2.35],
+        [1,-14,12,4,-.85], [lean,-18,8.2,3.5,-1.65], [-1,-6,9,3.8,-2], [.8,-7,9,3.5,-.9], [0,-11,10,3.5,-1.7]];
+      for (let i = 0; i < 5 + vigor; i++) {
+        const [x, y, length, width, angle] = leaves[i];
+        g.moveTo(0, y + 3).lineTo(x, y).stroke({ color: 0x6d8050, width: .7 });
+        leaf(x, y, length - (variant % 2) * .5, width, angle + lean * .08, shade(color, [.79, .95, .86, 1.08][i % 4]));
+      }
+    } else if (type === 'blackthorn') {
+      const color = [0x4d3459, 0x5e354a, 0x3e465a, 0x3f5149, 0x67506c][variant];
+      // A bare, crooked woody crown and unequal forks distinguish it from vines.
+      const wood = () => g.moveTo(-3, 0).bezierCurveTo(7, -8, -7, -18, 3 + lean, -26)
+        .moveTo(-1, -12).bezierCurveTo(-9, -14, -4, -20, -12, -22)
+        .moveTo(1, -9).bezierCurveTo(9, -12, 7, -19, 11, -20);
+      wood().stroke({ color: 0x281f2d, width: 2.5 });
+      wood().stroke({ color: 0x886d85, width: .65, alpha: .7 });
+      const thorns = [[-1,-4,1], [-1,-11,-1], [0,-18,1], [2,-24,-1], [-8,-17,-1], [8,-14,1], [-5,-14,-1], [7,-17,1]];
+      for (let i = 0; i < 5 + vigor; i++) {
+        const [x, y, side] = thorns[i];
+        g.poly([x - .7, y + 1, x + side * 3.6, y - 3, x + .7, y - .5]).fill(0xa28a9b);
+      }
+      for (let i = 0; i < 2 + vigor; i++) {
+        const side = i % 2 ? 1 : -1, x = side * (4 + i % 3), y = -10 - i * 3;
+        leaf(x, y, 4.2 + i % 2, 1.8, side < 0 ? -2.6 : -.6, shade(color, i % 2 ? 1.12 : .88));
+      }
+    } else if (type === 'weed') {
+      const color = [0x678a46, 0x75974e, 0x577b43, 0x5e8b6c, 0x91a965][variant];
+      g.moveTo(0, 0).bezierCurveTo(-1, -7, 2, -14, lean, -23).stroke({ color: 0x71814b, width: 1.2 });
+      const fans = [[lean,-18,8.8,-Math.PI / 2], [-4.8,-11,8.1,-1.9], [4.4,-9,7.8,-1.1], [1,-4,6.8,-1.6]];
+      for (let fan = 0; fan < 3 + (vigor > 1 ? 1 : 0); fan++) {
+        const [x, y, length, tilt] = fans[fan], fingers = vigor < 2 ? 5 : 7, middle = (fingers - 1) / 2;
+        g.moveTo(0, y + 3).quadraticCurveTo(x * .4, y + 2, x, y).stroke({ color: 0x6b844b, width: .7 });
+        for (let i = 0; i < fingers; i++) {
+          const angle = tilt + (i - middle) * (2.3 / (fingers - 1)) + lean * .06;
+          const size = length * (1 - Math.abs(i - middle) * .08), width = size * .17, points = [x, y];
+          // Shallow teeth survive the 2x bake without adding a forest of outlines.
+          const edge = [[.12,.25],[.22,.85],[.30,.55],[.40,1],[.48,.65],[.60,.9],[.68,.5],[.80,.5],[.87,.2]];
+          const point = (along, across) => points.push(x + Math.cos(angle) * along - Math.sin(angle) * across, y + Math.sin(angle) * along + Math.cos(angle) * across);
+          for (const [along, across] of edge) point(along * size, -across * width);
+          point(size, 0);
+          for (const [along, across] of edge.slice().reverse()) point(along * size, across * width);
+          g.poly(points).fill(shade(color, i === middle ? 1.08 : .84 + i % 3 * .06));
+          if (i === middle) g.moveTo(x, y).lineTo(x + Math.cos(angle) * size * .8, y + Math.sin(angle) * size * .8)
+            .stroke({ color: 0xa8b67d, width: .35, alpha: .45 });
+        }
+      }
+    }
+    g.scale.set(stage === 'sprout' ? .42 : stage === 'growing' ? .72 : stage === 'fading' ? .66 : 1);
+    g.alpha = stage === 'fading' ? .55 : 1;
+    return g;
+  }
   function makeLiveAtlas(P, renderer, shared, core) {
     const extras = [];
     for (let vigor = 0; vigor <= 3; vigor++) {
@@ -63,7 +128,8 @@
         }
       }]);
     }
-    const base = shared.makeAtlas(P, renderer, extras), sheet = new P.Container(), keys = [], vineTiles = [];
+    const base = shared.makeAtlas(P, renderer, extras), sheet = new P.Container(), keys = [], artTiles = [];
+    const enlargement = { flower: 1.12, mushroom: 1.16, wirefern: 1.16, crystalfungus: 1.12, ghostbloom: 1.10 };
     function tile(key, object) {
       const index = keys.length; object.position.set(index % 32 * 32 + 16, Math.floor(index / 32) * 32 + 29);
       sheet.addChild(object); keys.push(key);
@@ -71,11 +137,18 @@
     for (const type of core.species) for (let vigor = 0; vigor <= 3; vigor++) for (let variant = 0; variant < 5; variant++) {
       for (const stage of type === 'redbloom' ? ['mature', 'fading'] : ['sprout', 'growing', 'mature', 'fading']) {
         if (type === 'vine') {
-          const object = vineTile(P, vigor, variant, stage); vineTiles.push(object);
+          const object = vineTile(P, vigor, variant, stage); artTiles.push(object);
+          tile(`${type}:${stage}:${vigor}:${variant}`, object); continue;
+        }
+        if (type === 'broadleaf' || type === 'blackthorn' || type === 'weed') {
+          const object = foliageTile(P, type, vigor, variant, stage); artTiles.push(object);
           tile(`${type}:${stage}:${vigor}:${variant}`, object); continue;
         }
         const object = new P.Sprite(base.frames.get(`${type === 'redbloom' ? 'redbloom-star' : type}:${vigor}`)); object.anchor.set(.5, .9);
-        object.scale.set(stage === 'sprout' ? .21 : stage === 'growing' ? .36 : stage === 'fading' ? .33 : .5);
+        // The longest base mushroom stem reaches y=63; enlargement needs a
+        // slightly higher bake origin to leave a clear bottom texel in its slot.
+        if (type === 'mushroom') object.anchor.set(.5, .94);
+        object.scale.set((stage === 'sprout' ? .21 : stage === 'growing' ? .36 : stage === 'fading' ? .33 : .5) * (enlargement[type] ?? 1));
         object.tint = core.palettes[type][variant]; object.alpha = stage === 'fading' ? .55 : 1;
         tile(`${type}:${stage}:${vigor}:${variant}`, object);
       }
@@ -96,8 +169,8 @@
     tile('collectible_weed', mutation);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
-    // context. Release these one-time vine paths explicitly after rasterization.
-    for (const object of vineTiles) object.destroy();
+    // context. Release these one-time artwork paths explicitly after rasterization.
+    for (const object of artTiles) object.destroy();
     sheet.destroy({ children: true });
     for (const frame of base.frames.values()) frame.destroy(false); base.atlas.destroy(true);
     const frames = new Map(keys.map((key, i) => [key, new P.Texture({ source: atlas.source,

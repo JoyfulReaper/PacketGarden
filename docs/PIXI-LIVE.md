@@ -1,3 +1,114 @@
+# Phase 2B plant artwork and scale review (2026-10-20)
+
+The default and live-diagnostic gardens share a focused cached-artwork pass:
+
+- Broadleaf has 5–8 overlapping pointed leaves, curved blades/veins, visible
+  stems, varied leaf angles and layered restrained greens.
+- Blackthorn has crooked dark wood, unequal forks, 5–8 pale thorns and sparse
+  plum/slate foliage. Its bare woody silhouette stays distinct from green vines.
+- Ordinary weed has 3–4 palmate fans of five or seven narrow serrated leaflets,
+  green stems and subtle shade/angle variation. The separate `collectible_weed`
+  mutation texture and behavior are unchanged.
+
+Flowers and crystal fungus are **12%** larger; mushrooms and wireferns **16%**;
+ghostbloom **10%**. These multipliers apply to each existing stage's bake scale,
+retaining stage differences and the existing fade opacity. The mushroom's 64px
+source anchor moves from 0.90 to 0.94 during baking: its longest stem reaches
+y=63 and otherwise crosses the 32px tile edge when enlarged. Final Sprite
+anchors, logical cells, hit testing and world positions are unchanged. The three
+redesigned species use purpose-drawn tile coordinates rather than a global scale
+increase. Vines, redbloom, and the synthetic stress/Canvas artwork are unchanged.
+Variant selection/probabilities and existing inspection labels are retained;
+the new broadleaf/weed variants are restrained green interpretations.
+
+## Cache bounds and regression checks
+
+No atlas refactor was needed. The specimen atlas still has **763 frames** in a
+logical **1024x768** sheet at resolution 2 (2048x1536 physical pixels). Including
+ambient/ecology, **781 frames across three retained sources** and all source
+dimensions are unchanged. The new tiles replace 240 existing slots; temporary
+construction Graphics increase from 80 to 320, all explicitly released with their
+owned contexts after baking. Retained Sprite/connection counts do not increase.
+There is no new per-frame geometry, texture generation, RNG use, neighbor work,
+renderer scheduling or display-object allocation.
+
+`tests/pixi-plant-art.cjs` compares cached construction against vine checkpoint
+`916e7b969ea9218478202593088f6e9de614df26`, checks finite fans/thorns, stage scales,
+anchor/atlas dimensions, protected artwork and construction ownership. The
+existing Chrome artwork fixture adds a `--plants` mode (uses already available
+Playwright and Sharp, installs nothing):
+
+```sh
+node tests/pixi-vine-art-browser.cjs --run --plants --baseline --seconds=20
+node tests/pixi-vine-art-browser.cjs --run --plants --seconds=20
+```
+
+Use Node's normal module search path or `NODE_PATH` for the existing tools. Five
+fixtures cover broadleaf, blackthorn, weed, mixed, and dense mixed/grass/hurricane.
+Each has 640 specimens with multiple vigor/color/stage combinations, with ages
+and seeded random state held fixed for identical before/after comparisons. Native
+animation time and hurricane particles continue normally. Desktop 1280x900 and
+smaller 720x700 viewport screenshots (DPR 1) are saved in ignored
+`artifacts/plant-art/before/` and `after/` as `<scene>.png` and
+`<scene>-small.png`. Atlas PNGs, geometry bounds and raw timing JSON are alongside.
+The fixture checks matching specimen tuples, unchanged counts, zero geometry/
+texture regeneration during samples, and all 320 released construction contexts.
+
+Every edited frame has a transparent pixel border; new Graphics geometry fits
+inside its tile with at least a half-pixel inset. All 763 frames are nonblank.
+Vine, redbloom, rain, probe and collectible-mutation atlas pixels match the
+checkpoint byte-for-byte. The full `createView`/animation/connection implementation,
+shared garden models, ecology, SSE and backend are unchanged.
+
+## Phase 2B measurements and validation
+
+Installed headless Chrome 155.0.8059.80, native ticker, 20 seconds per scene per
+version (about 1,200 frames each), against checkpoint `916e7b9`. Timing windows
+exclude fixture construction, screenshot readback and resizing:
+
+| Scene | Interval p99 before/after | Worst interval before/after | Mean CPU render submission before/after |
+| --- | ---: | ---: | ---: |
+| Broadleaf | 17.0 / 17.0 ms | 19.0 / 17.3 ms | 0.136 / 0.143 ms |
+| Blackthorn | 16.9 / 17.1 ms | 17.1 / 17.9 ms | 0.116 / 0.123 ms |
+| Weed | 16.9 / 16.9 ms | 17.2 / 17.1 ms | 0.107 / 0.094 ms |
+| Mixed | 17.0 / 17.0 ms | 17.5 / 17.2 ms | 0.111 / 0.093 ms |
+| Mixed + grass + hurricane | 17.0 / 16.9 ms | 17.2 / 17.3 ms | 0.155 / 0.143 ms |
+
+All ten windows averaged about 60 FPS, with zero intervals above 50 or 300 ms.
+CPU submission p99 was at most 0.3 ms in these final windows; the largest single
+submission was 3.7 ms in the revised hurricane case (baseline 1.3 ms). Small mean
+differences vary by run and do not establish a speed improvement. Submission
+timing brackets `app.render()` without waiting for GPU completion. Increased
+foliage coverage may increase fragment work; no GPU trace or startup-time
+comparison was collected.
+
+Display objects before/after stayed **654** for each dominant-species fixture,
+**718** mixed, and **1,366** mixed/grass/hurricane. Rain particles are separate
+(400 in hurricane). All generated atlas dimensions, frame counts and retained
+sources match. No textures or Graphics geometry regenerated during samples.
+The mushroom margin check initially failed at 16% enlargement; the 0.94 bake
+anchor above corrected it, and all final atlas/pixel checks pass.
+
+All **36 standard JavaScript suites** pass (39 Node files including one harness
+and two optional browser skips). The optional real-Chrome cache/pixel suite
+passes both homepage routes, SSE fixture growth, inspection, DPR 2/resizes,
+reconnection and retained live-diagnostic/Canvas/stress controls. .NET app/checks
+build and backend checks pass using an isolated output directory:
+
+```sh
+dotnet build tests/PacketGarden.Checks/PacketGarden.Checks.csproj --no-restore -o artifacts/plant-art/checks
+dotnet artifacts/plant-art/checks/PacketGarden.Checks.dll
+```
+
+The build retains NU1900 because NuGet vulnerability data was unavailable;
+there were no build errors. `git diff --check` passes.
+
+This is a static synthetic rendering comparison, not a new live-NATS soak or
+GPU/compositor trace. Finite silhouettes can repeat in dense rows. Serrations
+become subtle in the smaller viewport; dark blackthorn foliage can recede against
+grass. Historical stutter uncertainty and the known teardown exception below
+remain unresolved. No commits or deployment are part of this artwork review.
+
 # Pixi vine artwork review (2026-10-20, uncommitted)
 
 The shared default/live renderer now uses muted sage, moss, straw and silver
