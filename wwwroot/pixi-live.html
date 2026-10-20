@@ -5,7 +5,8 @@
   <title>PacketGarden · Pixi live soak</title>
   <link rel="stylesheet" href="pixi-stress.css">
   <link rel="stylesheet" href="garden-ui.css">
-  <link rel="stylesheet" href="pixi-live.css">
+  <link rel="stylesheet" href="pixi-live.css?v=audio-1">
+  <script src="garden-audio.js?v=audio-1" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
@@ -14,10 +15,10 @@
   <script src="garden-ambient.js" defer></script>
   <script src="garden-interaction.js" defer></script>
   <script src="garden-ui-core.js" defer></script>
-  <script src="pixi-live-ui.js" defer></script>
+  <script src="pixi-live-ui.js?v=audio-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-ecology.js?v=grass-art-2c-1" defer></script>
-  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=network-stats-1" defer></script>
+  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=audio-1" defer></script>
 </head>
 <body>
   <main>
@@ -37,6 +38,11 @@
       <label><input id="probes" type="checkbox" checked> Probe dots</label>
       <label class="recent-activity-toggle" for="show-recent-activity"><input id="show-recent-activity" type="checkbox" checked> Recent events</label>
       <button id="reset" type="button">Reset measurements</button>
+      <div class="pixi-sound-controls" role="group" aria-label="Garden sound controls">
+        <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
+        <label for="sound-volume">Volume</label>
+        <input id="sound-volume" type="range" min="0" max="100" value="12" aria-label="Growth sound volume">
+      </div>
     </section>
     <p id="weather-status" role="status">Live weather connecting</p>
     <div id="probe-track" aria-label="CSS red and Pixi green motion probes"><span id="css-probe"></span></div>
@@ -61,7 +67,7 @@
       three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
       Overlap seeding replaces local garden state and cycles visitor types over one Amanita and mutation.
       Click priority: visitors, Amanita, active mutation, then cell inspection. Score stays zero.
-      Audio and gnomes remain deferred; Pixi artwork is approximate.
+      Sound is optional and starts Off; gnomes remain deferred. Pixi artwork is approximate.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>
   <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>

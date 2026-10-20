@@ -12,3 +12,7 @@
 .pixi-default .network-activity { flex-basis: 100%; display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; }
 .pixi-default .network-activity > span { white-space: nowrap; }
 #network-events-minute, #network-events-hour { color: #e1e6d7; font-variant-numeric: tabular-nums; }
+.pixi-sound-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.pixi-sound-controls button { padding: 4px 8px; }
+.pixi-sound-controls #sound-volume { width: 90px; min-width: 0; padding: 0; }
+.pixi-sound-controls #sound-volume:focus-visible { outline: 2px solid #e1e6d7; outline-offset: 3px; }

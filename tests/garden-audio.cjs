@@ -2,34 +2,7 @@
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
 
 function createGarden(options = {}) {
-  const state = { now:0, contexts:[], gains:[], oscillators:[], resumes:0, ...options };
-  const param = () => ({ value:0, events:[],
-    setValueAtTime(value,time) { this.value=value; this.events.push(['set',value,time]); },
-    linearRampToValueAtTime(value,time) { this.events.push(['linear',value,time]); },
-    exponentialRampToValueAtTime(value,time) { this.events.push(['exponential',value,time]); }
-  });
-  class AudioContext {
-    constructor() {
-      if (state.failConstructor) throw new Error('Unavailable audio device');
-      this.currentTime=0; this.state='suspended'; this.destination={}; state.contexts.push(this);
-    }
-    resume() {
-      state.resumes++;
-      if (state.failResume) return Promise.reject(new Error('Resume failed'));
-      if (state.deferredResume) return new Promise(resolve => { state.finishResume=()=>{this.state='running';resolve();}; });
-      this.state='running'; return Promise.resolve();
-    }
-    createGain() {
-      const gain={gain:param(),connect(){},disconnect(){this.disconnected=true;}};
-      state.gains.push(gain); return gain;
-    }
-    createOscillator() {
-      if (state.failPlayback) throw new Error('Playback failed');
-      const oscillator={frequency:param(),connect(){},disconnect(){this.disconnected=true;},
-        start(time){this.startTime=time;}, stop(time){this.stopTime=time;}};
-      state.oscillators.push(oscillator); return oscillator;
-    }
-  }
+  const {state, AudioContext} = require('./audio-context.cjs')(options);
   const html=fs.readFileSync('wwwroot/canvas.html','utf8');
   const volume=html.match(/id="sound-volume"[^>]*value="([^"]+)"/)[1];
   const elements=new Map(), sources=[];
@@ -123,11 +96,13 @@ module.exports=async function checkAudio() {
   element('#sound-volume').value='200'; element('#sound-volume').handlers.input(); assert.equal(master.gain.value,1);
   element('#sound-volume').value='invalid'; element('#sound-volume').handlers.input(); assert.equal(master.gain.value,0);
 
-  // All ordinary identities are distinct; burst suppression has no backlog or lost specimens.
+  // Existing ordinary identities remain; wirefern shares vine. Bursts have no backlog or lost specimens.
   const ordinary=createGarden(); await ordinary.toggle();
-  for (const [index,type] of ['flower','mushroom','broadleaf','vine','redbloom','weed'].entries()) ordinary.grow(type,index*400);
+  for (const [index,type] of ['flower','mushroom','broadleaf','vine','redbloom','weed','wirefern'].entries()) ordinary.grow(type,index*400);
   const frequencies=ordinary.state.oscillators.map(o=>o.frequency.value);
   assert(frequencies.includes(660) && frequencies.includes(180) && frequencies.includes(262) && frequencies.includes(220) && frequencies.includes(440) && frequencies.includes(146));
+  assert.deepEqual(ordinary.state.oscillators.slice(-2).map(o=>o.frequency.value),[220,660],'wirefern reuses the existing vine-family identity');
+  assert.doesNotThrow(() => ordinary.run('window.PacketGardenAudio.create({window}).maybePlayCollectionSound()'), 'missing optional sound controls are safe and muted');
   const burst=createGarden(); await burst.toggle();
   for(let event=0;event<30;event++) burst.grow('flower',event*10);
   assert.equal(burst.run('gardenState.specimens.length'),30);

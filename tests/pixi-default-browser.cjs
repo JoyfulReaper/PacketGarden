@@ -20,11 +20,23 @@ async function run() {
   await fs.mkdir(output, {recursive:true});
   let promoted = false, connections = 0;
   const streams = new Set(), requests = [];
-  const capture = `const init = PIXI.Application.prototype.init;
+  const capture = `window.__gardenAudioContexts = []; window.__gardenAudioTones = []; window.__gardenAudioGains = [];
+    const NativeAudioContext = window.AudioContext;
+    window.AudioContext = class extends NativeAudioContext {
+      constructor(...args) { super(...args); window.__gardenAudioContexts.push(this); }
+      createOscillator() { const node = super.createOscillator(); window.__gardenAudioTones.push(node); return node; }
+      createGain() { const node = super.createGain(); node.testSchedules = [];
+        const set = node.gain.setValueAtTime.bind(node.gain);
+        node.gain.setValueAtTime = (value, time) => { node.testSchedules.push({value,time}); return set(value,time); };
+        window.__gardenAudioGains.push(node); return node; }
+    };
+    const init = PIXI.Application.prototype.init;
     PIXI.Application.prototype.init = function(...args) {
       window.__gardenTestApp = this; window.__gardenTestPaints = 0;
       const render = this.render;
-      this.render = function(...args) { window.__gardenTestPaints++; return render.apply(this,args); };
+      window.__gardenTestRenderMs = [];
+      this.render = function(...args) { const at = performance.now(); window.__gardenTestPaints++;
+        const value = render.apply(this,args); if (window.__gardenTestRenderMs.length < 240) window.__gardenTestRenderMs.push(performance.now()-at); return value; };
       if (new URLSearchParams(location.search).has('fail-init')) return Promise.reject(new Error('WebGL unavailable (test)'));
       return init.apply(this,args);
     };`;
@@ -68,7 +80,8 @@ async function run() {
   const origin = `http://127.0.0.1:${server.address().port}`;
   let browser;
   try {
-    browser = await chromium.launch({channel:process.env.PACKETGARDEN_BROWSER_CHANNEL || 'chrome', headless:true});
+    browser = await chromium.launch({channel:process.env.PACKETGARDEN_BROWSER_CHANNEL || 'chrome', headless:true,
+      ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
     const warm = await context.newPage();
@@ -111,8 +124,17 @@ async function run() {
       weather({level:'quiet',eventsPerMinute:29.8,eventsLastHour:4322,hasSnapshot:true});
       await page.waitForFunction(() => document.querySelector('#network-events-hour').textContent === new Intl.NumberFormat().format(4322));
       assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');
+      assert.equal(await page.locator('#sound-toggle').textContent(),'Sound: Off');
+      assert.equal(await page.locator('#sound-volume').inputValue(),'12');
+      assert.equal(await page.evaluate(() => __gardenAudioContexts.length),0,'no context before enable gesture');
+      await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
+      await page.waitForFunction(() => __gardenAudioContexts.length === 1 && __gardenAudioContexts[0].state === 'running');
+      // Native AudioParam.value can retain a rendered quantum's value while the
+      // graph is inactive. Check the actual scheduled target, not that stale getter.
+      await page.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===.12);
       broadcast({specimenType:'flower',listenPort:53,vigor:2,sensor:'browser-fixture',seenCount:'12'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 1);
+      await page.waitForFunction(() => __gardenAudioTones.length === 1);
       await page.waitForFunction(before => window.__gardenTestPaints > before+2,state.paints);
       const point = await specimenPoint(page);
       const grown = png(await page.locator('#view canvas').screenshot());
@@ -139,6 +161,9 @@ async function run() {
         if (viewport.width === 320) await page.screenshot({path:path.join(output,route === '/' ? 'root-small-stats.png' : 'index-small-stats.png')});
       }
       const beforeReconnect = connections;
+      assert.equal(await page.evaluate(() => __gardenAudioTones.length),1,'inspection and resizing are silent');
+      await page.getByRole('button',{name:'Sound: On',exact:true}).click();
+      assert.equal(await page.evaluate(() => __gardenAudioGains[0].testSchedules.at(-1).value),0,'Off immediately schedules master mute');
       for (const stream of streams) stream.destroy();
       await page.waitForFunction(() => document.querySelector('#connection').textContent === 'disconnected/reconnecting');
       await page.waitForFunction(() => document.querySelector('#connection').textContent === 'connected',null,{timeout:15000});
@@ -150,16 +175,50 @@ async function run() {
       await page.waitForFunction(() => document.querySelector('#network-events-hour').textContent === '0');
       broadcast({specimenType:'flower',listenPort:53,vigor:0,sensor:'reconnected',seenCount:'2'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 2);
+      assert.equal(await page.evaluate(() => __gardenAudioTones.length),1,'muted growth and reconnect are silent');
       assert.deepEqual(errors,[]); await page.close();
     }
     assert(requests.some(r => r.promoted && /^\/pixi-live\.js\?v=/.test(r.url)));
     assert(requests.some(r => r.promoted && /^\/pixi-live\.css\?v=/.test(r.url)));
     const diagnostic = await context.newPage();
+    const diagnosticErrors=[]; diagnostic.on('pageerror',error=>diagnosticErrors.push(String(error.stack)));
     await diagnostic.goto(origin + '/pixi-live.html');
+    assert.equal(await diagnostic.evaluate(() => __gardenAudioContexts.length),0);
+    await diagnostic.getByRole('button',{name:'Sound: Off',exact:true}).click();
+    await diagnostic.waitForFunction(() => __gardenAudioContexts.length === 1 && __gardenAudioContexts[0].state === 'running');
+    await diagnostic.getByRole('slider',{name:'Growth sound volume'}).fill('25');
+    await diagnostic.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===.25);
     await diagnostic.getByLabel('Weather source',{exact:true}).selectOption('manual');
     await diagnostic.getByLabel('Manual weather',{exact:true}).selectOption('botnet_hurricane');
     await diagnostic.getByRole('button',{name:'Seed dense garden + ecology (local simulated)',exact:true}).click();
     await diagnostic.waitForFunction(() => document.querySelector('#hud').textContent.includes('Specimens 640/640') && document.querySelector('#hud').textContent.includes('rain particles 400'));
+    assert.equal(await diagnostic.evaluate(() => __gardenAudioTones.length),0,'native dense fixture seeding is silent');
+    const soundOn=await sample(diagnostic);
+    await diagnostic.getByRole('button',{name:'Sound: On',exact:true}).click();
+    const soundOff=await sample(diagnostic);
+    await diagnostic.getByRole('button',{name:'Sound: Off',exact:true}).click();
+    const soundOnAgain=await sample(diagnostic);
+    const timing={scene:'640 mixed specimens + dense ecology + manual hurricane; no incoming growth',soundOn,soundOff,soundOnAgain};
+    await fs.writeFile(path.join(output,'audio-timing.json'),JSON.stringify(timing,null,2)); console.log(JSON.stringify(timing));
+    assert.equal(await diagnostic.evaluate(() => __gardenAudioContexts.length),1);
+    await diagnostic.getByRole('button',{name:'Seed overlap fixture (local simulated)',exact:true}).click();
+    for(const [layer,message] of [[8,'You caught a ladybug. +0 points'],[7,'You found Amanita muscaria. +0 points'],[6,'You collected some weed. +0 points']]) {
+      const point=await diagnostic.evaluate(index=>{
+        const app=__gardenTestApp,root=app.stage.children[0],sprite=root.children[index].children[0],r=app.canvas.getBoundingClientRect();
+        return {x:r.left+(root.position.x+sprite.position.x*root.scale.x)*r.width/app.renderer.screen.width,
+          y:r.top+(root.position.y+(sprite.position.y-(index===6?12:0))*root.scale.y)*r.height/app.renderer.screen.height};
+      },layer);
+      await diagnostic.mouse.click(point.x,point.y);
+      await diagnostic.waitForFunction(text=>document.querySelector('#collection-message').textContent===text,message);
+    }
+    assert.equal(await diagnostic.evaluate(() => __gardenAudioTones.length),3,'one quiet tone per successful collection');
+    assert.equal(await diagnostic.locator('#garden-score').textContent(),'Score: 0');
+    await diagnostic.setViewportSize({width:320,height:700});
+    await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
+    assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
+    await diagnostic.screenshot({path:path.join(output,'diagnostic-audio-small.png')});
+    assert(await diagnostic.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'diagnostic audio controls fit narrow viewport');
+    assert.deepEqual(diagnosticErrors,[]);
     await diagnostic.close();
     const canvas = await context.newPage(); await canvas.goto(origin + '/canvas.html');
     await canvas.getByRole('button',{name:'Generate fake DNS event',exact:true}).click();
@@ -173,7 +232,7 @@ async function run() {
     assert(await unsupported.locator('#connection').isVisible());
     assert(await unsupported.getByRole('link',{name:'Canvas garden',exact:true}).isVisible());
     await unsupported.close();
-    console.log('PASS: real Chrome HTTP-cache upgrade, root/index soil+grid pixels, SSE-only actual hour/hour-only updates/waiting/unavailable/zero, 320px readable activity, Score 0, visible growth, inspection, DPR 2/resizes/reconnection, diagnostic/Canvas/stress pages.');
+    console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
   }
@@ -185,6 +244,17 @@ async function run() {
       return {x:r.left+x*r.width/app.renderer.screen.width,y:r.top+y*r.height/app.renderer.screen.height,
         pixelX:Math.round(x*app.canvas.width/app.renderer.screen.width),pixelY:Math.round(y*app.canvas.height/app.renderer.screen.height)};
     });
+  }
+  async function sample(page) {
+    return page.evaluate(()=>new Promise(resolve=>{
+      const app=__gardenTestApp,intervals=[];let last=null;__gardenTestRenderMs=[];
+      const tones=__gardenAudioTones.length;
+      const tick=t=>{if(last!==null)intervals.push(t.lastTime-last);last=t.lastTime;if(intervals.length<120)return;
+        app.ticker.remove(tick);
+        const stats=values=>({average:values.reduce((a,b)=>a+b,0)/values.length,worst:Math.max(...values)});
+        resolve({frameMs:stats(intervals),cpuSubmissionMs:stats(__gardenTestRenderMs),frames:intervals.length,
+          newAudioNodes:__gardenAudioTones.length-tones});};app.ticker.add(tick);
+    }));
   }
   // Chromium screenshot PNG decoder using only Node built-ins (8-bit RGB/RGBA).
   function png(bytes) {

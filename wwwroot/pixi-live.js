@@ -319,6 +319,7 @@
     const ecologyCore = window.PacketGardenEcology, ecologyPresentation = window.PacketGardenPixiEcology;
     const ambientCore = window.PacketGardenAmbient, ambientPresentation = window.PacketGardenPixiAmbient;
     const interaction = window.PacketGardenInteraction;
+    const sound = typeof gardenSound === 'undefined' ? null : gardenSound;
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
     await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
@@ -330,9 +331,12 @@
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
       onChange(change) { ambientView.change(change, Date.now()); } });
     let ui;
-    const model = core.createModel(view, { onLive: source => ambient.acceptLiveSpecimen(source),
+    const model = core.createModel(view, { onLive: source => {
+      ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
+    },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
-    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName });
+    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
+      onCollected: () => sound?.maybePlayCollectionSound() });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });

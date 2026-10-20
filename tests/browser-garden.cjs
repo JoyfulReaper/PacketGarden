@@ -77,7 +77,7 @@ function createGarden(options = {}) {
   vm.createContext(sandbox);
   // Exercise the exact production load order, including color/inspection wrappers.
   const scripts = [...html.matchAll(/<script src="([^"]+)" defer><\/script>/g)];
-  for (const [, file] of scripts) vm.runInContext(fs.readFileSync('wwwroot/' + file, 'utf8'), sandbox);
+  for (const [, file] of scripts) vm.runInContext(fs.readFileSync('wwwroot/' + file.split('?')[0], 'utf8'), sandbox);
   const run = code => vm.runInContext(code, sandbox);
   run('const originalPort22Mutation = maybeSchedulePort22Mutation');
   const forceRoll = roll => run(`maybeSchedulePort22Mutation = specimen => originalPort22Mutation(specimen, ${roll})`);

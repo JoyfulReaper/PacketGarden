@@ -1,7 +1,5 @@
 // Browser-local, event-driven presentation. No device/context is needed while off.
-const gardenSound = (() => {
-  const toggle = document.querySelector("#sound-toggle");
-  const volumeControl = document.querySelector("#sound-volume");
+function createGardenSound({ window, toggle = null, volumeControl = null }) {
   const sounds = new Map([
     ["flower", { frequency: 660, wave: "sine", duration: 0.14 }],
     ["mushroom", { frequency: 180, wave: "triangle", duration: 0.12 }],
@@ -13,6 +11,8 @@ const gardenSound = (() => {
     ["crystalfungus", { frequency: 1046, wave: "sine", duration: 0.22, notes: [1, 1.5, 2] }],
     ["blackthorn", { frequency: 196, wave: "triangle", duration: 0.24, notes: [1, 1.5, 2], overtone: 2 }]
   ]);
+  // Wirefern keeps the existing vine-family pluck rather than new synthesis.
+  sounds.set("wirefern", sounds.get("vine"));
   const ordinaryCooldownMs = 400;
   const rareCooldownMs = 900;
   // Oscillator envelopes need substantially more headroom than the original
@@ -23,12 +23,13 @@ const gardenSound = (() => {
   let audio = null;
   let master = null;
   let enabled = false;
-  let volume = Number(volumeControl.value) / 100;
+  let volume = Number(volumeControl?.value ?? 12) / 100;
   let activation = 0;
   let lastOrdinaryAt = -Infinity;
   let lastRareAt = -Infinity;
 
   function updateToggle(unavailable = false) {
+    if (!toggle) return;
     toggle.textContent = unavailable ? "Sound unavailable" : enabled ? "Sound: On" : "Sound: Off";
     toggle.setAttribute("aria-pressed", String(enabled));
   }
@@ -134,8 +135,14 @@ const gardenSound = (() => {
     } catch { reportUnavailable(); }
   }
 
-  toggle.addEventListener("click", () => setSoundEnabled(!enabled));
-  volumeControl.addEventListener("input", () => setSoundVolume(volumeControl.value));
+  toggle?.addEventListener("click", () => setSoundEnabled(!enabled));
+  volumeControl?.addEventListener("input", () => setSoundVolume(volumeControl.value));
   updateToggle();
   return { maybePlayGrowthSound, maybePlayGnomeSound, maybePlayCollectionSound };
-})();
+}
+
+// Both page types bind the same controls to one local controller. Context creation
+// stays inside the explicit enable handler, never inside growth or rendering.
+window.PacketGardenAudio = { create: createGardenSound };
+const gardenSound = createGardenSound({ window, toggle: document.querySelector("#sound-toggle"),
+  volumeControl: document.querySelector("#sound-volume") });

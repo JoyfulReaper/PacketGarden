@@ -71,7 +71,8 @@ explicit fallback rather than switched to automatically.
 
 `/canvas.html` preserves the original Canvas garden, including manual and
 automatic fake traffic, manual weather/intensity controls, optional audio,
-gnomes, and `?perf=1` diagnostics. Pixi still omits audio and gnomes and retains
+gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
+and collection audio; gnomes remain Canvas-only. Pixi retains
 its existing approximate artwork/palettes. No artwork or model rules changed
 as part of this promotion.
 
@@ -151,9 +152,9 @@ Live click inspection deliberately receives a bounded sensor label and exact TCP
 ## Status
 
 The default Pixi garden shares the existing logical rules and interactions with
-Canvas. The detailed Canvas artwork, fake controls, audio and gnome behavior
-described below remain available at `/canvas.html`; Pixi's artwork is approximate
-and audio/gnomes are not implemented there.
+Canvas, including optional growth and collection audio. The detailed Canvas
+artwork, fake controls and gnome behavior described below remain available at
+`/canvas.html`; Pixi's artwork is approximate and gnomes are not implemented there.
 
 All five initial MVP mappings are implemented: DNS flowers, Gopher mushrooms,
 HTTP broad-leaf plants, SSH thorny vines, and brief port-22-probe red
@@ -375,13 +376,26 @@ Heavy rain and storm levels increase density, speed, streak length, opacity, and
 soil darkening sharply. Hurricane rain has strong horizontal drift and diagonal
 streaks. These remain visual effects, without lightning, flashing, or damage.
 
-Optional browser-local Web Audio growth sounds start **Off**. Click **Sound: Off**
+Optional browser-local Web Audio on Canvas and both Pixi pages starts **Off**. Click **Sound: Off**
 to enable them; the volume slider starts at **12%**. Successful real and fake
 specimen spawns share subtle species tones. Ghostbloom, crystal fungus, and
 blackthorn use gentle chime flourishes reflecting artistic rarity, not security
 alerts. Ordinary sounds have a 400 ms cooldown and rare flourishes an independent
 900 ms cooldown; suppressed sounds are dropped while growth continues. Sound
 preferences are not saved, and weather has no continuous audio.
+
+All pages use the same `garden-audio.js` controller and synthesis, with no device
+or AudioContext created before an explicit enable gesture. Wirefern reuses the
+existing vine-family pluck (its former missing sound entry is now covered).
+Pixi growth audio follows only successfully accepted real SSE spawns/replacements;
+development fixture seeding, dropped/paused/invalid events, reconnects, redraws
+and ordinary inspection are silent. Successful curiosity, Amanita and collectible
+weed interactions use the existing quiet collection pluck, once per removal.
+Sound Off mutes the master immediately, zero volume schedules no tones, and device
+failures leave growth/rendering/clicking intact. The existing gnome sound methods
+remain available for future Pixi integration; no gnomes or weather audio were added.
+Focused parity/integration checks run with `node tests/pixi-audio.cjs` alongside
+`node tests/garden-audio.cjs`.
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
 5-second timeout. It trusts the source level and exposes `level`,

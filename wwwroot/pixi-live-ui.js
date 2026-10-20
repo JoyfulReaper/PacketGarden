@@ -4,7 +4,7 @@
   const common = typeof module !== 'undefined' && module.exports;
   const interaction = common ? require('./garden-interaction.js') : window.PacketGardenInteraction;
   const text = common ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
-  function createUi({ document, window, garden, ambient, colorName, now = Date.now }) {
+  function createUi({ document, window, garden, ambient, colorName, now = Date.now, onCollected = () => {} }) {
     const element = id => document.querySelector(`#${id}`);
     const card = element('specimen-card'), title = element('specimen-card-title'), closeButton = element('specimen-card-close');
     const fields = Object.fromEntries(['source','sensor','port','seen-count','vigor','color','age','mutation'].map(id => [id, element(`specimen-${id}`)]));
@@ -62,6 +62,7 @@
       if (removedItem) {
         if (hit.kind === 'mutation') removed(item);
         showMessage(text.messages[hit.kind === 'mutation' ? item.mutation.type : item.type], at);
+        onCollected();
       }
       return hit;
     }

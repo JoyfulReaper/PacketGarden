@@ -17,17 +17,23 @@ for (const id of ['hud','seed','clear','seed-ambient','seed-mutations','seed-pen
 assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/);
 assert.match(read('about.html'), /href="index.html"/);
 assert.match(read('canvas.html'), /src="garden.js"/);
-assert(!scripts.includes('garden.js')); assert(!scripts.includes('garden-audio.js'));
+assert(!scripts.includes('garden.js'));
+for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
+  assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=audio-`).test(url)),`${file} audio integration must bypass stale cached scripts`);
 
-async function start(failInit = false) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false } = {}) {
   let now = 100000, app, observer;
+  const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
+  let model;
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
-  for (const [, id] of html.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
-    textContent: '', hidden: ['#specimen-card','#collection-message'].includes(`#${id}`), checked: true,
+  for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
+    textContent: id === 'garden-score' ? 'Score: 0' : '', hidden: ['#specimen-card','#collection-message'].includes(`#${id}`), checked: true,
+    value: id === 'sound-volume' ? '12' : id === 'weather-source' ? 'live' : 'quiet', attributes: {},
     style: {}, handlers: new Map(), children: [], offsetWidth: 280, offsetHeight: 240,
     appendChild(child) { this.children.push(child); },
     getBoundingClientRect: () => ({left:40,top:70,width:1218,height:650}),
     addEventListener(name, handler) { this.handlers.set(name, handler); },
+    setAttribute(name, value) { this.attributes[name] = value; },
     removeEventListener(name) { this.handlers.delete(name); }
   });
   const element = id => elements.get(id) ?? null;
@@ -52,23 +58,27 @@ async function start(failInit = false) {
   }
   const doc = {hidden:false, querySelector:element, currentScript:null,
     body:{classList:{toggle(){}}}, addEventListener:(name, fn) => docHandlers.set(name, fn)};
-  const context = {document:doc, Date:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
+  const context = {document:doc, Date:{now:() => now}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
     EventSource:Source, console:{error:error => errors.push(error)},
     ResizeObserver:class {constructor(fn){observer=this;this.callback=fn;} observe(){} disconnect(){this.disconnected=true;}},
-    window:{PIXI:{...h.P,Application},devicePixelRatio:1,innerWidth:1280,innerHeight:900,
+    window:{PIXI:{...h.P,Application},AudioContext,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
       addEventListener:(name,fn) => winHandlers.set(name,fn), removeEventListener:name => winHandlers.delete(name)}};
   vm.createContext(context);
-  for (const script of scripts.filter(name => !name.startsWith('vendor/'))) {
+  for (const script of pageScripts.filter(name => !name.startsWith('vendor/'))) {
     doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && script === 'pixi-stress.js'};
     vm.runInContext(read(assetPath(script)), context, {filename:script});
-    if (script === 'pixi-stress.js') context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+    if (script === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+    if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
+      const create = context.window.PacketGardenPixiLiveCore.createModel;
+      context.window.PacketGardenPixiLiveCore.createModel = (...args) => { model = create(...args); return model; };
+    }
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;}, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
-(async () => {
+async function checkDefault() {
   const g = await start();
   assert.deepEqual(g.errors, []); assert(g.app.active); assert.equal(g.app.options.preference, 'webgl');
   assert.equal(g.sources.length, 1); assert.equal(g.sources[0].url, '/api/garden/events');
@@ -148,4 +158,6 @@ async function start(failInit = false) {
   assert.match(failed.element('#connection').textContent,/Garden initialization failed: WebGL unavailable/);
   assert.equal(failed.sources.length,0); assert.equal(failed.errors.length,1);
   console.log('PASS: default Pixi strict DOM/load order, no dev controls/metrics/fake traffic/probe, one SSE, weather/reconnect, inspection/collections, resize/DPR, visibility/expiry, teardown and visible WebGL failure.');
-})().catch(error => { console.error(error); process.exitCode = 1; });
+}
+module.exports = { start };
+if (require.main === module) checkDefault().catch(error => { console.error(error); process.exitCode = 1; });

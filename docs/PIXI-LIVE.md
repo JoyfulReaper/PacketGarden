@@ -1,3 +1,66 @@
+# Shared optional sound restored (2026-10-20)
+
+`/`, `/index.html` and `/pixi-live.html` now expose Sound: Off/On and a 12%-default
+volume slider. Canvas and Pixi load the same `garden-audio.js`: its reusable
+`PacketGardenAudio.create` factory accepts optional controls, and the existing
+`gardenSound` controller binds one instance per page. No AudioContext is created
+until the enable click. The same species synthesis, pitch variation, 400ms
+ordinary / 900ms rare cooldowns, three-note rare chimes, quiet collection pluck,
+master volume, immediate mute and failure/activation-race handling are retained.
+Wirefern previously had no audio entry; it now reuses the existing vine-family
+pluck on both renderers, without new oscillator settings. Gnome cues remain in
+the controller for later use; Pixi gnomes and weather audio are not implemented.
+
+Growth audio is attached to the existing successful real-event `onLive` callback
+after model acceptance, including forced replacements. Invalid/paused/saturated
+events, lifecycle updates, removals, reconnects, rendering and all development
+fixture buttons remain silent. `pixi-live-ui.js` exposes an optional `onCollected`
+callback invoked only after successful removal of a curiosity, Amanita or active
+weed mutation; inspection and failed removal are silent. Messages, priority and
+Score: 0 are unchanged. No audio code runs in the model, drawing or ticker.
+
+Both Pixi pages retain identical script order and advance the audio, UI adapter,
+renderer and stylesheet asset versions. Canvas advances its shared audio URL.
+Missing optional sound controls are safe. No preferences are persisted.
+
+`tests/pixi-audio.cjs` exercises both actual Pixi entry points with shared Web
+Audio test doubles, including every species, cooldown boundaries, dropped/paused
+growth, replacement, all three collection paths, silent fixtures/inspection/
+ticker/resizing, missing controls, unavailable devices, zero volume and rapid
+activation changes. `tests/garden-audio.cjs` retains Canvas/gnome coverage and
+checks wirefern compatibility. The optional installed-Chrome cache/pixel suite
+also exercises native Web Audio with user-gesture autoplay policy, actual clicks,
+volume/mute, silent seeding, collections and small-screen controls. This verifies
+native scheduling, not audibility or speaker output; local listening remains a
+manual check. Historical stuttering and the known teardown exception below remain
+unresolved; audio restoration is not a performance root-cause claim.
+
+Validation: all default JavaScript checks, .NET build/backend checks and the
+installed headless-Chrome suite passed. Chrome enforced user-gesture autoplay
+policy and checked both default URLs plus the diagnostic page, native growth
+and three collection tones, scheduled volume/mute changes, one context, silent
+fixture seeding/inspection, 320px controls, stats, reconnection and retained
+Canvas/stress pages. Native `AudioParam.value` can reflect the last processed
+render quantum while inactive, so native volume assertions observe calls to
+`setValueAtTime`; synthesis is not replaced with a fake in Chrome.
+
+Three 120-frame samples on the same dense mixed/grass/puddle/hurricane fixture,
+with no incoming growth, gave:
+
+| Sound | Mean / worst frame interval | Mean / worst CPU submission |
+| --- | --- | --- |
+| On | 16.68 / 16.90ms | 0.285 / 0.800ms |
+| Off | 16.68 / 16.80ms | 0.257 / 0.500ms |
+| On again | 16.68 / 16.90ms | 0.257 / 0.600ms |
+
+All three scheduled zero audio nodes. The first On CPU mean was 0.028ms above
+Off; the repeated On mean was within 0.001ms. These short headless samples show
+no recurring audio scheduling, not guaranteed performance equivalence, GPU
+completion or real speaker-output cost during sustained playback. Deterministic
+checks separately exercise active growth bursts, cooldowns and bounded node
+lifetimes. The existing NU1900 vulnerability-feed warning remains. Browser
+screenshots/timing evidence is local under ignored `artifacts/homepage-browser/`.
+
 # Aggregate network activity restored (2026-10-20)
 
 The default Pixi footer now shows **Observatory traffic**: Events/min explicitly
