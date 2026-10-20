@@ -193,6 +193,12 @@ or kill plants.
 Night should remain readable, with darker ambience and more visible glows rather
 than realistic darkness that hides the garden.
 
+As a separate future experiment, the two most intense aggregate weather labels
+(`botnet_thunderstorm` and `botnet_hurricane`) might gain restrained, occasional
+lightning and optional thunder. This is not implemented. Avoid strobing and allow
+lightning to be disabled; any thunder must respect explicit audio opt-in and mute.
+Neither effect should change ecology or be taken as evidence of a real attack.
+
 ## Inspection
 
 Interaction is deliberately minimal and watch-first.
@@ -229,7 +235,8 @@ Examples:
 - exact source-provided `seenCount == 1` -> optional short-lived first-seen curiosity;
 - long-lived connections -> slow-growing trees;
 - bursts of traffic -> rain, wind, spores, or pollen;
-- suspicious or noisy traffic -> invasive weeds only when backed by an appropriate higher-level signal;
+- ordinary TCPNoise rarity or the exact ports 420 and 42069 -> artistic weeds, without claiming suspicious or malicious activity;
+- a future trustworthy higher-level signal could separately influence invasive growth if that interpretation is explicitly supported;
 - uncommon protocol/port activity -> mutations or unusual species.
 
 The mappings do not need to be scientifically or technically literal. They should
