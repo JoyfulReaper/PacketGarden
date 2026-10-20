@@ -1,10 +1,11 @@
 const canvas = document.querySelector("canvas");
-const context = canvas.getContext("2d");
+let context = canvas.getContext("2d");
+const gardenPerf = typeof createGardenPerformanceDiagnostics === "function" ? createGardenPerformanceDiagnostics() : null;
 const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
 const fakeSshButton = document.querySelector("#fake-ssh");
-const fakeFailedAuthButton = document.querySelector("#fake-failed-auth");
+const fakePort22ProbeButton = document.querySelector("#fake-port22-probe");
 const automaticTrafficButton = document.querySelector("#automatic-traffic");
 const gardenStatus = document.querySelector("#garden-status");
 const weatherLevelControl = document.querySelector("#weather-level");
@@ -14,13 +15,16 @@ const weatherStatus = document.querySelector("#weather-status");
 let latestLiveWeather = null;
 let liveConnectionStatus = "Live weather connecting";
 
-weatherSourceControl.addEventListener("change", () => {
+function updateWeatherSource() {
   const live = weatherSourceControl.value === "live";
   weatherLevelControl.disabled = live;
   weatherIntensityControl.disabled = live;
   weatherStatus.textContent = live ? liveConnectionStatus : "Manual weather";
   if (live && latestLiveWeather) applyLiveWeather();
-});
+}
+
+weatherSourceControl.addEventListener("change", updateWeatherSource);
+updateWeatherSource();
 
 function applyLiveWeather() {
   Object.assign(weatherState, latestLiveWeather);
@@ -56,21 +60,53 @@ gardenEventSource.addEventListener("weather", message => {
 });
 gardenEventSource.addEventListener("garden", message => {
   try {
-    const event = JSON.parse(message.data);
-    if (event?.type === "port-hit" && Number.isInteger(event.port) && event.port >= 1 && event.port <= 65535) {
-      handleGardenEvent({ type: "port-hit", port: event.port });
-    }
+    handleLiveGardenEvent(JSON.parse(message.data));
   } catch { /* Ignore malformed frames; keep the stream and garden alive. */ }
 });
+
+function normalizeLiveGardenEvent(event) { return window.PacketGardenCore.normalizeGarden(event); }
+
+function handleLiveGardenEvent(frame) {
+  const event = normalizeLiveGardenEvent(frame);
+  if (!event) return null;
+  const receivedAt = Date.now();
+  const result = { specimen: null, outcome: "dropped" };
+  spawnSpecimen(event.specimenType, null, event.vigor, (specimen, outcome) => {
+    // Attach directly at creation, before the first draw/sound or secondary effects.
+    specimen.origin = { kind: "tcpnoise", sensor: event.sensor, listenPort: event.listenPort, seenCount: event.seenCount };
+    result.specimen = specimen;
+    result.outcome = outcome;
+  });
+  recordRecentGardenEvent({
+    kind: "tcpnoise", specimenType: event.specimenType, listenPort: event.listenPort,
+    sensor: event.sensor, seenCount: event.seenCount, receivedAt, outcome: result.outcome
+  });
+  if (result.specimen && event.listenPort === 22 && event.specimenType === "redbloom"
+    && typeof maybeSchedulePort22Mutation === "function") {
+    maybeSchedulePort22Mutation(result.specimen);
+  }
+  if (result.specimen) gardenAmbient.acceptLiveSpecimen(result.specimen, Date.now(), {
+    scheduleAmanita: source => { if (typeof maybeScheduleAmanitaDrop === "function") maybeScheduleAmanitaDrop(source); },
+    createCuriosity: source => { if (typeof createFirstSeenCuriosity === "function") createFirstSeenCuriosity(source); }
+  });
+  return result;
+}
+
+const fakeSourceNames = window.PacketGardenUiCore.fakeSourceNames;
+
+function recordRecentGardenEvent(entry) {
+  window.PacketGardenUiCore.appendRecent(gardenState.recentEvents, entry);
+  if (typeof renderRecentActivity === "function") renderRecentActivity();
+}
 
 const weatherState = { level: "quiet", eventsPerMinute: 1200 };
 const weatherLevels = new Map([
   ["quiet", { drops: 0, speed: 0, darkening: 0, length: 0, opacity: 0 }],
   ["drizzle", { drops: 16, speed: 120, darkening: 0.04, length: 5, opacity: 0.18 }],
   ["rain", { drops: 48, speed: 260, darkening: 0.09, length: 8, opacity: 0.35 }],
-  ["heavy_rain", { drops: 100, speed: 430, darkening: 0.14, length: 11, opacity: 0.4 }],
-  ["botnet_thunderstorm", { drops: 170, speed: 570, darkening: 0.18, length: 13, opacity: 0.42 }],
-  ["botnet_hurricane", { drops: 256, speed: 720, darkening: 0.22, length: 16, opacity: 0.44 }]
+  ["heavy_rain", { drops: 150, speed: 520, darkening: 0.18, length: 14, opacity: 0.48, drift: 60, slant: 5 }],
+  ["botnet_thunderstorm", { drops: 260, speed: 700, darkening: 0.26, length: 18, opacity: 0.56, drift: 150, slant: 11 }],
+  ["botnet_hurricane", { drops: 400, speed: 900, darkening: 0.34, length: 23, opacity: 0.62, drift: 360, slant: 25 }]
 ]);
 let weatherAnimationFrame = null;
 
@@ -79,19 +115,33 @@ function weatherIntensity() {
 }
 
 function updateWeatherAnimation() {
-  if (weatherAnimationFrame !== null) {
-    window.cancelAnimationFrame(weatherAnimationFrame);
-    weatherAnimationFrame = null;
-  }
-  drawGarden();
-  if (weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0) {
-    weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
-  }
+  if (typeof updatePuddleWeather === "function") updatePuddleWeather(Date.now());
+  if (weatherSoilDarkening() !== lastBaseSoilDarkening) { gardenBaseDirty = true; gardenPerf?.reason("weather-soil"); }
+  paintGardenBase();
+  drawGardenOverlay(true);
+  syncWeatherAnimation();
 }
 
-function animateWeather() {
-  drawGarden();
-  weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
+function animateWeather(frameTime = performance.now()) {
+  weatherAnimationFrame = null;
+  if (document.hidden) return;
+  gardenPerf?.raf(frameTime);
+  const now = Date.now();
+  if (gardenState.actors.length && typeof advanceGnomeIncident === "function") advanceGnomeIncident(now);
+  drawGardenOverlay(false, now, frameTime);
+  syncWeatherAnimation();
+}
+
+function syncWeatherAnimation() {
+  const needed = !document.hidden && gardenView !== null && ((weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0)
+    || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0 || gardenState.drops.length > 0 || gardenState.actors.length > 0);
+  if (!needed) gardenPerf?.pauseRaf();
+  if (!needed && weatherAnimationFrame !== null) {
+    window.cancelAnimationFrame(weatherAnimationFrame);
+    weatherAnimationFrame = null;
+  } else if (needed && weatherAnimationFrame === null) {
+    weatherAnimationFrame = window.requestAnimationFrame(animateWeather);
+  }
 }
 
 weatherLevelControl.addEventListener("change", () => {
@@ -104,60 +154,28 @@ weatherIntensityControl.addEventListener("input", () => {
 });
 
 // Fixed logical dimensions; resizing changes only the presentation scale.
-const gardenWidth = 960;
-const gardenHeight = 600;
-const cellSize = 30;
+const gardenCore = window.PacketGardenCore;
+const { width: gardenWidth, height: gardenHeight, cellSize } = gardenCore.dimensions;
 const margin = 16;
 const columns = gardenWidth / cellSize;
 const rows = gardenHeight / cellSize;
 
-// Lifecycle thresholds, measured from each specimen's creation.
-const flowerTimings = {
-  growingAfterMs: 15_000,
-  matureAfterMs: 45_000,
-  wiltingAfterMs: 180_000,
-  expiredAfterMs: 240_000
-};
-const mushroomTimings = {
-  growingAfterMs: 12_000,
-  matureAfterMs: 40_000,
-  decayingAfterMs: 240_000,
-  expiredAfterMs: 300_000
-};
-const broadleafTimings = {
-  growingAfterMs: 20_000,
-  matureAfterMs: 60_000,
-  fadingAfterMs: 300_000,
-  expiredAfterMs: 360_000
-};
-const vineTimings = {
-  growingAfterMs: 20_000,
-  matureAfterMs: 60_000,
-  dryingAfterMs: 480_000,
-  expiredAfterMs: 600_000
-};
-const redbloomTimings = {
-  wiltingAfterMs: 10_000,
-  expiredAfterMs: 30_000
-};
+// Lifecycle timing aliases remain for existing ecology/UI integrations.
+const flowerTimings = gardenCore.timings.flower;
+const mushroomTimings = gardenCore.timings.mushroom;
+const broadleafTimings = gardenCore.timings.broadleaf;
+const vineTimings = gardenCore.timings.vine;
+const wirefernTimings = gardenCore.timings.wirefern;
+const redbloomTimings = gardenCore.timings.redbloom;
+const weedTimings = gardenCore.timings.weed;
+const ghostbloomTimings = gardenCore.timings.ghostbloom;
+const crystalfungusTimings = gardenCore.timings.crystalfungus;
+const blackthornTimings = gardenCore.timings.blackthorn;
 const updateEveryMs = 250;
 
-const grassConfig = {
-  influenceChances: { flower: 0.45, broadleaf: 0.65 },
-  secondCellChance: 0.35,
-  sameCellChance: 0.5,
-  influenceRadius: 1,
-  growingAfterMs: 10_000,
-  matureAfterMs: 30_000,
-  fadingAfterMs: 20 * 60_000,
-  dyingAfterMs: 27 * 60_000,
-  deadAfterMs: 32 * 60_000,
-  expiredAfterMs: 35 * 60_000,
-  spreadEveryMs: 5_000,
-  spreadChance: 0.35
-};
+const gardenEcologyCore = window.PacketGardenEcology;
+const grassConfig = gardenEcologyCore.grassConfig;
 let nextGrassSpreadAt = 0;
-
 // Browser-only development traffic: about 30 events per minute at these defaults.
 const fakeTrafficConfig = {
   minDelayMs: 1_200,
@@ -167,7 +185,7 @@ const fakeTrafficConfig = {
     { type: "http", weight: 28 },
     { type: "ssh", weight: 10 },
     { type: "gopher", weight: 5 },
-    { type: "failed-auth", weight: 2 }
+    { type: "port22-probe", weight: 2 }
   ]
 };
 let automaticTrafficRunning = false;
@@ -178,155 +196,90 @@ const eventSpecimenTypes = new Map([
   ["gopher", "mushroom"],
   ["http", "broadleaf"],
   ["ssh", "vine"],
-  ["failed-auth", "redbloom"]
-]);
-// Destination-port aesthetics, not identification of a protocol/auth outcome.
-const portSpecimenTypes = new Map([
-  ...[80, 443, 8080, 8443].map(port => [port, "broadleaf"]),
-  ...[22, 2222, 23, 2323, 3389, 5900].map(port => [port, "vine"]),
-  ...[21, 445, 5432, 6379, 9200, 70].map(port => [port, "mushroom"]),
-  ...[25, 420, 42069, 53].map(port => [port, "flower"])
+  ["port22-probe", "redbloom"]
 ]);
 const speciesConfig = new Map([
   ["flower", { timings: flowerTimings, render: drawFlower, plural: "flowers" }],
   ["mushroom", { timings: mushroomTimings, render: drawMushroom, plural: "mushrooms" }],
   ["broadleaf", { timings: broadleafTimings, render: drawBroadleaf, singular: "broad-leaf plant", plural: "broad-leaf plants" }],
   ["vine", { timings: vineTimings, render: drawVine, plural: "vines" }],
-  ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }]
+  ["wirefern", { timings: wirefernTimings, render: drawWirefern, singular: "wirefern", plural: "wireferns" }],
+  ["redbloom", { timings: redbloomTimings, render: drawRedbloom, singular: "red bloom", plural: "red blooms" }],
+  ["weed", { timings: weedTimings, render: drawWeed, plural: "weeds" }],
+  ["ghostbloom", { timings: ghostbloomTimings, render: drawGhostbloom, plural: "ghostblooms" }],
+  ["crystalfungus", { timings: crystalfungusTimings, render: drawCrystalfungus, singular: "crystal fungus", plural: "crystal fungi" }],
+  ["blackthorn", { timings: blackthornTimings, render: drawBlackthorn, plural: "blackthorns" }]
 ]);
 
-/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "failed-auth" } | { type: "port-hit", port: number }} GardenEvent */
-const gardenState = { specimens: [], grassCells: [] };
-
-function resolveSpecimenType(event) {
-  if (event.type !== "port-hit") return eventSpecimenTypes.get(event.type);
-  if (!Number.isInteger(event.port) || event.port < 1 || event.port > 65535) return;
-  return portSpecimenTypes.get(event.port) ?? "flower";
-}
+/** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
+// Factories start empty; the ecology binding is installed before any growth/seed.
+let gardenEcology = null;
+const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random(), onChange(change) {
+  if (change.kind === 'added') gardenEcology?.removeGrassCell(change.specimen.column, change.specimen.row);
+  if (change.kind === 'removed') gardenMutations.removed(change.specimen, change.reason);
+}});
+const gardenMutations = window.PacketGardenMutations.createMutationModel({
+  garden: gardenModel, now: () => Date.now(), random: () => Math.random()
+});
+gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(),
+  isCellOccupied: (column, row) => gardenModel.byCell.has(row * columns + column), onChange({ kind }) {
+  gardenBaseDirty = true; gardenPerf?.reason(kind.startsWith('grass-') ? 'grass-change' : 'puddle-change');
+}});
+const gardenAmbient = window.PacketGardenAmbient.createAmbientModel({
+  now: () => Date.now(), random: () => Math.random(), getSpecimens: () => gardenModel.specimens
+});
+// Keep object references used by inspection and ecology; fixture assignment goes through the model too.
+const gardenState = {
+  get specimens() { return gardenModel.specimens; },
+  set specimens(entries) { gardenModel.seed(entries); },
+  get grassCells() { return gardenEcology.grassCells; },
+  set grassCells(entries) { gardenEcology.grassCells = entries; },
+  get puddles() { return gardenEcology.puddles; },
+  set puddles(entries) { gardenEcology.puddles = entries; },
+  get curiosities() { return gardenAmbient.curiosities; },
+  set curiosities(entries) { gardenAmbient.curiosities = entries; },
+  get drops() { return gardenAmbient.drops; },
+  set drops(entries) { gardenAmbient.drops = entries; },
+  actors: [], recentEvents: []
+};
 
 /** @param {GardenEvent} event */
 function handleGardenEvent(event) {
-  const specimenType = resolveSpecimenType(event);
+  const specimenType = eventSpecimenTypes.get(event.type);
   if (!specimenType) return;
+  const receivedAt = Date.now();
+  const result = { specimen: null, outcome: "dropped" };
+  spawnSpecimen(specimenType, event.type, 0, (specimen, outcome) => {
+    result.specimen = specimen;
+    result.outcome = outcome;
+  });
+  recordRecentGardenEvent({ kind: "simulated", eventType: event.type, specimenType, receivedAt, outcome: result.outcome });
+  return result;
+}
+
+// Existing callers still receive the specimen; live handling can observe the exact placement outcome.
+function spawnSpecimen(specimenType, grassEventType = null, vigor = 0, onCreated = null) {
+  if (!speciesConfig.has(specimenType)) return;
 
   updateGarden();
 
-  const occupiedCells = new Set(
-    gardenState.specimens.map(specimen => specimen.row * columns + specimen.column)
-  );
-  const emptyCells = [];
-  for (let cell = 0; cell < columns * rows; cell++) {
-    if (!occupiedCells.has(cell)) emptyCells.push(cell);
-  }
-  if (emptyCells.length === 0) return;
-
-  const adjacentCells = [];
-  const nearbyCells = [];
-  const sameSpecies = gardenState.specimens.filter(specimen => specimen.type === specimenType);
-  for (const cell of emptyCells) {
-    const column = cell % columns;
-    const row = Math.floor(cell / columns);
-    let distance = Infinity;
-    for (const specimen of sameSpecies) {
-      // Diagonals count as neighbors; coordinate distances never wrap at edges.
-      distance = Math.min(distance, Math.max(
-        Math.abs(column - specimen.column),
-        Math.abs(row - specimen.row)
-      ));
-    }
-    if (distance === 1) adjacentCells.push(cell);
-    else if (distance === 2) nearbyCells.push(cell);
-  }
-
-  // Mostly extend a patch, with occasional small gaps rather than distant seeds.
-  const preferAdjacent = Math.random() < 0.9;
-  const preferredCells = preferAdjacent ? adjacentCells : nearbyCells;
-  const alternateCells = preferAdjacent ? nearbyCells : adjacentCells;
-  const candidates = preferredCells.length > 0 ? preferredCells
-    : alternateCells.length > 0 ? alternateCells : emptyCells;
-  const cell = candidates[Math.floor(Math.random() * candidates.length)];
-  const specimen = {
-    type: specimenType,
-    column: cell % columns,
-    row: Math.floor(cell / columns),
-    createdAt: Date.now()
-  };
-  gardenState.specimens.push(specimen);
-  influenceGrass(specimenType, specimen);
+  const result = gardenModel.addSpecimen(specimenType, vigor);
+  if (!result) return;
+  const { specimen, replaced } = result;
+  if (onCreated) onCreated(specimen, replaced ? "replaced" : "spawned");
+  if (grassEventType) influenceGrass(grassEventType, specimen);
 
   updateGardenStatus();
-  drawGarden();
+  drawGarden("specimen-change");
+  gardenSound.maybePlayGrowthSound(specimenType);
+  return specimen;
 }
 
-function influenceGrass(specimenType, specimen, now = Date.now()) {
-  const chance = grassConfig.influenceChances[specimenType] ?? 0;
-  if (chance === 0 || Math.random() >= chance) return;
-
-  let column = specimen.column;
-  let row = specimen.row;
-  const neighbors = grassNeighbors(column, row);
-  if (Math.random() >= grassConfig.sameCellChance) {
-    if (neighbors.length > 0) {
-      const neighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
-      column = neighbor.column;
-      row = neighbor.row;
-    }
-  }
-
-  influenceGrassCell(column, row, now);
-  if (Math.random() < grassConfig.secondCellChance) {
-    const otherNeighbors = neighbors.filter(cell => cell.column !== column || cell.row !== row);
-    if (otherNeighbors.length > 0) {
-      const second = otherNeighbors[Math.floor(Math.random() * otherNeighbors.length)];
-      influenceGrassCell(second.column, second.row, now);
-    }
-  }
-}
-
-function grassNeighbors(column, row) {
-  const neighbors = [];
-  for (let dy = -grassConfig.influenceRadius; dy <= grassConfig.influenceRadius; dy++) {
-    for (let dx = -grassConfig.influenceRadius; dx <= grassConfig.influenceRadius; dx++) {
-      if (dx === 0 && dy === 0) continue;
-      const neighborColumn = column + dx;
-      const neighborRow = row + dy;
-      if (neighborColumn >= 0 && neighborColumn < columns && neighborRow >= 0 && neighborRow < rows) {
-        neighbors.push({ column: neighborColumn, row: neighborRow });
-      }
-    }
-  }
-  return neighbors;
-}
-
-function influenceGrassCell(column, row, now) {
-  const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
-  if (grass) {
-    grass.lastInfluencedAt = now;
-  } else {
-    gardenState.grassCells.push({ column, row, createdAt: now, lastInfluencedAt: now });
-  }
-}
-
+function influenceGrass(eventType, specimen, now = Date.now()) { gardenEcology.influenceGrass(eventType, specimen, now); }
+function influenceGrassCell(column, row, now) { return gardenEcology.influenceGrassCell(column, row, now); }
 function spreadGrass(now) {
-  if (now < nextGrassSpreadAt) return;
-  // One attempt for the whole garden, with no catch-up bursts after a paused tab.
-  nextGrassSpreadAt = now + grassConfig.spreadEveryMs;
-  if (Math.random() >= grassConfig.spreadChance) return;
-
-  const occupied = new Set(gardenState.grassCells.map(cell => cell.row * columns + cell.column));
-  const candidates = [];
-  for (const grass of gardenState.grassCells) {
-    if (now - grass.createdAt < grassConfig.matureAfterMs
-      || now - grass.lastInfluencedAt >= grassConfig.fadingAfterMs) continue;
-    const neighbors = grassNeighbors(grass.column, grass.row).filter(
-      cell => !occupied.has(cell.row * columns + cell.column)
-    );
-    if (neighbors.length > 0) candidates.push(neighbors);
-  }
-  if (candidates.length === 0) return;
-  const neighbors = candidates[Math.floor(Math.random() * candidates.length)];
-  const target = neighbors[Math.floor(Math.random() * neighbors.length)];
-  influenceGrassCell(target.column, target.row, now);
+  gardenEcology.nextGrassSpreadAt = nextGrassSpreadAt;
+  gardenEcology.spreadGrass(now); nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
 }
 
 function updateGardenStatus() {
@@ -335,28 +288,27 @@ function updateGardenStatus() {
     const speciesCount = gardenState.specimens.filter(specimen => specimen.type === type).length;
     return `${speciesCount} ${speciesCount === 1 ? config.singular ?? type : config.plural}`;
   }).join(", ");
-  gardenStatus.textContent = description;
+  gardenStatus.textContent = count === columns * rows
+    ? `${description}. Garden full — stronger growth may displace weaker plants`
+    : description;
   canvas.setAttribute("aria-label", `Rectangular soil garden with a subtle square grid and ${description}`);
   fakeDnsButton.disabled = count === columns * rows;
   fakeGopherButton.disabled = count === columns * rows;
   fakeHttpButton.disabled = count === columns * rows;
   fakeSshButton.disabled = count === columns * rows;
-  fakeFailedAuthButton.disabled = count === columns * rows;
+  fakePort22ProbeButton.disabled = count === columns * rows;
 }
 
 function updateGarden(now = Date.now()) {
-  const remaining = gardenState.specimens.filter(specimen => {
-    const expiresAfterMs = speciesConfig.get(specimen.type).timings.expiredAfterMs;
-    return now - specimen.createdAt < expiresAfterMs;
-  });
-  if (remaining.length !== gardenState.specimens.length) {
-    gardenState.specimens = remaining;
+  const changes = gardenModel.tick(now);
+  if (changes.removed) {
+    gardenBaseDirty = true;
+    gardenPerf?.reason("specimen-change");
     updateGardenStatus();
   }
-  gardenState.grassCells = gardenState.grassCells.filter(
-    grass => now - grass.lastInfluencedAt < grassConfig.expiredAfterMs
-  );
-  if (gardenState.grassCells.length > 0) spreadGrass(now);
+  if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) { gardenBaseDirty = true; gardenPerf?.reason("specimen-change"); }
+  gardenEcology.removeExpiredGrass(now);
+  if (gardenState.grassCells.length) spreadGrass(now);
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -383,9 +335,9 @@ fakeSshButton.addEventListener("click", () => {
   handleGardenEvent(event);
 });
 
-fakeFailedAuthButton.addEventListener("click", () => {
+fakePort22ProbeButton.addEventListener("click", () => {
   /** @type {GardenEvent} */
-  const event = { type: "failed-auth" };
+  const event = { type: "port22-probe" };
   handleGardenEvent(event);
 });
 
@@ -426,20 +378,19 @@ automaticTrafficButton.addEventListener("click", () => {
 });
 
 function drawFlower(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
   const x = (specimen.column + 0.5) * cellSize;
   const y = (specimen.row + 0.5) * cellSize;
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= flowerTimings.expiredAfterMs) return;
-  const stage = ageMs < flowerTimings.growingAfterMs ? "sprout"
-    : ageMs < flowerTimings.matureAfterMs ? "growing"
-    : ageMs < flowerTimings.wiltingAfterMs ? "mature" : "wilting";
+  const logicalStage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (logicalStage === "expired") return;
+  const stage = logicalStage === "fading" ? "wilting" : logicalStage;
   const wilting = stage === "wilting";
   const leafSize = stage === "sprout" ? 0.4 : stage === "growing" ? 0.75 : wilting ? 0.65 : 1;
 
   context.fillStyle = wilting ? "#88764f" : "#75935b";
   context.beginPath();
-  context.ellipse(x - 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, -Math.PI / 4, 0, Math.PI * 2);
-  context.ellipse(x + 5 * leafSize, y + 5 * leafSize, 7 * leafSize, 3 * leafSize, Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x - 5 * leafSize, y + 5 * leafSize, (7 + vigor * 0.4) * leafSize, (3 + vigor * 0.3) * leafSize, -Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(x + 5 * leafSize, y + 5 * leafSize, (7 + vigor * 0.4) * leafSize, (3 + vigor * 0.3) * leafSize, Math.PI / 4, 0, Math.PI * 2);
   context.fill();
 
   if (stage === "sprout") return;
@@ -454,10 +405,11 @@ function drawFlower(specimen, now) {
   const bloomSize = wilting ? 0.65 : 1;
   const bloomY = y + (wilting ? 3 : 0);
   context.fillStyle = wilting ? "#ab997b" : "#eedec3";
-  for (let petal = 0; petal < 5; petal++) {
-    const angle = petal * Math.PI * 2 / 5 - Math.PI / 2;
+  const petalCount = 5 + Math.floor(vigor / 2);
+  for (let petal = 0; petal < petalCount; petal++) {
+    const angle = petal * Math.PI * 2 / petalCount - Math.PI / 2;
     context.beginPath();
-    context.arc(x + Math.cos(angle) * 5 * bloomSize, bloomY + Math.sin(angle) * 5 * bloomSize, 4 * bloomSize, 0, Math.PI * 2);
+    context.arc(x + Math.cos(angle) * 5 * bloomSize, bloomY + Math.sin(angle) * 5 * bloomSize, (4 + vigor * 0.35) * bloomSize, 0, Math.PI * 2);
     context.fill();
   }
 
@@ -467,12 +419,55 @@ function drawFlower(specimen, now) {
   context.fill();
 }
 
+// Compact upright fronds; no neighbor lookups, connections, or per-frame motion.
+function drawWirefern(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  const frondPairs = stage === "sprout" ? 1 + Math.floor(vigor / 2)
+    : stage === "growing" ? 2 + vigor : 3 + vigor;
+  drawVariant(specimen, now, fading => {
+    context.strokeStyle = fading ? "#827b52" : "#65b975";
+    context.lineWidth = 1.1 + vigor * 0.2;
+    context.beginPath();
+    context.moveTo(-3, 12); context.lineTo(0, 9); context.lineTo(3, 12);
+    // Slightly offset short segments keep the central wire-like stem organic.
+    context.moveTo(0, 10);
+    for (let segment = 0; segment < 5; segment++) {
+      context.lineTo(segment % 2 ? -0.4 : 0.4, 6 - segment * 4);
+    }
+    context.lineTo(0, -12);
+    for (let pair = 0; pair < frondPairs; pair++) {
+      const y = frondPairs === 1 ? 0 : 5 - pair * 14 / (frondPairs - 1);
+      const reach = 7 + pair % 2 * 2;
+      for (let side = -1; side <= 1; side += 2) {
+        context.moveTo(0, y);
+        context.lineTo(side * 3, y - 0.5);
+        context.lineTo(side * reach, y - 3);
+        context.lineTo(side * (reach + 2), y - 2);
+        if (vigor >= 2) {
+          context.moveTo(side * (reach - 2), y - 2);
+          context.lineTo(side * (reach - 1), y - 5);
+        }
+      }
+    }
+    context.stroke();
+    context.fillStyle = fading ? "#ad9e6f" : "#b5df9b";
+    // Tiny phosphor-like terminal tips, rather than broad leaves or vine curls.
+    for (let pair = 0; pair < frondPairs; pair++) {
+      const y = frondPairs === 1 ? 0 : 5 - pair * 14 / (frondPairs - 1);
+      const reach = 9 + pair % 2 * 2;
+      context.fillRect(-reach - 0.6, y - 2.6, 1.2, 1.2);
+      context.fillRect(reach - 0.6, y - 2.6, 1.2, 1.2);
+    }
+    context.fillRect(-0.7, -12.7, 1.4, 1.4);
+  });
+}
+
 function drawMushroom(specimen, now) {
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= mushroomTimings.expiredAfterMs) return;
-  const stage = ageMs < mushroomTimings.growingAfterMs ? "sprout"
-    : ageMs < mushroomTimings.matureAfterMs ? "growing"
-    : ageMs < mushroomTimings.decayingAfterMs ? "mature" : "decaying";
+  const vigor = specimen.vigor ?? 0;
+  const logicalStage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (logicalStage === "expired") return;
+  const stage = logicalStage === "fading" ? "decaying" : logicalStage;
   const decaying = stage === "decaying";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : decaying ? 0.65 : 1;
 
@@ -481,10 +476,10 @@ function drawMushroom(specimen, now) {
   context.scale(size, size);
 
   context.fillStyle = decaying ? "#93816b" : "#d9c9a6";
-  context.fillRect(-2, 2, 4, 8);
+  context.fillRect(-2 - vigor * 0.4, 2, 4 + vigor * 0.8, 8);
   context.fillStyle = decaying ? "#76614f" : "#b86b48";
   context.beginPath();
-  context.ellipse(0, 0, 10, decaying ? 4 : 8, 0, 0, Math.PI * 2);
+  context.ellipse(0, 0, 10 + vigor * 0.6, decaying ? 4 : 8, 0, 0, Math.PI * 2);
   context.fill();
 
   if (stage !== "sprout") {
@@ -493,19 +488,22 @@ function drawMushroom(specimen, now) {
     context.arc(-4, -2, 2, 0, Math.PI * 2);
     context.arc(4, -1, 1.5, 0, Math.PI * 2);
     context.fill();
+    for (let spot = 0; spot < vigor; spot++) {
+      context.beginPath();
+      context.arc(-5 + spot * 5, -5 + spot % 2, 1.2, 0, Math.PI * 2);
+      context.fill();
+    }
   }
   context.restore();
 }
 
 function drawBroadleaf(specimen, now) {
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= broadleafTimings.expiredAfterMs) return;
-  const stage = ageMs < broadleafTimings.growingAfterMs ? "sprout"
-    : ageMs < broadleafTimings.matureAfterMs ? "growing"
-    : ageMs < broadleafTimings.fadingAfterMs ? "mature" : "fading";
+  const vigor = specimen.vigor ?? 0;
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
   const fading = stage === "fading";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.7 : 1;
-  const leafCount = stage === "sprout" ? 2 : stage === "growing" ? 4 : 6;
+  const leafCount = (stage === "sprout" ? 2 : stage === "growing" ? 4 : 6) + Math.floor(vigor * 2 / 3);
 
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
@@ -515,12 +513,12 @@ function drawBroadleaf(specimen, now) {
     const angle = leaf * Math.PI * 2 / leafCount - Math.PI / 4;
     context.save();
     context.rotate(angle);
-    context.fillStyle = fading ? "#8d8653" : leaf % 2 === 0 ? "#6e9a56" : "#527c44";
+    context.fillStyle = fading ? "#8f7a76" : leaf % 2 === 0 ? "#8d6f9f" : "#6f567f";
     context.beginPath();
-    context.ellipse(6, 0, 7, 4, 0, 0, Math.PI * 2);
+    context.ellipse(6, 0, 7 + vigor * 0.3, 4 + vigor * 0.4, 0, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = fading ? "#a59a67" : "#9bbb76";
-    context.lineWidth = 1;
+    context.strokeStyle = fading ? "#b29b92" : "#c4a9d3";
+    context.lineWidth = 1 + vigor * 0.2;
     context.beginPath();
     context.moveTo(1, 0);
     context.lineTo(11, 0);
@@ -531,37 +529,34 @@ function drawBroadleaf(specimen, now) {
 }
 
 function drawVine(specimen, now) {
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= vineTimings.expiredAfterMs) return;
-  const stage = ageMs < vineTimings.growingAfterMs ? "sprout"
-    : ageMs < vineTimings.matureAfterMs ? "growing"
-    : ageMs < vineTimings.dryingAfterMs ? "mature" : "drying";
+  const vigor = specimen.vigor ?? 0;
+  const logicalStage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (logicalStage === "expired") return;
+  const stage = logicalStage === "fading" ? "drying" : logicalStage;
   const drying = stage === "drying";
   const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : drying ? 0.55 : 1;
 
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
-  context.strokeStyle = drying ? "#857454" : "#527943";
-  context.lineWidth = drying ? 1 : stage === "mature" ? 2.5 : 1.5;
+  context.strokeStyle = drying ? "#857454" : "#a8b84f";
+  context.lineWidth = (drying ? 1 : stage === "mature" ? 2.5 : 1.5) + vigor * 0.4;
   context.lineCap = "round";
 
   if (stage !== "sprout") {
-    for (const neighbor of gardenState.specimens) {
-      if (neighbor === specimen || neighbor.type !== "vine") continue;
-      const neighborAge = now - neighbor.createdAt;
-      if (neighborAge < vineTimings.growingAfterMs || neighborAge >= vineTimings.expiredAfterMs) continue;
-      const dx = neighbor.column - specimen.column;
-      const dy = neighbor.row - specimen.row;
-      if (Math.max(Math.abs(dx), Math.abs(dy)) !== 1) continue;
-
-      // Each cell draws half the connection. Both halves meet at the same midpoint.
-      const endX = dx * cellSize / 2;
-      const endY = dy * cellSize / 2;
-      const bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
-      context.beginPath();
-      context.moveTo(0, 0);
-      context.quadraticCurveTo(endX / 2 - dy * bend, endY / 2 + dx * bend, endX, endY);
-      context.stroke();
+    // Base rendering shares one lookup; direct drawing helpers can build a current one.
+    const lookup = vineCellLookup ?? buildVineCellLookup(now);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if ((dx === 0 && dy === 0) || !vineNeighborAt(lookup, specimen.column + dx, specimen.row + dy)) continue;
+        // Each cell draws half the connection. Both halves meet at the same midpoint.
+        const endX = dx * cellSize / 2;
+        const endY = dy * cellSize / 2;
+        const bend = (specimen.column + specimen.row) % 2 === 0 ? 3 : -3;
+        context.beginPath();
+        context.moveTo(0, 0);
+        context.quadraticCurveTo(endX / 2 - dy * bend, endY / 2 + dx * bend, endX, endY);
+        context.stroke();
+      }
     }
   }
 
@@ -570,23 +565,28 @@ function drawVine(specimen, now) {
   context.bezierCurveTo(-9 * size, -3 * size, 8 * size, 4 * size, 8 * size, -7 * size);
   context.stroke();
 
-  context.fillStyle = drying ? "#8c8056" : "#78934e";
+  context.fillStyle = drying ? "#8c8056" : "#c0cf57";
   context.beginPath();
-  context.ellipse(-5 * size, 4 * size, 4 * size, 1.8 * size, -Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(-5 * size, 4 * size, (4 + vigor * 0.3) * size, (1.8 + vigor * 0.2) * size, -Math.PI / 4, 0, Math.PI * 2);
   context.fill();
   context.beginPath();
-  context.ellipse(6 * size, -4 * size, 4 * size, 1.8 * size, Math.PI / 4, 0, Math.PI * 2);
+  context.ellipse(6 * size, -4 * size, (4 + vigor * 0.3) * size, (1.8 + vigor * 0.2) * size, Math.PI / 4, 0, Math.PI * 2);
   context.fill();
+  if (vigor >= 2 && stage !== "sprout") {
+    context.beginPath();
+    context.ellipse(size, size, 4 * size, 2.2 * size, -Math.PI / 3, 0, Math.PI * 2);
+    context.fill();
+  }
 
   if (stage !== "sprout") {
-    context.fillStyle = drying ? "#a08b67" : "#c3b080";
+    context.fillStyle = drying ? "#a08b67" : "#d5c96a";
     context.beginPath();
     context.moveTo(-4 * size, 1 * size);
-    context.lineTo(-8 * size, -4 * size);
+    context.lineTo((-8 - vigor * 0.4) * size, (-4 - vigor * 0.4) * size);
     context.lineTo(-1 * size, 0);
     context.closePath();
     context.moveTo(3 * size, -1 * size);
-    context.lineTo(8 * size, 3 * size);
+    context.lineTo((8 + vigor * 0.4) * size, (3 + vigor * 0.4) * size);
     context.lineTo(5 * size, -3 * size);
     context.closePath();
     context.fill();
@@ -594,15 +594,182 @@ function drawVine(specimen, now) {
   context.restore();
 }
 
+// Shared lifecycle drawing setup; no species rarity decisions in the browser.
+function drawVariant(specimen, now, paint) {
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
+  const fading = stage === "fading";
+  const size = stage === "sprout" ? 0.4 : stage === "growing" ? 0.7 : fading ? 0.65 : 1;
+  context.save();
+  context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
+  context.scale(size, size);
+  paint(fading);
+  context.restore();
+}
+
+function drawWeed(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
+  drawVariant(specimen, now, fading => {
+    context.strokeStyle = fading ? "#856343" : "#a88c39";
+    context.lineWidth = 1.8 + vigor * 0.2;
+    context.beginPath();
+    context.moveTo(-2, 11);
+    context.lineTo(1, 3);
+    context.lineTo(-3, -4);
+    context.lineTo(0, -12);
+    context.moveTo(1, 3);
+    context.lineTo(9, -2);
+    context.lineTo(7, -8);
+    context.moveTo(-1, 7);
+    context.lineTo(-10, 1);
+    for (let branch = 0; branch < vigor; branch++) {
+      const direction = branch % 2 === 0 ? 1 : -1;
+      const y = -7 + branch * 5;
+      context.moveTo(0, y);
+      context.lineTo(10 * direction, y - 3);
+      context.lineTo(11 * direction, y - 6);
+    }
+    context.stroke();
+    context.fillStyle = fading ? "#947345" : "#bec04c";
+    // Uneven saw-toothed leaves, deliberately unlike turf blades or vine curls.
+    const leaves = [[-3, -4, -1], [1, 3, 1], [-1, 7, -1]];
+    leaves.push(...[[1, -6, 1], [-1, 1, -1], [2, 5, 1]].slice(0, vigor));
+    for (const [x, y, direction] of leaves) {
+      context.beginPath();
+      context.moveTo(x, y);
+      context.lineTo(x + 10 * direction, y - 6);
+      context.lineTo(x + 7 * direction, y - 1);
+      context.lineTo(x + 5 * direction, y - 3);
+      context.lineTo(x + 4 * direction, y + 2);
+      context.closePath();
+      context.fill();
+    }
+    context.fillStyle = "#b18a4d";
+    context.fillRect(-2, -13, 4, 3);
+    context.fillRect(6, -9, 3, 3);
+  });
+}
+
+function drawGhostbloom(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
+  drawVariant(specimen, now, fading => {
+    context.strokeStyle = fading ? "#71818a" : "#8fc9d8";
+    context.lineWidth = 1.5 + vigor * 0.2;
+    context.beginPath();
+    context.moveTo(0, 10);
+    context.lineTo(0, -1);
+    context.stroke();
+    // Translucent halo and narrow star petals, rather than the cream flower's discs.
+    context.fillStyle = fading ? "rgba(150,180,200,0.06)" : `rgba(157,222,255,${0.18 + vigor * 0.03})`;
+    context.beginPath();
+    context.arc(0, -2, 13 + vigor * 0.4, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = fading ? "#92a7b5" : "#e2f6ff";
+    const petals = 6 + vigor;
+    for (let petal = 0; petal < petals; petal++) {
+      context.save();
+      context.translate(0, -2);
+      context.rotate(petal * Math.PI * 2 / petals);
+      context.beginPath();
+      context.ellipse(0, -5, 2.5 + vigor * 0.15, 6 + vigor * 0.2, 0, 0, Math.PI * 2);
+      context.fill();
+      context.restore();
+    }
+    context.fillStyle = fading ? "#b3c4cb" : "#ffffff";
+    context.beginPath();
+    context.arc(0, -2, 2.5, 0, Math.PI * 2);
+    context.fill();
+  });
+}
+
+function drawCrystalfungus(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
+  drawVariant(specimen, now, fading => {
+    context.fillStyle = fading ? "#796c88" : "#9977cc";
+    context.fillRect(-2, 2, 4, 9);
+    for (const [x, y, size] of [[-7, 3, 0.65 + vigor * 0.03], [7, 4, 0.55 + vigor * 0.03], [0, 0, 1]]) {
+      context.save();
+      context.translate(x, y);
+      context.scale(size, size);
+      context.fillStyle = fading ? "#647f89" : "#71dce4";
+      context.beginPath();
+      context.moveTo(0, -12);
+      context.lineTo(10, -2);
+      context.lineTo(7, 4);
+      context.lineTo(-7, 4);
+      context.lineTo(-10, -2);
+      context.closePath();
+      context.fill();
+      context.fillStyle = fading ? "#7e728d" : "#9e83e6";
+      context.beginPath();
+      context.moveTo(0, -12);
+      context.lineTo(7, 4);
+      context.lineTo(-2, 2);
+      context.closePath();
+      context.fill();
+      context.strokeStyle = fading ? "#9aabb4" : "#c8ffff";
+      context.lineWidth = 1 + vigor * 0.2;
+      context.beginPath();
+      context.moveTo(-10, -2);
+      context.lineTo(0, -12);
+      context.lineTo(10, -2);
+      context.stroke();
+      for (let facet = 0; facet < vigor; facet++) {
+        context.beginPath();
+        context.moveTo(0, -12);
+        context.lineTo(-7 + facet * 7, 4);
+        context.stroke();
+      }
+      context.restore();
+    }
+  });
+}
+
+function drawBlackthorn(specimen, now) {
+  const vigor = specimen.vigor ?? 0;
+  drawVariant(specimen, now, fading => {
+    // A pale edge keeps the near-black stem legible on soil.
+    for (const [color, width] of [[fading ? "#756374" : "#a17eb2", 4], [fading ? "#51424e" : "#281c39", 2.5]]) {
+      context.strokeStyle = color;
+      context.lineWidth = width + vigor * 0.3;
+      context.beginPath();
+      context.moveTo(-10, 9);
+      context.bezierCurveTo(9, 8, -9, -8, 10, -10);
+      context.stroke();
+    }
+    for (let branch = 0; branch < vigor; branch++) {
+      const direction = branch % 2 === 0 ? 1 : -1;
+      const y = 5 - branch * 5;
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(8 * direction, y - 3);
+      context.lineTo(11 * direction, y - 6);
+      context.stroke();
+    }
+    context.fillStyle = fading ? "#a38996" : "#e4a1d6";
+    const thorns = [[-5, 7, -1], [0, 2, 1], [0, -4, -1], [5, -8, 1]];
+    thorns.push(...[[0, 8, 1], [-5, -2, -1], [4, 0, 1]].slice(0, vigor));
+    for (const [x, y, direction] of thorns) {
+      context.beginPath();
+      context.moveTo(x, y + 2);
+      context.lineTo(x + 7 * direction, y - 5);
+      context.lineTo(x + 2 * direction, y + 3);
+      context.closePath();
+      context.fill();
+    }
+  });
+}
+
 function drawRedbloom(specimen, now) {
-  const ageMs = Math.max(0, now - specimen.createdAt);
-  if (ageMs >= redbloomTimings.expiredAfterMs) return;
-  const wilting = ageMs >= redbloomTimings.wiltingAfterMs;
+  const vigor = specimen.vigor ?? 0;
+  const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+  if (stage === "expired") return;
+  const wilting = stage === "fading";
 
   context.save();
   context.translate((specimen.column + 0.5) * cellSize, (specimen.row + 0.5) * cellSize);
   context.strokeStyle = wilting ? "#897052" : "#6d8445";
-  context.lineWidth = 2;
+  context.lineWidth = 2 + vigor * 0.4;
   context.beginPath();
   context.moveTo(0, 10);
   context.quadraticCurveTo(wilting ? 7 : 1, 5, wilting ? 3 : 0, wilting ? 4 : 0);
@@ -615,9 +782,10 @@ function drawRedbloom(specimen, now) {
   context.strokeStyle = wilting ? "#b56864" : "#f27785";
   context.lineWidth = 1;
   context.beginPath();
-  for (let point = 0; point < 12; point++) {
-    const angle = point * Math.PI / 6 - Math.PI / 2;
-    const radius = point % 2 === 0 ? 10 : 4;
+  const points = 12 + vigor * 2;
+  for (let point = 0; point < points; point++) {
+    const angle = point * Math.PI * 2 / points - Math.PI / 2;
+    const radius = point % 2 === 0 ? 10 + vigor * 0.5 : 4 + vigor * 0.2;
     const x = Math.cos(angle) * radius;
     const y = Math.sin(angle) * radius;
     if (point === 0) context.moveTo(x, y);
@@ -634,24 +802,8 @@ function drawRedbloom(specimen, now) {
 }
 
 function drawGrass(grass, now) {
-  const ageMs = Math.max(0, now - grass.createdAt);
-  const idleMs = Math.max(0, now - grass.lastInfluencedAt);
-  if (idleMs >= grassConfig.expiredAfterMs) return;
-  const growing = Math.min(1, ageMs / grassConfig.growingAfterMs);
-  const expansion = Math.min(1, Math.max(0,
-    (ageMs - grassConfig.growingAfterMs) / (grassConfig.matureAfterMs - grassConfig.growingAfterMs)));
-  const growth = 0.18 + growing * 0.12 + expansion * 0.7;
-  const decline = Math.min(1, Math.max(0,
-    (idleMs - grassConfig.fadingAfterMs) / (grassConfig.expiredAfterMs - grassConfig.fadingAfterMs)));
-  // Green -> yellow -> brown -> dead turf; interpolate rather than jumping colors.
-  const colors = [[86, 127, 71], [144, 137, 74], [133, 105, 67], [112, 93, 69]];
-  const thresholds = [grassConfig.fadingAfterMs, grassConfig.dyingAfterMs,
-    grassConfig.deadAfterMs, grassConfig.expiredAfterMs];
-  const colorStage = idleMs < thresholds[1] ? 0 : idleMs < thresholds[2] ? 1 : 2;
-  const colorProgress = Math.min(1, Math.max(0,
-    (idleMs - thresholds[colorStage]) / (thresholds[colorStage + 1] - thresholds[colorStage])));
-  const color = colors[colorStage].map((channel, index) => Math.round(
-    channel + (colors[colorStage + 1][index] - channel) * colorProgress));
+  const { growth, decline, color, opacity, stage } = gardenEcologyCore.grassVisualState(grass, now);
+  if (stage === 'expired') return;
   const x = (grass.column + 0.5) * cellSize;
   const y = (grass.row + 0.5) * cellSize;
 
@@ -661,7 +813,7 @@ function drawGrass(grass, now) {
   context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
   context.clip();
   context.fillStyle = `rgb(${color.join(", ")})`;
-  context.globalAlpha = 0.6 * (1 - 0.65 * decline);
+  context.globalAlpha = opacity;
   context.beginPath();
   const seed = grass.column * 37 + grass.row * 61;
   for (let blob = 0; blob < 9; blob++) {
@@ -695,13 +847,18 @@ function drawGrass(grass, now) {
   context.restore();
 }
 
-function drawWeatherSoil() {
+function weatherSoilDarkening() {
   const intensity = weatherIntensity();
   const weather = weatherLevels.get(weatherState.level);
-  if (weather.darkening === 0 || intensity === 0) return;
+  return intensity === 0 ? 0 : weather.darkening * (0.5 + intensity * 0.5);
+}
+
+function drawWeatherSoil() {
+  const darkening = weatherSoilDarkening();
+  if (darkening === 0) return;
   context.save();
   context.fillStyle = "#172c28";
-  context.globalAlpha = weather.darkening * (0.5 + intensity * 0.5);
+  context.globalAlpha = darkening;
   context.fillRect(0, 0, gardenWidth, gardenHeight);
   context.restore();
 }
@@ -710,7 +867,8 @@ function drawRain(now) {
   const intensity = weatherIntensity();
   const weather = weatherLevels.get(weatherState.level);
   if (weather.drops === 0 || intensity === 0) return;
-  const drops = Math.min(256, Math.round(weather.drops * (0.25 + intensity * 0.75)));
+  const drops = Math.min(400, Math.round(weather.drops * (0.25 + intensity * 0.75)));
+  gardenPerf?.rain(drops);
   const speed = weather.speed * (0.6 + intensity * 0.4);
 
   context.save();
@@ -723,76 +881,279 @@ function drawRain(now) {
   context.beginPath();
   for (let drop = 0; drop < drops; drop++) {
     // Fixed seeds plus elapsed time animate a bounded layer without particle/ecology state.
-    const x = (drop * 137.508 + (drop % 7) * 19) % gardenWidth;
+    const x = (drop * 137.508 + (drop % 7) * 19 + now / 1000 * (weather.drift ?? 0)) % gardenWidth;
     const y = (drop * 127.7 + now / 1000 * speed * (0.85 + (drop % 5) * 0.05))
       % (gardenHeight + 30) - 15;
     context.moveTo(x, y);
-    context.lineTo(x + 2, y + weather.length);
+    context.lineTo(x + (weather.slant ?? 2), y + weather.length);
   }
   context.stroke();
   context.restore();
 }
 
-function drawGarden() {
-  const { width, height } = canvas.getBoundingClientRect();
-  if (width <= 0 || height <= 0) return;
+// The browser composites a persistent ecology canvas and a transparent animation canvas.
+const rendererConfig = { animationFps: 30, maxPixelRatio: 2, continuousVisualRefreshMs: 1_000 };
+const gardenBaseCanvas = canvas;
+const gardenBaseContext = context;
+const gardenOverlayCanvas = document.querySelector("#garden-overlay");
+const gardenOverlayContext = gardenOverlayCanvas.getContext("2d");
+let gardenBaseDirty = true;
+let gardenOverlayDirty = false;
+let gardenView = null;
+let lastOverlayAt = -Infinity;
+let nextBaseVisualAt = null;
+let lastBaseSoilDarkening = null;
+let vineCellLookup = null;
+const animatedSpecimens = [];
 
-  const pixelRatio = window.devicePixelRatio || 1;
-  canvas.width = Math.round(width * pixelRatio);
-  canvas.height = Math.round(height * pixelRatio);
-  context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  context.clearRect(0, 0, width, height);
+// Current specimen renderers use discrete stages, including vine connectivity at growing.
+// Active mutations render entirely on the overlay and are removed by logical cleanup.
+function nextSpecimenVisualChangeAt(specimen, now) {
+  if (specimen.mutation) return null;
+  return gardenCore.nextChangeAt(specimen, now);
+}
+
+function nextGrassVisualChangeAt(grass, now) {
+  return gardenEcologyCore.nextGrassVisualChangeAt(grass, now, rendererConfig.continuousVisualRefreshMs);
+}
+
+// Recompute only with a rebuilt base. The 250 ms logical tick reads this one stored deadline.
+function computeNextBaseVisualChangeAt(now) {
+  let next = Infinity;
+  for (const specimen of gardenState.specimens) next = Math.min(next, nextSpecimenVisualChangeAt(specimen, now) ?? Infinity);
+  for (const grass of gardenState.grassCells) next = Math.min(next, nextGrassVisualChangeAt(grass, now) ?? Infinity);
+  if (typeof nextPuddleVisualChangeAt === "function") {
+    for (const puddle of gardenState.puddles) next = Math.min(next, nextPuddleVisualChangeAt(puddle, now) ?? Infinity);
+  }
+  return Number.isFinite(next) ? next : null;
+}
+
+function invalidateDueBaseVisual(now) {
+  if (nextBaseVisualAt !== null && now >= nextBaseVisualAt) {
+    gardenBaseDirty = true;
+    gardenPerf?.reason("visual-deadline");
+  }
+}
+
+function buildVineCellLookup(now) {
+  const startedAt = gardenPerf ? performance.now() : 0;
+  gardenPerf?.count("vineLookupBuilds");
+  const lookup = new Map();
+  for (const specimen of gardenState.specimens) {
+    if (specimen.type !== "vine") continue;
+    const stage = gardenCore.stageAt(specimen.type, specimen.createdAt, now);
+    if (stage !== "sprout" && stage !== "expired") {
+      lookup.set(specimen.row * columns + specimen.column, specimen);
+    }
+  }
+  gardenPerf?.lookup(startedAt);
+  return lookup;
+}
+
+function vineNeighborAt(lookup, column, row) {
+  gardenPerf?.count("vineNeighborChecks");
+  if (column < 0 || column >= columns || row < 0 || row >= rows) return null;
+  return lookup.get(row * columns + column) ?? null;
+}
+
+function resizeCanvasBacking(target, width, height) {
+  if (gardenPerf && (target.width !== width || target.height !== height)) {
+    gardenPerf.count("backingResizes");
+    gardenPerf.count("backingWrites", Number(target.width !== width) + Number(target.height !== height));
+  }
+  if (target.width !== width) target.width = width;
+  if (target.height !== height) target.height = height;
+}
+
+function rebuildGardenBase(now) {
+  gardenPerf?.begin("base");
+  gardenPerf?.count("layoutReads");
+  const { width, height } = canvas.getBoundingClientRect();
+  if (width <= 0 || height <= 0) { gardenView = null; return false; }
+
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, rendererConfig.maxPixelRatio);
+  const pixelWidth = Math.round(width * pixelRatio);
+  const pixelHeight = Math.round(height * pixelRatio);
+  resizeCanvasBacking(gardenBaseCanvas, pixelWidth, pixelHeight);
+  resizeCanvasBacking(gardenOverlayCanvas, pixelWidth, pixelHeight);
 
   const scale = Math.min(
     width / (gardenWidth + margin * 2),
     height / (gardenHeight + margin * 2)
   );
-  context.translate(
-    (width - gardenWidth * scale) / 2,
-    (height - gardenHeight * scale) / 2
-  );
-  context.scale(scale, scale);
+  gardenView = { width, height, pixelRatio, scale, offsetX: (width - gardenWidth * scale) / 2,
+    offsetY: (height - gardenHeight * scale) / 2 };
+  const visibleContext = context;
+  context = gardenBaseContext;
+  vineCellLookup = buildVineCellLookup(now);
+  const previousAnimated = animatedSpecimens.slice();
+  try {
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.clearRect(0, 0, width, height);
+    context.translate(gardenView.offsetX, gardenView.offsetY);
+    context.scale(scale, scale);
+    gardenPerf?.mark("base", "setup");
 
-  context.fillStyle = "#685b45";
-  context.fillRect(0, 0, gardenWidth, gardenHeight);
+    context.fillStyle = "#685b45";
+    context.fillRect(0, 0, gardenWidth, gardenHeight);
 
-  drawWeatherSoil();
+    drawWeatherSoil();
 
-  context.beginPath();
-  for (let x = cellSize; x < gardenWidth; x += cellSize) {
-    context.moveTo(x, 0);
-    context.lineTo(x, gardenHeight);
+    context.beginPath();
+    for (let x = cellSize; x < gardenWidth; x += cellSize) {
+      context.moveTo(x, 0);
+      context.lineTo(x, gardenHeight);
+    }
+    for (let y = cellSize; y < gardenHeight; y += cellSize) {
+      context.moveTo(0, y);
+      context.lineTo(gardenWidth, y);
+    }
+    context.strokeStyle = "rgba(225, 214, 183, 0.09)";
+    context.lineWidth = 1;
+    context.stroke();
+
+    context.strokeStyle = "#9a9871";
+    context.lineWidth = 6;
+    context.strokeRect(0, 0, gardenWidth, gardenHeight);
+    gardenPerf?.mark("base", "soil");
+
+    for (const grass of gardenState.grassCells) {
+      drawGrass(grass, now);
+    }
+    gardenPerf?.mark("base", "grass");
+    if (typeof drawGardenPuddles === "function") drawGardenPuddles(now);
+    gardenPerf?.mark("base", "puddles");
+    animatedSpecimens.length = 0;
+    for (const specimen of gardenState.specimens) {
+      if (specimen.mutation && typeof drawSpecimenMutation === "function") {
+        animatedSpecimens.push(specimen);
+      } else {
+        const startedAt = gardenPerf ? performance.now() : 0;
+        speciesConfig.get(specimen.type).render(specimen, now);
+        gardenPerf?.specimen(specimen.type, startedAt);
+      }
+    }
+    gardenPerf?.mark("base", "specimens");
+  } finally {
+    context = visibleContext;
+    vineCellLookup = null;
   }
-  for (let y = cellSize; y < gardenHeight; y += cellSize) {
-    context.moveTo(0, y);
-    context.lineTo(gardenWidth, y);
-  }
-  context.strokeStyle = "rgba(225, 214, 183, 0.09)";
-  context.lineWidth = 1;
-  context.stroke();
-
-  context.strokeStyle = "#9a9871";
-  context.lineWidth = 6;
-  context.strokeRect(0, 0, gardenWidth, gardenHeight);
-
-  const now = Date.now();
-  for (const grass of gardenState.grassCells) {
-    drawGrass(grass, now);
-  }
-  for (const specimen of gardenState.specimens) {
-    speciesConfig.get(specimen.type).render(specimen, now);
-  }
-  drawRain(now);
+  if (previousAnimated.length !== animatedSpecimens.length
+    || previousAnimated.some((specimen, index) => specimen !== animatedSpecimens[index])) gardenOverlayDirty = true;
+  gardenBaseDirty = false;
+  nextBaseVisualAt = computeNextBaseVisualChangeAt(now);
+  lastBaseSoilDarkening = weatherSoilDarkening();
+  gardenPerf?.end("base");
+  return true;
 }
 
-new ResizeObserver(drawGarden).observe(canvas);
-window.addEventListener("resize", drawGarden);
-drawGarden();
+function paintGardenBase(now = Date.now()) {
+  if (document.hidden || !gardenBaseDirty) return false;
+  return rebuildGardenBase(now);
+}
 
-// Clean up before drawing, including the tick that removes the final specimen or tuft.
-window.setInterval(() => {
-  if (gardenState.specimens.length > 0 || gardenState.grassCells.length > 0) {
-    updateGarden();
-    drawGarden();
+function drawGardenOverlay(force = false, now = Date.now(), frameTime = performance.now()) {
+  if (document.hidden) return false;
+  // All dynamic objects and weather share the same scheduler and FPS budget.
+  if (!force && frameTime - lastOverlayAt + 0.001 < 1000 / rendererConfig.animationFps) { gardenPerf?.count("fpsSkips"); return false; }
+  if (!gardenView) return false;
+  gardenPerf?.begin("overlay", force);
+  lastOverlayAt = frameTime;
+  const previousContext = context;
+  context = gardenOverlayContext;
+  try {
+    context.setTransform(1, 0, 0, 1, 0, 0);
+    context.clearRect(0, 0, gardenOverlayCanvas.width, gardenOverlayCanvas.height);
+    const { pixelRatio, scale, offsetX, offsetY } = gardenView;
+    context.setTransform(pixelRatio * scale, 0, 0, pixelRatio * scale, offsetX * pixelRatio, offsetY * pixelRatio);
+    gardenPerf?.mark("overlay", "setup");
+    for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
+    gardenPerf?.mark("overlay", "mutations");
+    if (typeof drawGardenActors === "function") drawGardenActors(now);
+    gardenPerf?.mark("overlay", "actors");
+    if (typeof drawLooseDrops === "function") drawLooseDrops(now);
+    gardenPerf?.mark("overlay", "drops");
+    if (typeof drawFirstSeenCuriosities === "function") drawFirstSeenCuriosities(now);
+    gardenPerf?.mark("overlay", "curiosities");
+    drawRain(now);
+    gardenPerf?.mark("overlay", "rain");
+  } finally {
+    context = previousContext;
   }
+  gardenOverlayDirty = false;
+  gardenPerf?.end("overlay");
+  return true;
+}
+
+// Actual ecology changes repaint immediately. Routine logical ticks do not call this.
+function drawGarden(reason = "state-change") {
+  gardenPerf?.reason(reason);
+  gardenBaseDirty = true;
+  paintGardenBase();
+  drawGardenOverlay(true);
+  syncWeatherAnimation();
+}
+
+function resizeGarden() {
+  if (document.hidden) { gardenBaseDirty = true; gardenPerf?.reason("resize"); return; }
+  gardenPerf?.count("layoutReads");
+  const { width, height } = canvas.getBoundingClientRect();
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, rendererConfig.maxPixelRatio);
+  // Window resize and ResizeObserver can report the same change; rebuild once.
+  if (!gardenView || width !== gardenView.width || height !== gardenView.height
+    || pixelRatio !== gardenView.pixelRatio) drawGarden("resize");
+}
+
+function seedInitialGrass(count = 5, now = Date.now()) {
+  const totalCells = columns * rows;
+  const seeds = Math.min(count, totalCells);
+  for (let seed = 0; seed < seeds; seed++) {
+    const start = Math.floor(seed * totalCells / seeds);
+    const end = Math.floor((seed + 1) * totalCells / seeds);
+    const cell = start + Math.floor(Math.random() * (end - start));
+    influenceGrassCell(cell % columns, Math.floor(cell / columns), now);
+  }
+}
+
+seedInitialGrass();
+new ResizeObserver(resizeGarden).observe(canvas);
+window.addEventListener("resize", resizeGarden);
+document.addEventListener("visibilitychange", () => {
+  if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
+  if (document.hidden) syncWeatherAnimation();
+  else {
+    if (typeof updateFirstSeenCuriosities === "function") updateFirstSeenCuriosities(Date.now());
+    updateGarden();
+    if (typeof updateLooseDrops === "function") updateLooseDrops(Date.now());
+    if (typeof advanceGnomeIncident === "function") advanceGnomeIncident(Date.now(), undefined, false);
+    const now = Date.now();
+    invalidateDueBaseVisual(now);
+    if (gardenBaseDirty) { gardenPerf?.reason("resume"); paintGardenBase(now); }
+    drawGardenOverlay(true, now);
+    syncWeatherAnimation(); // Resume current state once, never replay missed visual frames.
+  }
+});
+window.addEventListener("pagehide", () => {
+  gardenPerf?.dispose();
+  if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);
+  weatherAnimationFrame = null;
+  if (typeof finishGnomeIncident === "function") finishGnomeIncident(false);
+});
+drawGarden("initial");
+
+// Logical cleanup stays at 250 ms; visual work wakes only for state changes or one aggregate deadline.
+window.setInterval(() => {
+  const now = Date.now();
+  if (typeof updateGardenPuddles === "function" && updateGardenPuddles(now)) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
+  if (typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(now)) gardenOverlayDirty = true;
+  if (typeof updateCollectionMessage === "function") updateCollectionMessage(now);
+  updateGarden(now);
+  if (typeof updateLooseDrops === "function" && updateLooseDrops(now)) gardenOverlayDirty = true;
+  invalidateDueBaseVisual(now);
+  paintGardenBase(now);
+  if (typeof updateAmbientEvents === "function") updateAmbientEvents(now);
+  if (gardenOverlayDirty) drawGardenOverlay(true, now);
+  syncWeatherAnimation();
+  if (typeof updateRecentActivity === "function") updateRecentActivity(now);
+  gardenPerf?.updatePanel();
 }, updateEveryMs);

@@ -3,7 +3,7 @@ using System.Text.Json;
 
 namespace PacketGarden;
 
-public sealed record GardenWeather(string Level, double EventsPerMinute);
+public sealed record GardenWeather(string Level, double EventsPerMinute, long? EventsLastHour = null, bool HasSnapshot = true);
 
 public sealed class WeatherAdapter(
     IHttpClientFactory clients,
@@ -11,12 +11,31 @@ public sealed class WeatherAdapter(
     ILogger<WeatherAdapter> logger) : BackgroundService
 {
     private readonly object gate = new();
-    private GardenWeather current = new("quiet", 0);
+    // Quiet/0 is a rendering fallback, not an observed traffic measurement.
+    private GardenWeather current = new("quiet", 0, HasSnapshot: false);
     private TaskCompletionSource changed = NewSignal();
     private bool fetchFailing;
 
     private static TaskCompletionSource NewSignal() =>
         new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public static GardenWeather? Normalize(JsonElement root)
+    {
+        if (root.ValueKind != JsonValueKind.Object ||
+            !root.TryGetProperty("level", out var levelValue) || levelValue.ValueKind != JsonValueKind.String ||
+            !root.TryGetProperty("eventsPerMinute", out var rateValue) ||
+            rateValue.ValueKind != JsonValueKind.Number || !rateValue.TryGetDouble(out var rate) || !double.IsFinite(rate))
+            return null;
+        var level = levelValue.GetString();
+        if (level is not ("quiet" or "drizzle" or "rain" or "heavy_rain" or "botnet_thunderstorm" or "botnet_hurricane"))
+            return null;
+        // Optional for older sources. Never infer an hour from the five-minute average.
+        // Keep counts exact in browser JSON numbers (Number.MAX_SAFE_INTEGER).
+        long? hour = root.TryGetProperty("eventsLastHour", out var hourValue) &&
+            hourValue.ValueKind == JsonValueKind.Number && hourValue.TryGetInt64(out var count) &&
+            count is >= 0 and <= 9_007_199_254_740_991 ? count : null;
+        return new GardenWeather(level, Math.Clamp(rate, 0, 1_000_000), hour);
+    }
 
     public async IAsyncEnumerable<GardenWeather> Updates(
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -66,20 +85,7 @@ public sealed class WeatherAdapter(
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync(stoppingToken);
             using var document = await JsonDocument.ParseAsync(stream, cancellationToken: stoppingToken);
-            var root = document.RootElement;
-            if (root.ValueKind != JsonValueKind.Object ||
-                !root.TryGetProperty("level", out var levelValue) || levelValue.ValueKind != JsonValueKind.String ||
-                !root.TryGetProperty("eventsPerMinute", out var rateValue) ||
-                rateValue.ValueKind != JsonValueKind.Number || !rateValue.TryGetDouble(out var rate) || !double.IsFinite(rate))
-            {
-                throw new JsonException("Missing or invalid weather fields.");
-            }
-            var level = levelValue.GetString();
-            if (level is not ("quiet" or "drizzle" or "rain" or "heavy_rain" or "botnet_thunderstorm" or "botnet_hurricane"))
-            {
-                throw new JsonException("Unsupported weather level.");
-            }
-            var weather = new GardenWeather(level, Math.Clamp(rate, 0, 1_000_000));
+            var weather = Normalize(document.RootElement) ?? throw new JsonException("Missing or invalid weather fields/level.");
             lock (gate)
             {
                 if (weather != current)

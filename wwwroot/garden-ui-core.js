@@ -1,0 +1,50 @@
+// Shared display text and bounded recent activity; no rendering or input actions.
+(function () {
+  'use strict';
+  const mutations = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
+  const fakeSourceNames = Object.freeze({ dns: 'Simulated DNS', gopher: 'Simulated Gopher', http: 'Simulated HTTP',
+    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe' });
+  const vigorNames = Object.freeze(['one-off', 'repeated', 'frequent', 'persistent']);
+  const messages = Object.freeze({ ladybug: 'You caught a ladybug. +0 points', snail: 'You collected a snail. It seems annoyed. +0 points',
+    moth: 'You caught a moth. +0 points', shiny_pebble: 'You found a rock. +0 points',
+    amanita_muscaria: 'You found Amanita muscaria. +0 points', collectible_weed: 'You collected some weed. +0 points' });
+  const messageDurationMs = 2000;
+  const capitalize = name => name.charAt(0).toUpperCase() + name.slice(1);
+  function formatAge(ageMs) {
+    const seconds = Math.max(0, Math.floor(ageMs / 1000));
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60), remainder = seconds % 60;
+    return remainder === 0 ? `${minutes}m` : `${minutes}m ${remainder}s`;
+  }
+  function recentEventAge(receivedAt, now) {
+    const seconds = Math.max(0, Math.floor((now - receivedAt) / 1000));
+    return seconds === 0 ? 'now' : seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m`;
+  }
+  function recentEventText(entry, now, sourceNames = fakeSourceNames) {
+    const parts = entry.kind === 'tcpnoise'
+      ? [entry.sensor, `:${entry.listenPort}`, entry.specimenType, entry.seenCount === null ? null : `seen ${entry.seenCount}`]
+      : [sourceNames[entry.eventType], entry.specimenType];
+    parts.push(recentEventAge(entry.receivedAt, now));
+    if (entry.outcome === 'dropped') parts.push('no growth');
+    return parts.filter(part => part !== null).join(' · ');
+  }
+  function appendRecent(entries, entry) {
+    // Copy only UI fields. Callers supply normalized event values; discarded frame fields never survive here.
+    const safe = entry.kind === 'tcpnoise'
+      ? { kind: 'tcpnoise', specimenType: entry.specimenType, listenPort: entry.listenPort,
+        sensor: entry.sensor, seenCount: entry.seenCount, receivedAt: entry.receivedAt, outcome: entry.outcome }
+      : { kind: 'simulated', eventType: entry.eventType, specimenType: entry.specimenType, receivedAt: entry.receivedAt, outcome: entry.outcome };
+    entries.unshift(safe); entries.length = Math.min(entries.length, 3); return safe;
+  }
+  function inspection(specimen, at, { colorName, sourceNames = fakeSourceNames } = {}) {
+    const origin = specimen.origin ?? {}, vigor = specimen.vigor ?? 0;
+    const singular = { broadleaf: 'broad-leaf plant', redbloom: 'red bloom', crystalfungus: 'crystal fungus' }[specimen.type] ?? specimen.type;
+    return { title: capitalize(singular), source: origin.kind === 'tcpnoise' ? 'Live TCPNoise' : sourceNames[origin.eventType] ?? 'Garden event',
+      sensor: origin.sensor ?? (origin.kind === 'tcpnoise' ? 'Not supplied' : 'Development controls'),
+      port: Number.isInteger(origin.listenPort) ? String(origin.listenPort) : '—', seenCount: origin.seenCount ?? '—',
+      vigor: `${vigor} — ${vigorNames[vigor] ?? 'unknown'}`, color: colorName ?? 'Default',
+      age: formatAge(at - specimen.createdAt), mutation: mutations.mutationLabel(specimen, at) };
+  }
+  const api = { fakeSourceNames, vigorNames, messages, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenUiCore = api;
+})();

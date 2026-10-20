@@ -1,0 +1,2628 @@
+{
+  "commit": "6e274e3",
+  "cases": [
+    {
+      "rolls": [
+        0
+      ],
+      "cells": [
+        {
+          "column": 0,
+          "row": 0,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1033,
+          "fadeSeedAttemptedAt": 1033
+        },
+        {
+          "column": 1,
+          "row": 0,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1034,
+          "fadeSeedAttemptedAt": 1034
+        },
+        {
+          "column": 2,
+          "row": 0,
+          "createdAt": 1002,
+          "lastInfluencedAt": 1035,
+          "fadeSeedAttemptedAt": 1035
+        },
+        {
+          "column": 3,
+          "row": 0,
+          "createdAt": 1003,
+          "lastInfluencedAt": 1036,
+          "fadeSeedAttemptedAt": 1036
+        },
+        {
+          "column": 4,
+          "row": 0,
+          "createdAt": 1004,
+          "lastInfluencedAt": 1037,
+          "fadeSeedAttemptedAt": 1037
+        },
+        {
+          "column": 5,
+          "row": 0,
+          "createdAt": 1005,
+          "lastInfluencedAt": 1038,
+          "fadeSeedAttemptedAt": 1038
+        },
+        {
+          "column": 6,
+          "row": 0,
+          "createdAt": 1006,
+          "lastInfluencedAt": 1039,
+          "fadeSeedAttemptedAt": 1039
+        },
+        {
+          "column": 7,
+          "row": 0,
+          "createdAt": 1007,
+          "lastInfluencedAt": 1040,
+          "fadeSeedAttemptedAt": 1040
+        },
+        {
+          "column": 8,
+          "row": 0,
+          "createdAt": 1008,
+          "lastInfluencedAt": 1041,
+          "fadeSeedAttemptedAt": 1041
+        },
+        {
+          "column": 9,
+          "row": 0,
+          "createdAt": 1009,
+          "lastInfluencedAt": 1042,
+          "fadeSeedAttemptedAt": 1042
+        },
+        {
+          "column": 10,
+          "row": 0,
+          "createdAt": 1010,
+          "lastInfluencedAt": 1043,
+          "fadeSeedAttemptedAt": 1043
+        },
+        {
+          "column": 11,
+          "row": 0,
+          "createdAt": 1011,
+          "lastInfluencedAt": 1044,
+          "fadeSeedAttemptedAt": 1044
+        },
+        {
+          "column": 12,
+          "row": 0,
+          "createdAt": 1012,
+          "lastInfluencedAt": 1045,
+          "fadeSeedAttemptedAt": 1045
+        },
+        {
+          "column": 13,
+          "row": 0,
+          "createdAt": 1013,
+          "lastInfluencedAt": 1046,
+          "fadeSeedAttemptedAt": 1046
+        },
+        {
+          "column": 14,
+          "row": 0,
+          "createdAt": 1014,
+          "lastInfluencedAt": 1047,
+          "fadeSeedAttemptedAt": 1047
+        },
+        {
+          "column": 15,
+          "row": 0,
+          "createdAt": 1015,
+          "lastInfluencedAt": 1048,
+          "fadeSeedAttemptedAt": 1048
+        },
+        {
+          "column": 16,
+          "row": 0,
+          "createdAt": 1016,
+          "lastInfluencedAt": 1049,
+          "fadeSeedAttemptedAt": 1049
+        },
+        {
+          "column": 17,
+          "row": 0,
+          "createdAt": 1017,
+          "lastInfluencedAt": 1050,
+          "fadeSeedAttemptedAt": 1050
+        },
+        {
+          "column": 18,
+          "row": 0,
+          "createdAt": 1018,
+          "lastInfluencedAt": 1051
+        },
+        {
+          "column": 19,
+          "row": 0,
+          "createdAt": 1019,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 20,
+          "row": 0,
+          "createdAt": 1020,
+          "lastInfluencedAt": 1053
+        },
+        {
+          "column": 21,
+          "row": 0,
+          "createdAt": 1021,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 22,
+          "row": 0,
+          "createdAt": 1022,
+          "lastInfluencedAt": 1055
+        },
+        {
+          "column": 23,
+          "row": 0,
+          "createdAt": 1023,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 24,
+          "row": 0,
+          "createdAt": 1024,
+          "lastInfluencedAt": 1057
+        },
+        {
+          "column": 25,
+          "row": 0,
+          "createdAt": 1025,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 26,
+          "row": 0,
+          "createdAt": 1026,
+          "lastInfluencedAt": 1059
+        },
+        {
+          "column": 27,
+          "row": 0,
+          "createdAt": 1027,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 28,
+          "row": 0,
+          "createdAt": 1028,
+          "lastInfluencedAt": 1061
+        },
+        {
+          "column": 29,
+          "row": 0,
+          "createdAt": 1029,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 30,
+          "row": 0,
+          "createdAt": 1030,
+          "lastInfluencedAt": 1063
+        },
+        {
+          "column": 31,
+          "row": 0,
+          "createdAt": 1031,
+          "lastInfluencedAt": 1031
+        },
+        {
+          "column": 0,
+          "row": 1,
+          "createdAt": 1032,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 1,
+          "row": 1,
+          "createdAt": 1033,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 2,
+          "row": 1,
+          "createdAt": 1034,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 3,
+          "row": 1,
+          "createdAt": 1035,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 4,
+          "row": 1,
+          "createdAt": 1036,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 5,
+          "row": 1,
+          "createdAt": 1037,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 6,
+          "row": 1,
+          "createdAt": 1038,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 7,
+          "row": 1,
+          "createdAt": 1039,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 8,
+          "row": 1,
+          "createdAt": 1040,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 9,
+          "row": 1,
+          "createdAt": 1041,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 10,
+          "row": 1,
+          "createdAt": 1042,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 11,
+          "row": 1,
+          "createdAt": 1043,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 12,
+          "row": 1,
+          "createdAt": 1044,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 13,
+          "row": 1,
+          "createdAt": 1045,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 14,
+          "row": 1,
+          "createdAt": 1046,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 15,
+          "row": 1,
+          "createdAt": 1047,
+          "lastInfluencedAt": 1047
+        },
+        {
+          "column": 16,
+          "row": 1,
+          "createdAt": 1048,
+          "lastInfluencedAt": 1048
+        },
+        {
+          "column": 17,
+          "row": 1,
+          "createdAt": 1049,
+          "lastInfluencedAt": 1049
+        },
+        {
+          "column": 18,
+          "row": 1,
+          "createdAt": 1050,
+          "lastInfluencedAt": 1050
+        },
+        {
+          "column": 19,
+          "row": 1,
+          "createdAt": 1051,
+          "lastInfluencedAt": 1051
+        },
+        {
+          "column": 20,
+          "row": 1,
+          "createdAt": 1052,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 21,
+          "row": 1,
+          "createdAt": 1053,
+          "lastInfluencedAt": 1053
+        },
+        {
+          "column": 22,
+          "row": 1,
+          "createdAt": 1054,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 23,
+          "row": 1,
+          "createdAt": 1055,
+          "lastInfluencedAt": 1055
+        },
+        {
+          "column": 24,
+          "row": 1,
+          "createdAt": 1056,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 25,
+          "row": 1,
+          "createdAt": 1057,
+          "lastInfluencedAt": 1057
+        },
+        {
+          "column": 26,
+          "row": 1,
+          "createdAt": 1058,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 27,
+          "row": 1,
+          "createdAt": 1059,
+          "lastInfluencedAt": 1059
+        },
+        {
+          "column": 28,
+          "row": 1,
+          "createdAt": 1060,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 29,
+          "row": 1,
+          "createdAt": 1061,
+          "lastInfluencedAt": 1061
+        },
+        {
+          "column": 30,
+          "row": 1,
+          "createdAt": 1062,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 31,
+          "row": 1,
+          "createdAt": 1063,
+          "lastInfluencedAt": 1063
+        },
+        {
+          "column": 0,
+          "row": 2,
+          "createdAt": 1064,
+          "lastInfluencedAt": 1064
+        },
+        {
+          "column": 1,
+          "row": 2,
+          "createdAt": 1065,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 2,
+          "row": 2,
+          "createdAt": 1066,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 3,
+          "row": 2,
+          "createdAt": 1067,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 4,
+          "row": 2,
+          "createdAt": 1068,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 5,
+          "row": 2,
+          "createdAt": 1069,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 6,
+          "row": 2,
+          "createdAt": 1070,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 7,
+          "row": 2,
+          "createdAt": 1071,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 8,
+          "row": 2,
+          "createdAt": 1072,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 9,
+          "row": 2,
+          "createdAt": 1073,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 10,
+          "row": 2,
+          "createdAt": 1074,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 11,
+          "row": 2,
+          "createdAt": 1075,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 12,
+          "row": 2,
+          "createdAt": 1076,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 13,
+          "row": 2,
+          "createdAt": 1077,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 14,
+          "row": 2,
+          "createdAt": 1078,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 15,
+          "row": 2,
+          "createdAt": 1079,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 16,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 17,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 18,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 19,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 20,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 21,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 15,
+          "row": 3,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 16,
+          "row": 3,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 17,
+          "row": 3,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        }
+      ]
+    },
+    {
+      "rolls": [
+        0.449999,
+        0.49,
+        0.349999,
+        0
+      ],
+      "cells": [
+        {
+          "column": 0,
+          "row": 0,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1033,
+          "fadeSeedAttemptedAt": 1033
+        },
+        {
+          "column": 1,
+          "row": 0,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1034,
+          "fadeSeedAttemptedAt": 1034
+        },
+        {
+          "column": 2,
+          "row": 0,
+          "createdAt": 1002,
+          "lastInfluencedAt": 1035,
+          "fadeSeedAttemptedAt": 1035
+        },
+        {
+          "column": 3,
+          "row": 0,
+          "createdAt": 1003,
+          "lastInfluencedAt": 1036,
+          "fadeSeedAttemptedAt": 1036
+        },
+        {
+          "column": 4,
+          "row": 0,
+          "createdAt": 1004,
+          "lastInfluencedAt": 1037,
+          "fadeSeedAttemptedAt": 1037
+        },
+        {
+          "column": 5,
+          "row": 0,
+          "createdAt": 1005,
+          "lastInfluencedAt": 1038,
+          "fadeSeedAttemptedAt": 1038
+        },
+        {
+          "column": 6,
+          "row": 0,
+          "createdAt": 1006,
+          "lastInfluencedAt": 1039,
+          "fadeSeedAttemptedAt": 1039
+        },
+        {
+          "column": 7,
+          "row": 0,
+          "createdAt": 1007,
+          "lastInfluencedAt": 1040,
+          "fadeSeedAttemptedAt": 1040
+        },
+        {
+          "column": 8,
+          "row": 0,
+          "createdAt": 1008,
+          "lastInfluencedAt": 1041,
+          "fadeSeedAttemptedAt": 1041
+        },
+        {
+          "column": 9,
+          "row": 0,
+          "createdAt": 1009,
+          "lastInfluencedAt": 1042,
+          "fadeSeedAttemptedAt": 1042
+        },
+        {
+          "column": 10,
+          "row": 0,
+          "createdAt": 1010,
+          "lastInfluencedAt": 1043,
+          "fadeSeedAttemptedAt": 1043
+        },
+        {
+          "column": 11,
+          "row": 0,
+          "createdAt": 1011,
+          "lastInfluencedAt": 1044,
+          "fadeSeedAttemptedAt": 1044
+        },
+        {
+          "column": 12,
+          "row": 0,
+          "createdAt": 1012,
+          "lastInfluencedAt": 1045,
+          "fadeSeedAttemptedAt": 1045
+        },
+        {
+          "column": 13,
+          "row": 0,
+          "createdAt": 1013,
+          "lastInfluencedAt": 1046,
+          "fadeSeedAttemptedAt": 1046
+        },
+        {
+          "column": 14,
+          "row": 0,
+          "createdAt": 1014,
+          "lastInfluencedAt": 1047,
+          "fadeSeedAttemptedAt": 1047
+        },
+        {
+          "column": 15,
+          "row": 0,
+          "createdAt": 1015,
+          "lastInfluencedAt": 1048,
+          "fadeSeedAttemptedAt": 1048
+        },
+        {
+          "column": 16,
+          "row": 0,
+          "createdAt": 1016,
+          "lastInfluencedAt": 1049,
+          "fadeSeedAttemptedAt": 1049
+        },
+        {
+          "column": 17,
+          "row": 0,
+          "createdAt": 1017,
+          "lastInfluencedAt": 1050,
+          "fadeSeedAttemptedAt": 1050
+        },
+        {
+          "column": 18,
+          "row": 0,
+          "createdAt": 1018,
+          "lastInfluencedAt": 1051
+        },
+        {
+          "column": 19,
+          "row": 0,
+          "createdAt": 1019,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 20,
+          "row": 0,
+          "createdAt": 1020,
+          "lastInfluencedAt": 1053
+        },
+        {
+          "column": 21,
+          "row": 0,
+          "createdAt": 1021,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 22,
+          "row": 0,
+          "createdAt": 1022,
+          "lastInfluencedAt": 1055
+        },
+        {
+          "column": 23,
+          "row": 0,
+          "createdAt": 1023,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 24,
+          "row": 0,
+          "createdAt": 1024,
+          "lastInfluencedAt": 1057
+        },
+        {
+          "column": 25,
+          "row": 0,
+          "createdAt": 1025,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 26,
+          "row": 0,
+          "createdAt": 1026,
+          "lastInfluencedAt": 1059
+        },
+        {
+          "column": 27,
+          "row": 0,
+          "createdAt": 1027,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 28,
+          "row": 0,
+          "createdAt": 1028,
+          "lastInfluencedAt": 1061
+        },
+        {
+          "column": 29,
+          "row": 0,
+          "createdAt": 1029,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 30,
+          "row": 0,
+          "createdAt": 1030,
+          "lastInfluencedAt": 1063
+        },
+        {
+          "column": 31,
+          "row": 0,
+          "createdAt": 1031,
+          "lastInfluencedAt": 1031
+        },
+        {
+          "column": 0,
+          "row": 1,
+          "createdAt": 1032,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 1,
+          "row": 1,
+          "createdAt": 1033,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 2,
+          "row": 1,
+          "createdAt": 1034,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 3,
+          "row": 1,
+          "createdAt": 1035,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 4,
+          "row": 1,
+          "createdAt": 1036,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 5,
+          "row": 1,
+          "createdAt": 1037,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 6,
+          "row": 1,
+          "createdAt": 1038,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 7,
+          "row": 1,
+          "createdAt": 1039,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 8,
+          "row": 1,
+          "createdAt": 1040,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 9,
+          "row": 1,
+          "createdAt": 1041,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 10,
+          "row": 1,
+          "createdAt": 1042,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 11,
+          "row": 1,
+          "createdAt": 1043,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 12,
+          "row": 1,
+          "createdAt": 1044,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 13,
+          "row": 1,
+          "createdAt": 1045,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 14,
+          "row": 1,
+          "createdAt": 1046,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 15,
+          "row": 1,
+          "createdAt": 1047,
+          "lastInfluencedAt": 1047
+        },
+        {
+          "column": 16,
+          "row": 1,
+          "createdAt": 1048,
+          "lastInfluencedAt": 1048
+        },
+        {
+          "column": 17,
+          "row": 1,
+          "createdAt": 1049,
+          "lastInfluencedAt": 1049
+        },
+        {
+          "column": 18,
+          "row": 1,
+          "createdAt": 1050,
+          "lastInfluencedAt": 1050
+        },
+        {
+          "column": 19,
+          "row": 1,
+          "createdAt": 1051,
+          "lastInfluencedAt": 1051
+        },
+        {
+          "column": 20,
+          "row": 1,
+          "createdAt": 1052,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 21,
+          "row": 1,
+          "createdAt": 1053,
+          "lastInfluencedAt": 1053
+        },
+        {
+          "column": 22,
+          "row": 1,
+          "createdAt": 1054,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 23,
+          "row": 1,
+          "createdAt": 1055,
+          "lastInfluencedAt": 1055
+        },
+        {
+          "column": 24,
+          "row": 1,
+          "createdAt": 1056,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 25,
+          "row": 1,
+          "createdAt": 1057,
+          "lastInfluencedAt": 1057
+        },
+        {
+          "column": 26,
+          "row": 1,
+          "createdAt": 1058,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 27,
+          "row": 1,
+          "createdAt": 1059,
+          "lastInfluencedAt": 1059
+        },
+        {
+          "column": 28,
+          "row": 1,
+          "createdAt": 1060,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 29,
+          "row": 1,
+          "createdAt": 1061,
+          "lastInfluencedAt": 1061
+        },
+        {
+          "column": 30,
+          "row": 1,
+          "createdAt": 1062,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 31,
+          "row": 1,
+          "createdAt": 1063,
+          "lastInfluencedAt": 1063
+        },
+        {
+          "column": 0,
+          "row": 2,
+          "createdAt": 1064,
+          "lastInfluencedAt": 1064
+        },
+        {
+          "column": 1,
+          "row": 2,
+          "createdAt": 1065,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 2,
+          "row": 2,
+          "createdAt": 1066,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 3,
+          "row": 2,
+          "createdAt": 1067,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 4,
+          "row": 2,
+          "createdAt": 1068,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 5,
+          "row": 2,
+          "createdAt": 1069,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 6,
+          "row": 2,
+          "createdAt": 1070,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 7,
+          "row": 2,
+          "createdAt": 1071,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 8,
+          "row": 2,
+          "createdAt": 1072,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 9,
+          "row": 2,
+          "createdAt": 1073,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 10,
+          "row": 2,
+          "createdAt": 1074,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 11,
+          "row": 2,
+          "createdAt": 1075,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 12,
+          "row": 2,
+          "createdAt": 1076,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 13,
+          "row": 2,
+          "createdAt": 1077,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 14,
+          "row": 2,
+          "createdAt": 1078,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 15,
+          "row": 2,
+          "createdAt": 1079,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 30,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 28,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 16,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 26,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 31,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 29,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 15,
+          "row": 3,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 17,
+          "row": 2,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 30,
+          "row": 3,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        }
+      ]
+    },
+    {
+      "rolls": [
+        0.45,
+        0.5,
+        0.35
+      ],
+      "cells": [
+        {
+          "column": 0,
+          "row": 1,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1032,
+          "fadeSeedAttemptedAt": 1032
+        },
+        {
+          "column": 2,
+          "row": 0,
+          "createdAt": 1002,
+          "lastInfluencedAt": 1002,
+          "fadeSeedAttemptedAt": 1002
+        },
+        {
+          "column": 3,
+          "row": 0,
+          "createdAt": 1003,
+          "lastInfluencedAt": 1003,
+          "fadeSeedAttemptedAt": 1003
+        },
+        {
+          "column": 4,
+          "row": 0,
+          "createdAt": 1004,
+          "lastInfluencedAt": 1004,
+          "fadeSeedAttemptedAt": 1004
+        },
+        {
+          "column": 5,
+          "row": 0,
+          "createdAt": 1005,
+          "lastInfluencedAt": 1005,
+          "fadeSeedAttemptedAt": 1005
+        },
+        {
+          "column": 6,
+          "row": 0,
+          "createdAt": 1006,
+          "lastInfluencedAt": 1006,
+          "fadeSeedAttemptedAt": 1006
+        },
+        {
+          "column": 7,
+          "row": 0,
+          "createdAt": 1007,
+          "lastInfluencedAt": 1007,
+          "fadeSeedAttemptedAt": 1007
+        },
+        {
+          "column": 8,
+          "row": 0,
+          "createdAt": 1008,
+          "lastInfluencedAt": 1008,
+          "fadeSeedAttemptedAt": 1008
+        },
+        {
+          "column": 9,
+          "row": 0,
+          "createdAt": 1009,
+          "lastInfluencedAt": 1009,
+          "fadeSeedAttemptedAt": 1009
+        },
+        {
+          "column": 10,
+          "row": 0,
+          "createdAt": 1010,
+          "lastInfluencedAt": 1010,
+          "fadeSeedAttemptedAt": 1010
+        },
+        {
+          "column": 11,
+          "row": 0,
+          "createdAt": 1011,
+          "lastInfluencedAt": 1011,
+          "fadeSeedAttemptedAt": 1011
+        },
+        {
+          "column": 12,
+          "row": 0,
+          "createdAt": 1012,
+          "lastInfluencedAt": 1012,
+          "fadeSeedAttemptedAt": 1012
+        },
+        {
+          "column": 13,
+          "row": 0,
+          "createdAt": 1013,
+          "lastInfluencedAt": 1013,
+          "fadeSeedAttemptedAt": 1013
+        },
+        {
+          "column": 14,
+          "row": 0,
+          "createdAt": 1014,
+          "lastInfluencedAt": 1014,
+          "fadeSeedAttemptedAt": 1014
+        },
+        {
+          "column": 15,
+          "row": 0,
+          "createdAt": 1015,
+          "lastInfluencedAt": 1015,
+          "fadeSeedAttemptedAt": 1015
+        },
+        {
+          "column": 16,
+          "row": 0,
+          "createdAt": 1016,
+          "lastInfluencedAt": 1016,
+          "fadeSeedAttemptedAt": 1016
+        },
+        {
+          "column": 17,
+          "row": 0,
+          "createdAt": 1017,
+          "lastInfluencedAt": 1017,
+          "fadeSeedAttemptedAt": 1017
+        },
+        {
+          "column": 18,
+          "row": 0,
+          "createdAt": 1018,
+          "lastInfluencedAt": 1018,
+          "fadeSeedAttemptedAt": 1018
+        },
+        {
+          "column": 19,
+          "row": 0,
+          "createdAt": 1019,
+          "lastInfluencedAt": 1019
+        },
+        {
+          "column": 20,
+          "row": 0,
+          "createdAt": 1020,
+          "lastInfluencedAt": 1020
+        },
+        {
+          "column": 21,
+          "row": 0,
+          "createdAt": 1021,
+          "lastInfluencedAt": 1021
+        },
+        {
+          "column": 22,
+          "row": 0,
+          "createdAt": 1022,
+          "lastInfluencedAt": 1022
+        },
+        {
+          "column": 23,
+          "row": 0,
+          "createdAt": 1023,
+          "lastInfluencedAt": 1023
+        },
+        {
+          "column": 24,
+          "row": 0,
+          "createdAt": 1024,
+          "lastInfluencedAt": 1024
+        },
+        {
+          "column": 25,
+          "row": 0,
+          "createdAt": 1025,
+          "lastInfluencedAt": 1025
+        },
+        {
+          "column": 26,
+          "row": 0,
+          "createdAt": 1026,
+          "lastInfluencedAt": 1026
+        },
+        {
+          "column": 27,
+          "row": 0,
+          "createdAt": 1027,
+          "lastInfluencedAt": 1027
+        },
+        {
+          "column": 28,
+          "row": 0,
+          "createdAt": 1028,
+          "lastInfluencedAt": 1028
+        },
+        {
+          "column": 29,
+          "row": 0,
+          "createdAt": 1029,
+          "lastInfluencedAt": 1029
+        },
+        {
+          "column": 30,
+          "row": 0,
+          "createdAt": 1030,
+          "lastInfluencedAt": 1030
+        },
+        {
+          "column": 31,
+          "row": 0,
+          "createdAt": 1031,
+          "lastInfluencedAt": 1031
+        },
+        {
+          "column": 1,
+          "row": 1,
+          "createdAt": 1033,
+          "lastInfluencedAt": 1033
+        },
+        {
+          "column": 2,
+          "row": 1,
+          "createdAt": 1034,
+          "lastInfluencedAt": 1034
+        },
+        {
+          "column": 3,
+          "row": 1,
+          "createdAt": 1035,
+          "lastInfluencedAt": 1035
+        },
+        {
+          "column": 4,
+          "row": 1,
+          "createdAt": 1036,
+          "lastInfluencedAt": 1036
+        },
+        {
+          "column": 5,
+          "row": 1,
+          "createdAt": 1037,
+          "lastInfluencedAt": 1037
+        },
+        {
+          "column": 6,
+          "row": 1,
+          "createdAt": 1038,
+          "lastInfluencedAt": 1038
+        },
+        {
+          "column": 7,
+          "row": 1,
+          "createdAt": 1039,
+          "lastInfluencedAt": 1039
+        },
+        {
+          "column": 8,
+          "row": 1,
+          "createdAt": 1040,
+          "lastInfluencedAt": 1040
+        },
+        {
+          "column": 9,
+          "row": 1,
+          "createdAt": 1041,
+          "lastInfluencedAt": 1041
+        },
+        {
+          "column": 10,
+          "row": 1,
+          "createdAt": 1042,
+          "lastInfluencedAt": 1042
+        },
+        {
+          "column": 11,
+          "row": 1,
+          "createdAt": 1043,
+          "lastInfluencedAt": 1043
+        },
+        {
+          "column": 12,
+          "row": 1,
+          "createdAt": 1044,
+          "lastInfluencedAt": 1044
+        },
+        {
+          "column": 13,
+          "row": 1,
+          "createdAt": 1045,
+          "lastInfluencedAt": 1045
+        },
+        {
+          "column": 14,
+          "row": 1,
+          "createdAt": 1046,
+          "lastInfluencedAt": 1046
+        },
+        {
+          "column": 15,
+          "row": 1,
+          "createdAt": 1047,
+          "lastInfluencedAt": 1047
+        },
+        {
+          "column": 16,
+          "row": 1,
+          "createdAt": 1048,
+          "lastInfluencedAt": 1048
+        },
+        {
+          "column": 17,
+          "row": 1,
+          "createdAt": 1049,
+          "lastInfluencedAt": 1049
+        },
+        {
+          "column": 18,
+          "row": 1,
+          "createdAt": 1050,
+          "lastInfluencedAt": 1050
+        },
+        {
+          "column": 19,
+          "row": 1,
+          "createdAt": 1051,
+          "lastInfluencedAt": 1051
+        },
+        {
+          "column": 20,
+          "row": 1,
+          "createdAt": 1052,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 21,
+          "row": 1,
+          "createdAt": 1053,
+          "lastInfluencedAt": 1053
+        },
+        {
+          "column": 22,
+          "row": 1,
+          "createdAt": 1054,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 23,
+          "row": 1,
+          "createdAt": 1055,
+          "lastInfluencedAt": 1055
+        },
+        {
+          "column": 24,
+          "row": 1,
+          "createdAt": 1056,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 25,
+          "row": 1,
+          "createdAt": 1057,
+          "lastInfluencedAt": 1057
+        },
+        {
+          "column": 26,
+          "row": 1,
+          "createdAt": 1058,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 27,
+          "row": 1,
+          "createdAt": 1059,
+          "lastInfluencedAt": 1059
+        },
+        {
+          "column": 28,
+          "row": 1,
+          "createdAt": 1060,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 29,
+          "row": 1,
+          "createdAt": 1061,
+          "lastInfluencedAt": 1061
+        },
+        {
+          "column": 30,
+          "row": 1,
+          "createdAt": 1062,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 31,
+          "row": 1,
+          "createdAt": 1063,
+          "lastInfluencedAt": 1063
+        },
+        {
+          "column": 0,
+          "row": 2,
+          "createdAt": 1064,
+          "lastInfluencedAt": 1064
+        },
+        {
+          "column": 1,
+          "row": 2,
+          "createdAt": 1065,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 2,
+          "row": 2,
+          "createdAt": 1066,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 3,
+          "row": 2,
+          "createdAt": 1067,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 4,
+          "row": 2,
+          "createdAt": 1068,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 5,
+          "row": 2,
+          "createdAt": 1069,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 6,
+          "row": 2,
+          "createdAt": 1070,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 7,
+          "row": 2,
+          "createdAt": 1071,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 8,
+          "row": 2,
+          "createdAt": 1072,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 9,
+          "row": 2,
+          "createdAt": 1073,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 10,
+          "row": 2,
+          "createdAt": 1074,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 11,
+          "row": 2,
+          "createdAt": 1075,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 12,
+          "row": 2,
+          "createdAt": 1076,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 13,
+          "row": 2,
+          "createdAt": 1077,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 14,
+          "row": 2,
+          "createdAt": 1078,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 15,
+          "row": 2,
+          "createdAt": 1079,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 27,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 28,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 26,
+          "row": 2,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 29,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 25,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 30,
+          "row": 2,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 0,
+          "row": 0,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 29,
+          "row": 3,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 28,
+          "row": 3,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 30,
+          "row": 3,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        }
+      ]
+    },
+    {
+      "rolls": [
+        0.649999,
+        0.5,
+        0.35,
+        0.7
+      ],
+      "cells": [
+        {
+          "column": 0,
+          "row": 1,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1000,
+          "fadeSeedAttemptedAt": 1000
+        },
+        {
+          "column": 3,
+          "row": 1,
+          "createdAt": 1003,
+          "lastInfluencedAt": 1003,
+          "fadeSeedAttemptedAt": 1003
+        },
+        {
+          "column": 4,
+          "row": 1,
+          "createdAt": 1004,
+          "lastInfluencedAt": 1004,
+          "fadeSeedAttemptedAt": 1004
+        },
+        {
+          "column": 5,
+          "row": 1,
+          "createdAt": 1005,
+          "lastInfluencedAt": 1005,
+          "fadeSeedAttemptedAt": 1005
+        },
+        {
+          "column": 6,
+          "row": 1,
+          "createdAt": 1006,
+          "lastInfluencedAt": 1006,
+          "fadeSeedAttemptedAt": 1006
+        },
+        {
+          "column": 7,
+          "row": 1,
+          "createdAt": 1007,
+          "lastInfluencedAt": 1007,
+          "fadeSeedAttemptedAt": 1007
+        },
+        {
+          "column": 8,
+          "row": 1,
+          "createdAt": 1008,
+          "lastInfluencedAt": 1008,
+          "fadeSeedAttemptedAt": 1008
+        },
+        {
+          "column": 9,
+          "row": 1,
+          "createdAt": 1009,
+          "lastInfluencedAt": 1009,
+          "fadeSeedAttemptedAt": 1009
+        },
+        {
+          "column": 10,
+          "row": 1,
+          "createdAt": 1010,
+          "lastInfluencedAt": 1010,
+          "fadeSeedAttemptedAt": 1010
+        },
+        {
+          "column": 11,
+          "row": 1,
+          "createdAt": 1011,
+          "lastInfluencedAt": 1011,
+          "fadeSeedAttemptedAt": 1011
+        },
+        {
+          "column": 12,
+          "row": 1,
+          "createdAt": 1012,
+          "lastInfluencedAt": 1012,
+          "fadeSeedAttemptedAt": 1012
+        },
+        {
+          "column": 13,
+          "row": 1,
+          "createdAt": 1013,
+          "lastInfluencedAt": 1013,
+          "fadeSeedAttemptedAt": 1013
+        },
+        {
+          "column": 14,
+          "row": 1,
+          "createdAt": 1014,
+          "lastInfluencedAt": 1014,
+          "fadeSeedAttemptedAt": 1014
+        },
+        {
+          "column": 15,
+          "row": 1,
+          "createdAt": 1015,
+          "lastInfluencedAt": 1015,
+          "fadeSeedAttemptedAt": 1015
+        },
+        {
+          "column": 16,
+          "row": 1,
+          "createdAt": 1016,
+          "lastInfluencedAt": 1016,
+          "fadeSeedAttemptedAt": 1016
+        },
+        {
+          "column": 17,
+          "row": 1,
+          "createdAt": 1017,
+          "lastInfluencedAt": 1017,
+          "fadeSeedAttemptedAt": 1017
+        },
+        {
+          "column": 18,
+          "row": 1,
+          "createdAt": 1018,
+          "lastInfluencedAt": 1018,
+          "fadeSeedAttemptedAt": 1018
+        },
+        {
+          "column": 19,
+          "row": 1,
+          "createdAt": 1019,
+          "lastInfluencedAt": 1019,
+          "fadeSeedAttemptedAt": 1019
+        },
+        {
+          "column": 20,
+          "row": 1,
+          "createdAt": 1020,
+          "lastInfluencedAt": 1020
+        },
+        {
+          "column": 21,
+          "row": 1,
+          "createdAt": 1021,
+          "lastInfluencedAt": 1021
+        },
+        {
+          "column": 22,
+          "row": 1,
+          "createdAt": 1022,
+          "lastInfluencedAt": 1022
+        },
+        {
+          "column": 23,
+          "row": 1,
+          "createdAt": 1023,
+          "lastInfluencedAt": 1023
+        },
+        {
+          "column": 24,
+          "row": 1,
+          "createdAt": 1024,
+          "lastInfluencedAt": 1024
+        },
+        {
+          "column": 25,
+          "row": 1,
+          "createdAt": 1025,
+          "lastInfluencedAt": 1025
+        },
+        {
+          "column": 26,
+          "row": 1,
+          "createdAt": 1026,
+          "lastInfluencedAt": 1026
+        },
+        {
+          "column": 27,
+          "row": 1,
+          "createdAt": 1027,
+          "lastInfluencedAt": 1027
+        },
+        {
+          "column": 28,
+          "row": 1,
+          "createdAt": 1028,
+          "lastInfluencedAt": 1028
+        },
+        {
+          "column": 29,
+          "row": 1,
+          "createdAt": 1029,
+          "lastInfluencedAt": 1029
+        },
+        {
+          "column": 30,
+          "row": 1,
+          "createdAt": 1030,
+          "lastInfluencedAt": 1031
+        },
+        {
+          "column": 0,
+          "row": 2,
+          "createdAt": 1032,
+          "lastInfluencedAt": 1033
+        },
+        {
+          "column": 1,
+          "row": 2,
+          "createdAt": 1034,
+          "lastInfluencedAt": 1034
+        },
+        {
+          "column": 2,
+          "row": 2,
+          "createdAt": 1035,
+          "lastInfluencedAt": 1035
+        },
+        {
+          "column": 3,
+          "row": 2,
+          "createdAt": 1036,
+          "lastInfluencedAt": 1036
+        },
+        {
+          "column": 4,
+          "row": 2,
+          "createdAt": 1037,
+          "lastInfluencedAt": 1037
+        },
+        {
+          "column": 5,
+          "row": 2,
+          "createdAt": 1038,
+          "lastInfluencedAt": 1038
+        },
+        {
+          "column": 6,
+          "row": 2,
+          "createdAt": 1039,
+          "lastInfluencedAt": 1039
+        },
+        {
+          "column": 7,
+          "row": 2,
+          "createdAt": 1040,
+          "lastInfluencedAt": 1040
+        },
+        {
+          "column": 8,
+          "row": 2,
+          "createdAt": 1041,
+          "lastInfluencedAt": 1041
+        },
+        {
+          "column": 9,
+          "row": 2,
+          "createdAt": 1042,
+          "lastInfluencedAt": 1042
+        },
+        {
+          "column": 10,
+          "row": 2,
+          "createdAt": 1043,
+          "lastInfluencedAt": 1043
+        },
+        {
+          "column": 11,
+          "row": 2,
+          "createdAt": 1044,
+          "lastInfluencedAt": 1044
+        },
+        {
+          "column": 12,
+          "row": 2,
+          "createdAt": 1045,
+          "lastInfluencedAt": 1045
+        },
+        {
+          "column": 13,
+          "row": 2,
+          "createdAt": 1046,
+          "lastInfluencedAt": 1046
+        },
+        {
+          "column": 14,
+          "row": 2,
+          "createdAt": 1047,
+          "lastInfluencedAt": 1047
+        },
+        {
+          "column": 15,
+          "row": 2,
+          "createdAt": 1048,
+          "lastInfluencedAt": 1048
+        },
+        {
+          "column": 16,
+          "row": 2,
+          "createdAt": 1049,
+          "lastInfluencedAt": 1049
+        },
+        {
+          "column": 17,
+          "row": 2,
+          "createdAt": 1050,
+          "lastInfluencedAt": 1050
+        },
+        {
+          "column": 18,
+          "row": 2,
+          "createdAt": 1051,
+          "lastInfluencedAt": 1051
+        },
+        {
+          "column": 19,
+          "row": 2,
+          "createdAt": 1052,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 20,
+          "row": 2,
+          "createdAt": 1053,
+          "lastInfluencedAt": 1053
+        },
+        {
+          "column": 21,
+          "row": 2,
+          "createdAt": 1054,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 22,
+          "row": 2,
+          "createdAt": 1055,
+          "lastInfluencedAt": 1055
+        },
+        {
+          "column": 23,
+          "row": 2,
+          "createdAt": 1056,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 24,
+          "row": 2,
+          "createdAt": 1057,
+          "lastInfluencedAt": 1057
+        },
+        {
+          "column": 25,
+          "row": 2,
+          "createdAt": 1058,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 26,
+          "row": 2,
+          "createdAt": 1059,
+          "lastInfluencedAt": 1059
+        },
+        {
+          "column": 27,
+          "row": 2,
+          "createdAt": 1060,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 28,
+          "row": 2,
+          "createdAt": 1061,
+          "lastInfluencedAt": 1061
+        },
+        {
+          "column": 29,
+          "row": 2,
+          "createdAt": 1062,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 30,
+          "row": 2,
+          "createdAt": 1063,
+          "lastInfluencedAt": 1063
+        },
+        {
+          "column": 0,
+          "row": 3,
+          "createdAt": 1064,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 1,
+          "row": 3,
+          "createdAt": 1066,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 2,
+          "row": 3,
+          "createdAt": 1067,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 3,
+          "row": 3,
+          "createdAt": 1068,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 4,
+          "row": 3,
+          "createdAt": 1069,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 5,
+          "row": 3,
+          "createdAt": 1070,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 6,
+          "row": 3,
+          "createdAt": 1071,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 7,
+          "row": 3,
+          "createdAt": 1072,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 8,
+          "row": 3,
+          "createdAt": 1073,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 9,
+          "row": 3,
+          "createdAt": 1074,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 10,
+          "row": 3,
+          "createdAt": 1075,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 11,
+          "row": 3,
+          "createdAt": 1076,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 12,
+          "row": 3,
+          "createdAt": 1077,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 13,
+          "row": 3,
+          "createdAt": 1078,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 14,
+          "row": 3,
+          "createdAt": 1079,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 26,
+          "row": 3,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 27,
+          "row": 3,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 25,
+          "row": 3,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 24,
+          "row": 3,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 1,
+          "row": 1,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 6,
+          "row": 0,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 25,
+          "row": 4,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 10,
+          "row": 0,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 13,
+          "row": 0,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 15,
+          "row": 0,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 18,
+          "row": 0,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 26,
+          "row": 4,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        }
+      ]
+    },
+    {
+      "rolls": [
+        0.1,
+        0.9,
+        0.2,
+        0.1,
+        0.8,
+        0.3,
+        0.6
+      ],
+      "cells": [
+        {
+          "column": 1,
+          "row": 0,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1000,
+          "fadeSeedAttemptedAt": 1000
+        },
+        {
+          "column": 1,
+          "row": 1,
+          "createdAt": 1000,
+          "lastInfluencedAt": 1000,
+          "fadeSeedAttemptedAt": 1000
+        },
+        {
+          "column": 0,
+          "row": 0,
+          "createdAt": 1001,
+          "lastInfluencedAt": 1033,
+          "fadeSeedAttemptedAt": 1033
+        },
+        {
+          "column": 2,
+          "row": 0,
+          "createdAt": 1002,
+          "lastInfluencedAt": 1035,
+          "fadeSeedAttemptedAt": 1035
+        },
+        {
+          "column": 4,
+          "row": 0,
+          "createdAt": 1004,
+          "lastInfluencedAt": 1037,
+          "fadeSeedAttemptedAt": 1037
+        },
+        {
+          "column": 6,
+          "row": 0,
+          "createdAt": 1006,
+          "lastInfluencedAt": 1039,
+          "fadeSeedAttemptedAt": 1039
+        },
+        {
+          "column": 8,
+          "row": 0,
+          "createdAt": 1008,
+          "lastInfluencedAt": 1041,
+          "fadeSeedAttemptedAt": 1041
+        },
+        {
+          "column": 10,
+          "row": 0,
+          "createdAt": 1010,
+          "lastInfluencedAt": 1043,
+          "fadeSeedAttemptedAt": 1043
+        },
+        {
+          "column": 12,
+          "row": 0,
+          "createdAt": 1012,
+          "lastInfluencedAt": 1045,
+          "fadeSeedAttemptedAt": 1045
+        },
+        {
+          "column": 14,
+          "row": 0,
+          "createdAt": 1014,
+          "lastInfluencedAt": 1047,
+          "fadeSeedAttemptedAt": 1047
+        },
+        {
+          "column": 16,
+          "row": 0,
+          "createdAt": 1016,
+          "lastInfluencedAt": 1049,
+          "fadeSeedAttemptedAt": 1049
+        },
+        {
+          "column": 18,
+          "row": 0,
+          "createdAt": 1018,
+          "lastInfluencedAt": 1051,
+          "fadeSeedAttemptedAt": 1051
+        },
+        {
+          "column": 20,
+          "row": 0,
+          "createdAt": 1020,
+          "lastInfluencedAt": 1053,
+          "fadeSeedAttemptedAt": 1053
+        },
+        {
+          "column": 22,
+          "row": 0,
+          "createdAt": 1022,
+          "lastInfluencedAt": 1055,
+          "fadeSeedAttemptedAt": 1055
+        },
+        {
+          "column": 24,
+          "row": 0,
+          "createdAt": 1024,
+          "lastInfluencedAt": 1057,
+          "fadeSeedAttemptedAt": 1057
+        },
+        {
+          "column": 26,
+          "row": 0,
+          "createdAt": 1026,
+          "lastInfluencedAt": 1059,
+          "fadeSeedAttemptedAt": 1059
+        },
+        {
+          "column": 28,
+          "row": 0,
+          "createdAt": 1028,
+          "lastInfluencedAt": 1061,
+          "fadeSeedAttemptedAt": 1061
+        },
+        {
+          "column": 30,
+          "row": 0,
+          "createdAt": 1030,
+          "lastInfluencedAt": 1063,
+          "fadeSeedAttemptedAt": 1063
+        },
+        {
+          "column": 0,
+          "row": 1,
+          "createdAt": 1032,
+          "lastInfluencedAt": 1065
+        },
+        {
+          "column": 2,
+          "row": 1,
+          "createdAt": 1034,
+          "lastInfluencedAt": 1067
+        },
+        {
+          "column": 4,
+          "row": 1,
+          "createdAt": 1036,
+          "lastInfluencedAt": 1069
+        },
+        {
+          "column": 6,
+          "row": 1,
+          "createdAt": 1038,
+          "lastInfluencedAt": 1071
+        },
+        {
+          "column": 8,
+          "row": 1,
+          "createdAt": 1040,
+          "lastInfluencedAt": 1073
+        },
+        {
+          "column": 10,
+          "row": 1,
+          "createdAt": 1042,
+          "lastInfluencedAt": 1075
+        },
+        {
+          "column": 12,
+          "row": 1,
+          "createdAt": 1044,
+          "lastInfluencedAt": 1077
+        },
+        {
+          "column": 14,
+          "row": 1,
+          "createdAt": 1046,
+          "lastInfluencedAt": 1079
+        },
+        {
+          "column": 16,
+          "row": 1,
+          "createdAt": 1048,
+          "lastInfluencedAt": 1048
+        },
+        {
+          "column": 18,
+          "row": 1,
+          "createdAt": 1050,
+          "lastInfluencedAt": 1050
+        },
+        {
+          "column": 20,
+          "row": 1,
+          "createdAt": 1052,
+          "lastInfluencedAt": 1052
+        },
+        {
+          "column": 22,
+          "row": 1,
+          "createdAt": 1054,
+          "lastInfluencedAt": 1054
+        },
+        {
+          "column": 24,
+          "row": 1,
+          "createdAt": 1056,
+          "lastInfluencedAt": 1056
+        },
+        {
+          "column": 26,
+          "row": 1,
+          "createdAt": 1058,
+          "lastInfluencedAt": 1058
+        },
+        {
+          "column": 28,
+          "row": 1,
+          "createdAt": 1060,
+          "lastInfluencedAt": 1060
+        },
+        {
+          "column": 30,
+          "row": 1,
+          "createdAt": 1062,
+          "lastInfluencedAt": 1062
+        },
+        {
+          "column": 0,
+          "row": 2,
+          "createdAt": 1064,
+          "lastInfluencedAt": 1064
+        },
+        {
+          "column": 2,
+          "row": 2,
+          "createdAt": 1066,
+          "lastInfluencedAt": 1066
+        },
+        {
+          "column": 4,
+          "row": 2,
+          "createdAt": 1068,
+          "lastInfluencedAt": 1068
+        },
+        {
+          "column": 6,
+          "row": 2,
+          "createdAt": 1070,
+          "lastInfluencedAt": 1070
+        },
+        {
+          "column": 8,
+          "row": 2,
+          "createdAt": 1072,
+          "lastInfluencedAt": 1072
+        },
+        {
+          "column": 10,
+          "row": 2,
+          "createdAt": 1074,
+          "lastInfluencedAt": 1074
+        },
+        {
+          "column": 12,
+          "row": 2,
+          "createdAt": 1076,
+          "lastInfluencedAt": 1076
+        },
+        {
+          "column": 14,
+          "row": 2,
+          "createdAt": 1078,
+          "lastInfluencedAt": 1078
+        },
+        {
+          "column": 9,
+          "row": 1,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 15,
+          "row": 0,
+          "createdAt": 40000,
+          "lastInfluencedAt": 40000
+        },
+        {
+          "column": 7,
+          "row": 1,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 17,
+          "row": 0,
+          "createdAt": 44000,
+          "lastInfluencedAt": 44000
+        },
+        {
+          "column": 1,
+          "row": 2,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 5,
+          "row": 1,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 5,
+          "row": 0,
+          "createdAt": 1202000,
+          "lastInfluencedAt": 1202000
+        },
+        {
+          "column": 9,
+          "row": 0,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 11,
+          "row": 1,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 11,
+          "row": 0,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 17,
+          "row": 1,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 19,
+          "row": 1,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 9,
+          "row": 2,
+          "createdAt": 1206000,
+          "lastInfluencedAt": 1206000
+        },
+        {
+          "column": 21,
+          "row": 0,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 23,
+          "row": 1,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 23,
+          "row": 0,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 27,
+          "row": 1,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 31,
+          "row": 1,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        },
+        {
+          "column": 15,
+          "row": 1,
+          "createdAt": 1210000,
+          "lastInfluencedAt": 1210000
+        }
+      ]
+    }
+  ]
+}

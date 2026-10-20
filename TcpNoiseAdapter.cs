@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -11,21 +12,64 @@ public sealed class TcpNoiseAdapter(
     ILogger<TcpNoiseAdapter> logger) : BackgroundService
 {
     // Unknown envelope/payload fields are ignored, never retained or forwarded.
-    private sealed record Envelope(string? EventType, int? SchemaVersion, PortPayload? Payload);
-    private sealed record PortPayload(int? ListenPort);
+    private sealed record Envelope(string? EventType, string? Source, int? SchemaVersion, PortPayload? Payload);
+    private sealed record PortPayload(int? ListenPort, JsonElement IpVersion, JsonElement Sensor, JsonElement SeenCount);
     private static readonly JsonSerializerOptions InputJson = new() { PropertyNameCaseInsensitive = true };
     private int unavailable;
 
-    public static PortHit? Normalize(ReadOnlySpan<byte> data)
+    public static GardenGrowth? Normalize(ReadOnlySpan<byte> data) =>
+        Normalize(data, Random.Shared.Next(10_000), Random.Shared.Next(3));
+
+    public static GardenGrowth? Normalize(ReadOnlySpan<byte> data, int roll, int rareChoice)
     {
         try
         {
             var envelope = JsonSerializer.Deserialize<Envelope>(data, InputJson);
-            return envelope is { EventType: "tcpnoise.connection", SchemaVersion: 1,
-                Payload.ListenPort: >= 1 and <= 65535 }
-                ? new PortHit(envelope.Payload.ListenPort.Value) : null;
+            if (envelope is not
+                {
+                    EventType: "tcpnoise.connection",
+                    Source: "tcpnoise",
+                    SchemaVersion: 1,
+                    Payload.ListenPort: >= 1 and <= 65535
+                })
+            {
+                return null;
+            }
+
+            var port = envelope.Payload.ListenPort.Value;
+            // Optional traits never invalidate a connection. Only numeric integer 6
+            // earns the IPv6 bonus; 4, missing, and unusable values have no bonus.
+            var ipVersion = envelope.Payload.IpVersion;
+            var isIpv6 = ipVersion.ValueKind == JsonValueKind.Number
+                && ipVersion.TryGetInt32(out var version) && version == 6;
+            var sensor = envelope.Payload.Sensor.ValueKind == JsonValueKind.String
+                ? envelope.Payload.Sensor.GetString() : null;
+            var species = TcpNoiseRarity.Resolve(port, isIpv6, sensor, roll, rareChoice);
+            var (vigor, seenCount) = ResolveSeenCount(envelope.Payload.SeenCount);
+            return new GardenGrowth(species, port, vigor, InspectionSensor(sensor), seenCount);
         }
-        catch (JsonException) { return null; }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    // Optional recurrence trait: no rarity, lifetime, or threat semantics.
+    // Preserve a valid unsigned count as text for inspection so JavaScript never loses UInt64 precision.
+    private static (int Vigor, string? SeenCount) ResolveSeenCount(JsonElement seenCount)
+    {
+        if (seenCount.ValueKind != JsonValueKind.Number || !seenCount.TryGetUInt64(out var count))
+            return (0, null);
+
+        var vigor = count switch { <= 1 => 0, <= 3 => 1, <= 9 => 2, _ => 3 };
+        return (vigor, count.ToString(CultureInfo.InvariantCulture));
+    }
+
+    // Sensor is useful provenance for click inspection but remains bounded display metadata.
+    private static string? InspectionSensor(string? sensor)
+    {
+        if (string.IsNullOrWhiteSpace(sensor)) return null;
+        return sensor.Length <= 128 ? sensor : sensor[..128];
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -65,8 +109,8 @@ public sealed class TcpNoiseAdapter(
                     await foreach (var message in connection.SubscribeAsync<byte[]>(subject,
                         serializer: NatsRawSerializer<byte[]>.Default, cancellationToken: stoppingToken))
                     {
-                        if (message.Data is not null && Normalize(message.Data) is { } hit)
-                            events.Publish(hit);
+                        if (message.Data is not null && Normalize(message.Data) is { } growth)
+                            events.Publish(growth);
                     }
                 }
                 catch (Exception ex) when (!stoppingToken.IsCancellationRequested &&

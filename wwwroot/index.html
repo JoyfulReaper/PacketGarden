@@ -5,45 +5,85 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PacketGarden</title>
   <link rel="stylesheet" href="garden.css">
-  <script src="garden.js" defer></script>
+  <link rel="stylesheet" href="garden-ui.css">
+  <link rel="stylesheet" href="pixi-live.css?v=audio-1">
+  <script src="garden-audio.js?v=storm-bolt-2" defer></script>
+  <script src="vendor/pixi/pixi.min.js" defer></script>
+  <script src="pixi-stress.js" defer data-pixi-library></script>
+  <script src="garden-core.js" defer></script>
+  <script src="garden-gnomes.js?v=gnomes-1" defer></script>
+  <script src="garden-mutations.js" defer></script>
+  <script src="garden-ecology.js?v=grass-clear-1" defer></script>
+  <script src="garden-ambient.js" defer></script>
+  <script src="garden-interaction.js" defer></script>
+  <script src="garden-ui-core.js" defer></script>
+  <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
+  <script src="pixi-live-ambient.js" defer></script>
+  <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
+  <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
+  <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
+  <script src="pixi-live-core.js?v=grass-clear-1" defer></script>
+  <script src="pixi-live.js?v=grass-clear-1" defer></script>
 </head>
-<body>
+<body class="pixi-default">
   <header>
     <h1>PacketGarden</h1>
-    <p>A quiet patch of possibility.</p>
+    <p>Packet Garden: Composting the internet's shit into something pretty.</p>
+    <nav class="site-nav" aria-label="Site navigation">
+      <a href="about.html">About</a> · <a href="https://noise.kgivler.com/" target="_blank" rel="noopener noreferrer" aria-label="Noise Observatory (opens in a new tab)">Noise Observatory</a> · <a href="canvas.html">Canvas garden</a>
+    </nav>
   </header>
   <main aria-label="Garden">
-    <canvas aria-label="An empty rectangular soil garden with a subtle square grid" role="img">
-      An empty rectangular soil garden with a subtle square grid.
-    </canvas>
+    <div class="pixi-garden-stage">
+      <div id="view" aria-label="PacketGarden"></div>
+    </div>
+    <div id="collection-message" class="collection-message" role="status" hidden></div>
+    <section id="recent-activity" class="recent-activity" aria-label="Recent activity">
+      <h2>Recent activity</h2>
+      <ol>
+        <li id="recent-event-0" hidden></li>
+        <li id="recent-event-1" hidden></li>
+        <li id="recent-event-2" hidden></li>
+      </ol>
+      <p id="garden-score">Score: 0</p>
+    </section>
   </main>
-  <div class="weather-controls" aria-label="Temporary weather controls">
-    <label for="weather-source">Weather source</label>
-    <select id="weather-source">
-      <option value="manual">Manual</option>
-      <option value="live">Live</option>
-    </select>
-    <label for="weather-level">Weather</label>
-    <select id="weather-level">
-      <option value="quiet">Quiet</option>
-      <option value="drizzle">Drizzle</option>
-      <option value="rain">Rain</option>
-      <option value="heavy_rain">Heavy rain</option>
-      <option value="botnet_thunderstorm">Botnet thunderstorm</option>
-      <option value="botnet_hurricane">Botnet hurricane</option>
-    </select>
-    <label for="weather-intensity">Events/min</label>
-    <input id="weather-intensity" type="number" min="0" max="1000000" step="100" value="1200">
-    <span id="weather-status" role="status">Manual weather</span>
-  </div>
-  <footer aria-label="Temporary development controls">
-    <button id="fake-dns" type="button">Generate fake DNS event</button>
-    <button id="fake-gopher" type="button">Generate fake Gopher event</button>
-    <button id="fake-http" type="button">Generate fake HTTP event</button>
-    <button id="fake-ssh" type="button">Generate fake SSH event</button>
-    <button id="fake-failed-auth" type="button">Generate fake failed-auth event</button>
-    <button id="automatic-traffic" type="button" aria-pressed="false">Start automatic fake traffic</button>
-    <span id="garden-status" role="status">0 flowers, 0 mushrooms, 0 broad-leaf plants, 0 vines, 0 red blooms</span>
+  <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>
+    <button id="specimen-card-close" class="specimen-card-close" type="button" aria-label="Close specimen information">×</button>
+    <h2 id="specimen-card-title">Specimen</h2>
+    <div id="grass-details" hidden>
+      <p>Background ecology that spreads in small tufts. Not a collectible plant specimen.</p>
+      <dl><div><dt>State</dt><dd id="grass-state">—</dd></div></dl>
+    </div>
+    <dl id="specimen-details">
+      <div><dt>Source</dt><dd id="specimen-source">—</dd></div>
+      <div><dt>Sensor</dt><dd id="specimen-sensor">—</dd></div>
+      <div><dt>Listening port</dt><dd id="specimen-port">—</dd></div>
+      <div><dt>Seen count</dt><dd id="specimen-seen-count">—</dd></div>
+      <div><dt>Vigor</dt><dd id="specimen-vigor">—</dd></div>
+      <div><dt>Color scheme</dt><dd id="specimen-color">—</dd></div>
+      <div><dt>Age</dt><dd id="specimen-age">—</dd></div>
+      <div><dt>Mutation</dt><dd id="specimen-mutation">None</dd></div>
+    </dl>
+  </aside>
+  <footer aria-label="Garden status">
+    <section class="network-activity" aria-label="Noise Observatory traffic" title="Aggregate Noise Observatory traffic, separate from accepted garden growth.">
+      <span>Observatory traffic</span>
+      <span>Events/min (5-min avg): <span id="network-events-minute">Waiting…</span></span>
+      <span>Last hour: <span id="network-events-hour">Waiting…</span></span>
+    </section>
+    <span>Live connection: <span id="connection" role="status">connecting</span></span>
+    <span id="weather-status" role="status">Live weather connecting</span>
+    <label><input id="lightning-enabled" type="checkbox" checked> Lightning</label>
+    <div class="pixi-sound-controls" role="group" aria-label="Garden sound controls">
+      <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
+      <label for="sound-volume">Volume</label>
+      <input id="sound-volume" type="range" min="0" max="100" value="12" aria-label="Growth sound volume">
+    </div>
+    <label class="recent-activity-toggle" for="show-recent-activity">
+      <input id="show-recent-activity" type="checkbox" checked>
+      Recent events
+    </label>
   </footer>
 </body>
 </html>
