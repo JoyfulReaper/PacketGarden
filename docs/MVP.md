@@ -23,7 +23,8 @@ sensor/service inputs remain goals.
 - Manual weather levels and an Events/min intensity preview, rendered separately from ecology with no effects on specimens or grass.
 - Live aggregate weather from Noise Observatory through backend polling and SSE, sharing the existing garden renderers.
 - The default homepage shows Observatory events/minute as a five-minute average and the actual source-reported last-hour count via existing SSE; these are aggregate traffic statistics, not the number of successful garden spawns. A bounded 5,000-event Observatory store may undercount the last hour during high traffic.
-- Stronger severe visual weather with wind-driven hurricane rain; no lightning, flashing, or ecological damage.
+- Stronger severe visual weather with wind-driven hurricane rain and no ecological damage.
+- Pixi-only optional storm illumination: a smooth localized glow for `botnet_thunderstorm`/`botnet_hurricane`, irregular 60–150s/45–120s waits after each sequence, independent Lightning control and reduced-motion suppression. Optional delayed thunder shares Sound On/volume; hidden pages cancel without catch-up. No ordinary/heavy-rain lightning, backend or ecology changes. Canvas retains its original rain. See [Pixi implementation](PIXI-LIVE.md).
 - Temporary storm-water terrain: heavy rain/thunderstorm/hurricane only, one check per 15 seconds with 35%/60%/85% chances. At most eight patches; existing water is usually refreshed/grown (60%), new patches often join nearby pools, and the cap forces refresh. Sizes grow gradually to a bounded maximum. Water holds for 30 seconds after refresh, then shrinks/fades over eight minutes. Hidden pages skip formation and resume on a fresh schedule without catch-up. Cached draw order is grass, water, specimens. No occupancy, provenance, plant damage, grass mutation, collection, extra Recent activity, or persistence.
 - Shared Canvas/Pixi browser-local Web Audio growth and collection sounds, Off by default at 12% volume and initialized only by an enable gesture. Species tones (including wirefern), gentle rare chimes and gnome battle/victory cues represent artistic events, not security alerts; independent 400 ms ordinary / 900 ms rare cooldowns drop extra sounds without delaying growth.
 - NATS-backed TCPNoise connection input, validated and resolved server-side from listening port to normalized specimen growth on the same SSE stream.
@@ -120,7 +121,7 @@ These are desired follow-ups, not descriptions of the code already implemented:
   drops remain future work beyond the four visitors and Amanita.
 - **Stillbloom:** quiet-only growth remains future work.
 - **Water interactions:** frogs, water-specific snails, and gnome reactions remain future work; storm puddles themselves are implemented.
-- **Storm lighting/thunder experiment:** rare, non-strobing optional lightning and opt-in thunder for `botnet_thunderstorm`/`botnet_hurricane` only. Not currently implemented; no ecological or security meaning. See [Ideas](IDEAS.md#storm-lightning-and-thunder-future-experiment).
+- **Storm presentation follow-up:** evaluate the implemented Pixi glow and distant thunder during longer live use; Canvas lighting parity and continuous weather ambience remain separate decisions. See [Ideas](IDEAS.md#storm-lightning-and-thunder-implemented-pixi-experiment).
 - **Optional desktop/screensaver:** investigate packaging the existing Pixi garden and a clearly simulated input mode; no commitment to Godot, pricing, or distribution. See [Ideas](IDEAS.md#optional-desktop--screensaver-experience-exploratory).
 
 See [Ideas](IDEAS.md) for the broader pool and design constraints.

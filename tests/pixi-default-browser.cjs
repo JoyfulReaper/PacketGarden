@@ -32,6 +32,8 @@ async function run() {
     };
     const createGnomes = PacketGardenGnomes.createModel;
     PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
+    const createStorm = PacketGardenPixiStorm.createModel;
+    PacketGardenPixiStorm.createModel = (...args) => (window.__gardenTestStorm = createStorm(...args));
     const init = PIXI.Application.prototype.init;
     PIXI.Application.prototype.init = function(...args) {
       window.__gardenTestApp = this; window.__gardenTestPaints = 0;
@@ -178,6 +180,19 @@ async function run() {
       broadcast({specimenType:'flower',listenPort:53,vigor:0,sensor:'reconnected',seenCount:'2'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 2);
       assert.equal(await page.evaluate(() => __gardenAudioTones.length),1,'muted growth and reconnect are silent');
+      weather({level:'botnet_thunderstorm',eventsPerMinute:10000,eventsLastHour:4323});
+      await page.waitForFunction(()=>__gardenTestStorm.nextAt<Infinity);
+      assert.equal(await page.locator('#trigger-lightning').count(),0,'no production forced trigger');
+      const deadline=await page.evaluate(()=>__gardenTestStorm.nextAt);
+      weather({level:'botnet_thunderstorm',eventsPerMinute:10000,eventsLastHour:4324});
+      await page.waitForFunction(()=>document.querySelector('#network-events-hour').textContent===new Intl.NumberFormat().format(4324));
+      assert.equal(await page.evaluate(()=>__gardenTestStorm.nextAt),deadline,'hour-only update does not reschedule lightning');
+      await page.evaluate(()=>__gardenTestStorm.trigger());await page.waitForFunction(()=>__gardenTestApp.stage.children[0].children.at(-1).alpha>0);
+      await page.locator('#lightning-enabled').uncheck();assert.equal(await page.evaluate(()=>__gardenTestStorm.active),null);
+      await page.locator('#lightning-enabled').check();await page.emulateMedia({reducedMotion:'reduce'});
+      await page.waitForFunction(()=>document.querySelector('#lightning-enabled').disabled);
+      assert.equal(await page.evaluate(()=>__gardenTestStorm.trigger()),false);await page.emulateMedia({reducedMotion:'no-preference'});
+      await page.waitForFunction(()=>!document.querySelector('#lightning-enabled').disabled);
       assert.deepEqual(errors,[]); await page.close();
     }
     assert(requests.some(r => r.promoted && /^\/pixi-live\.js\?v=/.test(r.url)));
@@ -216,6 +231,7 @@ async function run() {
     assert.equal(await diagnostic.evaluate(() => __gardenAudioTones.length),3,'one quiet tone per successful collection');
     assert.equal(await diagnostic.locator('#garden-score').textContent(),'Score: 0');
     await checkGnomes(diagnostic,broadcast);
+    await checkStorm(diagnostic);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -325,6 +341,44 @@ async function run() {
     const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:12,
       atlasBacking:[768,64],estimatedAtlasRgbaBytes:768*64*4};
     await fs.writeFile(path.join(output,'gnome-timing.json'),JSON.stringify(results,null,2));console.log('Gnome timing:',JSON.stringify(results));
+  }
+  async function checkStorm(page) {
+    const weather=level=>page.getByLabel('Manual weather',{exact:true}).selectOption(level);
+    const trigger=()=>page.getByRole('button',{name:'Trigger Lightning (simulated)',exact:true}).click();
+    const active=()=>page.evaluate(()=>Boolean(__gardenTestStorm.active));
+    await page.getByRole('button',{name:'Sound: On',exact:true}).click();
+    await weather('heavy_rain');await trigger();assert.equal(await active(),false,'heavy rain never illuminates');
+    await weather('quiet');const quiet=await sample(page),results={quiet};
+    const average=shot=>{let total=0;for(let i=0;i<shot.width*shot.height;i++)total+=shot.data[i*shot.channels]+shot.data[i*shot.channels+1]+shot.data[i*shot.channels+2];return total/(shot.width*shot.height*3);};
+    for(const level of ['botnet_thunderstorm','botnet_hurricane']) {
+      await weather(level);await page.evaluate(()=>__gardenTestGnomes.resetCadence());
+      const before=png(await page.locator('#view canvas').screenshot({path:path.join(output,`${level}-inactive.png`)}));
+      const idle=await sample(page);await trigger();assert(await active());
+      const moving=await sample(page);assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children.at(-1).texture.source.width),256);
+      // A second normal sequence provides a screenshot near its single smooth peak.
+      await page.evaluate(()=>__gardenTestStorm.reset());await trigger();
+      await page.waitForFunction(()=>Date.now()-__gardenTestStorm.active.createdAt>=950);
+      const after=png(await page.locator('#view canvas').screenshot({path:path.join(output,`${level}-glow.png`)}));
+      const brightening=average(after)-average(before);assert(brightening>.1,'cached cloud glow must change displayed pixels');
+      results[level]={idle,active:moving,meanPixelBrightening:brightening};
+      await page.evaluate(()=>__gardenTestStorm.reset());
+    }
+    await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
+    const tones=await page.evaluate(()=>__gardenAudioTones.length);await trigger();
+    await page.waitForFunction(n=>__gardenAudioTones.length===n+2,tones);
+    assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),1);
+    assert.deepEqual(await page.evaluate(()=>__gardenAudioTones.slice(-2).map(n=>n.frequency.value>0)),[true,true]);
+    await weather('heavy_rain');assert.equal(await active(),false);
+    await weather('botnet_thunderstorm');await trigger();const noReplay=await page.evaluate(()=>__gardenAudioTones.length);
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+    assert.equal(await active(),false);
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
+    assert.equal(await page.evaluate(()=>__gardenAudioTones.length),noReplay);assert(await page.evaluate(()=>__gardenTestStorm.nextAt>Date.now()+59000));
+    await page.emulateMedia({reducedMotion:'reduce'});await trigger();assert.equal(await active(),false);
+    await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>!document.querySelector('#lightning-enabled').disabled);
+    await page.locator('#lightning-enabled').uncheck();await trigger();assert.equal(await active(),false);await page.locator('#lightning-enabled').check();
+    results.resources={sprites:1,cachedTextures:1,backing:[256,128],estimatedRgbaBytes:256*128*4,extraRenderLoops:0};
+    await fs.writeFile(path.join(output,'storm-timing.json'),JSON.stringify(results,null,2));console.log('Storm timing:',JSON.stringify(results));
   }
   // Chromium screenshot PNG decoder using only Node built-ins (8-bit RGB/RGBA).
   function png(bytes) {

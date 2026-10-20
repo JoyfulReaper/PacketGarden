@@ -90,9 +90,8 @@ the homepage. Both Pixi pages use real garden/weather SSE and shared placement,
 competition, lifecycle, ecology, ambient, mutation and interaction rules.
 The production status area includes Noise Observatory events/minute (five-minute
 average) and its actual last-hour event count, distinct from specimen growth.
-Rare lightning and optional thunder for the strongest storms, as well as an
-optional desktop/screensaver edition, remain ideas rather than implemented
-features; see [Ideas](docs/IDEAS.md).
+Both Pixi pages include rare, optional storm illumination and opt-in thunder.
+The desktop/screensaver edition remains an idea; see [Ideas](docs/IDEAS.md).
 
 Earlier investigations sometimes recorded excellent timing while visible
 stutter persisted, so migration was paused. The user subsequently reported a
@@ -388,7 +387,27 @@ zero intensity also removes the rain and dampening tint. Larger values increase
 rain density, speed, and soil darkening, saturating visually at 10,000 events/min.
 Heavy rain and storm levels increase density, speed, streak length, opacity, and
 soil darkening sharply. Hurricane rain has strong horizontal drift and diagonal
-streaks. These remain visual effects, without lightning, flashing, or damage.
+streaks. These visual effects cause no ecological damage. Canvas retains rain
+without lightning; both Pixi pages also support the optional illumination below.
+
+Only `botnet_thunderstorm` and `botnet_hurricane` qualify for Pixi lightning;
+ordinary rain and `heavy_rain` never do. A localized, soft blue-gray glow rises
+and falls smoothly over 2.2 seconds, with no white frames or repeated flashes.
+Thunderstorms wait a random 60–150 seconds; hurricanes wait 45–120 seconds,
+with a slightly larger, stronger glow. Each wait starts after the previous
+3.5-second sequence finishes. **Lightning** disables the effect independently;
+`prefers-reduced-motion` suppresses illumination and its accompanying thunder.
+Hidden pages cancel the sequence and resume on a fresh schedule without catch-up.
+An hourly-statistics-only update does not reset that schedule. These effects
+carry no security meaning and do not affect specimens, weather rules or puddles.
+
+When Sound is already On, lightning may produce a soft two-tone rumble after
+0.8–1.3 seconds, lasting 1.6 seconds (thunderstorm) or 1.9 seconds (hurricane,
+with lower pitches). It shares the existing context/master volume. Sound Off,
+zero volume, hiding, disabling lightning or changing weather cancels thunder;
+expired or suspended sequences never replay it. Preferences are not persisted.
+The diagnostic page alone offers **Trigger Lightning (simulated)** under manually
+selected eligible weather. See [implementation and measurements](docs/PIXI-LIVE.md).
 
 Optional browser-local Web Audio on Canvas and both Pixi pages starts **Off**. Click **Sound: Off**
 to enable them; the volume slider starts at **12%**. Successful real and fake
@@ -408,9 +427,12 @@ weed interactions use the existing quiet collection pluck, once per removal.
 Sound Off mutes the master immediately, zero volume schedules no tones, and device
 failures leave growth/rendering/clicking intact. Gnomes on both renderers reuse
 the existing battle/victory cues once per phase through the same context and
-volume. Weather audio remains absent.
+volume. Pixi's optional distant thunder accompanies actual lightning; continuous
+weather ambience remains absent. Canvas does not trigger thunder.
 Focused parity/integration checks run with `node tests/pixi-audio.cjs` alongside
 `node tests/garden-audio.cjs`.
+Storm scheduling, audio, rendering and cancellation checks run with
+`node tests/pixi-storm.cjs`.
 
 Gnome checks run with `node tests/gnome-events.cjs` (Canvas),
 `node tests/gnome-model.cjs` (shared rules), and `node tests/pixi-gnomes.cjs`

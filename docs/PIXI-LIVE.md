@@ -1,3 +1,72 @@
+# Optional storm illumination and thunder (2026-10-20)
+
+The default Pixi garden and `/pixi-live.html` now share `pixi-live-storm.js`.
+Only normalized `botnet_thunderstorm` and `botnet_hurricane` qualify. Ordinary
+rain and `heavy_rain` never produce lightning or thunder. Canvas lighting,
+weather classification, SSE, rain/wind, puddles and all garden rules are unchanged.
+This is atmospheric artwork without security meaning.
+
+One localized blue-gray glow follows a smooth sine-squared envelope over 2.2s,
+with no full-screen white frame or flash sequence. Thunderstorm peak Sprite
+alpha is .14 (760×360 world units); hurricane is .20 (840×420). Positions vary
+within the upper-middle garden. After each 3.5s sequence, thunderstorms wait
+uniformly 60–150s and hurricanes 45–120s. Entering eligible weather starts the
+same wait. A separately seeded presentation RNG leaves the garden stream alone.
+At most one sequence exists; no backlog accumulates.
+
+Both pages expose a compact Lightning checkbox. Reduced motion automatically
+suppresses the sequence and disables this control; removing that preference
+restores the user's checkbox choice. No preference is persisted. Hiding,
+changing weather or disabling cancels immediately; resuming schedules a fresh
+wait. Tick gaps over 2s also discard pending work. An hourly-count-only update
+does not rebuild rain or alter the lightning deadline. `/pixi-live.html` alone
+offers **Trigger Lightning (simulated)**, requiring manually selected eligible
+weather and enabled illumination without reduced motion.
+
+Thunder uses the existing Sound On gesture, AudioContext and master volume.
+Two low triangle tones fade in/out after a random .8–1.3s delay: 56/79Hz for
+1.6s in thunderstorms, 40/58Hz for 1.9s in hurricanes, with descending pitches.
+Off/zero volume/device failure remains safe. Muting, hiding, weather changes,
+disable and teardown stop/disconnect thunder without touching growth, collection,
+rare or gnome cues. Audio more than 300ms late is dropped, and expired or suspended
+sequences never replay it. No context is created just for thunder.
+
+Resources: one persistent Sprite (hidden when idle), one 256×128 RGBA cached
+texture (~128 KiB excluding driver overhead), at most two thunder oscillators
+and two envelope gains. Temporary construction Graphics is destroyed immediately;
+Sprite and backing texture are destroyed on teardown. Repeated effects create
+no textures or display objects. The existing 250ms logical tick handles scheduling;
+the native ticker only updates visibility/alpha while active. No extra timers,
+RAF loops, fullscreen filters or procedural geometry are added.
+
+Deterministic tests cover eligibility, interval bounds, intensity, one sequence,
+independent RNG, hourly-only updates, reduced motion, manual disable, opt-in sound,
+late/expired cancellation, hidden/resume, mute/zero/device failures and cleanup.
+Installed headless Chrome verified both default URLs, diagnostic forcing, actual
+pixel brightening, media preference changes, native audio nodes, hidden/resume
+and cancellation. Existing Canvas/stress checks also passed. Local ignored
+artifacts are `artifacts/homepage-browser/*-glow.png`, `*-inactive.png` and
+`storm-timing.json`.
+
+120-frame dense mixed-scene samples at DPR 2 (thunder muted during timing):
+
+| Scene | Glow | Mean / worst interval | Mean / worst CPU submission |
+| --- | --- | --- | --- |
+| Quiet | Ineligible | 16.68 / 16.80ms | 0.151 / 0.300ms |
+| Thunderstorm | Inactive | 16.68 / 16.90ms | 0.159 / 0.400ms |
+| Thunderstorm | Active | 16.68 / 17.10ms | 0.193 / 1.100ms |
+| Hurricane | Inactive | 16.68 / 16.90ms | 0.171 / 0.600ms |
+| Hurricane | Active | 16.68 / 16.90ms | 0.183 / 0.700ms |
+
+Active CPU mean differences were approximately +.033ms and +.012ms respectively.
+Peak screenshots increased average channel brightness by 1.11/255 and 3.31/255.
+These short noisy CPU submission samples do not measure GPU completion or prove
+long-session equivalence. Native audio scheduling was tested, but speaker output
+was not auditioned; tonal quality needs listening on real speakers/headphones.
+The historical unexplained stutter and known Pixi teardown exception remain
+unresolved. The .NET check build retained the existing NU1900 vulnerability-feed
+warning. Earlier dated sections below preserve their original findings.
+
 # The Gnome Incident restored (2026-10-20)
 
 Canvas and all live/default Pixi pages now use `garden-gnomes.js` for the existing

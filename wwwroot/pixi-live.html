@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="pixi-stress.css">
   <link rel="stylesheet" href="garden-ui.css">
   <link rel="stylesheet" href="pixi-live.css?v=audio-1">
-  <script src="garden-audio.js?v=audio-1" defer></script>
+  <script src="garden-audio.js?v=storm-1" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
@@ -19,8 +19,9 @@
   <script src="pixi-live-ui.js?v=audio-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
+  <script src="pixi-live-storm.js?v=storm-1" defer></script>
   <script src="pixi-live-ecology.js?v=grass-art-2c-1" defer></script>
-  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=gnomes-1" defer></script>
+  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=storm-1" defer></script>
 </head>
 <body>
   <main>
@@ -38,6 +39,9 @@
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
+      <label><input id="lightning-enabled" type="checkbox" checked> Lightning</label>
+      <button id="trigger-lightning" type="button">Trigger Lightning (simulated)</button>
+      <span id="lightning-test-status" role="status">Manual thunderstorm/hurricane only; lightning respects reduced motion.</span>
       <label><input id="pause" type="checkbox"> Pause live garden events</label>
       <label><input id="probes" type="checkbox" checked> Probe dots</label>
       <label class="recent-activity-toggle" for="show-recent-activity"><input id="show-recent-activity" type="checkbox" checked> Recent events</label>

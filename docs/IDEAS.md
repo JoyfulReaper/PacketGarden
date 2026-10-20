@@ -348,28 +348,33 @@ Still-planned presentation work:
 - make luminous/rare specimens more noticeable after dark;
 - subtle transitions rather than abrupt time-of-day switches.
 
-### Storm lightning and thunder (future experiment)
+<a id="storm-lightning-and-thunder-future-experiment"></a>
 
-The existing rain, wind, storm darkening and temporary puddles have **no**
-lightning or thunder effects today. Explore a rare atmospheric effect only for
-`botnet_thunderstorm` and `botnet_hurricane`, not ordinary/heavy rain:
+### Storm lightning and thunder (implemented Pixi experiment)
 
-- thunderstorm: occasional distant or localized cloud illumination and soft,
-  delayed thunder; hurricane: somewhat stronger wind-lit skies and deeper but
-  still infrequent thunder, without constant flashing;
-- use gently shaped, short light transitions rather than strobing or repeated
-  full-screen white frames; make flashes independently disableable and respect
-  reduced-motion preferences;
-- thunder stays silent until the user explicitly enables the existing sound
-  controller, obeys its volume/mute/device-failure behavior, and remains optional;
-- use bounded, testable intervals and no missed-event bursts after hidden-tab
-  suspension; no additional render loop or per-frame texture generation;
-- do not damage plants, change weather classification, affect ecology, create
-  network events or imply that botnet-named visual weather proves an attack.
+Implemented on October 20, 2026 for the default Pixi garden and `/pixi-live.html`:
+only `botnet_thunderstorm` and `botnet_hurricane` qualify, never ordinary/heavy
+rain. A localized blue-gray glow smoothly rises/falls over 2.2 seconds. Random
+waits are 60–150 seconds for thunderstorms and 45–120 seconds for hurricanes,
+starting after each 3.5-second sequence. Hurricanes have a slightly larger,
+stronger glow and lower-pitched thunder. There are no full-screen white frames
+or repeated flashes.
 
-This is a wishlist item to prototype and assess, not a promise to ship it. The
-original omission of flashes was deliberate; usability, performance and
-photosensitivity safety take priority over spectacle.
+The independent Lightning checkbox and reduced-motion preference suppress the
+whole sequence. Thunder requires the existing Sound On gesture and nonzero
+volume; two quiet tones follow actual lightning after 0.8–1.3 seconds. Weather
+changes, hiding, disable and cleanup cancel effects without delayed replay.
+The existing logical tick/ticker drives one cached Sprite and bounded audio;
+there are no extra animation loops, garden RNG draws or per-frame geometry.
+Hourly traffic updates alone leave the schedule unchanged. The diagnostic page
+alone has a manual eligible-weather trigger. No ecology, classification, backend
+or security interpretation changes accompany this atmospheric artwork.
+
+The original severe-weather slice deliberately omitted flashes. This guarded
+Pixi experiment revisits that presentation decision while retaining the earlier
+historical findings. Longer live evaluation and audible listening remain useful;
+Canvas lighting parity is a separate future decision. See [measurements and
+limits](PIXI-LIVE.md). Usability takes priority over spectacle.
 
 Possible later audio polish:
 
@@ -533,10 +538,9 @@ aggregate traffic pressure -> severe weather -> temporary puddles -> slow draina
 
 That adds environmental history without pretending the rain is a damaging event.
 
-Lightning/flashing was intentionally omitted from the implemented severe-weather
-slice. The guarded storm-lighting proposal above reopens that decision only as
-future experimentation; current storms still communicate intensity without
-strobing.
+Lightning/flashing was intentionally omitted from the original severe-weather
+slice. The guarded Pixi experiment above now adds optional smooth illumination;
+Canvas retains the original presentation. Neither renderer uses strobing.
 
 ## Keep the weirdness earned
 

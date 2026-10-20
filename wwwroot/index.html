@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="garden.css">
   <link rel="stylesheet" href="garden-ui.css">
   <link rel="stylesheet" href="pixi-live.css?v=audio-1">
-  <script src="garden-audio.js?v=audio-1" defer></script>
+  <script src="garden-audio.js?v=storm-1" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
@@ -20,9 +20,10 @@
   <script src="pixi-live-ui.js?v=audio-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
+  <script src="pixi-live-storm.js?v=storm-1" defer></script>
   <script src="pixi-live-ecology.js?v=grass-art-2c-1" defer></script>
   <script src="pixi-live-core.js?v=network-stats-1" defer></script>
-  <script src="pixi-live.js?v=gnomes-1" defer></script>
+  <script src="pixi-live.js?v=storm-1" defer></script>
 </head>
 <body class="pixi-default">
   <header>
@@ -69,6 +70,7 @@
     </section>
     <span>Live connection: <span id="connection" role="status">connecting</span></span>
     <span id="weather-status" role="status">Live weather connecting</span>
+    <label><input id="lightning-enabled" type="checkbox" checked> Lightning</label>
     <div class="pixi-sound-controls" role="group" aria-label="Garden sound controls">
       <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
       <label for="sound-volume">Volume</label>

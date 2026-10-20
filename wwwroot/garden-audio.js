@@ -27,6 +27,9 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   let activation = 0;
   let lastOrdinaryAt = -Infinity;
   let lastRareAt = -Infinity;
+  let thunder = null;
+
+  function stopThunder() { thunder?.cancel(); }
 
   function updateToggle(unavailable = false) {
     if (!toggle) return;
@@ -39,6 +42,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   }
 
   function reportUnavailable() {
+    stopThunder();
     enabled = false;
     activation++;
     try { applyVolume(); } catch { /* Device may have become unavailable. */ }
@@ -62,6 +66,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
 
   async function setSoundEnabled(value) {
     enabled = Boolean(value);
+    if (!enabled) stopThunder();
     const request = ++activation;
     updateToggle();
     try {
@@ -76,6 +81,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   function setSoundVolume(value) {
     const numeric = Number(value);
     volume = Number.isFinite(numeric) ? Math.min(100, Math.max(0, numeric)) / 100 : 0;
+    if (volume === 0) stopThunder();
     try { applyVolume(); } catch { reportUnavailable(); }
   }
 
@@ -135,10 +141,49 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
     } catch { reportUnavailable(); }
   }
 
+  function maybePlayThunderSound(level) {
+    if (!enabled || volume === 0 || audio?.state !== "running" || thunder ||
+        (level !== "botnet_thunderstorm" && level !== "botnet_hurricane")) return null;
+    const nodes = [], duration = level === "botnet_hurricane" ? 1.9 : 1.6;
+    const release = node => {
+      if (node.done) return;
+      node.done = true;
+      try { node.oscillator.disconnect();node.envelope.disconnect(); } catch { /* Device may be gone. */ }
+      if (nodes.every(item => item.done) && thunder === sequence) thunder = null;
+    };
+    const sequence = { cancel() {
+      for (const node of nodes) {
+        if (node.done) continue;
+        try { if (node.started) node.oscillator.stop(audio.currentTime); } catch { /* Device may be gone. */ }
+        release(node);
+      }
+      if (thunder === sequence) thunder = null;
+    }};
+    thunder = sequence;
+    try {
+      const frequencies = level === "botnet_hurricane" ? [40,58] : [56,79];
+      for (const [index,frequency] of frequencies.entries()) {
+        const node = { oscillator:audio.createOscillator(), envelope:audio.createGain(), started:false, done:false };
+        nodes.push(node);
+        const start = audio.currentTime;
+        node.oscillator.type = "triangle";
+        node.oscillator.frequency.setValueAtTime(frequency,start);
+        node.oscillator.frequency.exponentialRampToValueAtTime(frequency*.65,start+duration);
+        node.envelope.gain.setValueAtTime(0,start);
+        node.envelope.gain.linearRampToValueAtTime(index===0?.028:.016,start+.22);
+        node.envelope.gain.exponentialRampToValueAtTime(.0001,start+duration);
+        node.oscillator.connect(node.envelope);node.envelope.connect(master);
+        node.oscillator.onended = () => release(node);
+        node.oscillator.start(start);node.started=true;node.oscillator.stop(start+duration+.01);
+      }
+      return () => sequence.cancel();
+    } catch { sequence.cancel();reportUnavailable();return null; }
+  }
+
   toggle?.addEventListener("click", () => setSoundEnabled(!enabled));
   volumeControl?.addEventListener("input", () => setSoundVolume(volumeControl.value));
   updateToggle();
-  return { maybePlayGrowthSound, maybePlayGnomeSound, maybePlayCollectionSound };
+  return { maybePlayGrowthSound, maybePlayGnomeSound, maybePlayCollectionSound, maybePlayThunderSound };
 }
 
 // Both page types bind the same controls to one local controller. Context creation

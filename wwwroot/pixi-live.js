@@ -326,6 +326,21 @@
       backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
     viewElement.appendChild(app.canvas);
     const cache = makeLiveAtlas(P, app.renderer, shared, core), view = createView(P, app, cache.frames, core, shared);
+    const stormPresentation = window.PacketGardenPixiStorm, stormView = stormPresentation.createView(P, app.renderer, view.root);
+    // Separate random stream: effects never consume placement/ecology randomness.
+    const stormSeed = window.crypto?.getRandomValues ? window.crypto.getRandomValues(new Uint32Array(1))[0] : Date.now();
+    const storm = stormPresentation.createModel({random:shared.seededRandom(stormSeed),onChange:stormView.change,
+      onThunder:level => sound?.maybePlayThunderSound(level)});
+    const lightningToggle = document.querySelector('#lightning-enabled');
+    const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');let lightningEnabled = true;
+    const updateLightning = () => {
+      const reduced = reducedMotion?.matches ?? false;
+      if(lightningToggle){lightningToggle.disabled=reduced;lightningToggle.checked=lightningEnabled&&!reduced;
+        lightningToggle.title=reduced?'Suppressed by reduced-motion preference':'Rare atmospheric storm illumination';}
+      storm.configure({enabled:lightningEnabled,reducedMotion:reduced,hidden:document.hidden});
+    };
+    lightningToggle?.addEventListener('change',event=>{lightningEnabled=event.target.checked;updateLightning();});
+    reducedMotion?.addEventListener?.('change',updateLightning);updateLightning();
     const ambientCache = ambientPresentation.makeAmbientAtlas(P, app.renderer);
     const ambientView = ambientPresentation.createAmbientView(P, view.curiosityLayer, view.dropLayer, ambientCache.frames);
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
@@ -385,6 +400,7 @@
       if (levelControl) levelControl.disabled = live;
       currentWeather = live ? latestWeather ?? { level: 'quiet', eventsPerMinute: 0 } : { level: levelControl.value, eventsPerMinute: 10000 };
       view.setWeather(currentWeather);
+      storm.configure({level:currentWeather.level});
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
@@ -392,6 +408,12 @@
       status = value; connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
     });
     sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();
+    document.querySelector('#trigger-lightning')?.addEventListener('click',()=>{
+      const status=document.querySelector('#lightning-test-status');
+      const started=sourceControl?.value==='manual' && storm.trigger();
+      if(status)status.textContent=started?'Simulated atmospheric lightning; optional thunder follows.'
+        :'Requires manual thunderstorm/hurricane, enabled lightning, no reduced motion and no active sequence.';
+    });
     let ambientSeedVariant = 0;
     const seedAmbient = () => ambientPresentation.seedAmbient(ambient, Date.now(), ambientSeedVariant++ % 4);
     document.querySelector('#seed-ambient')?.addEventListener('click', seedAmbient);
@@ -405,7 +427,7 @@
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); gnomes.clear(); gnomes.resetCadence(); });
+    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
     document.querySelector('#seed')?.addEventListener('click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
@@ -428,7 +450,7 @@
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + 1} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.phase ?? 'idle'} · winner ${gnomes.incident?.winner ?? 'undecided'} · 12 cached frames / 1 GPU source`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
@@ -449,18 +471,21 @@
         const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
         ambient.tick(at, { hidden: document.hidden });
         gnomes.tick(at, undefined, document.hidden);
+        storm.tick(at);
         ui.tick(at);
         nextLogicalAt = Date.now() + 250;
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
       if (gnomes.incident) { gnomes.advance(Date.now());gnomeView.animate(Date.now()); }
+      if (storm.active) stormView.animate(storm.active,Date.now());
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
     document.addEventListener('visibilitychange', () => {
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
       gnomes.resetCadence(at);
+      storm.configure({hidden:document.hidden},at);
       if (document.hidden) app.stop(); else {
         model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
         ambient.tick(at, { hidden: false }); ambientView.animate(at);
@@ -470,9 +495,10 @@
       }
     });
     window.addEventListener('pagehide', event => {
-      app.stop(); stream.close(); if (event.persisted) return;
+      storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
       gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
+      reducedMotion?.removeEventListener?.('change',updateLightning);storm.destroy();stormView.destroy();
       app.canvas.removeEventListener('click', clickGarden); ui.destroy();
       ecology.clear(); ecologyView.destroy(); view.destroy(); ecologyCache.destroy();
       for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true); app.destroy(true);

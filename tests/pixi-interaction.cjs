@@ -93,5 +93,5 @@ for(const secret of ['SECRET_IP','SECRET_PAYLOAD','SECRET_BANNER','SECRET_CREDEN
 score();ui.destroy();assert.equal(windowHandlers.size,0);assert.equal(element('specimen-card-close').handlers.size,0);
 ambient.clear();garden.clear();av.destroy();view.destroy();cache.destroy();
 for(const file of ['pixi-live-ui.js','garden-ui-core.js'])assert.doesNotMatch(fs.readFileSync('wwwroot/'+file,'utf8'),/setTimeout|setInterval|localStorage|sessionStorage|AudioContext|gardenSound|garden-score/);
-assert.match(fs.readFileSync('wwwroot/pixi-live.html','utf8'),/garden-audio\.js\?v=audio-/);
+assert.match(fs.readFileSync('wwwroot/pixi-live.html','utf8'),/garden-audio\.js\?v=.+/);
 console.log('PASS: exact priority/removal/Sprite ownership, all six messages/2s replacement, inspection/fallbacks/palette/age/close/stale cell/clear, safe bounded Recent spawn/replacement/drop/invalid/paused/toggle, zero score, constant caches, no audio implementation in UI or new timers.');
