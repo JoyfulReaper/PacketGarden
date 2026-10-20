@@ -309,6 +309,15 @@ the port-22 collectible mutation. Every valid port
 gets growth, with flowers as the unknown-port fallback before rarity. Weeds and
 rare specimens are artistic outcomes.
 
+The two exact listening ports **420** and **42069** use ordinary weed as their
+known, non-fallback base (not the range between those ports). Normal and weed
+rolls both yield weed: ordinary IPv4 traffic is 99.5% weed / 0.5% rare, with the
+existing IPv6/DN42/Ygg rare bonuses and three rare-species choices preserved.
+This aesthetic mapping does not infer protocol or connection contents. Ordinary
+port-mapped weed is separate from the port-22 collectible mutation; vigor, safe
+inspection provenance, lifecycles, placement and SSE are unchanged. See the
+[complete mapping and rarity policy](EVENT-MAPPINGS.md#tcpnoise-destination-port-mapping).
+
 IPv6 / DN42 / Ygg and fallback ports are coarse visual modifiers, not security
 classifications or claims that any sensor/traffic class is malicious. Individual
 hits drive plants; aggregate activity continues driving weather separately through

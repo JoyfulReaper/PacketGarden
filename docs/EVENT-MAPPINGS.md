@@ -77,7 +77,8 @@ rarity roll:
 | 23, 2323 | wirefern |
 | 3389, 5900 | vine |
 | 21, 70 | mushroom |
-| 25, 53, 420, 42069, 5432, 6379, 9200 | flower |
+| 420, 42069 (two exact ports) | ordinary weed (base; normal rarity) |
+| 25, 53, 5432, 6379, 9200 | flower |
 | Any other valid port (1–65535) | flower |
 
 53 and 70 are supported future ports even though the current fleet does not
@@ -87,6 +88,12 @@ normally expose them. The planning inventory is in
 The narrower mushroom set keeps noisy scan ports in ordinary background
 vegetation; mushrooms remain a normal base species. These are aesthetic choices,
 not claims about application protocol use.
+
+Only the exact listening ports **420** and **42069** have a weed base, not the
+range between them. Both are known, non-fallback ports. This is ordinary weed
+with its existing lifecycle and behavior, separate from the browser-only
+port-22 collectible weed mutation. The mapping is aesthetic and says nothing
+about protocol identity, malicious activity, or connection contents.
 
 Wirefern is a compact terminal-like fern for observed connections to listening
 port 23 or 2323. It does not prove Telnet negotiation, credentials, authentication,
@@ -105,6 +112,13 @@ Port 22 always resolves to redbloom before ordinary rarity. For every other
 accepted connection, the backend rolls once. Known non-22 ports start at **98%
 normal, 1.5% weed, 0.5% rare**; fallback ports start at **94% flower, 4% weed, 2%
 rare**.
+
+For ports **420** and **42069**, the normal and weed roll intervals both produce
+ordinary `weed`: ordinary IPv4 traffic therefore yields **99.5% weed, 0.5% rare**.
+The intervals and trait bonuses below are unchanged. IPv6 or DN42 alone yields
+99% weed / 1% rare; Yggdrasil alone or IPv6 + DN42 yields 98.5% / 1.5%; IPv6 +
+Yggdrasil yields 98% / 2%. The rare interval still selects the same three species
+equally. Adjacent and other ports keep their existing mappings and rarity odds.
 
 Add these percentage points to the weed and rare chances, subtracting their sum
 from normal growth:

@@ -77,12 +77,18 @@ foreach (var (port, type) in new (int Port, string Type)[]
     (80, "broadleaf"), (443, "broadleaf"), (445, "broadleaf"), (8080, "broadleaf"), (8443, "broadleaf"),
     (22, "redbloom"), (2222, "redbloom"), (23, "wirefern"), (2323, "wirefern"), (3389, "vine"), (5900, "vine"),
     (21, "mushroom"), (70, "mushroom"),
-    (25, "flower"), (420, "flower"), (42069, "flower"), (53, "flower"),
+    (25, "flower"), (420, "weed"), (42069, "weed"), (53, "flower"),
     (5432, "flower"), (6379, "flower"), (9200, "flower"), (1, "flower"), (65535, "flower")
 })
 {
     Check(Parse(WithPort(good, port)) == new GardenGrowth(type, port), $"Port {port} maps to {type}");
     Check(TcpNoiseRarity.BaseSpecimen(port) == (type, port is 1 or 65535), $"Base mapping/fallback flag for {port}");
+}
+
+foreach (var port in new[] { 419, 421, 42068, 42070 })
+{
+    Check(TcpNoiseRarity.BaseSpecimen(port) == ("flower", true), $"Adjacent port {port} remains fallback flower, not a weed range");
+    Check(Parse(WithPort(good, port)) == new GardenGrowth("flower", port), $"Adjacent port {port} normalization unchanged");
 }
 
 Check(Parse(WithPort(good, 2222), 9799)?.SpecimenType == "redbloom", "Port 2222 has a redbloom base");
@@ -102,11 +108,11 @@ foreach (var port in new[] { 23, 2323 })
 }
 
 // Check the complete discrete roll space, as well as exact transition boundaries.
-foreach (var port in new[] { 443, 445, 2222, 23, 2323, 21, 70, 53, 5432, 6379, 9200, 12345 })
+foreach (var port in new[] { 443, 445, 2222, 23, 2323, 21, 70, 53, 5432, 6379, 9200, 12345, 420, 42069, 419, 421, 42068, 42070 })
 foreach (var ipv6 in new[] { false, true })
 foreach (var (sensor, bonus) in new[] { ("public", 0), ("overlay-dn42", 50), ("overlay-ygg", 100) })
 {
-    var fallback = port == 12345;
+    var fallback = port is 12345 or 419 or 421 or 42068 or 42070;
     var expectedWeed = (fallback ? 400 : 150) + bonus + (ipv6 ? 50 : 0);
     var expectedRare = (fallback ? 200 : 50) + bonus + (ipv6 ? 50 : 0);
     Check(TcpNoiseRarity.Chances(fallback, ipv6, sensor) == (expectedWeed, expectedRare), "Exact trait probabilities");
@@ -120,10 +126,18 @@ foreach (var (sensor, bonus) in new[] { ("public", 0), ("overlay-dn42", 50), ("o
     Check(Resolve(weedEnd) == "ghostbloom" && Resolve(9999) == "ghostbloom", "Rare boundaries");
     foreach (var (choice, rare) in new[] { (0, "ghostbloom"), (1, "crystalfungus"), (2, "blackthorn") })
         Check(Resolve(weedEnd, choice) == rare && Resolve(9999, choice) == rare, "Only three equally selectable rare species");
-    var counts = Enumerable.Range(0, 10_000).Select(roll => Resolve(roll)).GroupBy(type => type)
-        .ToDictionary(group => group.Key, group => group.Count());
-    Check(counts[normal] == normalEnd && counts["weed"] == expectedWeed && counts["ghostbloom"] == expectedRare,
-        "Exact normal/weed/rare frequencies over all rolls, without probabilistic tests");
+    foreach (var (choice, rare) in new[] { (0, "ghostbloom"), (1, "crystalfungus"), (2, "blackthorn") })
+    {
+        var counts = Enumerable.Range(0, 10_000).Select(roll => Resolve(roll, choice)).GroupBy(type => type)
+            .ToDictionary(group => group.Key, group => group.Count());
+        Check(counts[rare] == expectedRare, "Exact rare frequency over all rolls and each rare choice");
+        if (port is 420 or 42069)
+            Check(counts.Count == 2 && counts["weed"] == 10_000 - expectedRare,
+                "Known weed-base ports merge normal and weed outcomes: 99.5% weed before trait bonuses");
+        else
+            Check(counts.Count == 3 && counts[normal] == normalEnd && counts["weed"] == expectedWeed,
+                "Other ports retain separate exact normal/weed frequencies over all rolls");
+    }
 }
 
 static string Traits(string json, string ipVersion, string sensor) =>
@@ -187,7 +201,7 @@ foreach (var (count, vigor) in vigorCases)
 }
 
 // Vigor and inspection metadata must not affect base mappings or any normal/weed/rare boundary outcome.
-foreach (var port in new[] { 22, 2222, 23, 2323, 443, 5432, 53, 12345 })
+foreach (var port in new[] { 22, 2222, 23, 2323, 443, 5432, 53, 12345, 420, 42069 })
 foreach (var ip in new[] { "4", "6" })
 foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
 {
@@ -206,14 +220,18 @@ foreach (var sensor in new[] { "public", "overlay-dn42", "overlay-ygg" })
     }
 }
 
-foreach (var (roll, choice) in new[] { (0, 0), (9800, 0), (9999, 0), (9999, 1), (9999, 2) })
+foreach (var port in new[] { 443, 420, 42069 })
+foreach (var (roll, choice) in new[] { (0, 0), (9799, 0), (9800, 0), (9999, 0), (9999, 1), (9999, 2) })
 {
-    var sanitized = JsonSerializer.Serialize(Parse(Seen(Traits(good, "6", "\"private-sensor-ygg\""), "1234567"), roll, choice),
+    var sanitized = JsonSerializer.Serialize(Parse(Seen(WithPort(Traits(good, "6", "\"private-sensor-ygg\""), port), "1234567"), roll, choice),
         new JsonSerializerOptions(JsonSerializerDefaults.Web));
     using var document = JsonDocument.Parse(sanitized);
     Check(document.RootElement.EnumerateObject().Select(property => property.Name)
         .Order().SequenceEqual(new[] { "listenPort", "seenCount", "sensor", "specimenType", "vigor" }),
         "Inspectable outcomes serialize only the five intended fields");
+    Check(document.RootElement.GetProperty("listenPort").GetInt32() == port, "Exact listening port preserved in SSE data");
+    Check(document.RootElement.GetProperty("specimenType").GetString() == TcpNoiseRarity.Resolve(port, true, "private-sensor-ygg", roll, choice),
+        "Normalized species preserved in SSE data, including ordinary port-mapped weed and rare outcomes");
     Check(document.RootElement.GetProperty("vigor").GetInt32() == 3, "Bounded vigor forwarded");
     Check(document.RootElement.GetProperty("sensor").GetString() == "private-sensor-ygg", "Sensor label forwarded for inspection");
     Check(document.RootElement.GetProperty("seenCount").GetString() == "1234567", "Exact seenCount forwarded as text");
@@ -244,8 +262,16 @@ events.Publish(Parse(Seen(WithPort(good, 22), "10"), 9999, 2)!);
 Check(first.Reader.TryRead(out var redA) && second.Reader.TryRead(out var redB) && redA == redB
     && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 3, SeenCount: "10" } },
     "Port-22 redbloom uses existing transient fanout with inspection count");
+foreach (var port in new[] { 420, 42069 })
+{
+    var growth = Parse(Seen(WithPort(Traits(good, "4", "\"public\""), port), "10"), 9949)!;
+    events.Publish(growth);
+    Check(first.Reader.TryRead(out var weedA) && second.Reader.TryRead(out var weedB) && weedA == weedB
+        && weedA is { Name: "garden", Data: GardenGrowth weedGrowth } && weedGrowth == new GardenGrowth("weed", port, 3, "public", "10"),
+        "Port-mapped ordinary weed retains exact port/vigor/safe provenance through existing SSE fanout");
+}
 events.RemoveClient(first);
 events.Publish(Parse(WithPort(good, 70))!);
 Check(second.Reader.TryRead(out var c) && c.Data is GardenGrowth { SpecimenType: "mushroom", ListenPort: 70 }, "Remaining client unaffected by disconnect");
 events.RemoveClient(second);
-Console.WriteLine("PASS: TCPNoise validation/mapping, bounded vigor and inspectable sensor/seenCount metadata, port-22 rarity bypass, exact rarity probabilities/boundaries/traits, sensitive-field exclusion, fanout, no replay, disconnect cleanup.");
+Console.WriteLine("PASS: TCPNoise validation/mapping, exact 420/42069 known weed bases and unaffected neighbors, bounded vigor and safe metadata, port-22 bypass, all 10000 rarity rolls/three rare choices/trait combinations, sensitive-field exclusion, fanout, no replay, disconnect cleanup.");

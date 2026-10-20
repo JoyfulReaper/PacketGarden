@@ -138,6 +138,17 @@ for(const data of ['bad','null','{}',JSON.stringify(event('bad'))])stream.handle
 stream.handlers.garden({data:JSON.stringify({...event(),remoteIp:'secret'})});assert.equal(streamModel.specimens.length,1);assert.doesNotMatch(JSON.stringify(streamModel.specimens),/secret|remoteIp/);
 streamModel.setPaused(true);stream.handlers.garden({data:JSON.stringify(event())});stream.handlers.weather({data:JSON.stringify({level:'rain',eventsPerMinute:100})});assert.equal(streamModel.specimens.length,1);assert.equal(appliedWeather.level,'rain');
 stream.handlers.weather({data:'bad'});assert.equal(appliedWeather.level,'rain');
+const weedModel=core.createModel(nullView,{now:()=>now,random:()=>.5});
+const weedStream=core.connectStream(Source,weedModel,()=>{},()=>{});
+for(const port of [420,42069])for(const vigor of [0,1,2,3]) {
+  const seenCount=String([1,2,4,10][vigor]);
+  const specimenEvent={specimenType:'weed',listenPort:port,vigor,sensor:'public',seenCount};
+  weedStream.handlers.garden({data:JSON.stringify(specimenEvent)});
+  const specimen=weedModel.specimens.at(-1);
+  assert.equal(specimen.type,'weed');assert.equal(specimen.vigor,vigor);
+  assert.equal(specimen.origin.listenPort,port);assert.equal(specimen.origin.sensor,'public');assert.equal(specimen.origin.seenCount,seenCount);
+  assert(!specimen.mutation && !specimen.pendingMutation,'ordinary port-mapped weed is not the port-22 collectible mutation');
+}
 view.destroy();assert.equal(live.size,1);assert.equal(textureCount,763);
 console.log('PASS: Pixi live isolation/SSE/safe contract; production timing and placement parity; capacity/protected vigor competition; persistent views/local vine curves; bounded atlas/particles/timing; clear/seed/pause/lifecycle/resize.');
 module.exports = { P, renderer, cache, live, textureCount: () => textureCount, generated: () => generated };

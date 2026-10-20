@@ -10,7 +10,8 @@ public static class TcpNoiseRarity
         23 or 2323 => ("wirefern", false),
         3389 or 5900 => ("vine", false),
         21 or 70 => ("mushroom", false),
-        25 or 53 or 420 or 42069 or 5432 or 6379 or 9200 => ("flower", false),
+        420 or 42069 => ("weed", false),
+        25 or 53 or 5432 or 6379 or 9200 => ("flower", false),
         _ => ("flower", true)
     };
 

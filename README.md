@@ -277,6 +277,9 @@ or malicious intent. This aesthetic special case bypasses ordinary rarity so the
 signal remains recognizable. Port 2222 has a redbloom base and retains normal rarity;
 unknown ports have a flower base. Each accepted non-22 connection rolls for an
 artistic weed or rare specimen.
+The exact ports 420 and 42069 have an ordinary weed base: 99.5% weed / 0.5% rare
+on ordinary IPv4 traffic, with existing trait bonuses. These are two ports, not a
+range, and their weed is separate from the port-22 collectible mutation.
 IPv6 and sensor suffixes `-dn42` / `-ygg` are coarse visual modifiers, not security
 classifications. Rarity stays event-driven; no timer creates mutations. See the
 [probability policy](docs/EVENT-MAPPINGS.md#tcpnoise-rarity).
