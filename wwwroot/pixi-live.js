@@ -238,10 +238,27 @@
       }
     }
     const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : `${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
+    const specimenScale = { flower: 1.4, mushroom: 1.4, broadleaf: 1.35, wirefern: 1.4, weed: 1.4,
+      redbloom: 1.25, ghostbloom: 1.3, crystalfungus: 1.3, blackthorn: 1.25 };
+    function sizeSpecimen(specimen, sprite) {
+      if (specimen.type === 'vine' && !specimen.mutation) return; // Preserve mirrored vines and their connection roots.
+      // Scale the existing 2x cached tile, keeping its rooted anchor and stage
+      // proportions. A top-row limit avoids crowding the second row to fit tall heads.
+      const scale = specimen.mutation ? 1 : Math.min(specimenScale[specimen.type] ?? 1, specimen.row === 0 ? 1.1 : Infinity);
+      sprite.scale.set(scale);
+      const x = (specimen.column + .5) * cellSize, y = (specimen.row + .5) * cellSize + 12;
+      if (specimen.mutation) { sprite.position.set(x, y); return; }
+      const w = sprite.texture.frame.width * scale, h = sprite.texture.frame.height * scale;
+      // Only visual edge insets change; the entire quad stays inside the garden
+      // mask, including transparent padding. Logical picking still uses the cell.
+      sprite.position.set(Math.max(w * .5 + .5, Math.min(width - w * .5 - .5, x)),
+        Math.max(h * .9 + .5, Math.min(height - h * .1 - .5, y)));
+    }
     return { root, byId, vineLinks, mutationViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
+        sizeSpecimen(specimen, sprite);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
@@ -254,6 +271,7 @@
         }
       },
       update(specimen, byCell) { byId.get(specimen.id).texture = texture(specimen); counters.stageUpdates++;
+        sizeSpecimen(specimen, byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
         if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell); },
       remove(specimen, byCell) {

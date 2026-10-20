@@ -3,6 +3,7 @@
 // Example: node tests/pixi-vine-art-browser.cjs --run --baseline --seconds=20
 // --plants compares Phase 2B against the committed vine renderer, including small views.
 // --grass compares Phase 2C against the committed plant renderer and ecology atlas.
+// --size compares specimen presentation scale against the committed tufted-grass garden.
 if (!process.argv.includes('--run')) console.log('SKIP: optional vine-art browser fixture; pass --run.');
 else run().catch(error => { console.error(error); process.exitCode = 1; });
 
@@ -11,17 +12,18 @@ async function run() {
   const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline'),plants=process.argv.includes('--plants');
   const grassArt=process.argv.includes('--grass');assert(!(plants&&grassArt));
+  const sizeArt=process.argv.includes('--size');assert(!sizeArt||!plants&&!grassArt);
   const seconds=Number(process.argv.find(arg=>arg.startsWith('--seconds='))?.split('=')[1]??20);
   assert(seconds>=5&&seconds<=60);
   const label=process.argv.find(arg=>arg.startsWith('--label='))?.split('=')[1]??(baseline?'before':'after');
-  const sceneNames=grassArt?['grass-sparse','grass-young','grass-mature','grass-fading','mixed-grass','mixed-grass-hurricane']:
+  const sceneNames=sizeArt?['size-sparse','size-dense','size-hurricane']:grassArt?['grass-sparse','grass-young','grass-mature','grass-fading','mixed-grass','mixed-grass-hurricane']:
     plants?['broadleaf','blackthorn','weed','mixed','mixed-hurricane']:['vines-quiet','vines-hurricane','mixed-hurricane'];
   const onlyScene=process.argv.find(arg=>arg.startsWith('--scene='))?.split('=')[1];
   assert(!onlyScene||sceneNames.includes(onlyScene));
   assert(/^[a-z0-9-]+$/.test(label));
-  const artifactRoot=path.join(root,'artifacts',grassArt?'grass-art':plants?'plant-art':'vine-art');
+  const artifactRoot=path.join(root,'artifacts',sizeArt?'plant-size':grassArt?'grass-art':plants?'plant-art':'vine-art');
   const output=path.join(artifactRoot,label);await fs.mkdir(output,{recursive:true});
-  const checkpoint=grassArt?'a90c779b5b8875aa446a780d3b6fef7562e0d62d':plants?'916e7b969ea9218478202593088f6e9de614df26':'a7e391cf0f8a614d763d6fa86f9f474d4a2dd075';
+  const checkpoint=sizeArt?'8b60c29b44546d27a71a06766ae392aee555210c':grassArt?'a90c779b5b8875aa446a780d3b6fef7562e0d62d':plants?'916e7b969ea9218478202593088f6e9de614df26':'a7e391cf0f8a614d763d6fa86f9f474d4a2dd075';
   const oldRenderer=baseline?execFileSync('git',['show',checkpoint+':wwwroot/pixi-live.js'],{cwd:root}):null;
   const oldEcology=baseline&&grassArt?execFileSync('git',['show',checkpoint+':wwwroot/pixi-live-ecology.js'],{cwd:root}):null;
   const capture=`
@@ -64,6 +66,11 @@ async function run() {
       PIXI.Graphics.prototype[name]=function(...args){fixture.geometry++;return original.apply(this,args);};}
     for(const [api,name,key] of [[PacketGardenCore,'createGardenModel','garden'],[PacketGardenEcology,'createEcologyModel','ecology']]){
       const original=api[name];api[name]=function(...args){const model=original(...args);fixture[key]=model;return model;};}
+    if(${sizeArt}){
+      const create=PacketGardenPixiUi.createUi;
+      PacketGardenPixiUi.createUi=function(...args){const ui=create(...args),click=ui.click;
+        ui.click=function(...input){const hit=click(...input);fixture.lastHit=hit;return hit;};return ui;};
+    }
   `;
   const streams=new Set();
   const server=http.createServer(async(req,res)=>{
@@ -93,7 +100,7 @@ async function run() {
     const atlas=await page.evaluate(()=>({png:window.__vineFixture.atlasPng,bounds:window.__vineFixture.tileBounds}));
     await fs.writeFile(path.join(output,'atlas.png'),Buffer.from(atlas.png.split(',')[1],'base64'));
     await fs.writeFile(path.join(output,'tile-bounds.json'),JSON.stringify(atlas.bounds,null,2));
-    if(grassArt){
+    if(grassArt||sizeArt){
       const ecologyAtlas=await page.evaluate(()=>({png:window.__vineFixture.ecologyPng,bounds:window.__vineFixture.grassBounds}));
       await fs.writeFile(path.join(output,'ecology-atlas.png'),Buffer.from(ecologyAtlas.png.split(',')[1],'base64'));
       await fs.writeFile(path.join(output,'grass-bounds.json'),JSON.stringify(ecologyAtlas.bounds,null,2));
@@ -102,17 +109,18 @@ async function run() {
     for(const scene of onlyScene?[onlyScene]:sceneNames){
       const hurricane=scene.endsWith('hurricane');
       for(const stream of streams)stream.write(`event: weather\ndata: ${JSON.stringify({level:hurricane?'botnet_hurricane':'quiet',eventsPerMinute:hurricane?10000:0})}\n\n`);
-      const fixture=await page.evaluate(({scene,plants,grassArt})=>{
+      const fixture=await page.evaluate(({scene,plants,grassArt,sizeArt})=>{
         const f=window.__vineFixture,at=Date.now(),mixed=scene.startsWith('mixed');window.__resetVineRandom();
         const start=performance.now();
-        f.garden.seed(Array.from({length:grassArt&&!mixed?0:640},(_,cell)=>{
-          const type=mixed?PacketGardenCore.species[cell%10]:plants?scene:'vine',timing=PacketGardenCore.timings[type];
-          const stage=Math.floor(cell/32)%8,age=grassArt?(type==='redbloom'?5000:timing.matureAfterMs+1000):!plants?(mixed&&cell%10===5?5000:120000):type==='redbloom'?5000:
+        f.garden.seed(Array.from({length:grassArt&&!mixed?0:sizeArt&&scene==='size-sparse'?96:640},(_,index)=>{
+          const cell=sizeArt&&scene==='size-sparse'?(index*73+7)%640:index;
+          const type=mixed||sizeArt?PacketGardenCore.species[index%10]:plants?scene:'vine',timing=PacketGardenCore.timings[type];
+          const stage=sizeArt?Math.floor(index/10)%8:Math.floor(cell/32)%8,age=grassArt?(type==='redbloom'?5000:timing.matureAfterMs+1000):!plants&&!sizeArt?(mixed&&cell%10===5?5000:120000):type==='redbloom'?5000:
             stage===0?1000:stage===1?timing.growingAfterMs+1000:stage===7?timing.expiredAfterMs-1000:timing.matureAfterMs+1000;
-          return {type,column:cell%32,row:Math.floor(cell/32),vigor:plants?Math.floor(cell/8)%4:cell%4,createdAt:at-age,
+          return {type,column:cell%32,row:Math.floor(cell/32),vigor:plants||sizeArt?Math.floor(index/8)%4:cell%4,createdAt:at-age,
             origin:{kind:'simulated',eventType:'art-fixture'}};
         }),at);
-        const grass=plants&&scene!=='mixed-hurricane'?0:640,puddles=grass?8:0;
+        const grass=sizeArt?(scene==='size-sparse'?32:640):plants&&scene!=='mixed-hurricane'?0:640,puddles=sizeArt?(scene.endsWith('hurricane')?8:0):grass?8:0;
         let cells=Array.from({length:grass},(_,cell)=>({column:cell%32,row:Math.floor(cell/32),createdAt:at-60000,lastInfluencedAt:at}));
         if(grassArt){
           if(scene==='grass-sparse')cells=Array.from({length:32},(_,i)=>{const cell=(i*73+17)%640;return {column:cell%32,row:Math.floor(cell/32),createdAt:at-60000,lastInfluencedAt:at};});
@@ -123,22 +131,58 @@ async function run() {
         }
         const waterCount=grassArt?(scene.endsWith('hurricane')?8:0):puddles;
         f.ecology.seed({grassCells:cells,puddles:Array.from({length:waterCount},(_,i)=>({x:150+i%4*210,y:180+Math.floor(i/4)*240,seed:i/8,size:18,maxSize:18,createdAt:at-20000,lastRefreshedAt:at}))});
-        if(grassArt)f.ecology.resetCadence(at);
+        if(grassArt||sizeArt)f.ecology.resetCadence(at);
         return {buildMs:performance.now()-start,grass:cells.length,puddles:waterCount,
-          grassState:grassArt?cells.map(c=>[c.column,c.row,c.createdAt,c.lastInfluencedAt]):undefined,
-          positions:f.garden.specimens.map(p=>[p.type,p.column,p.row,p.vigor,p.colorVariant,...(plants||grassArt?[p.stage]:[])])};
-      },{scene,plants,grassArt});
+          grassState:grassArt||sizeArt?cells.map(c=>[c.column,c.row,c.createdAt,c.lastInfluencedAt]):undefined,
+          positions:f.garden.specimens.map(p=>[p.type,p.column,p.row,p.vigor,p.colorVariant,...(plants||grassArt||sizeArt?[p.stage]:[])])};
+      },{scene,plants,grassArt,sizeArt});
       await page.waitForTimeout(1000);
       await page.locator('#view canvas').screenshot({path:path.join(output,`${scene}.png`)});
-      if(plants||grassArt){
+      const layouts=[];
+      const checkSize=async(viewport)=>{
+        const layout=await page.evaluate(()=>{
+          const f=window.__vineFixture,root=f.app.stage.children[0],sprites=root.children[6].children;
+          const {width,height}=f.app.renderer.screen;
+          return {viewport:[innerWidth,innerHeight],canvas:[width,height],scale:root.scale.x,
+            bands:{top:root.position.y,bottom:height-root.position.y-600*root.scale.y,left:root.position.x,right:width-root.position.x-960*root.scale.x},
+            specimens:f.garden.specimens.map((p,i)=>{const s=sprites[i],w=s.texture.frame.width*Math.abs(s.scale.x),h=s.texture.frame.height*Math.abs(s.scale.y);
+              return {type:p.type,stage:p.stage,row:p.row,column:p.column,scale:Math.abs(s.scale.x),
+                bounds:[s.position.x-w*s.anchor.x,s.position.y-h*s.anchor.y,s.position.x+w*(1-s.anchor.x),s.position.y+h*(1-s.anchor.y)]};})};
+        });
+        if(!baseline)for(const p of layout.specimens)if(p.type!=='vine')assert(p.bounds[0]>=0&&p.bounds[1]>=0&&p.bounds[2]<=960&&p.bounds[3]<=600,'scaled sprite stays inside garden');
+        // Logical cell centers remain the picking contract even where art overlaps.
+        const chosen=await page.evaluate(()=>window.__vineFixture.garden.specimens.filter(p=>p.type!=='vine').filter((p,i)=>i%13===0).slice(0,8)
+          .map(p=>({id:p.id,column:p.column,row:p.row,type:p.type,age:Math.max(0,Date.now()-p.createdAt)})));
+        for(const p of chosen){
+          const point=await page.evaluate(p=>{const f=window.__vineFixture,r=f.app.stage.children[0],box=f.app.canvas.getBoundingClientRect();
+            return {x:box.left+r.position.x+(p.column+.5)*30*r.scale.x,y:box.top+r.position.y+(p.row+.5)*30*r.scale.y};},p);
+          await page.mouse.click(point.x,point.y);await page.locator('#specimen-card').waitFor({state:'visible'});
+          const title=await page.locator('#specimen-card-title').textContent();
+          const expected=await page.evaluate(type=>PacketGardenUiCore.inspection({type,createdAt:Date.now()},Date.now()).title,p.type);
+          assert.equal(title,expected,'inspection resolves exact logical species');
+          assert.equal(await page.evaluate(()=>window.__vineFixture.lastHit?.specimen?.id),p.id,'inspection resolves exact specimen');
+          await page.getByRole('button',{name:'Close specimen information'}).click();
+        }
+        layouts.push(layout);
+      };
+      if(sizeArt)await checkSize();
+      if(plants||grassArt||sizeArt){
         await page.setViewportSize({width:720,height:700});await page.waitForTimeout(200);
         await page.locator('#view canvas').screenshot({path:path.join(output,`${scene}-small.png`)});
+        if(sizeArt){
+          await checkSize();
+          if(scene==='size-sparse'){
+            await page.setViewportSize({width:720,height:1000});await page.waitForTimeout(200);
+            await page.locator('#view canvas').screenshot({path:path.join(output,`${scene}-tall.png`)});await checkSize();
+          }
+        }
         await page.setViewportSize({width:1280,height:900});await page.waitForTimeout(200);
       }
+      if(sizeArt)await fs.writeFile(path.join(output,`${scene}-layout.json`),JSON.stringify(layouts,null,2));
       await page.evaluate(()=>{const f=window.__vineFixture;f.paints=[];f.gaps=[];f.last=null;f.geometry=0;f.textures=0;});
       console.log(`Measuring ${label}: ${scene} for ${seconds}s`);
       await page.waitForTimeout(seconds*1000);
-      const data=await page.evaluate(({plants,grassArt})=>{
+      const data=await page.evaluate(({plants,grassArt,sizeArt})=>{
         const f=window.__vineFixture,root=f.app.stage.children[0];
         const stats=values=>{const sorted=values.slice().sort((a,b)=>a-b);return {n:values.length,avg:values.reduce((a,b)=>a+b,0)/values.length,
           p95:sorted[Math.floor((sorted.length-1)*.95)],p99:sorted[Math.floor((sorted.length-1)*.99)],max:sorted.at(-1),over50:values.filter(v=>v>50).length,over300:values.filter(v=>v>300).length};};
@@ -149,21 +193,29 @@ async function run() {
           releasedVineContexts:f.vineContexts?.filter(context=>context.destroyed).length??0,
           releasedArtContexts:f.artContexts?.filter(context=>context.destroyed).length??0,
           releasedGrassContexts:f.grassContexts?.filter(context=>context.destroyed).length??0,
-          grassState:grassArt?f.ecology.grassCells.map(c=>[c.column,c.row,c.createdAt,c.lastInfluencedAt]):undefined,
-          positions:f.garden.specimens.map(p=>[p.type,p.column,p.row,p.vigor,p.colorVariant,...(plants||grassArt?[p.stage]:[])])};
-      },{plants,grassArt});
+          grassState:grassArt||sizeArt?f.ecology.grassCells.map(c=>[c.column,c.row,c.createdAt,c.lastInfluencedAt]):undefined,
+          positions:f.garden.specimens.map(p=>[p.type,p.column,p.row,p.vigor,p.colorVariant,...(plants||grassArt||sizeArt?[p.stage]:[])])};
+      },{plants,grassArt,sizeArt});
       assert.deepEqual(data.positions,fixture.positions);assert.equal(data.geometryDuringFrames,0);assert.equal(data.texturesDuringFrames,0);
       const vineCount=fixture.positions.filter(p=>p[0]==='vine').length;
       assert.equal(data.objects,14+fixture.positions.length+vineCount+fixture.grass+fixture.puddles);assert.equal(data.particles,hurricane?400:0);
-      if(grassArt)assert.deepEqual(data.grassState,fixture.grassState);
+      if(grassArt||sizeArt)assert.deepEqual(data.grassState,fixture.grassState);
       if(!baseline){
         assert.equal(data.releasedVineContexts,80,'temporary vine Graphics contexts released after baking');
         assert.equal(data.releasedArtContexts,320,'all new construction contexts released');
-        if(grassArt)assert.equal(data.releasedGrassContexts,12,'all temporary grass contexts released');
+        if(grassArt||sizeArt)assert.equal(data.releasedGrassContexts,12,'all temporary grass contexts released');
       }
       results.push({scene,...fixture,...data});assert.deepEqual(errors,[]);
       await fs.writeFile(path.join(output,'measurements.json'),JSON.stringify({baseline,checkpoint,seconds,browser:browser.version(),results,errors},null,2));
       console.log(JSON.stringify({scene,objects:data.objects,linkStrokes:data.linkStrokes,interval:data.interval,submission:data.submission}));
+    }
+    if(sizeArt&&!baseline){
+      const sharp=require('sharp');
+      for(const name of ['atlas.png','ecology-atlas.png']){
+        const before=await sharp(path.join(artifactRoot,'before',name)).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+        const after=await sharp(path.join(output,name)).ensureAlpha().raw().toBuffer({resolveWithObject:true});
+        assert.deepEqual(after.info,before.info);assert(after.data.equals(before.data),'cached artwork and ecology pixels unchanged');
+      }
     }
     if(grassArt&&!baseline){
       const sharp=require('sharp');
@@ -228,8 +280,14 @@ async function run() {
       if(before)for(const result of results){
         const previous=before.results.find(item=>item.scene===result.scene);assert(previous,'baseline scene exists');
         assert.deepEqual(result.positions,previous.positions,'before/after fixture positions, variants and vigor match');
-        if(grassArt)assert.deepEqual(result.grassState,previous.grassState,'before/after grass timestamps and cells match');
+        if(grassArt||sizeArt)assert.deepEqual(result.grassState,previous.grassState,'before/after grass timestamps and cells match');
         assert.equal(result.objects,previous.objects);assert.deepEqual(result.atlases,previous.atlases);
+        if(sizeArt){
+          const oldLayouts=JSON.parse(await fs.readFile(path.join(artifactRoot,'before',`${result.scene}-layout.json`),'utf8'));
+          const newLayouts=JSON.parse(await fs.readFile(path.join(output,`${result.scene}-layout.json`),'utf8'));
+          assert.deepEqual(newLayouts.map(({viewport,canvas,scale,bands})=>({viewport,canvas,scale,bands})),
+            oldLayouts.map(({viewport,canvas,scale,bands})=>({viewport,canvas,scale,bands})),'garden dimensions/contain letterboxing unchanged');
+        }
         const oldPixels=await fs.readFile(path.join(artifactRoot,'before',`${result.scene}.png`));
         const newPixels=await fs.readFile(path.join(output,`${result.scene}.png`));assert(!oldPixels.equals(newPixels),'art visibly changes the fixture');
       }

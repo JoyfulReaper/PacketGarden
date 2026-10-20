@@ -1,3 +1,135 @@
+# Plant size and visual presence review (2026-10-20)
+
+The live/default renderer now enlarges existing cached specimen Sprites, without
+changing artwork, atlas packing or the 960x600 / 32x20 logical garden:
+
+- Flower, mushroom, wirefern and ordinary weed: **+40%**.
+- Broadleaf: **+35%**.
+- Ghostbloom and crystal fungus: **+30%**.
+- Redbloom and blackthorn: **+25%**.
+- Vine Sprites/connections and collectible mutations: original size/behavior.
+
+These are increases over the Phase 2B artwork/scale checkpoint, not over the
+original synthetic art. Each species keeps its existing sprout/growing/mature/
+fading proportions, cached opacity and exact lifecycle. The same Sprite survives
+stage changes without root jumps. The top row is limited to **+10%** to fit tall
+heads without excessive crowding of the second row. Edge-only visual insets keep
+the entire enlarged quad inside the garden mask. Interior roots are unchanged;
+all logical cells and interaction rules are unchanged. Overhanging decoration
+does not change picking: inspection still resolves the original logical cell.
+An active collectible mutation explicitly returns to its original scale and
+position, preserving its collection geometry. Grass art/ecology are untouched.
+
+## Atlas and rendering cost
+
+No larger atlas frames were needed: enlargement happens after rasterization,
+using the existing transparent 32x32 frames baked at 2x resolution. Existing tile
+padding stays transparent, and no paths expand into neighboring atlas tiles.
+The specimen/mutation/rain/probe and ecology atlas PNG pixels are identical to
+checkpoint `8b60c29b44546d27a71a06766ae392aee555210c`. Specimen cache remains
+**763 frames**, 1024x768 at resolution 2 (2048x1536 physical); with ambient/ecology,
+**781 frames across three retained sources**. RGBA source storage is unchanged
+at approximately **12.89 MiB** (excluding driver overhead/back buffers).
+
+Scale/edge insets update only on specimen addition/stage change. There are no
+new display objects, per-frame geometry, textures, neighbor searches or timers.
+Larger quads can increase GPU fragment work even though source memory/counts
+stay fixed. Magnified 2x cached edges can look slightly softer at high DPI; no
+GPU timer trace or long live soak is claimed by the short comparison below.
+
+## Reproduce and inspect
+
+The existing installed-Chrome fixture adds `--size`, using available Playwright
+and Sharp without installing dependencies:
+
+```sh
+node tests/pixi-vine-art-browser.cjs --run --size --baseline --seconds=20
+node tests/pixi-vine-art-browser.cjs --run --size --seconds=20
+```
+
+Use Node's normal module path or `NODE_PATH` for those existing tools. Baseline
+serves checkpoint `8b60c29`. Cases are sparse (96 specimens), dense (640) and dense
+hurricane, with identical positions, vigor, variants, stages and grass timestamps.
+Logical time is frozen for comparison; rain uses real animation time. Captures
+are under ignored `artifacts/plant-size/before/` and `after/`, with
+`size-sparse.png`, `size-dense.png`, `size-hurricane.png` at 1280x900, corresponding
+`-small.png` at 720x700, and `size-sparse-tall.png` at 720x1000. Timing JSON,
+unchanged atlas PNGs and viewport/quad/letterbox measurements are alongside.
+Logical-center clicks verify exact specimen identity at each viewport; every
+enlarged non-vine quad is checked against the garden boundary. Resizing, clicking
+and screenshots are outside the measured windows.
+
+`tests/pixi-plant-size.cjs` covers all species/stages/vigor in a full 640-cell
+fixture: exact scale factors, rooted anchors, edge bounds, original logical
+picking, unchanged logical specimens, stage transitions without root jumps,
+original mutation scale/position and unchanged cache/creation/neighbor counts.
+
+## Measured size comparison and validation
+
+Installed headless Chrome 155.0.8059.80, native ticker, 20 seconds per scene per
+version (about 1,200 frames each), desktop DPR 1:
+
+| Scene | Interval p99 before/after | Worst interval before/after | Mean CPU submission before/after |
+| --- | ---: | ---: | ---: |
+| Sparse | 17.0 / 17.0 ms | 18.3 / 17.9 ms | 0.140 / 0.118 ms |
+| Dense | 17.0 / 17.0 ms | 18.7 / 20.9 ms | 0.135 / 0.120 ms |
+| Dense hurricane | 17.0 / 17.0 ms | 17.3 / 17.7 ms | 0.150 / 0.139 ms |
+
+All six windows averaged about 60 FPS with zero >50ms or >300ms intervals. CPU
+submission p99 stayed 0.3ms. These small mean differences do not establish a
+speed improvement; dense worst interval increased slightly in this run. Timing
+brackets `app.render()` without waiting for GPU completion. Display objects stay
+**152** sparse, **1,358** dense and **1,366** dense/hurricane, plus 400 separate
+rain particles. Atlas dimensions, pixels, frame/source counts and estimated source
+memory match. No recurring geometry or texture generation was observed.
+
+The sparse and dense screenshots were reviewed at desktop and 720x700. Enlarged
+ink is approximately bounded by 35px width / 40px height on 30px logical cells,
+allowing modest leaf/head overlap while keeping recognizable stages. All enlarged
+quads remain inside the garden; top-row limiting avoids stacking full-height
+plants too heavily at the border. Logical picking is deliberately unchanged even
+where a neighboring plant's decoration overhangs a cell.
+
+All **38 standard JavaScript suites** pass (41 Node files including a harness and
+two optional-browser skips). The real-Chrome route/cache/pixel suite passes root,
+index, SSE fixture growth, exact inspection, DPR 2/resizes, reconnection and retained
+diagnostic/Canvas/stress functionality. App/backend build and checks pass:
+
+```sh
+dotnet build tests/PacketGarden.Checks/PacketGarden.Checks.csproj --no-restore -o artifacts/plant-size/checks
+dotnet artifacts/plant-size/checks/PacketGarden.Checks.dll
+```
+
+NU1900 remains because vulnerability data was unavailable; there were no build
+errors. `git diff --check` passes. No live-NATS soak, GPU timer/heap trace or
+long-duration performance-equivalence claim is included. Historical stutter and
+the known teardown exception remain unresolved. Changes are left uncommitted.
+
+## Why taller viewports have dark bands
+
+`garden.css` gives `main` the remaining height after header, footer and padding.
+The Pixi canvas fills that area. `shared.contain()` then applies
+`min(canvasWidth/960, canvasHeight/600)` and centers the garden. The dark bands
+are the opaque canvas background outside that proportional garden rectangle.
+At 720x700 the measured canvas is 691x564, garden height about 432, with about
+**66px above and below**. At 720x1000 the canvas is 691x864, with **216px above and
+below**. At 1280x900 it is height-constrained, leaving about 27px on either side.
+They are not atlas padding or missing garden rows.
+
+Options preserving the complete garden and its proportions:
+
+- Keep the current centered contain presentation.
+- Fit the canvas element itself to the 8:5 garden ratio and align it near the top;
+  surplus page space moves below/outside the canvas, without enlarging the garden.
+- Use a wider window/landscape presentation to provide more horizontal space.
+  Reducing outer padding recovers only a small amount of width; removing vertical
+  header space alone cannot make a width-constrained garden taller.
+- In a separate UI decision, use surplus page space for status/activity or a
+  gentler surrounding background. It would remain outside the interactive garden.
+
+No CSS, contain transform, garden clipping rectangle or page layout changes are
+included here. Before/after viewport measurements verify identical letterboxing.
+
 # Phase 2C grass tuft artwork review (2026-10-20)
 
 Pixi's spreading grass now uses small separated fans of narrow, curved, pointed
