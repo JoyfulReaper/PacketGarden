@@ -477,6 +477,17 @@ Set `Nats:Url` (environment variable `Nats__Url`) to enable TCPNoise input.
 `Nats:Subject` (`Nats__Subject`) defaults to `tcpnoise.connection`. With no URL,
 the app starts normally with discrete input disabled. Garden events are transient,
 with no replay after reconnection; fake controls remain available in either mode.
+
+For public alpha, each SSE subscription now has a **256-frame bounded queue**.
+A subscriber that falls behind and fills its queue is disconnected rather than
+accumulating unbounded events or silently dropping weather. An individual
+response write/flush has a 15-second budget; browsers using EventSource reconnect
+automatically, but any missed growth events are intentionally not replayed.
+At most **128** SSE clients can be connected at once; an excess request gets
+HTTP 503 with `Retry-After: 5`. These are conservative initial alpha limits,
+not a substitute for ingress controls, memory monitoring, or live/proxy testing.
+See [the alpha checklist](docs/ALPHA-RELEASE.md) for release gates.
+
 See [Real data](docs/REAL-DATA.md) for validation, mapping, and fleet inventory.
 
 Run normalization/fanout checks with `dotnet run --project tests/PacketGarden.Checks`,
