@@ -1,116 +1,44 @@
-// Garden-side nonsense only: separate from network growth, occupancy, and grass.
-const ambientEventConfig = {
-  checkEveryMs: 45_000,
-  minimumSpecimens: 30,
-  incidentChance: 0.02,
-  battleAfterMs: 3_000,
-  resultAfterMs: 7_000,
-  losersGoneAfterMs: 9_000,
-  finishedAfterMs: 12_000
-};
-let nextAmbientCheckAt = Date.now() + ambientEventConfig.checkEveryMs;
+// Canvas presentation adapter for the shared, renderer-neutral Gnome Incident.
+const ambientEventConfig = window.PacketGardenGnomes.config;
+const gardenGnomes = window.PacketGardenGnomes.createModel({
+  getSpecimens: () => gardenState.specimens,
+  onCue: stage => gardenSound.maybePlayGnomeSound(stage)
+});
+let nextAmbientCheckAt = gardenGnomes.nextCheckAt;
 let gnomeIncident = null;
-
-function livingSpecimenCount(now) {
-  return gardenState.specimens.filter(specimen =>
-    now - specimen.createdAt < speciesConfig.get(specimen.type).timings.expiredAfterMs
-  ).length;
+function syncGnomeState() {
+  gardenState.actors = gardenGnomes.actors;
+  gnomeIncident = gardenGnomes.incident;
+  nextAmbientCheckAt = gardenGnomes.nextCheckAt;
 }
-
+function livingSpecimenCount(now) { return gardenGnomes.livingCount(now); }
+document.addEventListener("visibilitychange", () => { gardenGnomes.resetCadence(Date.now()); syncGnomeState(); });
 function startGnomeIncident(now, random = Math.random) {
-  if (gnomeIncident || livingSpecimenCount(now) < ambientEventConfig.minimumSpecimens) return false;
-  const centerX = gardenWidth * (0.4 + random() * 0.2);
-  const centerY = gardenHeight * (0.35 + random() * 0.3);
-  gnomeIncident = { type: "gnome_incident", createdAt: now, phase: "approach", winner: null };
-  for (const side of ["green", "red"]) {
-    const direction = side === "green" ? -1 : 1;
-    for (const offset of [-12, 12]) {
-      const startX = centerX + direction * 180;
-      const startY = centerY + direction * 40 + offset;
-      gardenState.actors.push({
-        type: "gnome", side, startX, startY, x: startX, y: startY,
-        targetX: centerX + direction * 14, targetY: centerY + offset,
-        state: "approach", createdAt: now
-      });
-    }
-  }
-  drawGardenOverlay(true, now);
-  syncWeatherAnimation();
-  return true;
+  if (!gardenGnomes.start(now, random)) return false;
+  syncGnomeState(); drawGardenOverlay(true, now); syncWeatherAnimation(); return true;
 }
-
 function finishGnomeIncident(repaint = true) {
-  gardenState.actors = [];
-  gnomeIncident = null;
-  if (repaint) {
-    drawGardenOverlay(true);
-    syncWeatherAnimation();
-  }
+  gardenGnomes.clear(); syncGnomeState();
+  if (repaint) { drawGardenOverlay(true); syncWeatherAnimation(); }
 }
-
 function advanceGnomeIncident(now, random = Math.random, repaintCompletion = true) {
-  if (!gnomeIncident) return;
-  const age = Math.max(0, now - gnomeIncident.createdAt);
-  if (age >= ambientEventConfig.finishedAfterMs) {
-    finishGnomeIncident(repaintCompletion);
-    return;
-  }
-  const phase = age < ambientEventConfig.battleAfterMs ? "approach"
-    : age < ambientEventConfig.resultAfterMs ? "battle" : "result";
-  if (phase === "battle" && gnomeIncident.phase !== "battle") gardenSound.maybePlayGnomeSound("battle");
-  if (phase === "result" && gnomeIncident.winner === null) {
-    gnomeIncident.winner = random() < 0.5 ? "green" : "red";
-    gardenSound.maybePlayGnomeSound("victory");
-  }
-  gnomeIncident.phase = phase;
-  if (age >= ambientEventConfig.losersGoneAfterMs) {
-    gardenState.actors = gardenState.actors.filter(actor => actor.side === gnomeIncident.winner);
-  }
-  for (const actor of gardenState.actors) {
-    if (phase === "approach") {
-      const progress = age / ambientEventConfig.battleAfterMs;
-      actor.x = actor.startX + (actor.targetX - actor.startX) * progress;
-      actor.y = actor.startY + (actor.targetY - actor.startY) * progress;
-      actor.state = "approach";
-    } else {
-      actor.x = actor.targetX;
-      actor.y = actor.targetY;
-      actor.state = phase === "battle" ? "battle" : actor.side === gnomeIncident.winner ? "celebrate" : "flee";
-      if (actor.state === "flee") {
-        const progress = (age - ambientEventConfig.resultAfterMs)
-          / (ambientEventConfig.losersGoneAfterMs - ambientEventConfig.resultAfterMs);
-        actor.x += (actor.startX - actor.targetX) * progress;
-        actor.y += (actor.startY - actor.targetY) * progress;
-      }
-    }
-  }
+  const active = gardenGnomes.incident;
+  gardenGnomes.advance(now, random); syncGnomeState();
+  if (active && !gnomeIncident && repaintCompletion) { drawGardenOverlay(true, now); syncWeatherAnimation(); }
 }
-
 function updateAmbientEvents(now, random = Math.random) {
-  if (gnomeIncident) {
-    advanceGnomeIncident(now, random);
-    return;
-  }
-  if (now < nextAmbientCheckAt) return;
-  // One roll at most, even after a long pause. Never replay missed checks.
-  nextAmbientCheckAt = now + ambientEventConfig.checkEveryMs;
-  if (livingSpecimenCount(now) >= ambientEventConfig.minimumSpecimens && random() < ambientEventConfig.incidentChance) {
-    startGnomeIncident(now, random);
-  }
+  const active = gardenGnomes.incident;
+  gardenGnomes.tick(now, random, Boolean(document.hidden)); syncGnomeState();
+  if (Boolean(active) !== Boolean(gnomeIncident)) { drawGardenOverlay(true, now); syncWeatherAnimation(); }
 }
-
 function drawGardenActors(now) {
   for (const actor of gardenState.actors) {
-    const step = Math.sin((now - actor.createdAt) / 90);
-    const battle = actor.state === "battle";
-    const bounce = actor.state === "celebrate" ? -Math.abs(step) * 4 : 0;
-    const shove = battle ? step * (actor.side === "green" ? 2 : -2) : 0;
+    const { step, battle, bounce, shove, rotation, alpha } = window.PacketGardenGnomes.appearance(actor, now);
     context.save();
     context.translate(actor.x + shove, actor.y + bounce);
-    if (battle) context.rotate(step * 0.12);
+    if (battle) context.rotate(rotation);
     if (actor.state === "flee") {
-      context.globalAlpha = Math.max(0, 1 - (now - actor.createdAt - ambientEventConfig.resultAfterMs)
-        / (ambientEventConfig.losersGoneAfterMs - ambientEventConfig.resultAfterMs));
+      context.globalAlpha = alpha;
     }
     context.strokeStyle = "#433c32";
     context.lineWidth = 2;

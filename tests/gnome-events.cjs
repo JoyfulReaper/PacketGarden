@@ -29,7 +29,7 @@ function createGarden() {
   };
   sandbox.Math.random=()=>0;
   vm.createContext(sandbox);
-  for(const file of ['garden-audio.js','garden-core.js','garden-mutations.js','garden-ui-core.js','garden-ecology.js','garden-ambient.js','garden.js','garden-grass.js','garden-actors.js'])
+  for(const file of ['garden-audio.js','garden-core.js','garden-gnomes.js','garden-mutations.js','garden-ui-core.js','garden-ecology.js','garden-ambient.js','garden.js','garden-grass.js','garden-actors.js'])
     vm.runInContext(fs.readFileSync('wwwroot/'+file,'utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   const fill=count=>run(`gardenState.specimens=Array.from({length:${count}},(_,i)=>({type:'broadleaf',column:i%columns,row:Math.floor(i/columns),createdAt:Date.now(),vigor:0}))`);
@@ -155,4 +155,7 @@ assert.equal(tick.run('gardenState.actors.length'),4,'existing update tick drive
 tick.clock.now=57000; tick.intervals.get(1).handler();
 assert.equal(tick.run('gardenState.actors.length'),0);
 assert.equal(tick.frames.size,0,'existing update tick also clears a completed incident');
+const hiddenCadence=createGarden();hiddenCadence.fill(30);hiddenCadence.sandbox.document.hidden=true;
+hiddenCadence.advance(45000,0);assert.equal(hiddenCadence.run('gnomeIncident'),null,'hidden Canvas ticks never start incidents');
+assert.equal(hiddenCadence.run('nextAmbientCheckAt'),90000);
 console.log('PASS: gnome eligibility/cadence/chance, one four-actor incident, separated teams, deterministic stages/winners, early loser exit, cleanup/reload/pause handling, occupancy/grass/weather/SSE independence, render order/resize.');

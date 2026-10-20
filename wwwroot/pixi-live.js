@@ -337,6 +337,24 @@
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
       onCollected: () => sound?.maybePlayCollectionSound() });
+    const gnomePresentation = window.PacketGardenPixiGnomes;
+    const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
+    // This existing world layer is above specimens and below rain. No idle group.
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames);
+    let simulatedWinner = null, nextSimulatedWinner = 'green';
+    const gnomes = window.PacketGardenGnomes.createModel({ getSpecimens: () => model.specimens,
+      random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
+      onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
+      onCue: stage => sound?.maybePlayGnomeSound(stage) });
+    document.querySelector('#trigger-gnomes')?.addEventListener('click', () => {
+      const status = document.querySelector('#gnome-test-status');
+      if (gnomes.incident) { if(status)status.textContent='An incident is already active.';return; }
+      simulatedWinner = nextSimulatedWinner;
+      if (gnomes.start(Date.now())) {
+        if(status)status.textContent=`Simulated incident · ${simulatedWinner} will win. No network event.`;
+        nextSimulatedWinner = simulatedWinner === 'green' ? 'red' : 'green';gnomeView.animate(Date.now());
+      } else { simulatedWinner=null;if(status)status.textContent='Requires at least 30 living specimens. Seed a garden or wait for live growth.'; }
+    });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
@@ -387,7 +405,7 @@
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); });
+    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); gnomes.clear(); gnomes.resetCadence(); });
     document.querySelector('#seed')?.addEventListener('click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
@@ -410,7 +428,8 @@
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.phase ?? 'idle'} · winner ${gnomes.incident?.winner ?? 'undecided'} · 12 cached frames / 1 GPU source`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
@@ -429,19 +448,23 @@
       if (Date.now() >= nextLogicalAt) {
         const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
         ambient.tick(at, { hidden: document.hidden });
+        gnomes.tick(at, undefined, document.hidden);
         ui.tick(at);
         nextLogicalAt = Date.now() + 250;
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
+      if (gnomes.incident) { gnomes.advance(Date.now());gnomeView.animate(Date.now()); }
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
     document.addEventListener('visibilitychange', () => {
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
+      gnomes.resetCadence(at);
       if (document.hidden) app.stop(); else {
         model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
         ambient.tick(at, { hidden: false }); ambientView.animate(at);
+        gnomes.advance(at);gnomeView.animate(at);
         ui.tick(at);
         nextLogicalAt = at + 250; lastTick = null; app.start();
       }
@@ -449,6 +472,7 @@
     window.addEventListener('pagehide', event => {
       app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
+      gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
       app.canvas.removeEventListener('click', clickGarden); ui.destroy();
       ecology.clear(); ecologyView.destroy(); view.destroy(); ecologyCache.destroy();
       for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true); app.destroy(true);

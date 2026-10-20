@@ -10,6 +10,7 @@
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
+  <script src="garden-gnomes.js?v=gnomes-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js" defer></script>
   <script src="garden-ambient.js" defer></script>
@@ -17,8 +18,9 @@
   <script src="garden-ui-core.js" defer></script>
   <script src="pixi-live-ui.js?v=audio-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
+  <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
   <script src="pixi-live-ecology.js?v=grass-art-2c-1" defer></script>
-  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=audio-1" defer></script>
+  <script src="pixi-live-core.js?v=network-stats-1" defer></script><script src="pixi-live.js?v=gnomes-1" defer></script>
 </head>
 <body>
   <main>
@@ -31,6 +33,8 @@
       <button id="seed-mutations" type="button">Seed 3 mutations (local simulated)</button>
       <button id="seed-pending-mutations" type="button">Seed 4 pending mutations (local simulated)</button>
       <button id="seed-interaction" type="button">Seed overlap fixture (local simulated)</button>
+      <button id="trigger-gnomes" type="button">Trigger Gnome Incident (simulated)</button>
+      <span id="gnome-test-status" role="status">Requires 30 living specimens; simulated winners alternate green/red.</span>
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
@@ -67,7 +71,7 @@
       three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
       Overlap seeding replaces local garden state and cycles visitor types over one Amanita and mutation.
       Click priority: visitors, Amanita, active mutation, then cell inspection. Score stays zero.
-      Sound is optional and starts Off; gnomes remain deferred. Pixi artwork is approximate.
+      Sound is optional and starts Off. Gnome triggers are simulated; ordinary incidents keep their rare shared rules. Pixi artwork is approximate.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>
   <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>

@@ -1,3 +1,71 @@
+# The Gnome Incident restored (2026-10-20)
+
+Canvas and all live/default Pixi pages now use `garden-gnomes.js` for the existing
+incident logic. `garden-actors.js` retains Canvas drawing and its legacy entry
+points around that shared model; `pixi-live-gnomes.js` provides cached Sprite
+presentation. No network, specimen, ecology, occupancy, Recent activity, score,
+collection or weather rules changed. This implements only the original four
+gnomes' pointless dispute, not the future incidents listed in IDEAS.md.
+
+The model preserves at least **30 living specimens**, one eligibility check per
+**45 seconds**, **2%** chance (roll < .02), two green and two red gnomes and at
+most one incident. Approach lasts 0–3s; battle 3–7s; a single 50/50 winner is
+selected at 7s; losers flee until 9s; winners celebrate until full removal at 12s.
+World positions, visual bounce/shove/fade and shared phase boundaries are based
+on elapsed time. The original battle/victory cues fire once through the existing
+optional audio controller. Muted/zero-volume/unavailable audio remains safe.
+
+Pixi eligibility uses the existing 250ms logical cadence. Only an active incident
+advances/animates in the native ticker, with no new RAF, timers or workers.
+Canvas retains its existing scheduler. Both renderers skip eligibility while
+hidden and reset the check deadline on visibility changes; there is no backlog.
+Resume removes a completed incident before phase/audio handling. Clear removes
+the actors, and teardown releases their views and cached textures. Gnomes do not
+participate in logical picking, so existing collection/inspection priority stays.
+
+Artwork follows Canvas's pointed hats, faces, white beards, tunics, walking legs
+and tiny arguing arms. Twelve 32×32 frames (two teams × normal/battle × three leg
+poses) share one 768×64 backing at 2× resolution: approximately **192 KiB RGBA**,
+excluding driver overhead. Frames are generated once at page startup. Incidents
+allocate exactly four Sprites and one temporary group in the existing world layer
+above specimens and below rain; losers' Sprites are destroyed at 9s and all
+remaining incident display objects at 12s. Idle has no gnome display objects.
+No per-frame geometry or texture generation occurs. Plant artwork is unchanged.
+
+`/pixi-live.html` alone exposes **Trigger Gnome Incident (simulated)**. It requires
+the same 30 living specimens (use the existing dense seed button if necessary),
+rejects overlap, and alternates a deterministic green/red winning roll using the
+normal model. It publishes no event and changes no specimens or production odds.
+Observe the existing HUD for phase/count/winner, and wait 12s for cleanup. Both
+Pixi pages advance the shared renderer cache URL; new shared/model adapters and
+the Canvas adapter are versioned. Missing diagnostic controls remain safe.
+
+Verification: original Canvas gnome tests, shared synthetic-clock tests, repeated
+Pixi atlas/view tests and both actual entry points pass. Twenty synthetic full
+incidents keep the same 12 frames/one source and release every Sprite/group.
+Tests cover exact boundaries, both winners, single phase cues, mute/zero/device
+failure, hidden completion/no catch-up, clear, resize, teardown and independence
+from specimens/Recent activity. Installed headless Chrome also verified native
+audio, both forced winners, all phases, world-space resizing, hidden completion,
+clear, default/diagnostic initialization and retained Canvas/stress pages.
+
+120-frame headless Chrome samples at DPR 2 (no incoming growth) measured:
+
+| Scene | Gnomes | Mean / worst interval | Mean / worst CPU submission |
+| --- | --- | --- | --- |
+| Quiet, 30 live fixture specimens | Idle | 16.68 / 16.90ms | 0.213 / 0.600ms |
+| Same quiet garden | Four active | 16.68 / 16.90ms | 0.178 / 0.600ms |
+| Dense mixed garden + hurricane | Idle | 16.68 / 16.80ms | 0.183 / 0.600ms |
+| Same dense garden + hurricane | Four active | 16.68 / 16.90ms | 0.177 / 0.700ms |
+
+The active scene added five display objects and returned to baseline after
+cleanup. Lower active CPU means are sampling variation, not a speedup claim.
+These short samples do not prove GPU completion, long-session equivalence or
+audible speaker output. Screenshots and timing data are local/ignored under
+`artifacts/homepage-browser/gnomes-*.png` and `gnome-timing.json`. The historical
+stutter uncertainty, pre-existing Pixi teardown exception and NU1900 build warning
+remain outside this restoration. The earlier dated sections below are historical.
+
 # Shared optional sound restored (2026-10-20)
 
 `/`, `/index.html` and `/pixi-live.html` now expose Sound: Off/On and a 12%-default

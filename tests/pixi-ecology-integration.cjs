@@ -21,7 +21,7 @@ const h=require('./pixi-live.cjs');
     EventSource:Source,ResizeObserver:class{observe(){}disconnect(){}},window:{PIXI:{...h.P,Application},
       PacketGardenPixi:require('../wwwroot/pixi-stress.js'),devicePixelRatio:1,innerWidth:1280,innerHeight:1000,addEventListener:(name,fn)=>windowHandlers.set(name,fn),removeEventListener(name){windowHandlers.delete(name)}}};
   vm.createContext(context);
-  for(const name of ['garden-core','garden-mutations','garden-ecology','garden-ambient','garden-interaction','garden-ui-core','pixi-live-ui','pixi-live-core','pixi-live-ecology','pixi-live-ambient','pixi-live'])vm.runInContext(fs.readFileSync(`wwwroot/${name}.js`,'utf8'),context);
+  for(const name of ['garden-core','garden-gnomes','garden-mutations','garden-ecology','garden-ambient','garden-interaction','garden-ui-core','pixi-live-ui','pixi-live-core','pixi-live-ecology','pixi-live-ambient','pixi-live-gnomes','pixi-live'])vm.runInContext(fs.readFileSync(`wwwroot/${name}.js`,'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(sources.length,1);assert.equal(sources[0].url,'/api/garden/events');assert(app.active);
   const emit=(name,data)=>sources[0].handlers.get(name)({data:JSON.stringify(data)});

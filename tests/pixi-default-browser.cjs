@@ -30,6 +30,8 @@ async function run() {
         node.gain.setValueAtTime = (value, time) => { node.testSchedules.push({value,time}); return set(value,time); };
         window.__gardenAudioGains.push(node); return node; }
     };
+    const createGnomes = PacketGardenGnomes.createModel;
+    PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
     const init = PIXI.Application.prototype.init;
     PIXI.Application.prototype.init = function(...args) {
       window.__gardenTestApp = this; window.__gardenTestPaints = 0;
@@ -213,6 +215,7 @@ async function run() {
     }
     assert.equal(await diagnostic.evaluate(() => __gardenAudioTones.length),3,'one quiet tone per successful collection');
     assert.equal(await diagnostic.locator('#garden-score').textContent(),'Score: 0');
+    await checkGnomes(diagnostic,broadcast);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -255,6 +258,73 @@ async function run() {
         resolve({frameMs:stats(intervals),cpuSubmissionMs:stats(__gardenTestRenderMs),frames:intervals.length,
           newAudioNodes:__gardenAudioTones.length-tones});};app.ticker.add(tick);
     }));
+  }
+  async function checkGnomes(page,broadcast) {
+    const trigger=()=>page.getByRole('button',{name:'Trigger Gnome Incident (simulated)',exact:true}).click();
+    const quiet=()=>page.getByLabel('Manual weather',{exact:true}).selectOption('quiet');
+    const clear=()=>page.getByRole('button',{name:'Clear garden',exact:true}).click();
+    const tones=()=>page.evaluate(()=>__gardenAudioTones.length);
+    async function age(ms) {
+      await page.evaluate(age=>{
+        const m=__gardenTestGnomes,createdAt=Date.now()-age;
+        m.incident.createdAt=createdAt;for(const actor of m.actors)actor.createdAt=createdAt;m.advance(Date.now());
+      },ms);
+      const paints=await page.evaluate(()=>__gardenTestPaints);
+      await page.waitForFunction(n=>__gardenTestPaints>n+1,paints);
+    }
+    const actors=()=>page.evaluate(()=>({count:__gardenTestGnomes.actors.length,phase:__gardenTestGnomes.incident?.phase??'idle',
+      winner:__gardenTestGnomes.incident?.winner??null}));
+    const objects=()=>page.evaluate(()=>{
+      const count=n=>1+(n.children??[]).reduce((total,child)=>total+count(child),0);return count(__gardenTestApp.stage);
+    });
+    const resize=async(width,height)=>{await page.setViewportSize({width,height});await page.waitForFunction(()=>
+      __gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));};
+    await clear();await trigger();assert.equal((await actors()).count,0,'dev trigger preserves minimum thirty');
+    assert.match(await page.locator('#gnome-test-status').textContent(),/Requires at least 30/);
+    await page.getByRole('button',{name:'Sound: On',exact:true}).click();
+    for(let i=0;i<30;i++)broadcast({specimenType:'broadleaf',listenPort:443,vigor:0});
+    await page.waitForFunction(()=>__gardenTestApp.stage.children[0].children[6].children.length===30);
+    await quiet();await page.evaluate(()=>__gardenTestGnomes.resetCadence());
+    const quietIdle=await sample(page),idleObjects=await objects(),mutedTones=await tones();
+    await trigger();assert.deepEqual(await actors(),{count:4,phase:'approach',winner:null});
+    await trigger();assert.equal((await actors()).count,4,'no overlapping incident');
+    assert.equal(await objects(),idleObjects+5,'four sprites plus one transient group');
+    const quietActive=await sample(page);
+    await page.locator('#view canvas').screenshot({path:path.join(output,'gnomes-quiet-approach.png')});
+    const targets=await page.evaluate(()=>__gardenTestGnomes.actors.map(a=>[a.startX,a.startY,a.targetX,a.targetY]));
+    await resize(720,700);assert.deepEqual(await page.evaluate(()=>__gardenTestGnomes.actors.map(a=>[a.startX,a.startY,a.targetX,a.targetY])),targets);
+    await resize(1280,900);
+    await age(4000);assert.equal((await actors()).phase,'battle');
+    await page.locator('#view canvas').screenshot({path:path.join(output,'gnomes-battle.png')});
+    await age(7500);assert.deepEqual(await actors(),{count:4,phase:'result',winner:'green'});
+    await age(10000);assert.equal((await actors()).count,2);
+    await page.locator('#view canvas').screenshot({path:path.join(output,'gnomes-green-celebrate.png')});
+    await age(12000);assert.deepEqual(await actors(),{count:0,phase:'idle',winner:null});assert.equal(await objects(),idleObjects);
+    assert.equal(await tones(),mutedTones,'Off suppresses gnome cues');
+    await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
+    await trigger();await age(4000);assert.equal(await tones(),mutedTones+1,'one existing battle cue');
+    await age(4500);assert.equal(await tones(),mutedTones+1);
+    await age(7500);assert.equal((await actors()).winner,'red');assert.equal(await tones(),mutedTones+4,'existing three-tone victory cue');
+    await age(10000);await age(12000);assert.equal(await tones(),mutedTones+4);
+    assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),1,'gnomes reuse shared context');
+    await trigger();await clear();assert.equal((await actors()).count,0,'garden clear releases actors');
+    await page.getByRole('button',{name:'Sound: On',exact:true}).click();
+    await page.getByRole('button',{name:'Seed dense garden + ecology (local simulated)',exact:true}).click();
+    await page.getByLabel('Manual weather',{exact:true}).selectOption('botnet_hurricane');
+    await page.evaluate(()=>__gardenTestGnomes.resetCadence());
+    const hurricaneIdle=await sample(page),denseObjects=await objects();
+    await trigger();const hurricaneActive=await sample(page);assert.equal(await objects(),denseObjects+5);
+    await age(4000);await page.locator('#view canvas').screenshot({path:path.join(output,'gnomes-hurricane-battle.png')});
+    await age(12000);assert.equal(await objects(),denseObjects);
+    await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
+    await trigger();const beforeHidden=await tones();
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));
+      __gardenTestGnomes.incident.createdAt=Date.now()-20000;});
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
+    assert.equal((await actors()).count,0);assert.equal(await tones(),beforeHidden,'suspended completion does not replay cues');
+    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:12,
+      atlasBacking:[768,64],estimatedAtlasRgbaBytes:768*64*4};
+    await fs.writeFile(path.join(output,'gnome-timing.json'),JSON.stringify(results,null,2));console.log('Gnome timing:',JSON.stringify(results));
   }
   // Chromium screenshot PNG decoder using only Node built-ins (8-bit RGB/RGBA).
   function png(bytes) {

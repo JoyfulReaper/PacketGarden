@@ -72,7 +72,7 @@ explicit fallback rather than switched to automatically.
 `/canvas.html` preserves the original Canvas garden, including manual and
 automatic fake traffic, manual weather/intensity controls, optional audio,
 gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
-and collection audio; gnomes remain Canvas-only. Pixi retains
+and collection audio, plus the same Gnome Incident rules. Pixi retains
 its existing approximate artwork/palettes. No artwork or model rules changed
 as part of this promotion.
 
@@ -152,9 +152,9 @@ Live click inspection deliberately receives a bounded sensor label and exact TCP
 ## Status
 
 The default Pixi garden shares the existing logical rules and interactions with
-Canvas, including optional growth and collection audio. The detailed Canvas
-artwork, fake controls and gnome behavior described below remain available at
-`/canvas.html`; Pixi's artwork is approximate and gnomes are not implemented there.
+Canvas, including optional growth/collection audio and The Gnome Incident. The
+detailed Canvas artwork and fake controls described below remain available at
+`/canvas.html`; Pixi uses cached approximate artwork for its plants and gnomes.
 
 All five initial MVP mappings are implemented: DNS flowers, Gopher mushrooms,
 HTTP broad-leaf plants, SSH thorny vines, and brief port-22-probe red
@@ -185,6 +185,15 @@ green-hat gnomes. They approach, shove, randomly pick a winner, and disappear af
 12 seconds. These transient actors occupy no plant cells and change no specimens,
 grass, or weather. Sound-enabled gardens get two tiny cues through the existing
 volume control. It is garden nonsense, with no network or security meaning.
+
+Canvas and Pixi share one renderer-neutral incident model. The existing Pixi
+ticker animates at most four cached gnome Sprites above specimens and below rain;
+idle incidents allocate no display objects and run no animation. Hidden pages
+skip eligibility and reset the 45-second cadence on resume, without catch-up.
+Completed suspended incidents are removed without stale audio. Clear/teardown
+release the actors. On `/pixi-live.html`, **Trigger Gnome Incident (simulated)**
+requires 30 living specimens and alternates green/red winners through the normal
+12-second lifecycle, without network input or new growth. It is absent from `/`.
 
 Very occasionally, a live port-22 redbloom may itself become a collectible weed
 plant. Click it quickly enough and you collect some weed. This accomplishes
@@ -392,10 +401,15 @@ development fixture seeding, dropped/paused/invalid events, reconnects, redraws
 and ordinary inspection are silent. Successful curiosity, Amanita and collectible
 weed interactions use the existing quiet collection pluck, once per removal.
 Sound Off mutes the master immediately, zero volume schedules no tones, and device
-failures leave growth/rendering/clicking intact. The existing gnome sound methods
-remain available for future Pixi integration; no gnomes or weather audio were added.
+failures leave growth/rendering/clicking intact. Gnomes on both renderers reuse
+the existing battle/victory cues once per phase through the same context and
+volume. Weather audio remains absent.
 Focused parity/integration checks run with `node tests/pixi-audio.cjs` alongside
 `node tests/garden-audio.cjs`.
+
+Gnome checks run with `node tests/gnome-events.cjs` (Canvas),
+`node tests/gnome-model.cjs` (shared rules), and `node tests/pixi-gnomes.cjs`
+(cached presentation, entry points, sound and cleanup).
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
 5-second timeout. It trusts the source level and exposes `level`,

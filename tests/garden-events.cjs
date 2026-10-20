@@ -37,6 +37,7 @@ sandbox.Math.random = () => 0;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-core.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('wwwroot/garden-gnomes.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-mutations.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ecology.js', 'utf8'), sandbox);
