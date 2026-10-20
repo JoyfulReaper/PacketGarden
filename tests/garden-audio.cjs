@@ -1,5 +1,6 @@
 // Web Audio scheduling checks; no device, real-time sleeps, or audible playback required.
 const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:assert/strict');
+const outputGain = value => 2 * value ** 1.25;
 
 function createGarden(options = {}) {
   const {state, AudioContext} = require('./audio-context.cjs')(options);
@@ -55,9 +56,12 @@ module.exports=async function checkAudio() {
   await garden.toggle();
   assert.equal(state.contexts.length,1); assert.equal(state.resumes,1);
   assert.equal(element('#sound-toggle').textContent,'Sound: On');
-  const master=state.gains[0]; assert.equal(master.gain.value,0.12);
+  const master=state.gains[0]; assert.equal(master.gain.value,outputGain(.12));
+  assert.equal(state.compressors.length,1);assert.equal(state.compressors[0].threshold.value,-6);
+  assert.equal(state.compressors[0].ratio.value,12);
+  assert.equal(state.gains[1].gain.value,.75,'post-compressor output headroom');
   element('#sound-volume').value='25'; element('#sound-volume').handlers.input();
-  assert.equal(master.gain.value,0.25); assert.equal(state.contexts.length,1,'volume reuses context');
+  assert.equal(master.gain.value,outputGain(.25)); assert.equal(state.contexts.length,1,'volume reuses context');
 
   grow('flower',0); assert.equal(state.oscillators.length,1,'ordinary flower has one pluck');
   const specimens=run('gardenState.specimens.length');
@@ -75,7 +79,7 @@ module.exports=async function checkAudio() {
   grow('blackthorn',2201); assert.equal(state.oscillators.length,18,'blackthorn rare chime includes overtone');
   assert.deepEqual([...new Set(state.oscillators.slice(-6).map(o=>o.startTime))],[0,0.1,0.2]);
   assert(state.oscillators.every(o=>Number.isFinite(o.stopTime) && o.stopTime>o.startTime && o.stopTime<=0.6),'all tones stop promptly');
-  const oscillator=state.oscillators[0], envelope=state.gains[1];
+  const oscillator=state.oscillators[0], envelope=state.gains[2];
   oscillator.onended(); assert(oscillator.disconnected && envelope.disconnected,'ended nodes disconnect');
 
   const count=state.oscillators.length;
@@ -88,13 +92,17 @@ module.exports=async function checkAudio() {
   grow('ghostbloom',5000); assert.equal(state.oscillators.length,count,'Off suppresses future sounds');
   element('#sound-volume').value='50'; element('#sound-volume').handlers.input();
   assert.equal(master.gain.value,0,'volume adjustment stays muted while Off');
-  await garden.toggle(); assert.equal(master.gain.value,0.5); assert.equal(state.contexts.length,1);
+  await garden.toggle(); assert.equal(master.gain.value,outputGain(.5)); assert.equal(state.contexts.length,1);
   assert.equal(state.resumes,1,'running context reused');
   state.contexts[0].state='suspended'; await garden.toggle(); await garden.toggle();
   assert.equal(state.resumes,2,'explicit re-enable resumes suspended context');
   element('#sound-volume').value='0'; element('#sound-volume').handlers.input();
   grow('flower',6000); assert.equal(state.oscillators.length,count,'zero volume schedules no sounds');
-  element('#sound-volume').value='200'; element('#sound-volume').handlers.input(); assert.equal(master.gain.value,1);
+  element('#sound-volume').value='200'; element('#sound-volume').handlers.input(); assert.equal(master.gain.value,2,'full volume has +6dB headroom');
+  for(const value of [1,5,12,25,50,100]) {
+    element('#sound-volume').value=String(value);element('#sound-volume').handlers.input();
+    assert.equal(master.gain.value,outputGain(value/100));
+  }
   element('#sound-volume').value='invalid'; element('#sound-volume').handlers.input(); assert.equal(master.gain.value,0);
 
   // Existing ordinary identities remain; wirefern shares vine. Bursts have no backlog or lost specimens.
@@ -152,10 +160,10 @@ module.exports=async function checkAudio() {
   assert.equal(collection.state.contexts.length,1,'collection reuses the existing AudioContext');
   assert.equal(collection.state.oscillators.length,1,'one tiny collection pluck');
   assert.equal(collection.state.oscillators[0].stopTime,0.09,'collection sound is short');
-  assert.equal(collection.state.gains[0].gain.value,0.12,'collection shares the master volume');
-  assert.equal(collection.state.gains[1].gain.events.find(event=>event[0]==='linear')[1],0.045,'quiet envelope');
+  assert.equal(collection.state.gains[0].gain.value,outputGain(.12),'collection shares the master volume');
+  assert.equal(collection.state.gains[2].gain.events.find(event=>event[0]==='linear')[1],0.045,'quiet envelope');
   collection.element('#sound-volume').value='25'; collection.element('#sound-volume').handlers.input();
-  assert.equal(collection.state.gains[0].gain.value,0.25);
+  assert.equal(collection.state.gains[0].gain.value,outputGain(.25));
   await collection.toggle(); collection.run('gardenSound.maybePlayCollectionSound()');
   assert.equal(collection.state.oscillators.length,1,'Off suppresses collection sound');
   await collection.toggle();
@@ -171,8 +179,8 @@ module.exports=async function checkAudio() {
   gnomes.run("gardenSound.maybePlayGnomeSound('battle'); gardenSound.maybePlayGnomeSound('victory')");
   assert.equal(gnomes.state.contexts.length,1,'gnomes share the growth AudioContext');
   assert.equal(gnomes.state.oscillators.length,4,'one ting and a three-note victory trill');
-  assert.equal(gnomes.state.gains[0].gain.value,0.12,'gnomes share the master volume');
-  assert(gnomes.state.gains.slice(1).every(gain=>gain.gain.events.find(event=>event[0]==='linear')[1]===0.045),'ambient cues stay below growth envelopes');
+  assert.equal(gnomes.state.gains[0].gain.value,outputGain(.12),'gnomes share the master volume');
+  assert(gnomes.state.gains.slice(2).every(gain=>gain.gain.events.find(event=>event[0]==='linear')[1]===0.045),'ambient cues stay below growth envelopes');
   await gnomes.toggle();
   gnomes.run("gardenSound.maybePlayGnomeSound('battle'); gardenSound.maybePlayGnomeSound('victory')");
   assert.equal(gnomes.state.oscillators.length,4,'Sound Off suppresses every gnome cue');

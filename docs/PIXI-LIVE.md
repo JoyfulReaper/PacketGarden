@@ -1,4 +1,96 @@
-# Optional storm illumination and thunder (2026-10-20)
+# Readable storm bolts and audible shared mix (2026-10-20)
+
+The original oval glow below was technically visible but did not read as a
+strike. Its two .028/.016-gain tones were mostly 40–79Hz, poorly suited to small
+speakers. Native Chrome output capture confirmed a real signal, but very low
+thunder amplitude. This revision changes presentation/audio only; storm eligibility,
+60–150s/45–120s waits, 3.5s sequence ownership, .8–1.3s thunder delay, suppression,
+hidden/resume cancellation and hourly-only update stability remain unchanged.
+
+Pixi now draws a pale-white/blue bolt from y=0 to a varied y=270–510 in the
+existing 960×600 world. Ten uneven downward segments vary origin, drift and
+zig-zag width. 65% of strikes have 1–3 smaller, three-segment branches. The
+envelope attacks in 10ms, holds through 60ms and fades continuously to zero at
+650ms. There is no follow-up flashing sequence. A faint 140ms scene brightening
+(peak .035 thunderstorm / .05 hurricane) supports the bolt. Hurricane strokes
+are 20% thicker with peak bolt alpha 1 rather than .9.
+
+One overlay Container and two Graphics replace the original Sprite/texture:
+**three persistent display objects, zero extra textures**, versus one Sprite and
+128KiB previously. Maximum paths are 11 main points plus 12 branch points,
+with three stroke layers for the crisp core and subtle edge glow. Geometry is
+built once on an event, cleared on cancellation, and destroyed on teardown.
+The ticker only updates alpha/visibility; no geometry work occurs per frame.
+No filters, extra animation loops, garden RNG draws or other artwork changes.
+
+Thunder is now one filtered-noise source plus one descending triangle body.
+A deterministic 2.1s mono noise buffer is cached per shared controller/context
+(403,200 bytes at 48kHz). Thunderstorms use a 1200→380Hz lowpass and 96→62.4Hz
+body over 1.8s; hurricanes use 850→260Hz and 72→46.8Hz over 2s. The 35ms attack
+and .38s shoulder make it distinct before a rumbling decay. Each source stops
+by duration+.01s; envelopes and the one filter disconnect on end/cancellation.
+No Sound On gesture means no context or buffer creation. Muting, zero volume,
+device failure, hiding and weather/Lightning changes retain the existing guards.
+
+All shared sounds retain their species envelopes, pitches and cooldowns. The
+slider now sets `2 × volume^1.25` before one shared compressor (threshold -6dB,
+knee 6dB, ratio 12, attack .003s, release .18s), followed by .75 fixed output
+headroom. This raises full-volume output while keeping quiet slider settings
+usable and managing overlap. Off still sets master gain to zero. Canvas uses
+the same revised mix, but never triggers lightning/thunder. Versioned audio,
+storm and entry scripts prevent the old effect/mix remaining cached.
+
+Verification: all 47 Node test files passed (optional runners skip without
+`--run`), including 1,000 deterministic shapes, path bounds/variation, envelopes,
+one active event, no per-frame geometry/textures, repeated cleanup, cached noise,
+source/filter lifetime, volume curve and preserved sound/event guards. The
+installed headless Chrome suite passed both default URLs, diagnostic manual
+trigger, reduced motion, cancellation, native audio, SSE/reconnection, resizing,
+320px controls, Canvas and stress pages. At a frozen 55ms test age, all 30 sampled
+locations along each rendered main bolt contained pale strike pixels.
+
+The browser test taps **actual rendered PCM after the output mix**, leaving the
+normal destination connected; it does not substitute mocked synthesis. Full
+volume captures from the real manual-lightning path measured:
+
+| Cue | Previous peak / RMS | Revised peak / RMS |
+| --- | --- | --- |
+| Thunderstorm | .0411 / .00434 | .7225 / .06277 |
+| Hurricane | .0394 / .00465 | .7316 / .05631 |
+| Flower | .3780 / .03881 | .6348 / .06614 |
+
+Thunder RMS increased approximately 23.2dB / 21.7dB in these cue windows; flower
+RMS increased about 4.6dB. A mixed thunder/rare/collection/gnome sample peaked at
+.7092. No samples reached .99 in these captures; muted lightning captured exact
+silence. These are signal measurements, not perceived-loudness or physical-device
+tests. Real speakers/headphones and OS output still need user audition.
+
+Dense-scene Chrome timing at DPR 2, 120-frame samples with thunder muted:
+
+| Scene | Previous mean CPU, idle / sequence | Revised mean CPU, idle / sequence | Revised worst interval |
+| --- | --- | --- | --- |
+| Quiet | .161ms | .214ms | 17.0ms |
+| Thunderstorm | .168 / .204ms | .213 / .224ms | 22.3ms |
+| Hurricane | .176 / .188ms | .203 / .256ms | 18.1ms |
+
+Means stayed near 16.68ms/frame. Additional 24-frame windows during visible bolts
+measured .271/.304ms mean CPU submission; path construction measured 0–.4ms.
+The sequence samples include frames after the 650ms fade. Runs were short and
+noisy (including concurrent test activity), so these do not prove GPU/compositor
+or long-soak equivalence. Small CPU increases and the 22.3ms interval are retained
+as observations, not dismissed based on average FPS.
+
+Baseline artifacts are preserved in `artifacts/storm-bolt-before/`; revised
+screenshots (`*-bolt.png`), timings, `audio-output.json` and playable PCM WAVs
+are in `artifacts/storm-bolt-after/`, all ignored. Reproduce with existing
+Playwright/installed Chrome: set `PACKETGARDEN_BROWSER_OUTPUT` to a new artifacts
+directory, then `node tests/pixi-default-browser.cjs --run`. The test-only PCM
+tap uses ScriptProcessor; the application adds no recording or metering loop.
+.NET build/backend checks pass with the existing NU1900 vulnerability-feed warning.
+Historical unexplained stutter and the known Pixi teardown exception remain.
+The original experiment and its measurements below are historical.
+
+# Optional storm illumination and thunder (2026-10-20, original experiment)
 
 The default Pixi garden and `/pixi-live.html` now share `pixi-live-storm.js`.
 Only normalized `botnet_thunderstorm` and `botnet_hurricane` qualify. Ordinary

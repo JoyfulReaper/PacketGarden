@@ -15,13 +15,13 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   sounds.set("wirefern", sounds.get("vine"));
   const ordinaryCooldownMs = 400;
   const rareCooldownMs = 900;
-  // Oscillator envelopes need substantially more headroom than the original
-  // prototype. Keep the master slider linear while making 100% genuinely audible.
+  // Keep species timbres/envelopes; output gain supplies usable full-volume range.
   const ordinaryPeak = 0.38;
   const rarePeak = 0.26;
   const overtonePeak = 0.07;
   let audio = null;
   let master = null;
+  let thunderBuffer = null;
   let enabled = false;
   let volume = Number(volumeControl?.value ?? 12) / 100;
   let activation = 0;
@@ -38,7 +38,8 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   }
 
   function applyVolume() {
-    if (master) master.gain.setValueAtTime(enabled ? volume : 0, audio.currentTime);
+    // +6dB at full volume, with a gentle curve retaining useful quiet settings.
+    if (master) master.gain.setValueAtTime(enabled ? 2 * volume ** 1.25 : 0, audio.currentTime);
   }
 
   function reportUnavailable() {
@@ -58,7 +59,16 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
     if (!master) {
       const gain = audio.createGain();
       gain.gain.setValueAtTime(0, audio.currentTime);
-      gain.connect(audio.destination);
+      // One shared compressor controls overlapping peaks after the volume gain.
+      const compressor = audio.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-6,audio.currentTime);
+      compressor.knee.setValueAtTime(6,audio.currentTime);
+      compressor.ratio.setValueAtTime(12,audio.currentTime);
+      compressor.attack.setValueAtTime(.003,audio.currentTime);
+      compressor.release.setValueAtTime(.18,audio.currentTime);
+      // Leave output headroom for the compressor's makeup gain / attack transient.
+      const output=audio.createGain();output.gain.setValueAtTime(.75,audio.currentTime);
+      gain.connect(compressor);compressor.connect(output);output.connect(audio.destination);
       master = gain;
     }
     if (audio.state !== "running") await audio.resume();
@@ -144,12 +154,13 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   function maybePlayThunderSound(level) {
     if (!enabled || volume === 0 || audio?.state !== "running" || thunder ||
         (level !== "botnet_thunderstorm" && level !== "botnet_hurricane")) return null;
-    const nodes = [], duration = level === "botnet_hurricane" ? 1.9 : 1.6;
+    const nodes = [], filters = [], hurricane = level === "botnet_hurricane", duration = hurricane ? 2 : 1.8;
+    const disconnectFilters = () => { for(const filter of filters)try{filter.disconnect();}catch{/* Device may be gone. */} };
     const release = node => {
       if (node.done) return;
       node.done = true;
       try { node.oscillator.disconnect();node.envelope.disconnect(); } catch { /* Device may be gone. */ }
-      if (nodes.every(item => item.done) && thunder === sequence) thunder = null;
+      if (nodes.every(item => item.done)) { disconnectFilters();if(thunder===sequence)thunder=null; }
     };
     const sequence = { cancel() {
       for (const node of nodes) {
@@ -157,22 +168,41 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
         try { if (node.started) node.oscillator.stop(audio.currentTime); } catch { /* Device may be gone. */ }
         release(node);
       }
+      disconnectFilters();
       if (thunder === sequence) thunder = null;
     }};
     thunder = sequence;
     try {
-      const frequencies = level === "botnet_hurricane" ? [40,58] : [56,79];
-      for (const [index,frequency] of frequencies.entries()) {
-        const node = { oscillator:audio.createOscillator(), envelope:audio.createGain(), started:false, done:false };
+      // One finite cached noise buffer adds audible midrange on small speakers.
+      // Local deterministic noise never draws from the garden's random stream.
+      if(!thunderBuffer) {
+        thunderBuffer=audio.createBuffer(1,Math.ceil(audio.sampleRate*2.1),audio.sampleRate);
+        const data=thunderBuffer.getChannelData(0);let seed=0x7a39bc12;
+        for(let i=0;i<data.length;i++){seed^=seed<<13;seed^=seed>>>17;seed^=seed<<5;data[i]=(seed>>>0)/2147483648-1;}
+      }
+      const start=audio.currentTime;
+      for(let index=0;index<2;index++) {
+        const node = { oscillator:index===0?audio.createBufferSource():audio.createOscillator(), envelope:null, started:false, done:false };
         nodes.push(node);
-        const start = audio.currentTime;
-        node.oscillator.type = "triangle";
-        node.oscillator.frequency.setValueAtTime(frequency,start);
-        node.oscillator.frequency.exponentialRampToValueAtTime(frequency*.65,start+duration);
+        node.envelope=audio.createGain();
+        if(index===0) {
+          node.oscillator.buffer=thunderBuffer;
+          const filter=audio.createBiquadFilter();filters.push(filter);filter.type='lowpass';
+          filter.Q.setValueAtTime(.7,start);
+          filter.frequency.setValueAtTime(hurricane?850:1200,start);
+          filter.frequency.exponentialRampToValueAtTime(hurricane?260:380,start+duration);
+          node.oscillator.connect(filter);filter.connect(node.envelope);
+        } else {
+          node.oscillator.type='triangle';const frequency=hurricane?72:96;
+          node.oscillator.frequency.setValueAtTime(frequency,start);
+          node.oscillator.frequency.exponentialRampToValueAtTime(frequency*.65,start+duration);
+          node.oscillator.connect(node.envelope);
+        }
         node.envelope.gain.setValueAtTime(0,start);
-        node.envelope.gain.linearRampToValueAtTime(index===0?.028:.016,start+.22);
+        node.envelope.gain.linearRampToValueAtTime(index===0?.95:.16,start+.035);
+        node.envelope.gain.exponentialRampToValueAtTime(index===0?.25:.07,start+.38);
         node.envelope.gain.exponentialRampToValueAtTime(.0001,start+duration);
-        node.oscillator.connect(node.envelope);node.envelope.connect(master);
+        node.envelope.connect(master);
         node.oscillator.onended = () => release(node);
         node.oscillator.start(start);node.started=true;node.oscillator.stop(start+duration+.01);
       }

@@ -2,6 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const {start}=require('./pixi-default.cjs'),createAudioContext=require('./audio-context.cjs');
 const html=file=>fs.readFileSync(`wwwroot/${file}`,'utf8');
+const outputGain=value=>2*value**1.25;
 async function setup(page,options={}) {
   const audio=createAudioContext(options);
   const g=await start(false,{pageHtml:html(page),AudioContext:options.supported===false?undefined:audio.AudioContext,captureModel:true});
@@ -22,8 +23,9 @@ async function check(page) {
   const g=await setup(page),s=g.state,voices=()=>s.oscillators.length;
   assert.equal(g.element('#sound-toggle').textContent,'Sound: Off');assert.equal(g.element('#sound-volume').value,'12');
   g.grow();assert.equal(s.contexts.length,0);assert.equal(g.model.specimens.length,1);
-  await g.toggle();assert.equal(s.contexts.length,1);assert.equal(s.gains[0].gain.value,.12);
-  g.volume(25);assert.equal(s.gains[0].gain.value,.25);g.model.clear();
+  await g.toggle();assert.equal(s.contexts.length,1);assert.equal(s.gains[0].gain.value,outputGain(.12));
+  assert.equal(s.compressors.length,1);
+  g.volume(25);assert.equal(s.gains[0].gain.value,outputGain(.25));g.model.clear();
   for(const [type,frequency,wave,count] of [['flower',660,'sine',1],['mushroom',180,'triangle',1],['broadleaf',262,'triangle',1],
     ['vine',220,'triangle',2],['wirefern',220,'triangle',2],['redbloom',440,'sine',2],['weed',146,'triangle',2],
     ['ghostbloom',784,'sine',3],['crystalfungus',1046,'sine',3],['blackthorn',196,'triangle',6]]) {
@@ -62,7 +64,7 @@ async function check(page) {
     assert.equal(s.gains.at(-1).gain.events.find(e=>e[0]==='linear')[1],.045,'unchanged quiet collection envelope');
   }
   await g.toggle();assert.equal(s.gains[0].gain.value,0,'Off immediately mutes scheduled nodes');g.advance(1000);g.grow();assert.equal(voices(),count);
-  g.volume(50);assert.equal(s.gains[0].gain.value,0);await g.toggle();assert.equal(s.gains[0].gain.value,.5);
+  g.volume(50);assert.equal(s.gains[0].gain.value,0);await g.toggle();assert.equal(s.gains[0].gain.value,outputGain(.5));
   g.volume(0);g.advance(1000);g.grow('blackthorn');assert.equal(voices(),count,'zero volume schedules no tones');
   if(g.element('#seed-interaction')) {
     g.element('#seed-interaction').handlers.get('click')();click(g,center(g.model.specimens[0]));
@@ -70,7 +72,7 @@ async function check(page) {
   }
   for(let i=0;i<10;i++)await g.toggle();assert.equal(s.contexts.length,1,'rapid toggles reuse one context');
   assert(s.oscillators.every(o=>o.stopTime>o.startTime&&o.stopTime<=.6));
-  s.oscillators[0].onended();assert(s.oscillators[0].disconnected&&s.gains[1].disconnected);
+  s.oscillators[0].onended();assert(s.oscillators[0].disconnected&&s.gains[2].disconnected);
   assert.deepEqual(g.errors,[]);g.winHandlers.get('pagehide')({persisted:false});
   for(const options of [{supported:false},{failConstructor:true},{failResume:true},{failPlayback:true}]) {
     const failed=await setup(page,options);await failed.toggle();failed.grow();

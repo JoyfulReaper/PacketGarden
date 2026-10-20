@@ -354,17 +354,24 @@ Still-planned presentation work:
 
 Implemented on October 20, 2026 for the default Pixi garden and `/pixi-live.html`:
 only `botnet_thunderstorm` and `botnet_hurricane` qualify, never ordinary/heavy
-rain. A localized blue-gray glow smoothly rises/falls over 2.2 seconds. Random
+rain. The initial oval-glow experiment was revised into a pale-blue/white bolt
+with bounded irregular segments from the top edge and occasional 1–3 branches.
+A 10ms attack, brief hold and fade ending at 650ms make the strike readable;
+a faint 140ms scene brightening stays secondary. Random
 waits are 60–150 seconds for thunderstorms and 45–120 seconds for hurricanes,
-starting after each 3.5-second sequence. Hurricanes have a slightly larger,
-stronger glow and lower-pitched thunder. There are no full-screen white frames
+starting after each 3.5-second sequence. Hurricanes have a slightly thicker,
+stronger bolt and lower-pitched thunder. There are no full-screen white frames
 or repeated flashes.
 
 The independent Lightning checkbox and reduced-motion preference suppress the
 whole sequence. Thunder requires the existing Sound On gesture and nonzero
-volume; two quiet tones follow actual lightning after 0.8–1.3 seconds. Weather
+volume; filtered noise and a low tonal body follow actual lightning after
+0.8–1.3 seconds, lasting 1.8s/2s. Audible midrange replaces the original nearly
+sub-bass-only mix. Shared output has a louder full-volume range, gentle volume
+curve, compressor and output headroom. Weather
 changes, hiding, disable and cleanup cancel effects without delayed replay.
-The existing logical tick/ticker drives one cached Sprite and bounded audio;
+The existing logical tick/ticker drives one overlay with two Graphics and bounded
+audio. Paths are built once per event, noise is cached once per context;
 there are no extra animation loops, garden RNG draws or per-frame geometry.
 Hourly traffic updates alone leave the schedule unchanged. The diagnostic page
 alone has a manual eligible-weather trigger. No ecology, classification, backend

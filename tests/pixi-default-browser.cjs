@@ -16,15 +16,29 @@ async function run() {
   const legacy = new Map(['pixi-live.js','pixi-live.css'].map(file => [file,
     execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], {cwd:root})]));
   const unversioned = process.argv.includes('--unversioned');
-  const output = path.join(root, 'artifacts', unversioned ? 'homepage-negative' : 'homepage-browser');
+  const output = path.resolve(root, process.env.PACKETGARDEN_BROWSER_OUTPUT || path.join('artifacts', unversioned ? 'homepage-negative' : 'homepage-browser'));
   await fs.mkdir(output, {recursive:true});
   let promoted = false, connections = 0;
   const streams = new Set(), requests = [];
-  const capture = `window.__gardenAudioContexts = []; window.__gardenAudioTones = []; window.__gardenAudioGains = [];
+  const capture = `window.__gardenAudioContexts = []; window.__gardenAudioTones = []; window.__gardenAudioGains = [];window.__gardenAudioSources=[];
+    // Test-only PCM tap after the actual output mix. Original destination stays connected.
+    const nativeConnect = AudioNode.prototype.connect;
+    AudioNode.prototype.connect = function(destination,...args) {
+      const result = nativeConnect.call(this,destination,...args);
+      if (destination === this.context.destination && !(this instanceof ScriptProcessorNode)) {
+        const tap = this.context.createScriptProcessor(2048,1,1);
+        tap.onaudioprocess = event => {
+          if (window.__gardenAudioRecording) __gardenAudioRecording.push(Array.from(event.inputBuffer.getChannelData(0)));
+        };
+        nativeConnect.call(this,tap);nativeConnect.call(tap,destination);
+      }
+      return result;
+    };
     const NativeAudioContext = window.AudioContext;
     window.AudioContext = class extends NativeAudioContext {
       constructor(...args) { super(...args); window.__gardenAudioContexts.push(this); }
       createOscillator() { const node = super.createOscillator(); window.__gardenAudioTones.push(node); return node; }
+      createBufferSource() { const node=super.createBufferSource();window.__gardenAudioSources.push(node);return node; }
       createGain() { const node = super.createGain(); node.testSchedules = [];
         const set = node.gain.setValueAtTime.bind(node.gain);
         node.gain.setValueAtTime = (value, time) => { node.testSchedules.push({value,time}); return set(value,time); };
@@ -33,7 +47,14 @@ async function run() {
     const createGnomes = PacketGardenGnomes.createModel;
     PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
     const createStorm = PacketGardenPixiStorm.createModel;
-    PacketGardenPixiStorm.createModel = (...args) => (window.__gardenTestStorm = createStorm(...args));
+    PacketGardenPixiStorm.createModel = options => (window.__gardenTestStorm = createStorm({...options,random:PacketGardenPixi.seededRandom(77332)}));
+    const createStormView = PacketGardenPixiStorm.createView;
+    window.__gardenStrikeBuildMs=[];
+    PacketGardenPixiStorm.createView = (...args) => {
+      const view=createStormView(...args),change=view.change;
+      view.change=event=>{const start=performance.now();change(event);if(event)__gardenStrikeBuildMs.push(performance.now()-start);};
+      return window.__gardenTestStormView=view;
+    };
     const init = PIXI.Application.prototype.init;
     PIXI.Application.prototype.init = function(...args) {
       window.__gardenTestApp = this; window.__gardenTestPaints = 0;
@@ -135,7 +156,7 @@ async function run() {
       await page.waitForFunction(() => __gardenAudioContexts.length === 1 && __gardenAudioContexts[0].state === 'running');
       // Native AudioParam.value can retain a rendered quantum's value while the
       // graph is inactive. Check the actual scheduled target, not that stale getter.
-      await page.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===.12);
+      await page.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===2*.12**1.25);
       broadcast({specimenType:'flower',listenPort:53,vigor:2,sensor:'browser-fixture',seenCount:'12'});
       await page.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 1);
       await page.waitForFunction(() => __gardenAudioTones.length === 1);
@@ -204,7 +225,7 @@ async function run() {
     await diagnostic.getByRole('button',{name:'Sound: Off',exact:true}).click();
     await diagnostic.waitForFunction(() => __gardenAudioContexts.length === 1 && __gardenAudioContexts[0].state === 'running');
     await diagnostic.getByRole('slider',{name:'Growth sound volume'}).fill('25');
-    await diagnostic.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===.25);
+    await diagnostic.waitForFunction(() => __gardenAudioGains[0].testSchedules.at(-1).value===2*.25**1.25);
     await diagnostic.getByLabel('Weather source',{exact:true}).selectOption('manual');
     await diagnostic.getByLabel('Manual weather',{exact:true}).selectOption('botnet_hurricane');
     await diagnostic.getByRole('button',{name:'Seed dense garden + ecology (local simulated)',exact:true}).click();
@@ -264,16 +285,16 @@ async function run() {
         pixelX:Math.round(x*app.canvas.width/app.renderer.screen.width),pixelY:Math.round(y*app.canvas.height/app.renderer.screen.height)};
     });
   }
-  async function sample(page) {
-    return page.evaluate(()=>new Promise(resolve=>{
+  async function sample(page,frames=120) {
+    return page.evaluate(frames=>new Promise(resolve=>{
       const app=__gardenTestApp,intervals=[];let last=null;__gardenTestRenderMs=[];
       const tones=__gardenAudioTones.length;
-      const tick=t=>{if(last!==null)intervals.push(t.lastTime-last);last=t.lastTime;if(intervals.length<120)return;
+      const tick=t=>{if(last!==null)intervals.push(t.lastTime-last);last=t.lastTime;if(intervals.length<frames)return;
         app.ticker.remove(tick);
         const stats=values=>({average:values.reduce((a,b)=>a+b,0)/values.length,worst:Math.max(...values)});
         resolve({frameMs:stats(intervals),cpuSubmissionMs:stats(__gardenTestRenderMs),frames:intervals.length,
           newAudioNodes:__gardenAudioTones.length-tones});};app.ticker.add(tick);
-    }));
+    }),frames);
   }
   async function checkGnomes(page,broadcast) {
     const trigger=()=>page.getByRole('button',{name:'Trigger Gnome Incident (simulated)',exact:true}).click();
@@ -354,20 +375,32 @@ async function run() {
       await weather(level);await page.evaluate(()=>__gardenTestGnomes.resetCadence());
       const before=png(await page.locator('#view canvas').screenshot({path:path.join(output,`${level}-inactive.png`)}));
       const idle=await sample(page);await trigger();assert(await active());
-      const moving=await sample(page);assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children.at(-1).texture.source.width),256);
-      // A second normal sequence provides a screenshot near its single smooth peak.
+      const moving=await sample(page);
+      await page.evaluate(()=>__gardenTestStorm.reset());await trigger();const strikeWindow=await sample(page,24);
+      // Freeze only the test screenshot at 55ms so the short bolt is reproducible.
       await page.evaluate(()=>__gardenTestStorm.reset());await trigger();
-      await page.waitForFunction(()=>Date.now()-__gardenTestStorm.active.createdAt>=950);
-      const after=png(await page.locator('#view canvas').screenshot({path:path.join(output,`${level}-glow.png`)}));
-      const brightening=average(after)-average(before);assert(brightening>.1,'cached cloud glow must change displayed pixels');
-      results[level]={idle,active:moving,meanPixelBrightening:brightening};
-      await page.evaluate(()=>__gardenTestStorm.reset());
+      const points=await page.evaluate(()=>{const app=__gardenTestApp,root=app.stage.children[0],event=__gardenTestStorm.active;
+        app.stop();__gardenTestStormView.animate(event,event.createdAt+55);app.render();
+        return event.points.map(p=>({x:(root.position.x+p.x*root.scale.x)*app.canvas.width/app.renderer.screen.width,
+          y:(root.position.y+p.y*root.scale.y)*app.canvas.height/app.renderer.screen.height}));});
+      const after=png(await page.locator('#view canvas').screenshot({path:path.join(output,`${level}-bolt.png`)}));
+      let hits=0,total=0;
+      for(let i=1;i<points.length;i++)for(const t of [.25,.5,.75]) {
+        const x=Math.round(points[i-1].x*(1-t)+points[i].x*t),y=Math.round(points[i-1].y*(1-t)+points[i].y*t);let hit=false;
+        for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){const at=((y+dy)*after.width+x+dx)*after.channels;
+          if(after.data[at]>180&&after.data[at+1]>185&&after.data[at+2]>195)hit=true;}
+        if(hit)hits++;total++;
+      }
+      assert(hits/total>.8,'a pale jagged strike must actually appear along its rendered path');
+      const brightening=average(after)-average(before);assert(brightening>0);
+      results[level]={idle,active:moving,strikeWindow,meanPixelBrightening:brightening,boltPixelCoverage:hits/total};
+      await page.evaluate(()=>{__gardenTestStorm.reset();__gardenTestApp.start();});
     }
     await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
-    const tones=await page.evaluate(()=>__gardenAudioTones.length);await trigger();
-    await page.waitForFunction(n=>__gardenAudioTones.length===n+2,tones);
+    const tones=await page.evaluate(()=>__gardenAudioTones.length),sources=await page.evaluate(()=>__gardenAudioSources.length);await trigger();
+    await page.waitForFunction(n=>__gardenAudioTones.length===n+1,tones);
     assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),1);
-    assert.deepEqual(await page.evaluate(()=>__gardenAudioTones.slice(-2).map(n=>n.frequency.value>0)),[true,true]);
+    assert.equal(await page.evaluate(()=>__gardenAudioSources.length),sources+1);
     await weather('heavy_rain');assert.equal(await active(),false);
     await weather('botnet_thunderstorm');await trigger();const noReplay=await page.evaluate(()=>__gardenAudioTones.length);
     await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
@@ -377,8 +410,46 @@ async function run() {
     await page.emulateMedia({reducedMotion:'reduce'});await trigger();assert.equal(await active(),false);
     await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>!document.querySelector('#lightning-enabled').disabled);
     await page.locator('#lightning-enabled').uncheck();await trigger();assert.equal(await active(),false);await page.locator('#lightning-enabled').check();
-    results.resources={sprites:1,cachedTextures:1,backing:[256,128],estimatedRgbaBytes:256*128*4,extraRenderLoops:0};
+    results.resources={displayObjects:3,cachedTextures:0,extraRenderLoops:0,maxPathPoints:23,
+      strikeBuildMs:await page.evaluate(()=>__gardenStrikeBuildMs)};
     await fs.writeFile(path.join(output,'storm-timing.json'),JSON.stringify(results,null,2));console.log('Storm timing:',JSON.stringify(results));
+    await page.getByRole('slider',{name:'Growth sound volume'}).fill('100');
+    const audioResults={};
+    for(const level of ['botnet_thunderstorm','botnet_hurricane']) {
+      await weather(level);await page.evaluate(()=>{__gardenTestStorm.reset();window.__gardenAudioRecording=[];});
+      await trigger();await page.waitForFunction(()=>__gardenTestStorm.active===null);
+      audioResults[level]=await saveAudio(page,level);
+      assert(audioResults[level].peak>.15&&audioResults[level].rms>.012,'thunder must reach meaningful rendered output amplitude');
+      assert.equal(audioResults[level].clippedSamples,0);
+    }
+    await page.evaluate(()=>{window.__gardenAudioRecording=[];gardenSound.maybePlayGrowthSound('flower',performance.now(),.5);});
+    await page.waitForFunction(()=>__gardenAudioRecording.length>=12);
+    audioResults.flower=await saveAudio(page,'flower');
+    assert(audioResults.flower.peak>.5,'full-volume garden output must be louder than the former .38 peak');
+    assert.equal(audioResults.flower.clippedSamples,0);
+    await page.evaluate(()=>{window.__gardenAudioRecording=[];gardenSound.maybePlayThunderSound('botnet_hurricane');
+      gardenSound.maybePlayGrowthSound('blackthorn',performance.now()+2000,.5);gardenSound.maybePlayCollectionSound();gardenSound.maybePlayGnomeSound('victory');});
+    await page.waitForFunction(()=>__gardenAudioRecording.length>=50);
+    audioResults.mixed=await saveAudio(page,'mixed');assert.equal(audioResults.mixed.clippedSamples,0,'overlapping output must retain headroom');
+    await page.getByRole('button',{name:'Sound: On',exact:true}).click();
+    await page.evaluate(()=>{__gardenTestStorm.reset();window.__gardenAudioRecording=[];});await trigger();
+    await page.waitForFunction(()=>__gardenTestStorm.active===null);
+    audioResults.muted=await saveAudio(page,'muted',false);assert.equal(audioResults.muted.peak,0,'muted lightning renders silence');
+    await fs.writeFile(path.join(output,'audio-output.json'),JSON.stringify(audioResults,null,2));console.log('Rendered audio:',JSON.stringify(audioResults));
+  }
+  async function saveAudio(page,name,expectSignal=true) {
+    const capture=await page.evaluate(()=>{const samples=__gardenAudioRecording.flat();window.__gardenAudioRecording=null;
+      return {samples,sampleRate:__gardenAudioContexts[0].sampleRate};});
+    const bytes=Buffer.alloc(44+capture.samples.length*2),size=capture.samples.length*2;
+    bytes.write('RIFF');bytes.writeUInt32LE(36+size,4);bytes.write('WAVEfmt ',8);bytes.writeUInt32LE(16,16);
+    bytes.writeUInt16LE(1,20);bytes.writeUInt16LE(1,22);bytes.writeUInt32LE(capture.sampleRate,24);
+    bytes.writeUInt32LE(capture.sampleRate*2,28);bytes.writeUInt16LE(2,32);bytes.writeUInt16LE(16,34);bytes.write('data',36);bytes.writeUInt32LE(size,40);
+    let peak=0,sum=0,active=0,clipped=0;
+    capture.samples.forEach((value,i)=>{peak=Math.max(peak,Math.abs(value));sum+=value*value;if(Math.abs(value)>.001)active++;if(Math.abs(value)>=.99)clipped++;
+      bytes.writeInt16LE(Math.round(Math.max(-1,Math.min(1,value))*32767),44+i*2);});
+    await fs.writeFile(path.join(output,`${name}-output.wav`),bytes);
+    if(expectSignal)assert(active>0,'actual output PCM must contain signal, not only scheduled nodes');
+    return {peak,rms:Math.sqrt(sum/capture.samples.length),activeSamples:active,clippedSamples:clipped,sampleRate:capture.sampleRate};
   }
   // Chromium screenshot PNG decoder using only Node built-ins (8-bit RGB/RGBA).
   function png(bytes) {

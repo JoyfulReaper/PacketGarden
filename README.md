@@ -391,26 +391,33 @@ streaks. These visual effects cause no ecological damage. Canvas retains rain
 without lightning; both Pixi pages also support the optional illumination below.
 
 Only `botnet_thunderstorm` and `botnet_hurricane` qualify for Pixi lightning;
-ordinary rain and `heavy_rain` never do. A localized, soft blue-gray glow rises
-and falls smoothly over 2.2 seconds, with no white frames or repeated flashes.
+ordinary rain and `heavy_rain` never do. A crisp pale-blue/white segmented bolt
+starts at the garden's top edge, with varied downward zig-zags and sometimes
+1–3 smaller branches. It attacks in 10ms, holds briefly and fades by 650ms;
+a faint 140ms scene brightening supports the strike without an oval glow,
+white frames or repeated flashes.
 Thunderstorms wait a random 60–150 seconds; hurricanes wait 45–120 seconds,
-with a slightly larger, stronger glow. Each wait starts after the previous
+with a slightly thicker, stronger bolt. Each wait starts after the previous
 3.5-second sequence finishes. **Lightning** disables the effect independently;
 `prefers-reduced-motion` suppresses illumination and its accompanying thunder.
 Hidden pages cancel the sequence and resume on a fresh schedule without catch-up.
 An hourly-statistics-only update does not reset that schedule. These effects
 carry no security meaning and do not affect specimens, weather rules or puddles.
 
-When Sound is already On, lightning may produce a soft two-tone rumble after
-0.8–1.3 seconds, lasting 1.6 seconds (thunderstorm) or 1.9 seconds (hurricane,
-with lower pitches). It shares the existing context/master volume. Sound Off,
+When Sound is already On, lightning produces a filtered-noise rumble with a low
+tonal body after 0.8–1.3 seconds, lasting 1.8 seconds (thunderstorm) or 2 seconds
+(hurricane, with a lower cutoff and pitch). The added midrange makes thunder
+more audible on small speakers. It shares the existing context/master volume. Sound Off,
 zero volume, hiding, disabling lightning or changing weather cancels thunder;
 expired or suspended sequences never replay it. Preferences are not persisted.
 The diagnostic page alone offers **Trigger Lightning (simulated)** under manually
 selected eligible weather. See [implementation and measurements](docs/PIXI-LIVE.md).
 
 Optional browser-local Web Audio on Canvas and both Pixi pages starts **Off**. Click **Sound: Off**
-to enable them; the volume slider starts at **12%**. Successful real and fake
+to enable them; the volume slider starts at **12%**. Shared output uses a gentle
+volume curve (`2 × volume^1.25`), one compressor and a .75 output headroom gain:
+full volume is louder while low settings remain usable. Existing species
+envelopes, pitches and cooldowns are retained. Successful real and fake
 specimen spawns share subtle species tones. Ghostbloom, crystal fungus, and
 blackthorn use gentle chime flourishes reflecting artistic rarity, not security
 alerts. Ordinary sounds have a 400 ms cooldown and rare flourishes an independent
