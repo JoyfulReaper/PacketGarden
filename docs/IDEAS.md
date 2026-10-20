@@ -401,6 +401,41 @@ paid edition would be worthwhile. No release, pricing or storefront commitment
 has been made. Do not introduce quests, mandatory interaction, a meaningful
 score or a resource economy just to make it a "game."
 
+## Grass clearing when a specimen takes a cell (wishlist)
+
+Today grass and specimens use separate layers and can occupy the same logical
+cell. Grass renders beneath a plant, but exposed blades may compete visually
+with the larger artwork, especially when a specimen is small or fading.
+
+**Proposed behavior:** When a plant **successfully spawns or replaces** another
+specimen, check its destination cell. If that cell already has grass, remove
+the grass from that cell as part of the successful placement, before presenting
+the new plant. The result should be a clean patch of soil around the new
+specimen, while neighboring grass remains untouched.
+
+Important implementation choices for a future focused pass:
+
+- Prefer actual removal from the shared grass ecology model, with the normal
+  grass-removed notification and renderer cleanup, rather than merely hiding a
+  sprite in Pixi. Confirm the visual result against a mask-only approach before
+  committing to an ecology change.
+- Never clear grass for invalid, paused or saturated/dropped events; the plant
+  must actually occupy the chosen cell first. Replacement clears the
+  destination once, not a second/random cell.
+- Keep planting, clearing, and the visible update in one logical operation,
+  without making an empty-looking frame or changing specimen placement, rarity,
+  vigor, capacity or lifetimes.
+- Decide explicitly how grass can return: it should not instantly respawn
+  beneath the same occupied cell through grass spread or fake DNS/HTTP influence.
+  After the plant expires, ordinary neighboring spread could recolonize the
+  cleared soil; removal alone should not magically generate new grass.
+- Apply the same rule to Canvas and Pixi through shared model integration,
+  and test new growth, replacement, expiry, rejected growth, nearby spread
+  and visual/cache cleanup. Avoid added per-frame work.
+
+This is a visual/ecological polish proposal, **not currently implemented**.
+The existing separation of grass and specimen cell capacity remains valuable.
+
 ## Ecology and event pressure
 
 The current full-grid vigor rule is intentionally bounded. Richer future ecology
