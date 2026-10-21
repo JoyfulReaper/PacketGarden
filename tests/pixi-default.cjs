@@ -22,10 +22,10 @@ for (const id of ['trigger-stillbloom','stillbloom-test-status','trigger-gnomes'
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0 } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99 } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, ambient, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
+  let model, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -82,6 +82,10 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create=context.window.PacketGardenAmbient.createAmbientModel;
       context.window.PacketGardenAmbient.createAmbientModel=(...args)=>(ambient=create(...args));
     }
+    if(assetPath(script)==='garden-frogs.js'){
+      const create=context.window.PacketGardenFrogs.createModel;
+      context.window.PacketGardenFrogs.createModel=options=>(frogs=create({...options,random:frogRandom}));
+    }
     if(assetPath(script)==='garden-stillbloom.js'&&captureModel){
       const create=context.window.PacketGardenStillbloom.createModel;
       context.window.PacketGardenStillbloom.createModel=(...args)=>{const model=create(...args);stillbloom??=model;return model;};
@@ -105,7 +109,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get ambient(){return ambient;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {

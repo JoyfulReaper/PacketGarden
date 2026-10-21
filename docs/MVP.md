@@ -14,6 +14,17 @@ sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
+- Passive puddle frogs in Canvas/Pixi: at most two, one strict 15% roll every
+  45 seconds when actual shared water has visible size >=8 and opacity >=0.12.
+  Weather alone is insufficient; retained water after storms still qualifies.
+  Each roughly 60-second visit has two or three small planned hops and occasional
+  glances, with a 1.5-second fading exit if its exact puddle is lost or dries.
+  Independent randomness, bounded positions, reduced-motion discrete sitting
+  poses, and no hidden/suspended catch-up. Separate wildlife consumes no specimen,
+  curiosity, drop or gnome slots and changes no ecology, clicks, score, sounds,
+  statistics or activity. Existing 250ms/visual schedulers, six finite Pixi frames
+  in the ambient atlas and at most two Sprites; Canvas overlay only. The simulated
+  water/two-visit trigger appears only on `/pixi-live.html`.
 - ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
 - Default PixiJS/WebGL garden at `/` and `/index.html`, original Canvas at `/canvas.html`, and a separate Pixi diagnostic/live-soak page at `/pixi-live.html`; all retain the 32×20 logical garden, bounded capacity, and shared model rules.
 - Pixi has cached, larger and revised plant artwork (including vines, broadleaf, blackthorn and ordinary weed), collection/inspection, and bounded rendering resources; no logical cell-size or lifecycle change from visual polish. Both renderers now draw fuller, greener wild grass using 12 shared finite broad-blade/groundcover recipes, with open soil and preserved aging, inspection, water layering and lighting. Pixi retains one Sprite per grass cell and startup-only atlas generation.
@@ -149,7 +160,7 @@ These are desired follow-ups, not descriptions of the code already implemented:
 - **Additional curiosity/drop types:** odd seeds, worthless coin-shaped objects,
   rainbow leaves, crystal shards, ghost petals, gnome hats, and other collectible
   drops remain future work beyond the four visitors and Amanita.
-- **Water interactions:** frogs, water-specific snails, and gnome reactions remain future work; storm puddles themselves are implemented.
+- **Water interactions:** passive frogs and storm puddles are implemented; water-specific snails, collectible frogs and gnome reactions remain future work.
 - **Storm presentation follow-up:** evaluate the implemented Pixi bolts and thunder during longer live use; Canvas lightning parity and continuous weather ambience remain separate decisions. See [Ideas](IDEAS.md#storm-lightning-and-thunder-implemented-pixi-experiment).
 - **Optional desktop/screensaver:** investigate packaging the existing Pixi garden and a clearly simulated input mode; no commitment to Godot, pricing, or distribution. See [Ideas](IDEAS.md#optional-desktop--screensaver-experience-exploratory).
 

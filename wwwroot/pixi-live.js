@@ -337,6 +337,7 @@
     const P = window.PIXI, shared = window.PacketGardenPixi, core = window.PacketGardenPixiLiveCore;
     const ecologyCore = window.PacketGardenEcology, ecologyPresentation = window.PacketGardenPixiEcology;
     const ambientCore = window.PacketGardenAmbient, ambientPresentation = window.PacketGardenPixiAmbient;
+    const frogCore=window.PacketGardenFrogs;
     const interaction = window.PacketGardenInteraction;
     const sound = typeof gardenSound === 'undefined' ? null : gardenSound;
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
@@ -369,6 +370,8 @@
     lightningToggle?.addEventListener('change',event=>{lightningEnabled=event.target.checked;updateLightning();});
     reducedMotion?.addEventListener?.('change',updateLightning);updateLightning();
     const ambientCache = ambientPresentation.makeAmbientAtlas(P, app.renderer);
+    const frogView=frogCore?ambientPresentation.createFrogView(P,view.dropLayer,ambientCache.frames,()=>reducedMotion?.matches??false):null;
+    const frogs=frogCore?.createModel({getPuddles:()=>ecology?.puddles??[],onChange(change){frogView.change(change,Date.now());}})??null;
     const ambientView = ambientPresentation.createAmbientView(P, view.curiosityLayer, view.dropLayer, ambientCache.frames);
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
       onChange(change) { ambientView.change(change, Date.now()); } });
@@ -495,7 +498,17 @@
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    document.querySelector('#trigger-frog')?.addEventListener('click',()=>{
+      const at=Date.now();
+      if(!frogs.eligiblePuddles(at).length){
+        ecology.seed({grassCells:ecology.grassCells,puddles:[...ecology.puddles.slice(0,7),
+          {x:480,y:300,seed:.7199,size:18,maxSize:24,createdAt:at,lastRefreshedAt:at,simulated:true}]});
+      }
+      const frog=frogs.spawnSimulated(at),status=document.querySelector('#frog-test-status');
+      status.textContent=frog?'Simulated frog: sits, makes 2–3 small hops, leaves at 60s. Trigger again for two.':'Two frogs already visiting, or water not ready.';
+      frogView.animate(at);
+    });
     document.querySelector('#seed')?.addEventListener('click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
@@ -524,6 +537,7 @@
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
+        `Frogs ${frogs?.frogs.length??0}/2 · views ${frogView?.views.size??0} · independent wildlife · 6 cached frames`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Loose drops ${ambient.drops.length}/${ambientCore.dropConfig.maxActiveDrops} · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
@@ -541,6 +555,7 @@
         const at = Date.now(); model.tick();stillbloom.tick(at);ecology.tick(at); ecologyView.tick(at);
         updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
+        frogs?.tick(at,{hidden:document.hidden});
         gnomes.tick(at, undefined, document.hidden);
         storm.tick(at);
         ui.tick(at);
@@ -551,11 +566,13 @@
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
+      frogView?.animate(Date.now());
       if (gnomes.incident) { gnomes.advance(Date.now());gnomeView.animate(Date.now()); }
       if (storm.active) stormView.animate(storm.active,Date.now());
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
     document.addEventListener('visibilitychange', () => {
+      frogs?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
@@ -573,10 +590,11 @@
       }
     });
     window.addEventListener('pagehide', event => {
+      frogs?.setHidden(true);
       ambient.setHidden(true);
       stillbloom.configure({hidden:true});
       gnomes.suspend();storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
-      observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
+      observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); frogs?.clear();frogView?.destroy();ambientView.destroy();ambientCache.destroy();
       stillbloom.destroy();
       stillbloomDiagnostics?.destroy();
       lightingControls.destroy();lighting.destroy();lightingSurface.destroy();

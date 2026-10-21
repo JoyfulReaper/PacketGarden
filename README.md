@@ -102,9 +102,9 @@ Both Pixi pages include rare, optional storm illumination and opt-in thunder.
 The Canvas-to-Pixi gameplay port is substantially complete: both renderers use the
 same collectible weed mutation of live port-22 redblooms, separate Amanita muscaria
 mushroom drops, the four first-seen visitors, click/collection priority, gnomes,
-grass ecology, Stillbloom and opt-in audio. The ordinary weed species does **not**
-yet shed separate collectible buds; that is a future addition, distinct from the
-port-22 mutation. Deliberate interface/presentation differences remain: Canvas
+grass ecology, Stillbloom and opt-in audio. Ordinary weeds now shed separate
+collectible buds, distinct from the port-22 mutation, and both renderers share
+passive puddle frogs. Deliberate interface/presentation differences remain: Canvas
 retains manual fake-traffic and numerical weather-intensity controls and its
 `?perf=1` profiler, while Pixi uses its own development fixtures/HUD and adds
 optional storm lightning/thunder. The older `docs/PIXI-LIVE.md` sections describing
@@ -352,7 +352,7 @@ normal drop expiry. Canvas and Pixi share its rules and compact leaf artwork;
 Pixi adds one cached frame, with at most five loose-drop Sprites.
 
 Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
-and frogs/water interactions remain future work.
+and additional water interactions remain future work.
 
 **Stillbloom** is an uncommon ivory flower with silver-green growth and pale
 lavender details, created by sustained **verified live quiet weather**. After
@@ -432,7 +432,26 @@ heavy rain there is no formation or refresh. Hidden tabs never form water; resum
 discards expired patches and schedules a fresh check without catch-up. Muted
 procedural water renders in the cached scene after grass and before specimens,
 without damaging plants, changing grass, adding Recent activity, or collecting
-anything. Reload clears it. Frogs and water-specific creature interactions remain future.
+anything. Reload clears it.
+
+Rare **frogs** now visit this water in Canvas and Pixi, including after rain ends.
+Every 45 seconds, usable water permits one **15%** roll and at most one arrival,
+with **two frogs maximum**. Eligibility uses the actual shared puddle's visible
+size and opacity, never just a storm classification. Each visitor sits, looks
+around and makes two or three small hops near its exact puddle before leaving
+at about 60 seconds. Lost or completely dry water prompts a brief fading exit;
+same-looking replacement water is a different puddle. Frogs stay within bounds,
+use an independent random stream and change no plants, grass, water or traffic.
+
+Frogs are passive wildlife: no clicks, collection, sounds, Score changes or
+Recent activity. They use none of the specimen, curiosity, drop or gnome slots.
+Reduced motion uses discrete sitting positions; hidden tabs and long stalls
+discard stale visits and restart the 45-second cadence without catch-up.
+Pixi keeps at most two persistent Sprites with six cached sitting/hopping frames;
+Canvas uses its existing dynamic overlay. Only `/pixi-live.html` has **Trigger
+frog (simulated)**: it seeds suitable local water if needed and can be pressed
+twice to show two frogs, their hops and natural departure. Other water-specific
+creature interactions remain future work.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
 listening ports to visual families without asserting protocol/authentication

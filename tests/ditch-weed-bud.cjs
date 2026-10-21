@@ -116,7 +116,7 @@ for(let cycle=0;cycle<30;cycle++){
   assert.equal(view.dropViews.get(a.idFor(first)).sprite,sprite);assert.equal(sprite.texture,cache.frames.get('ditch_weed_bud'));
   assert.equal(sprite.position.x,first.x);assert.equal(sprite.position.y,first.y,'bud remains still');
   a.removeDrop(first,'collected');assert(!h.live.has(sprite));a.tick(120000);assert.equal(view.dropViews.size,0);
-  assert.equal(h.live.size,idle);assert.equal(h.textureCount(),textureBase+7);assert.equal(h.generated(),generatedBase+1);
+  assert.equal(h.live.size,idle);assert.equal(h.textureCount(),textureBase+13);assert.equal(h.generated(),generatedBase+1);
 }
 a.clear();view.destroy();cl.destroy();dl.destroy();cache.destroy();assert.equal(h.textureCount(),textureBase);assert.equal(h.live.size,liveBase);
 (async()=>{

@@ -74,6 +74,7 @@ const point=()=>({x:0,y:0,set(x,y=x){this.x=x;this.y=y;}});
 class Container {
   constructor(){this.children=[];this.position=point();this.scale=point();this.visible=true;live.add(this);}
   addChild(...children){for(const child of children){child.parent=this;this.children.push(child);}return children[0];}
+  addChildAt(child,index){this.addChild(child);this.children.splice(this.children.indexOf(child),1);this.children.splice(index,0,child);return child;}
   removeChildren(){const children=this.children.splice(0);for(const child of children)child.parent=null;return children;}
   destroy(options){if(options?.children)for(const child of this.removeChildren())child.destroy(options);
     if(this.parent){this.parent.children.splice(this.parent.children.indexOf(this),1);this.parent=null;}live.delete(this);}

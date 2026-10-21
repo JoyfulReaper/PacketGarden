@@ -61,9 +61,36 @@ First-seen visitors use their own bounded curiosity collection because gnome
 cleanup owns the actor array. Neither layer consumes specimen cells or affects
 plant ecology.
 
-Possible visitors include:
+### Frogs around storm puddles (implemented)
 
-- frogs;
+Both renderers now have passive frogs around actual shared puddles. Every
+45 seconds, sufficiently visible/wet water permits one strict `< 0.15` roll,
+at most one arrival, and no more than two active frogs. Eligibility uses
+`puddleVisualState`: size >=8 and opacity >=0.12. A storm without water is
+insufficient; quiet weather with retained water is eligible.
+
+Each frog keeps its exact puddle reference and a small preplanned route. It
+sits initially, makes two or three short hops, glances around and departs at
+60 seconds. Losing the puddle or completely dry water starts a 1.5-second fading
+exit; replacement objects do not inherit frogs. Positions stay inside the
+garden. Reduced motion uses discrete sitting poses, without hop arcs. Hiding
+or a logical gap over 1.5 seconds discards stale visits and starts a fresh
+45-second cadence, with no missed checks or hops replayed.
+
+The bounded renderer-neutral model has its own random stream and uses the
+existing logical tick. It never changes ecology, specimen capacity, rarity,
+weather, scores, activity or acceptance statistics. Frogs have no click/collection
+or sound behavior and consume none of the existing curiosity/drop/gnome slots.
+Canvas uses its shared overlay; Pixi reuses six finite sit/hop frames across
+three green/olive palettes in the ambient atlas, with at most two persistent
+Sprites and no runtime geometry/textures. Gnome click priority is unchanged.
+
+Only `/pixi-live.html` has **Trigger frog (simulated)**. It seeds suitable local
+water when needed and can create two ordinary 60-second visits, without incoming
+network events or activity. Further frog interactions remain possibilities.
+
+Additional possible visitors include:
+
 - bugs;
 - birds;
 - snails;
@@ -784,10 +811,9 @@ Water does not damage plants or create a survival mechanic. Grass beneath water
 looks tinted/partially submerged and returns to normal as the puddle drains,
 without any change to grass lifetime, influence, or spreading.
 
-Temporary water also gives later ambient behavior a natural place to happen.
-These interactions remain future work:
+Temporary water now supports the passive frogs described above. Further
+interactions remain future work:
 
-- frogs may appear near puddles;
 - snails may be more likely after rain;
 - occasional small ripples;
 - a floating leaf;

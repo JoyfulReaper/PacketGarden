@@ -141,7 +141,7 @@ function animateWeather(frameTime = performance.now()) {
 
 function syncWeatherAnimation() {
   const needed = !document.hidden && gardenView !== null && ((weatherState.level !== "quiet" && weatherState.eventsPerMinute > 0)
-    || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0 || gardenState.drops.length > 0 || gardenState.actors.length > 0);
+    || animatedSpecimens.length > 0 || gardenState.curiosities.length > 0 || gardenState.drops.length > 0 || gardenState.actors.length > 0 || (gardenFrogs?.frogs.length??0)>0);
   if (!needed) gardenPerf?.pauseRaf();
   if (!needed && weatherAnimationFrame !== null) {
     window.cancelAnimationFrame(weatherAnimationFrame);
@@ -243,6 +243,8 @@ gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), ra
 const gardenAmbient = window.PacketGardenAmbient.createAmbientModel({
   now: () => Date.now(), random: () => Math.random(), getSpecimens: () => gardenModel.specimens
 });
+const gardenFrogs = window.PacketGardenFrogs?.createModel({getPuddles:()=>gardenEcology.puddles,
+  onChange(){gardenOverlayDirty=true;}})??null;
 gardenStillbloom = window.PacketGardenStillbloom.createModel({garden:gardenModel,random:()=>Math.random(),onSpawn(){gardenBaseDirty=true;updateGardenStatus();}});
 gardenStillbloom.configure({connected:liveWeatherConnected,live:weatherSourceControl.value==='live',hidden:document.hidden});
 // Keep object references used by inspection and ecology; fixture assignment goes through the model too.
@@ -1096,6 +1098,7 @@ function drawGardenOverlay(force = false, now = Date.now(), frameTime = performa
     gardenPerf?.mark("overlay", "setup");
     for (const specimen of animatedSpecimens) drawSpecimenMutation(specimen, now);
     gardenPerf?.mark("overlay", "mutations");
+    if (typeof drawGardenFrogs === 'function') drawGardenFrogs(now);
     if (typeof drawGardenActors === "function") drawGardenActors(now);
     gardenPerf?.mark("overlay", "actors");
     if (typeof drawLooseDrops === "function") drawLooseDrops(now);
@@ -1137,6 +1140,7 @@ seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
+  gardenFrogs?.setHidden(document.hidden);
   gardenAmbient.setHidden(document.hidden);
   gardenStillbloom.configure({hidden:document.hidden});
   gardenEcology.resetCadence(Date.now());
@@ -1157,6 +1161,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", event => {
+  gardenFrogs?.setHidden(true);
   gardenAmbient.setHidden(true);
   if (!event?.persisted) gardenAmbient.clear();
   gardenStillbloom.configure({hidden:true});
@@ -1178,6 +1183,7 @@ window.setInterval(() => {
   if (typeof updateCollectionMessage === "function") updateCollectionMessage(now);
   updateGarden(now);
   if (typeof updateLooseDrops === "function" && updateLooseDrops(now)) gardenOverlayDirty = true;
+  gardenFrogs?.tick(now,{hidden:document.hidden});
   invalidateDueBaseVisual(now);
   paintGardenBase(now);
   if (typeof updateAmbientEvents === "function") updateAmbientEvents(now);

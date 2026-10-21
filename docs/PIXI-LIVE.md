@@ -1,3 +1,86 @@
+# Passive puddle frogs (2026-10-21)
+
+`garden-frogs.js` is one renderer-neutral wildlife model, called on the existing
+250ms logical tick. A scheduled check every **45 seconds** permits one strict
+**15%** roll when usable shared puddle water exists and fewer than **two** frogs
+are visiting. At most one arrival per check. Usable water comes from
+`puddleVisualState`: visible size **>=8** and opacity **>=0.12**, with finite,
+in-bounds, non-future shared puddle data. Weather classification alone never
+qualifies; frogs can visit retained water after a storm ends.
+
+Each frog retains the exact puddle reference and a route planned once at arrival.
+It sits for ten seconds, makes two or three bounded hops (650ms each, about
+10–16 logical pixels), occasionally glances around, then fades/departs by
+**60 seconds**. Green, olive and muted teal palettes share rounded bodies,
+visible eyes, hind legs and dark spots. Reduced motion uses sitting poses and
+discrete destination changes, with no hop arc. All positions remain in bounds.
+
+Lost, replaced or completely dry water starts a **1.5-second** fading departure
+from the current position. Replacement water cannot inherit an existing visitor.
+Hidden pages clear stale frogs immediately, release their views and schedule
+the next check 45 seconds from resume. Logical gaps over 1.5 seconds likewise
+clear visits and reset cadence, instead of replaying missed checks/hops. Explicit
+Clear and page teardown release all frog state/Sprites.
+
+Frogs use an independent seeded random stream, initialized without `Math.random`,
+and never consume placement, rarity, grass, weather or puddle-generation draws.
+They are passive: no clicks, sounds, network provenance/events, activity rows,
+scores, occupancy or ecological effects. Their separate two-object collection
+uses none of the first-seen, five-drop or gnome slots. Existing gnome-first click
+priority and all collection messages remain unchanged.
+
+Canvas's `garden-frogs-canvas.js` draws the shared finite shape recipes on the
+existing dynamic overlay and wakes its existing 30 FPS scheduler only while
+frogs are present. No base invalidation or bitmap copies are introduced. Pixi's
+existing ambient atlas adds **six frames** (three palettes × sit/hop), growing
+**7 → 13 frames**, **448×64 → 832×64** at resolution two. That is **+96 KiB RGBA**
+before driver/mipmap overhead, with the same one source and startup bake. At
+most two persistent noninteractive Sprites sit behind loose drops in the existing
+layer; per-frame work is bounded transforms and cached texture selection, with
+no Graphics rebuilding, extra containers or runtime texture generation.
+
+Only `/pixi-live.html` adds **Trigger frog (simulated)** and a status explanation.
+It imports suitable simulated water through the ecology's existing fixture API
+only when needed, then creates a normal timed visit. Press twice for two; a
+third press cannot exceed the cap. Existing water can be used directly. The
+fixture changes no incoming counts or Recent activity and is absent from the
+homepage. Updated entry/atlas scripts have new cache versions.
+
+Validation lives in `tests/garden-frogs.cjs`: exact `.15` boundary, wetness/size
+eligibility, quiet weather/absent water, dry/expired/future-invalid puddles,
+exact-reference replacement, two-frog cap, lifetime and fading departure,
+hidden/suspended cadence, bounds, reduced motion, pass-through clicks,
+independent RNG, Canvas/Pixi adapters and 30 repeated Sprite/atlas cleanup cycles.
+All **58 Node entry points** passed. Debug/Release application builds and backend
+checks passed, as did actual ASP.NET polling → SSE integration; the checks build
+reported NU1900 because the NuGet vulnerability feed was unavailable. Backend
+code/contracts were unchanged.
+
+Chrome's focused regression covers the trigger/two-cap, cached sit/hop poses,
+reduced motion, 60-second expiry, same-pixel puddle replacement and 20 resource
+cycles, each ending at zero views with destroyed owned Sprites. Deterministic
+capture clocks are separate from native-clock CPU/ticker probes. Canvas also
+measures 120 overlay submissions with frog drawing disabled/restored, without
+changing the frog model. Measurements are CPU submission/ticker observations,
+not GPU completion, sustained smoothness or cross-browser guarantees.
+
+The complete Chrome suite passed, preserving cache upgrades, both landscaping
+modes/weed harvest, underpants, Amanita/buds, Stillbloom, grass inspection,
+weather/storm audio, resizing and centralized clicks. Native-clock frog probes
+observed **16.68ms** mean ticker intervals: mean Pixi CPU submission was **0.163ms
+idle / 0.183ms sitting / 0.147ms hopping / 0.278ms rain** (short samples, with
+ordinary timing noise; the hopping value is not evidence of a speedup). Canvas's
+120-paint probe measured **0.008ms without frog drawing / 0.039ms with two frogs**,
+about **0.031ms additional submission time**. These were separate local viewport/
+DPR probes, not a renderer comparison. All samples produced zero audio nodes.
+
+Artifacts: `artifacts/frogs/browser/frog-resources.json` and
+`frogs-{pixi,canvas}-{day-sitting,day-hopping,night,rain}.png`, plus
+`frogs-pixi-reduced.png`. Captures show normal-scale water/wildlife in daylight,
+local-time night and rain. Longer real-traffic soaks and other browsers/GPUs
+remain unverified. The dated sections below retain previous resource counts
+and feature boundaries as historical snapshots.
+
 # Gnome weed harvest and underpants (2026-10-21)
 
 Implemented in both renderers through the existing shared models. `weed_harvest`

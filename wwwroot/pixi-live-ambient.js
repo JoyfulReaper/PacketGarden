@@ -2,11 +2,18 @@
 (function () {
   'use strict';
   const ambientCore = typeof module !== 'undefined' && module.exports ? require('./garden-ambient.js') : window.PacketGardenAmbient;
+  const frogCore = typeof module !== 'undefined' && module.exports ? require('./garden-frogs.js') : window.PacketGardenFrogs;
   function makeAmbientAtlas(P, renderer) {
-    const sheet = new P.Container(), keys = [...ambientCore.curiosityTypes, ...Object.keys(ambientCore.dropTypes)];
+    const sheet = new P.Container(), keys = [...ambientCore.curiosityTypes, ...Object.keys(ambientCore.dropTypes), ...(frogCore?.frames.keys()??[])];
     for (const [i, type] of keys.entries()) {
       const g = new P.Graphics();
-      if (type === 'ladybug') {
+      if (type.startsWith('frog:')) {
+        for(const [shape,x,y,a,b,color,width] of frogCore.frames.get(type)) {
+          if(shape==='line')g.moveTo(x+16,y+16).lineTo(a+16,b+16).stroke({color,width});
+          else if(shape==='circle')g.circle(x+16,y+16,a).fill(b);
+          else g.ellipse(x+16,y+16,a,b).fill(color);
+        }
+      } else if (type === 'ladybug') {
         for (const y of [-2,0,2]) g.moveTo(11,16+y).lineTo(21,16+y);
         g.stroke({color:0x292725,width:1});g.circle(16,12.5,2).fill(0x292725);
         g.ellipse(16,16,3.5,4).fill(0xd35243);g.moveTo(16,13).lineTo(16,20).stroke({color:0x292725,width:1});
@@ -89,6 +96,19 @@
       x:[395,545,551][i], y:315, phase:0
     }))});
   }
-  const api={makeAmbientAtlas,createAmbientView,seedAmbient,seedWeedBuds};
+  function createFrogView(P,layer,frames,getReducedMotion=()=>false) {
+    const views=new Map();
+    function transform(frog,sprite,at) {
+      const pose=frogCore.visualState(frog,at,getReducedMotion());
+      sprite.texture=frames.get(pose.frame);sprite.position.set(pose.x,pose.y);sprite.scale.set(pose.direction,1);sprite.alpha=pose.alpha;
+    }
+    return {views,change({kind,item},at=Date.now()) {
+      if(kind==='frog-added'){const sprite=new P.Sprite(frames.get(`frog:${item.variant}:sit`));sprite.anchor.set(.5);sprite.eventMode='none';
+        layer.addChildAt(sprite,views.size);views.set(item,sprite);transform(item,sprite,at);}
+      else if(kind==='frog-removed'){views.get(item)?.destroy();views.delete(item);}
+    },animate(at){for(const [frog,sprite] of views)transform(frog,sprite,at);},
+    destroy(){for(const sprite of views.values())sprite.destroy();views.clear();}};
+  }
+  const api={makeAmbientAtlas,createAmbientView,createFrogView,seedAmbient,seedWeedBuds};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else window.PacketGardenPixiAmbient=api;
 })();

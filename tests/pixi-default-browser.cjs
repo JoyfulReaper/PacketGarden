@@ -60,6 +60,12 @@ async function run() {
     window.__gardenAmbientBakes=0;
     PacketGardenPixiAmbient.makeAmbientAtlas=(...args)=>{window.__gardenAmbientBakes++;return window.__gardenTestAmbientAtlas=makeAmbientAtlas(...args);};
     PacketGardenPixiAmbient.createAmbientView=(...args)=>(window.__gardenTestAmbientView=createAmbientView(...args));
+    if(window.PacketGardenFrogs){
+      const createFrogs=PacketGardenFrogs.createModel,frogRandom=PacketGardenFrogs.seededRandom(731),createFrogView=PacketGardenPixiAmbient.createFrogView;
+      // Isolate unrelated regression fixtures from chance; diagnostic planning uses its own fixed stream.
+      PacketGardenFrogs.createModel=options=>(window.__gardenTestFrogs=createFrogs({...options,random:()=>window.__frogPlanning?frogRandom():.99}));
+      PacketGardenPixiAmbient.createFrogView=(...args)=>(window.__gardenTestFrogView=createFrogView(...args));
+    }
     const createGnomeView=PacketGardenPixiGnomes.createGnomeView,makeGnomeAtlas=PacketGardenPixiGnomes.makeGnomeAtlas;
     window.__gardenGnomeBakes=0;
     PacketGardenPixiGnomes.makeGnomeAtlas=(...args)=>{window.__gardenGnomeBakes++;return window.__gardenTestGnomeAtlas=makeGnomeAtlas(...args);};
@@ -131,6 +137,7 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--frogs-only')){promoted=true;await checkFrogs();return;}
     if(process.argv.includes('--gnome-harvest-only')){promoted=true;await checkHarvest();return;}
     if(process.argv.includes('--weed-bud-only')){
       promoted=true;const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
@@ -306,6 +313,7 @@ async function run() {
     await checkStillbloom(diagnostic);
     await checkWeedBuds(diagnostic);
     await checkHarvest();
+    await checkFrogs();
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -329,6 +337,81 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+
+  async function checkFrogs() {
+    const page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2}),errors=[];
+    page.on('pageerror',e=>errors.push(String(e)));let at=Date.UTC(2026,9,21,12);
+    await page.clock.setFixedTime(at);await page.goto(origin+'/pixi-live.html');await page.waitForFunction(()=>window.__gardenTestFrogs);
+    await page.locator('#probes').uncheck();await page.locator('#lighting-mode').selectOption('day');
+    await page.evaluate(()=>window.__frogPlanning=true);
+    await page.locator('#trigger-frog').click();await page.locator('#trigger-frog').click();await page.locator('#trigger-frog').click();
+    await page.evaluate(()=>window.__frogPlanning=false);
+    assert.equal(await page.evaluate(()=>__gardenTestFrogs.frogs.length),2);assert.equal(await page.evaluate(()=>__gardenTestEcology.puddles.length),1);
+    const paint=async()=>{const n=await page.evaluate(()=>__gardenTestPaints);await page.waitForFunction(n=>__gardenTestPaints>n+1,n);};
+    async function advance(ms){for(let elapsed=0;elapsed<ms;){const step=Math.min(250,ms-elapsed);elapsed+=step;at+=step;
+      await page.clock.setFixedTime(at);await page.evaluate(()=>__gardenTestFrogs.tick(Date.now()));}await paint();}
+    await advance(1000);
+    await page.locator('#view canvas').screenshot({path:path.join(output,'frogs-pixi-day-sitting.png')});
+    await advance(9325);
+    assert(await page.evaluate(()=>__gardenTestFrogs.frogs.every(f=>PacketGardenFrogs.visualState(f,Date.now()).hopping)));
+    await page.locator('#view canvas').screenshot({path:path.join(output,'frogs-pixi-day-hopping.png')});
+    await page.locator('#lighting-mode').selectOption('night');await page.locator('#view canvas').screenshot({path:path.join(output,'frogs-pixi-night.png')});
+    await page.getByLabel('Weather source',{exact:true}).selectOption('manual');await page.getByLabel('Manual weather',{exact:true}).selectOption('rain');
+    await page.locator('#view canvas').screenshot({path:path.join(output,'frogs-pixi-rain.png')});
+    await page.emulateMedia({reducedMotion:'reduce'});await paint();
+    assert(await page.evaluate(()=>[...__gardenTestFrogView.views].every(([frog,sprite])=>sprite.texture===__gardenTestAmbientAtlas.frames.get(`frog:${frog.variant}:sit`))));
+    await page.locator('#view canvas').screenshot({path:path.join(output,'frogs-pixi-reduced.png')});await page.emulateMedia({reducedMotion:'no-preference'});
+    const baseline=await page.evaluate(()=>({specimens:__gardenTestGarden.specimens.length,drops:__gardenTestAmbient.drops.length,
+      curiosities:__gardenTestAmbient.curiosities.length,gnomes:__gardenTestGnomes.actors.length}));
+    assert.deepEqual(baseline,{specimens:0,drops:0,curiosities:0,gnomes:0});assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');
+    await advance(49675);assert.equal(await page.evaluate(()=>__gardenTestFrogs.frogs.length),0);assert.equal(await page.evaluate(()=>__gardenTestFrogView.views.size),0);
+    // Same-pixel water replacement is a new puddle and causes a brief departure.
+    await page.evaluate(()=>window.__frogPlanning=true);await page.locator('#trigger-frog').click();await page.evaluate(()=>window.__frogPlanning=false);
+    await advance(1000);await page.evaluate(()=>{const p=__gardenTestEcology.puddles[0];__gardenTestEcology.seed({puddles:[{...p}]});});await advance(250);
+    assert(await page.evaluate(()=>__gardenTestFrogs.frogs[0].leaveAt!==null));await advance(1500);assert.equal(await page.evaluate(()=>__gardenTestFrogView.views.size),0);
+    const resources=await page.evaluate(()=>{
+      const frogs=__gardenTestFrogs,view=__gardenTestFrogView,states=[];
+      for(let n=0;n<20;n++){
+        frogs.clear();const start=Date.now()+n*70000;__gardenTestEcology.seed({puddles:[{x:480,y:300,size:18,maxSize:24,createdAt:start,lastRefreshedAt:start,seed:.3}]});
+        frogs.clear(start);frogs.spawnSimulated(start);frogs.spawnSimulated(start);const sprites=[...view.views.values()];
+        for(let age=250;age<=60000;age+=250){frogs.tick(start+age);view.animate(start+age);}
+        states.push({views:view.views.size,destroyed:sprites.every(s=>s.destroyed)});
+      }
+      const atlas=__gardenTestAmbientAtlas;
+      return {states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],
+        sources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
+    });assert(resources.states.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,13);assert.equal(resources.bakes,1);assert.equal(resources.sources,1);
+    const canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
+    await canvas.evaluate(()=>{gardenEcology.clear();const at=Date.now();gardenEcology.seed({puddles:[{x:480,y:300,size:18,maxSize:24,createdAt:at,lastRefreshedAt:at,seed:.3}]});
+      gardenFrogs.spawnSimulated();gardenFrogs.spawnSimulated();gardenLighting.setMode('day');updateGardenLighting(at,true);drawGarden();});
+    const canvasStart=at;
+    const canvasAdvance=async(ms)=>{for(let elapsed=0;elapsed<ms;){const step=Math.min(250,ms-elapsed);elapsed+=step;at+=step;await canvas.clock.setFixedTime(at);
+      await canvas.evaluate(()=>gardenFrogs.tick(Date.now()));}await canvas.evaluate(()=>drawGardenOverlay(true));};
+    await canvasAdvance(1000);await canvas.locator('.garden-stage').screenshot({path:path.join(output,'frogs-canvas-day-sitting.png')});
+    await canvasAdvance(9325);await canvas.locator('.garden-stage').screenshot({path:path.join(output,'frogs-canvas-day-hopping.png')});
+    await canvas.evaluate(()=>{gardenLighting.setMode('night');updateGardenLighting(Date.now(),true);drawGardenOverlay(true);});
+    await canvas.locator('.garden-stage').screenshot({path:path.join(output,'frogs-canvas-night.png')});
+    await canvas.getByLabel('Weather source',{exact:true}).selectOption('manual');await canvas.getByLabel('Weather',{exact:true}).selectOption('rain');
+    await canvas.locator('.garden-stage').screenshot({path:path.join(output,'frogs-canvas-rain.png')});
+    await canvasAdvance(canvasStart+60000-at);assert.equal(await canvas.evaluate(()=>gardenFrogs.frogs.length),0);
+    assert.equal(await canvas.locator('#garden-score').textContent(),'Score: 0');await canvas.close();
+    assert.deepEqual(errors,[]);await page.close();
+    // CPU/ticker probes use fresh native clocks, separate from deterministic screenshot clocks.
+    const perf=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestFrogs);
+    await perf.locator('#probes').uncheck();const idle=await sample(perf,60);
+    await perf.evaluate(()=>window.__frogPlanning=true);await perf.locator('#trigger-frog').click();await perf.locator('#trigger-frog').click();await perf.evaluate(()=>window.__frogPlanning=false);
+    const sitting=await sample(perf,60);await perf.waitForFunction(()=>__gardenTestFrogs.frogs.some(f=>PacketGardenFrogs.visualState(f,Date.now()).hopping));const hopping=await sample(perf,60);
+    await perf.getByLabel('Weather source',{exact:true}).selectOption('manual');await perf.getByLabel('Manual weather',{exact:true}).selectOption('rain');const rain=await sample(perf,60);await perf.close();
+    const cp=await browser.newPage();await cp.goto(origin+'/canvas.html');
+    const canvasCpu=await cp.evaluate(()=>{
+      gardenEcology.seed({puddles:[{x:480,y:300,size:18,maxSize:24,createdAt:Date.now(),lastRefreshedAt:Date.now(),seed:.3}]});gardenFrogs.spawnSimulated();gardenFrogs.spawnSimulated();
+      const drawFrogs=drawGardenFrogs;
+      const probe=()=>{const samples=[];for(let i=0;i<120;i++){const start=performance.now();drawGardenOverlay(true);samples.push(performance.now()-start);}
+        return {averageMs:samples.reduce((sum,n)=>sum+n,0)/samples.length,worstMs:Math.max(...samples),paints:samples.length};};
+      try{drawGardenFrogs=()=>{};const baseline=probe();drawGardenFrogs=drawFrogs;return {baseline,twoFrogs:probe()};}finally{drawGardenFrogs=drawFrogs;}
+    });await cp.close();const report={idle,sitting,hopping,rain,canvasCpu,resources};
+    await fs.writeFile(path.join(output,'frog-resources.json'),JSON.stringify(report,null,2));console.log('PASS: Chrome frog diagnostics/two-cap/sit-hop/reduced/natural expiry/exact water replacement, Canvas-Pixi day/night/rain captures and 20 cleanup cycles:',JSON.stringify(report));
   }
 
   async function checkHarvest() {
@@ -381,7 +464,7 @@ async function run() {
         gnomeBakes:__gardenGnomeBakes,ambientBakes:__gardenAmbientBakes,
         gnomeBacking:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight]};
     });
-    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,21);assert.equal(resources.ambientFrames,7);
+    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,21);assert.equal(resources.ambientFrames,13);
     assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
     const canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
     await canvas.evaluate(()=>{gardenModel.clear();gardenEcology.clear();const at=Date.now();gardenModel.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:0,column:12+i*2,row:10,createdAt:at-65000,
@@ -441,7 +524,7 @@ async function run() {
       return {cycles:states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,
         backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],gpuSources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
     });
-    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,7);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
+    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,13);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
     await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#seed-weed-buds').click();
     const positions=await page.evaluate(()=>{const v=__gardenTestAmbientView;v.animate(Date.now());const a=[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y]);
       v.animate(Date.now()+10000);return [a,[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y])];});
