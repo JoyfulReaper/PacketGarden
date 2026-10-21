@@ -97,6 +97,22 @@ average) and its actual last-hour event count, distinct from specimen growth.
 Both Pixi pages include rare, optional storm illumination and opt-in thunder.
 The desktop/screensaver edition remains an idea; see [Ideas](docs/IDEAS.md).
 
+Both garden renderers now follow the viewer's **local browser time**. Soft cool
+dawn warms into the original daytime garden, then passes through gentle amber
+golden hour, purple dusk and a readable blue night. Fixed local-time anchors
+interpolate smoothly; there is no geolocation or sunrise service. Existing pale
+ghostbloom halos and crystal highlights stand out against the cooler terrain.
+Time of day changes presentation only, with no ecology, rarity or network effects.
+
+Lighting samples on the existing logical tick at most every 30 seconds, writes
+only meaningfully different color values, and resumes directly at current time
+after hiding. Cached plant/terrain artwork is preserved; day adds no color pass.
+Night rain remains visible and existing lightning/audio/reduced-motion controls
+keep their behavior. Only `/pixi-live.html` has **Lighting** presets, **Live local
+time**, and a **Simulated local hour** slider from 0–24. The homepage and Canvas
+fallback always use real local time. See [lighting notes](docs/PIXI-LIVE.md#local-time-lighting-2026-10-20)
+for screenshot comparisons, performance measurements and compositor limitations.
+
 Earlier investigations sometimes recorded excellent timing while visible
 stutter persisted, so migration was paused. The user subsequently reported a
 smooth 655-second Chrome live soak on October 20, 2026, recorded at checkpoint
@@ -502,6 +518,12 @@ free-space/removal/time bounds and repeated Canvas/Pixi resource checks.
 The optional installed-Chrome
 suite `node tests/pixi-default-browser.cjs --run` includes real-time landscaping
 on both renderers and writes screenshots under `artifacts/homepage-browser/`.
+`node tests/garden-lighting.cjs` covers local time/timezones, interpolation,
+overrides, clock changes, weather composition, hidden/reduced-motion handling,
+Canvas/Pixi parity and dense cache/cleanup bounds. The Chrome suite also captures
+the same populated garden at all five lighting phases and at night in a storm;
+use `--run --lighting-only` for this focused visual comparison. Set
+`PACKETGARDEN_BROWSER_OUTPUT` to choose an ignored artifact directory.
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
 5-second timeout. It trusts the source level and exposes `level`,

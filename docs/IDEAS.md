@@ -385,7 +385,7 @@ A possible first version:
 Visually it should not be confused with ghostbloom: thin silver-green growth, a
 large pale flower, or another restrained design that reads as something able to
 appear only after the garden has been left in peace. A mature form could have a
-very faint glow, especially once local-time night lighting exists.
+very faint glow under the implemented local-time night lighting.
 
 Possible later quiet-only relatives include a silence fern, dewbell, or extremely
 rare glass lily, but begin with one species so seeing it stays special.
@@ -406,12 +406,30 @@ mouse interaction at all.
 
 ## Lighting and atmosphere
 
-Still-planned presentation work:
+Local-time lighting is implemented in both Pixi and Canvas. A fixed local schedule
+holds night from 22:00–05:00, transitions to dawn by 06:00, warms into day by
+09:00, holds day until 16:00, warms toward golden hour at 18:00, cools into dusk
+at 20:00 and settles back into night by 22:00. Smooth interpolation joins these
+anchors without hard hourly switches or geolocation.
 
-- gradual local-time morning/day/sunset/night lighting;
-- a readable night garden rather than realistic darkness;
-- make luminous/rare specimens more noticeable after dark;
-- subtle transitions rather than abrupt time-of-day switches.
+Night uses a restrained blue/purple ambient transform and color floor, keeping
+soil, grass and plant colors readable. Existing pale/cyan glows and crystal
+highlights gain relative prominence; there is no new all-plant glow or bloom.
+Weather retains its existing soil darkening and rain, with a small night-storm
+compensation to preserve visibility. Pixi lightning remains controlled by its
+existing toggle, reduced-motion and optional sound settings.
+
+The shared calculation samples on the existing tick at a 30-second cadence and
+quantizes visual changes below about half a color level. A single surface color
+pass preserves cached artwork in both renderers; full day is the original image
+with the pass disabled. Hidden tabs skip work and resume once using current
+browser-local time. There are no new timers, persistence, APIs or ecological
+effects. Only `/pixi-live.html` offers named phases and a simulated-hour slider.
+
+Remaining presentation possibilities include seasonal/sunrise-aware boundaries,
+directional or longer golden-hour shadows, and carefully selected extra luminous
+art. These are not implemented. Current verification covers Chrome, not a long
+multi-browser/GPU soak; see [Pixi notes](PIXI-LIVE.md#local-time-lighting-2026-10-20).
 
 <a id="storm-lightning-and-thunder-future-experiment"></a>
 

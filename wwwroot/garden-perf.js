@@ -98,6 +98,7 @@ function createGardenPerformanceDiagnostics() {
   }
   function snapshot(now = performance.now()) {
     return {
+      lighting: typeof gardenLighting === 'undefined' ? null : { ...gardenLighting.snapshot(), ...gardenLightingSurface.snapshot() },
       base: Object.fromEntries(baseKeys.map(key => [key, stats(base, key)])),
       overlay: Object.fromEntries(overlayKeys.map(key => [key, stats(overlay, key)])),
       deadlineOnly: stats(deadlineOnly), rafGap: stats(rafGaps), counts: { ...counts }, reasons: { ...reasons },

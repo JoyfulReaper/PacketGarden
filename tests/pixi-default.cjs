@@ -18,14 +18,14 @@ assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/
 assert.match(read('about.html'), /href="index.html"/);
 assert.match(read('canvas.html'), /src="garden\.js\?v=.+"/);
 assert(!scripts.includes('garden.js'));
-for (const id of ['trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
+for (const id of ['trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
 async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false } = {}) {
   let now = 100000, app, observer;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, gnomes, storm, ecology;
+  let model, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -60,7 +60,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   const doc = {hidden:false, querySelector:element, currentScript:null,
     body:{classList:{toggle(){}}}, addEventListener:(name, fn) => docHandlers.set(name, fn)};
-  const context = {document:doc, Date:{now:() => now}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
+  const context = {document:doc, Date:class extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
     EventSource:Source, console:{error:error => errors.push(error)},
     ResizeObserver:class {constructor(fn){observer=this;this.callback=fn;} observe(){} disconnect(){this.disconnected=true;}},
     window:{PIXI:{...h.P,Application},AudioContext,matchMedia:()=>media,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
@@ -72,7 +72,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
     if (script === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
     if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
-      context.window.PacketGardenPixiLiveCore.createModel = (...args) => { model = create(...args); return model; };
+      context.window.PacketGardenPixiLiveCore.createModel = (...args) => { gardenView=args[0];model = create(...args); return model; };
     }
     if (assetPath(script) === 'garden-ecology.js' && captureModel) {
       const create = context.window.PacketGardenEcology.createEcologyModel;
@@ -82,6 +82,14 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create = context.window.PacketGardenGnomes.createModel;
       context.window.PacketGardenGnomes.createModel = (...args) => { gnomes = create(...args); return gnomes; };
     }
+    if (assetPath(script) === 'garden-lighting.js' && captureModel) {
+      const create=context.window.PacketGardenLighting.createModel;
+      context.window.PacketGardenLighting.createModel=(...args)=>(lighting=create(...args));
+    }
+    if (assetPath(script) === 'garden-lighting-view.js' && captureModel) {
+      const create=context.window.PacketGardenLightingView.createSurface;
+      context.window.PacketGardenLightingView.createSurface=(...args)=>(lightingSurface=create(...args));
+    }
     if (assetPath(script) === 'pixi-live-storm.js' && captureModel) {
       const create = context.window.PacketGardenPixiStorm.createModel;
       context.window.PacketGardenPixiStorm.createModel = (...args) => { storm = create(...args); return storm; };
@@ -89,7 +97,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {

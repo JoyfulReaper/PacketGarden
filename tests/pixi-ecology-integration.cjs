@@ -6,7 +6,7 @@ const h=require('./pixi-live.cjs');
   const elements=new Map(),documentHandlers=new Map(),windowHandlers=new Map(),sources=[],canvasRegistrations=[];
   function element(id){
     if(!elements.has(id))elements.set(id,{value:id==='#weather-source'?'live':'quiet',checked:true,handlers:new Map(),textContent:id==='#garden-score'?'Score: 0':'',
-      hidden:true,style:{},appendChild(){},getBoundingClientRect:()=>({left:40,top:70,width:1218,height:650}),addEventListener(name,fn){this.handlers.set(name,fn);if(id==='#test-canvas')canvasRegistrations.push(name)},removeEventListener(name){this.handlers.delete(name)}});
+      hidden:true,style:{},appendChild(){},setAttribute(){},getBoundingClientRect:()=>({left:40,top:70,width:1218,height:650}),addEventListener(name,fn){this.handlers.set(name,fn);if(id==='#test-canvas')canvasRegistrations.push(name)},removeEventListener(name){this.handlers.delete(name)}});
     return elements.get(id);
   }
   class Application{
@@ -17,11 +17,11 @@ const h=require('./pixi-live.cjs');
   }
   class Source{constructor(url){this.url=url;this.handlers=new Map();sources.push(this)}addEventListener(name,fn){this.handlers.set(name,fn)}close(){this.closed=true}}
   const doc={hidden:false,querySelector:element,body:{classList:{toggle(){}}},addEventListener:(name,fn)=>documentHandlers.set(name,fn)};
-  const context={Date:{now:()=>now},Math:Object.assign(Object.create(Math),{random:()=>0}),console,document:doc,
+  const context={Date:class extends Date{constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}},Math:Object.assign(Object.create(Math),{random:()=>0}),console,document:doc,
     EventSource:Source,ResizeObserver:class{observe(){}disconnect(){}},window:{PIXI:{...h.P,Application},
       PacketGardenPixi:require('../wwwroot/pixi-stress.js'),devicePixelRatio:1,innerWidth:1280,innerHeight:1000,addEventListener:(name,fn)=>windowHandlers.set(name,fn),removeEventListener(name){windowHandlers.delete(name)}}};
   vm.createContext(context);
-  for(const name of ['garden-core','garden-gnomes','garden-mutations','garden-ecology','garden-ambient','garden-interaction','garden-ui-core','pixi-live-ui','pixi-live-core','pixi-live-ecology','pixi-live-ambient','pixi-live-gnomes','pixi-live-storm','pixi-live'])vm.runInContext(fs.readFileSync(`wwwroot/${name}.js`,'utf8'),context);
+  for(const name of ['garden-core','garden-lighting','garden-lighting-view','garden-gnomes','garden-mutations','garden-ecology','garden-ambient','garden-interaction','garden-ui-core','pixi-live-ui','pixi-live-core','pixi-live-ecology','pixi-live-ambient','pixi-live-gnomes','pixi-live-storm','pixi-live'])vm.runInContext(fs.readFileSync(`wwwroot/${name}.js`,'utf8'),context);
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(sources.length,1);assert.equal(sources[0].url,'/api/garden/events');assert(app.active);
   const emit=(name,data)=>sources[0].handlers.get(name)({data:JSON.stringify(data)});

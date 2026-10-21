@@ -17,6 +17,7 @@ sensor/service inputs remain goals.
 - ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
 - Default PixiJS/WebGL garden at `/` and `/index.html`, original Canvas at `/canvas.html`, and a separate Pixi diagnostic/live-soak page at `/pixi-live.html`; all retain the 32×20 logical garden, bounded capacity, and shared model rules.
 - Pixi has cached, larger and revised plant artwork (including vines, broadleaf, blackthorn and ordinary weed), tufted grass, collection/inspection, and bounded rendering resources; no logical cell-size or lifecycle change from visual polish.
+- Local-time atmospheric lighting in Pixi and Canvas: smooth dawn/day/golden-hour/dusk/night transitions at fixed local-time anchors, with readable cool nights and preserved specimen colors. Existing cyan/white luminous art stands out without added bloom. One shared, quantized surface color transform leaves cached geometry/textures untouched and is disabled at day. The existing logical tick samples every 30 seconds, skips identical values and hidden work, handles clock/timezone changes and refreshes once on resume. Existing weather/rain/lightning/sound/reduced-motion controls compose unchanged, with a restrained night-storm compensation. Diagnostic presets and a 0–24 hour slider appear only on `/pixi-live.html`; public pages use actual local time. No ecology, growth, rarity, provenance, activity, backend or network changes. Directional shadows, seasonal sun times, long GPU/compositor profiling and other-browser verification remain outside this slice.
 - Five development mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and port-22-probe red blooms.
 - Simple procedural art, including visual connections between neighboring vine cells.
 - Manual event controls and start/stop automatic weighted fake traffic with randomized delays.
@@ -98,7 +99,6 @@ cycle.
 
 ## Remaining MVP work
 
-- Gradual lighting based on the viewer's real local time, with a readable night garden.
 - Deliberately simple persistence across browser/server restarts.
 - Richer ecological responses beyond bounded saturation-only replacement, without health bars or management mechanics.
 - Event effects that strengthen, bloom, spread, mutate, or influence existing growth when another permanent spawn is not useful.
@@ -124,7 +124,7 @@ These are desired follow-ups, not descriptions of the code already implemented:
   drops remain future work beyond the four visitors and Amanita.
 - **Stillbloom:** quiet-only growth remains future work.
 - **Water interactions:** frogs, water-specific snails, and gnome reactions remain future work; storm puddles themselves are implemented.
-- **Storm presentation follow-up:** evaluate the implemented Pixi bolts and thunder during longer live use; Canvas lighting parity and continuous weather ambience remain separate decisions. See [Ideas](IDEAS.md#storm-lightning-and-thunder-implemented-pixi-experiment).
+- **Storm presentation follow-up:** evaluate the implemented Pixi bolts and thunder during longer live use; Canvas lightning parity and continuous weather ambience remain separate decisions. See [Ideas](IDEAS.md#storm-lightning-and-thunder-implemented-pixi-experiment).
 - **Optional desktop/screensaver:** investigate packaging the existing Pixi garden and a clearly simulated input mode; no commitment to Godot, pricing, or distribution. See [Ideas](IDEAS.md#optional-desktop--screensaver-experience-exploratory).
 
 See [Ideas](IDEAS.md) for the broader pool and design constraints.
@@ -174,7 +174,7 @@ or heavy rain through the existing weather path.
 An active viewing session should show meaningful change over roughly 30 minutes.
 The tuned prototype lifetimes retain recent visual history; longer-lived terrain
 and rare growth lasting hours or days remain future work. Quiet traffic should
-mean quieter network-shaped activity, while future lighting follows local time
+mean quieter network-shaped activity, while lighting follows local time
 independently.
 
 ## Not MVP

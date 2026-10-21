@@ -10,6 +10,8 @@
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
+  <script src="garden-lighting.js?v=light-1" defer></script>
+  <script src="garden-lighting-view.js?v=light-1" defer></script>
   <script src="garden-gnomes.js?v=overcrowding-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js?v=grass-clear-1" defer></script>
@@ -21,13 +23,17 @@
   <script src="pixi-live-gnomes.js?v=landscaping-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
-  <script src="pixi-live-core.js?v=overcrowding-1" defer></script><script src="pixi-live.js?v=overcrowding-1" defer></script>
+  <script src="pixi-live-core.js?v=overcrowding-1" defer></script><script src="pixi-live.js?v=light-1" defer></script>
 </head>
 <body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <main>
     <header><a href="/">← Production garden</a><a href="pixi-stress.html">Synthetic stress test</a>
       <h1>Pixi live soak</h1><p id="connection" role="status">connecting</p></header>
     <section class="controls" aria-label="Live soak controls">
+      <label>Lighting <select id="lighting-mode" aria-label="Lighting"><option value="live">Live local time</option><option value="dawn">Dawn</option><option value="day">Day</option><option value="golden">Golden hour</option><option value="dusk">Dusk</option><option value="night">Night</option><option value="hour">Simulated hour</option></select></label>
+      <label>Local hour <input id="lighting-hour" type="range" min="0" max="24" step="0.05" value="12" aria-label="Simulated local hour"></label>
+      <span id="lighting-status" role="status"></span>
       <button id="clear" type="button">Clear garden</button>
       <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>

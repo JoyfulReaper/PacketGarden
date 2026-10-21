@@ -326,6 +326,14 @@
       backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
     viewElement.appendChild(app.canvas);
     const cache = makeLiveAtlas(P, app.renderer, shared, core), view = createView(P, app, cache.frames, core, shared);
+    const lightingSurface=window.PacketGardenLightingView.createSurface(document,app.canvas);
+    const lighting=window.PacketGardenLighting.createModel();let lightingWeather=0,lightingControls=null;
+    const updateLighting=(at=Date.now(),force=false,weatherChanged=false)=>{
+      if(document.hidden)return;
+      if(lighting.tick(at,{force})||force||weatherChanged) {
+        lightingSurface.apply(lighting.state,lightingWeather);lightingControls?.refresh();
+      }
+    };
     const stormPresentation = window.PacketGardenPixiStorm, stormView = stormPresentation.createView(P, app.renderer, view.root);
     // Separate random stream: effects never consume placement/ecology randomness.
     const stormSeed = window.crypto?.getRandomValues ? window.crypto.getRandomValues(new Uint32Array(1))[0] : Date.now();
@@ -421,6 +429,7 @@
       if (levelControl) levelControl.disabled = live;
       currentWeather = live ? latestWeather ?? { level: 'quiet', eventsPerMinute: 0 } : { level: levelControl.value, eventsPerMinute: 10000 };
       view.setWeather(currentWeather);
+      lightingWeather=core.weatherSettings(currentWeather).darkening;updateLighting(Date.now(),false,true);
       storm.configure({level:currentWeather.level});
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
@@ -429,6 +438,7 @@
       status = value; connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
     });
     sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();
+    lightingControls=window.PacketGardenLightingView.bindControls(document,lighting,()=>updateLighting(Date.now(),false,true));
     document.querySelector('#trigger-lightning')?.addEventListener('click',()=>{
       const status=document.querySelector('#lightning-test-status');
       const started=sourceControl?.value==='manual' && storm.trigger();
@@ -473,6 +483,7 @@
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · 14 cached frames / 1 GPU source`,
+        `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
@@ -490,11 +501,15 @@
       if (elapsed > 0) { measurements?.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
       if (Date.now() >= nextLogicalAt) {
         const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
+        updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
         gnomes.tick(at, undefined, document.hidden);
         storm.tick(at);
         ui.tick(at);
         nextLogicalAt = Date.now() + 250;
+      } else if (Date.now() < nextLogicalAt - 250 && lighting.needsSample(Date.now())) {
+        // Refresh light after a backwards clock jump without advancing ecology.
+        updateLighting();
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
@@ -509,6 +524,7 @@
       if (document.hidden) gnomes.suspend(at);
       storm.configure({hidden:document.hidden},at);
       if (document.hidden) app.stop(); else {
+        updateLighting(at,true);
         model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
         ambient.tick(at, { hidden: false }); ambientView.animate(at);
         gnomes.advance(at);gnomeView.animate(at);
@@ -519,6 +535,7 @@
     window.addEventListener('pagehide', event => {
       gnomes.suspend();storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
+      lightingControls.destroy();lighting.destroy();lightingSurface.destroy();
       gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
       reducedMotion?.removeEventListener?.('change',updateLightning);storm.destroy();stormView.destroy();
       app.canvas.removeEventListener('click', clickGarden); ui.destroy();

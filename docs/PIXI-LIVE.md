@@ -1,3 +1,108 @@
+# Local-time lighting (2026-10-20)
+
+Pixi's default/diagnostic gardens and the Canvas fallback now share
+`garden-lighting.js`: browser-local hours, fixed anchors, smoothstep interpolation,
+30-second sampling and a quantized sRGB color matrix. Only presentation changes.
+There are no backend, SSE/NATS, specimen, ecology, rarity, growth, provenance,
+activity or sound changes, and no extra timers, dependencies or persistence.
+
+| Local hours | Transition |
+| --- | --- |
+| 22:00–05:00 | Readable blue/purple night |
+| 05:00–06:00 | Night to soft cool dawn |
+| 06:00–09:00 | Dawn gradually warms into day |
+| 09:00–16:00 | Original day appearance |
+| 16:00–18:00 | Day to gentle amber golden hour |
+| 18:00–20:00 | Golden hour to cooler purple dusk |
+| 20:00–22:00 | Dusk to night |
+
+Local `Date` components are read afresh at each sample, so timezone/DST changes
+are not stuck behind a cached UTC offset. Backwards clock jumps trigger a fresh
+sample; the existing Pixi ticker can refresh overdue light after a backwards
+jump while leaving ecology's logical deadline untouched. Hidden pages perform no visual sampling;
+resume forces one current-time sample with no transition backlog. Reduced motion
+uses the same slow light, with no added animation; existing lightning suppression
+still applies. Visual components are rounded to 1/512, less than half an 8-bit
+color level, and identical matrices cause no DOM/style writes.
+
+`garden-lighting-view.js` applies one diagonal RGB-plus-bias SVG color matrix to
+the existing rendered surface: Pixi's canvas, or Canvas's `.garden-stage`
+containing its two canvases. The zero-size SVG definition is static page markup;
+UI, inspection cards, messages and Recent activity are outside the filter.
+There are no new Pixi objects, textures, filters or per-specimen changes, and no
+Canvas bitmap copies, geometry rebuilds or new RAF. The daytime identity matrix
+sets CSS `filter: none`. Colored phases add **one browser compositor color pass**;
+its offscreen surface allocation/GPU cost is outside Pixi's resource counters.
+Teardown clears the CSS filter, disables sampling and detaches diagnostic handlers.
+Canvas `?perf=1` snapshots and the Pixi HUD expose bounded sample/update counters.
+
+Night retains blue light and a small color floor rather than using a black
+overlay. Existing ghostbloom halos and crystal highlights therefore stand out
+against cooler terrain without adding glow to ordinary specimens. Distinct
+species hues remain recognizable. Golden hour gently warms existing colors;
+there are no directional/lengthening shadows. Weather's existing soil darkening
+and rain are preserved, with a small night-only matrix compensation for severe
+darkening. Rain stays visible, and the existing lightning passes through the
+same light without extra intensity, flashes, sound or changed eligibility.
+
+Only `/pixi-live.html` has **Lighting**: Live local time, Dawn (06:00), Day
+(12:00), Golden hour (18:00), Dusk (20:00), Night (00:00), plus Simulated hour.
+The **Simulated local hour** slider spans 0–24 in .05-hour steps and switches to
+that manual mode. Returning to Live restores actual local time. Overrides stay
+in this page's memory. `/`, `/index.html` and `/canvas.html` always start live
+and expose no lighting controls. Canvas tests call its shared controller directly;
+there is no public query-parameter override.
+
+`node tests/garden-lighting.cjs` covers exact anchors, smooth boundaries/midnight,
+real Node timezone interpretation, live/manual behavior, clock/provider changes,
+weather/bolt bounds, reduced motion/hidden resume, both production adapters and
+cleanup. In a mature 640-specimen fixture, **120 lighting changes cause zero
+Canvas base rebuilds or Pixi sprite/texture/geometry/vine-neighbor changes**.
+Existing rendering/performance and ecology tests retain their assertions.
+
+The installed-Chrome runner adds `--lighting-only` for focused visual QA:
+
+```powershell
+$env:PACKETGARDEN_BROWSER_OUTPUT = 'artifacts/local-lighting'
+node tests/pixi-default-browser.cjs --run --lighting-only
+```
+
+Use the already available Playwright runtime/installed Chrome (normal module
+resolution or `NODE_PATH`); no application dependency is added. The full runner
+also includes these checks. Captures freeze the same 240-specimen garden with
+grass and water at dawn/day/golden/dusk/night, plus night hurricane and a frozen
+55ms bolt. Canvas captures all five phases with the same specimens. Tests also
+check actual live mode in UTC/Tokyo browser contexts, hidden/resume, reduced
+motion, nighttime inspection and unchanged resource counts.
+
+Ignored `artifacts/local-lighting/lighting-comparison.png` presents the actual
+five phases and night storm; individual `lighting-*.png`, Canvas captures and
+`lighting-comparison.json` remain alongside. In the initial focused comparison,
+mean image luminance was 74.88 dawn / 74.22 day / 74.67 golden / 65.71 dusk /
+59.53 night / 47.75 night hurricane (8-bit units). Night retained about **80%**
+of daytime mean luminance. A night bolt raised hurricane mean to 52.67, remaining
+distinct without a washed-out frame. These are whole-image fixture measurements,
+not a universal perceptual/accessibility guarantee.
+
+Dense 640-specimen, DPR-2 Chrome samples (120 frames each) retained **735 display
+objects and 763 specimen/weather atlas frames**. Day/night ticker means were
+16.68/16.68ms, worst 17.1/16.8ms, with CPU submission means .295/.289ms in the
+final focused run. Earlier pairs measured .377/.410ms and .279/.245ms. Short samples are noisy:
+they do **not** measure GPU completion, compositor work, battery use or long-run
+smoothness. Colored phases necessarily add a compositor pass; browser/driver
+surface caching and cost can differ. Firefox/Safari, multi-hour real traffic,
+clock-change visual comfort and GPU profiling remain unverified. Fixed boundaries
+are not seasonal or astronomical, and extra bloom/shadow systems are out of scope.
+
+Validation: all **52 Node entry points**, the complete Chrome browser regression
+suite, focused lighting/inspection checks, .NET build and backend checks, and
+actual ASP.NET polling/SSE integration pass. The .NET build has zero warnings or
+errors; the checks project retains its existing NU1900 vulnerability-feed warning.
+Local-server browser/SSE checks require execution outside the sandbox's socket
+limits. Canvas cache restoration is also covered: a persisted page keeps its
+lighting controller, refreshes at `pageshow`, and releases the restore listener
+and surface transform on final departure. `git diff --check` passes.
+
 # Emergency overcrowding relief (2026-10-20)
 
 The existing shared landscaping incident now has an explicit `mode`: `vine` or

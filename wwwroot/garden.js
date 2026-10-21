@@ -115,6 +115,7 @@ function weatherIntensity() {
 }
 
 function updateWeatherAnimation() {
+  if (typeof updateGardenLighting === 'function') updateGardenLighting(Date.now(),false,true);
   if (typeof updatePuddleWeather === "function") updatePuddleWeather(Date.now());
   if (weatherSoilDarkening() !== lastBaseSoilDarkening) { gardenBaseDirty = true; gardenPerf?.reason("weather-soil"); }
   paintGardenBase();
@@ -1128,6 +1129,7 @@ document.addEventListener("visibilitychange", () => {
   if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
   if (document.hidden) syncWeatherAnimation();
   else {
+    if (typeof updateGardenLighting === 'function') updateGardenLighting(Date.now(),true);
     if (typeof updateFirstSeenCuriosities === "function") updateFirstSeenCuriosities(Date.now());
     updateGarden();
     if (typeof updateLooseDrops === "function") updateLooseDrops(Date.now());
@@ -1139,7 +1141,8 @@ document.addEventListener("visibilitychange", () => {
     syncWeatherAnimation(); // Resume current state once, never replay missed visual frames.
   }
 });
-window.addEventListener("pagehide", () => {
+window.addEventListener("pagehide", event => {
+  if (!event?.persisted && typeof disposeGardenLighting === 'function') disposeGardenLighting();
   gardenPerf?.dispose();
   if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);
   weatherAnimationFrame = null;
@@ -1150,6 +1153,7 @@ drawGarden("initial");
 // Logical cleanup stays at 250 ms; visual work wakes only for state changes or one aggregate deadline.
 window.setInterval(() => {
   const now = Date.now();
+  if (typeof updateGardenLighting === 'function') updateGardenLighting(now);
   if (typeof updateGardenPuddles === "function" && updateGardenPuddles(now)) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
   if (typeof updateFirstSeenCuriosities === "function" && updateFirstSeenCuriosities(now)) gardenOverlayDirty = true;
   if (typeof updateCollectionMessage === "function") updateCollectionMessage(now);

@@ -11,6 +11,8 @@
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
+  <script src="garden-lighting.js?v=light-1" defer></script>
+  <script src="garden-lighting-view.js?v=light-1" defer></script>
   <script src="garden-gnomes.js?v=overcrowding-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js?v=grass-clear-1" defer></script>
@@ -23,9 +25,10 @@
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
   <script src="pixi-live-core.js?v=overcrowding-1" defer></script>
-  <script src="pixi-live.js?v=overcrowding-1" defer></script>
+  <script src="pixi-live.js?v=light-1" defer></script>
 </head>
 <body class="pixi-default">
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <header>
     <h1>PacketGarden</h1>
     <p>Packet Garden: Composting the internet's shit into something pretty.</p>

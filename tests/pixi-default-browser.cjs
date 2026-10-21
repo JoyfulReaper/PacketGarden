@@ -45,6 +45,10 @@ async function run() {
         window.__gardenAudioGains.push(node); return node; }
     };
     const createGnomes = PacketGardenGnomes.createModel;
+    const createLighting=PacketGardenLighting.createModel,createSurface=PacketGardenLightingView.createSurface;
+    PacketGardenLighting.createModel=options=>(window.__gardenTestLighting=createLighting({...options,
+      getLocalHour:new URLSearchParams(location.search).has('live-lighting')?PacketGardenLighting.localHour:()=>12}));
+    PacketGardenLightingView.createSurface=(...args)=>(window.__gardenTestLightingSurface=createSurface(...args));
     const createGarden=PacketGardenCore.createGardenModel,createEcology=PacketGardenEcology.createEcologyModel;
     PacketGardenCore.createGardenModel=(...args)=>(window.__gardenTestGarden=createGarden(...args));
     PacketGardenEcology.createEcologyModel=(...args)=>(window.__gardenTestEcology=createEcology(...args));
@@ -119,6 +123,10 @@ async function run() {
     await warm.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 640);
     await warm.close();
     promoted = true;
+    if(process.argv.includes('--lighting-only')) {
+      const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
+      await page.waitForFunction(()=>window.__gardenTestLighting?.state);await checkLighting(page);await page.close();return;
+    }
     const broadcast = event => { for (const stream of streams) stream.write(`event: garden\ndata: ${JSON.stringify(event)}\n\n`); };
     const weather = data => { for (const stream of streams) stream.write(`event: weather\ndata: ${JSON.stringify(data)}\n\n`); };
     for (const route of ['/','/index.html']) {
@@ -267,6 +275,7 @@ async function run() {
     await checkStorm(diagnostic);
     await checkLandscaping(diagnostic);
     await checkOvercrowding(diagnostic);
+    await checkLighting(diagnostic);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -445,6 +454,96 @@ async function run() {
     assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),remaining);
     await page.emulateMedia({reducedMotion:'no-preference'});
     console.log('PASS: Chrome landscaping real-time sequential snips, two transient sprites, cleanup/cooldown, reduced motion, hidden cancellation and screenshots.');
+  }
+  async function checkLighting(page) {
+    await page.reload();await page.waitForFunction(()=>window.__gardenTestLighting?.state);
+    const errors=[];page.on('pageerror',error=>errors.push(String(error)));
+    await page.getByLabel('Weather source',{exact:true}).selectOption('manual');
+    await page.getByLabel('Manual weather',{exact:true}).selectOption('quiet');
+    await page.locator('#probes').uncheck();
+    await page.locator('#seed').click();
+    const footprint=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>[p.id,p.cell,p.type,p.createdAt,p.origin])));
+    const resources=()=>page.evaluate(()=>{
+      const count=n=>1+(n.children??[]).reduce((v,c)=>v+count(c),0);
+      return {objects:count(__gardenTestApp.stage),specimens:__gardenTestGarden.specimens.length,
+        frames:document.querySelector('#hud').textContent.match(/atlas frames (\d+)/)?.[1],filter:__gardenTestApp.canvas.style.filter};
+    });
+    await page.locator('#lighting-mode').selectOption('day');const dayResources=await resources(),dayTiming=await sample(page);
+    await page.locator('#lighting-mode').selectOption('night');const nightTiming=await sample(page),nightResources=await resources();
+    assert.equal(nightResources.objects,dayResources.objects);assert.equal(nightResources.frames,dayResources.frames);
+    assert.equal(await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>[p.id,p.cell,p.type,p.createdAt,p.origin]))),footprint);
+    await page.evaluate(()=>{
+      __gardenTestApp.stop();const at=Date.now(),types=PacketGardenCore.species;
+      __gardenTestGarden.seed(Array.from({length:240},(_,i)=>{const type=types[i%types.length];return {
+        type,vigor:i%4,column:4+i%24,row:5+Math.floor(i/24),createdAt:at-(type==='redbloom'?3000:65000),
+        origin:{kind:'simulated',eventType:'lighting-comparison'}};}),at);
+      const grassCells=[];
+      for(let i=0;i<640;i++)if(!__gardenTestGarden.byCell.has(i)&&i%7!==0)grassCells.push({column:i%32,row:Math.floor(i/32),createdAt:at-60000,lastInfluencedAt:at});
+      __gardenTestEcology.seed({grassCells,puddles:[{x:180,y:180,size:18,maxSize:18,seed:.3,createdAt:at,lastRefreshedAt:at}]});
+      __gardenTestApp.render();
+    });
+    const stable=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens));
+    const shots={},metrics={dayTiming,nightTiming,dayResources,nightResources};
+    const mean=shot=>{let r=0,g=0,b=0;for(let i=0;i<shot.width*shot.height;i++){r+=shot.data[i*shot.channels];g+=shot.data[i*shot.channels+1];b+=shot.data[i*shot.channels+2];}
+      const n=shot.width*shot.height;return {r:r/n,g:g/n,b:b/n,luma:(r*.2126+g*.7152+b*.0722)/n};};
+    for(const phase of ['dawn','day','golden','dusk','night']) {
+      await page.locator('#lighting-mode').selectOption(phase);await page.evaluate(()=>__gardenTestApp.render());
+      shots[phase]=await page.locator('#view canvas').screenshot({path:path.join(output,`lighting-${phase}.png`)});
+      metrics[phase]=mean(png(shots[phase]));
+    }
+    assert(metrics.night.luma>metrics.day.luma*.6&&metrics.night.luma<metrics.day.luma*.95,'night stays readable while visibly cooler/dimmer');
+    assert(metrics.golden.r/metrics.golden.b>metrics.day.r/metrics.day.b,'golden hour warms the existing colors');
+    assert(metrics.night.b/metrics.night.r>metrics.day.b/metrics.day.r,'night adds a restrained cool ambience');
+    assert.equal(await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens)),stable,'same specimens at all five times');
+    const hit=await page.evaluate(()=>{const app=__gardenTestApp,root=app.stage.children[0],sprite=root.children[6].children[0],r=app.canvas.getBoundingClientRect();
+      return {x:r.left+(root.position.x+sprite.position.x*root.scale.x)*r.width/app.renderer.screen.width,
+        y:r.top+(root.position.y+(sprite.position.y-12)*root.scale.y)*r.height/app.renderer.screen.height};});
+    await page.mouse.click(hit.x,hit.y);assert(await page.locator('#specimen-card').isVisible(),'night CSS light preserves inspection hits');
+    await page.keyboard.press('Escape');
+    await page.locator('#lighting-hour').fill('17.35');assert.equal(await page.locator('#lighting-mode').inputValue(),'hour');
+    assert.equal(await page.evaluate(()=>__gardenTestLighting.state.hour),17.35);
+    await page.locator('#lighting-mode').selectOption('night');
+    await page.getByLabel('Manual weather',{exact:true}).selectOption('botnet_hurricane');await page.evaluate(()=>__gardenTestApp.render());
+    shots.storm=await page.locator('#view canvas').screenshot({path:path.join(output,'lighting-night-storm.png')});metrics.storm=mean(png(shots.storm));
+    assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[9].particleChildren.length),400);
+    await page.locator('#trigger-lightning').click();
+    await page.evaluate(()=>{const event=__gardenTestStorm.active;__gardenTestStormView.animate(event,event.createdAt+55);__gardenTestApp.render();});
+    const bolt=await page.locator('#view canvas').screenshot({path:path.join(output,'lighting-night-bolt.png')});metrics.bolt=mean(png(bolt));
+    assert(metrics.bolt.luma>metrics.storm.luma&&metrics.bolt.luma-metrics.storm.luma<12,'night lightning remains visible and restrained');
+    await page.evaluate(()=>__gardenTestStorm.reset());const filter=await page.evaluate(()=>__gardenTestApp.canvas.style.filter);
+    await page.emulateMedia({reducedMotion:'reduce'});await page.waitForFunction(()=>document.querySelector('#lightning-enabled').disabled);
+    assert.equal(await page.evaluate(()=>__gardenTestStorm.trigger()),false);
+    assert.equal(await page.evaluate(()=>__gardenTestApp.canvas.style.filter),filter,'slow lighting is unchanged by reduced motion');
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    const beforeHidden=await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));return __gardenTestLighting.snapshot().samples;});
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;__gardenTestApp.stop();});
+    assert.equal(await page.evaluate(()=>__gardenTestLighting.snapshot().samples),beforeHidden+1,'one immediate resume sample');
+    const fixture=await page.evaluate(()=>({specimens:__gardenTestGarden.specimens,grass:__gardenTestEcology.grassCells}));
+    const canvas=await page.context().newPage();await canvas.goto(origin+'/canvas.html');
+    await canvas.evaluate(fixture=>{gardenModel.seed(fixture.specimens);gardenEcology.seed({grassCells:fixture.grass,puddles:[]});drawGarden();},fixture);
+    for(const phase of ['dawn','day','golden','dusk','night']) {
+      await canvas.evaluate(phase=>{gardenLighting.setMode(phase);updateGardenLighting(Date.now(),true);},phase);
+      await canvas.locator('canvas').first().screenshot({path:path.join(output,`lighting-canvas-${phase}.png`)});
+      const matrix=await canvas.locator('#garden-light-matrix').getAttribute('values');
+      const expected=await page.evaluate(phase=>PacketGardenLighting.compose(PacketGardenLighting.atHour(PacketGardenLighting.presets[phase])).join(' '),phase);
+      assert.equal(matrix,expected,'Canvas and Pixi use the same color matrix');
+    }
+    await canvas.close();
+    // A test-only sheet presents the actual captures; no regenerated artwork.
+    const sheet=await page.context().newPage();await sheet.setViewportSize({width:1320,height:570});
+    await sheet.setContent(`<html><body style="margin:0;padding:12px;background:#151c20;color:#dae2de;font:16px system-ui;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">${Object.entries(shots).map(([name,bytes])=>`<figure style="margin:0"><figcaption style="padding:4px">${name==='storm'?'Night · hurricane':name}</figcaption><img style="display:block;width:100%" src="data:image/png;base64,${bytes.toString('base64')}"></figure>`).join('')}</body></html>`);
+    await sheet.screenshot({path:path.join(output,'lighting-comparison.png'),fullPage:true});await sheet.close();
+    // Unmodified live mode under two real browser timezones; no public controls.
+    for(const timezoneId of ['UTC','Asia/Tokyo']) {
+      const liveContext=await browser.newContext({timezoneId,viewport:{width:960,height:720}}),livePage=await liveContext.newPage();
+      await livePage.goto(origin+'/?live-lighting=1');await livePage.waitForFunction(()=>window.__gardenTestLighting?.state);
+      const live=await livePage.evaluate(()=>({mode:__gardenTestLighting.mode,hour:__gardenTestLighting.state.hour,expected:PacketGardenLighting.localHour(Date.now())}));
+      assert.equal(live.mode,'live');assert(Math.abs(live.hour-live.expected)<.01);assert.equal(await livePage.locator('#lighting-mode').count(),0);
+      await liveContext.close();
+    }
+    assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'lighting-comparison.json'),JSON.stringify(metrics,null,2));
+    console.log('PASS: Chrome five-phase/Canvas comparison, night rain/bolt, live browser timezones, reduced motion/resume and stable resources:',JSON.stringify(metrics));
+    await page.reload();await page.waitForFunction(()=>window.__gardenTestLighting?.state);
   }
   async function checkOvercrowding(page) {
     await page.reload();await page.waitForFunction(()=>window.__gardenTestGnomes);

@@ -9,13 +9,16 @@
   <script src="garden-audio.js?v=storm-bolt-2" defer></script>
   <script src="garden-perf.js" defer></script>
   <script src="garden-core.js" defer></script>
+  <script src="garden-lighting.js?v=light-1" defer></script>
+  <script src="garden-lighting-view.js?v=light-1" defer></script>
   <script src="garden-gnomes.js?v=overcrowding-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js?v=grass-clear-1" defer></script>
   <script src="garden-ambient.js" defer></script>
   <script src="garden-interaction.js" defer></script>
   <script src="garden-ui-core.js" defer></script>
-  <script src="garden.js?v=landscaping-1" defer></script>
+  <script src="garden.js?v=light-1" defer></script>
+  <script src="garden-lighting-canvas.js?v=light-1" defer></script>
   <script src="garden-broadleaf.js" defer></script>
   <script src="garden-species-colors.js" defer></script>
   <script src="garden-grass.js" defer></script>
@@ -28,6 +31,7 @@
   <script src="garden-inspect.js" defer></script>
 </head>
 <body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <pre id="garden-perf" hidden aria-label="Browser performance diagnostics"></pre>
   <header>
     <h1>PacketGarden</h1>

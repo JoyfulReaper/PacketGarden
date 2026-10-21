@@ -55,7 +55,7 @@ function createGarden(options = {}) {
   }
   let audioContexts = 0;
   const sandbox = {
-    Date: { now: () => clock.now }, performance: { now: () => clock.now }, Math: Object.create(Math),
+    Date: class extends Date {constructor(...args){super(...(args.length?args:[clock.now]));}static now(){return clock.now;}}, performance: { now: () => clock.now }, Math: Object.create(Math),
     document: { querySelector: element, hidden: false,
       createElement: () => ({ getContext: () => context }),
       addEventListener(name, handler) { addHandler(documentHandlers, name, handler); }
@@ -65,6 +65,7 @@ function createGarden(options = {}) {
       matchMedia: () => ({ matches: options.reduced ?? false }),
       innerWidth: 1200, innerHeight: 900, devicePixelRatio: 2,
       addEventListener(name, handler) { addHandler(windowHandlers, name, handler); },
+      removeEventListener(name, handler) { windowHandlers.set(name,(windowHandlers.get(name)??[]).filter(value=>value!==handler)); },
       setInterval(handler, delay) { intervals.push({ handler, delay }); return intervals.length; },
       setTimeout() { throw new Error('Browser features must reuse the existing tick'); }, clearTimeout() {},
       requestAnimationFrame(handler) { frames.set(++nextFrame, handler); return nextFrame; },
