@@ -14,6 +14,15 @@ sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
+- Illustrated storm pools in Canvas/Pixi: four shared organic silhouettes chosen
+  deterministically from each existing puddle seed, subdued teal/slate water,
+  soft shores, shallow-water marks and static reflected-sky glints. Canvas uses
+  four cached tiles only on existing base deadlines; Pixi uses four frames in
+  the existing ecology atlas and one Sprite per puddle. No new loops, shaders,
+  particles or texture sources. All water state/timing, layering and exact frog
+  references/eligibility remain unchanged. Matching before/after captures cover
+  small/mature/overlapping/grass/frog/night/hurricane/drained water; see
+  [artwork measurements and limits](PIXI-LIVE.md#illustrated-storm-puddles-2026-10-21).
 - Passive puddle frogs in Canvas/Pixi: at most two, one strict 15% roll every
   45 seconds when actual shared water has visible size >=8 and opacity >=0.12.
   Weather alone is insufficient; retained water after storms still qualifies.

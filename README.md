@@ -434,6 +434,15 @@ procedural water renders in the cached scene after grass and before specimens,
 without damaging plants, changing grass, adding Recent activity, or collecting
 anything. Reload clears it.
 
+Storm water now uses four shared, seed-stable illustrated pool shapes in Canvas
+and Pixi: irregular soft shores, muted teal/slate shades, lighter shallows,
+broken sky reflections and a few static glints. These replace the overlapping
+ellipse outlines and remain readable at night and in hurricane rain. Canvas
+caches four small tiles on its existing base; Pixi bakes four frames into the
+existing ecology atlas and retains one Sprite per puddle. Growth, drainage,
+positions, the eight-puddle cap and frog eligibility are unchanged. See the
+[artwork comparison and measurements](docs/PIXI-LIVE.md#illustrated-storm-puddles-2026-10-21).
+
 Rare **frogs** now visit this water in Canvas and Pixi, including after rain ends.
 Every 45 seconds, usable water permits one **15%** roll and at most one arrival,
 with **two frogs maximum**. Eligibility uses the actual shared puddle's visible

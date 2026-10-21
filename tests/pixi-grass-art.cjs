@@ -16,11 +16,11 @@ const originalRandom = Math.random; let atlas;
 try {
   Math.random = () => { throw new Error('Artwork must not consume ecology randomness'); };
   atlas = presentation.makeEcologyAtlas({ ...h.P, Graphics, Texture }, { generateTexture(options) {
-    generated++; assert.deepEqual([options.frame.width,options.frame.height,options.resolution],[832,64,2]);
+    generated++; assert.deepEqual([options.frame.width,options.frame.height,options.resolution],[1024,64,2]);
     tiles = options.target.children.slice(); return { source:{}, destroy(source) { sourceDestroyed=source; } };
   } });
 } finally { Math.random = originalRandom; }
-assert.equal(atlas.frames.size,13); assert.equal(new Set([...atlas.frames.values()].map(frame=>frame.source)).size,1);
+assert.equal(atlas.frames.size,16); assert.equal(new Set([...atlas.frames.values()].map(frame=>frame.source)).size,1);
 assert.equal(h.live.size,startObjects,'all construction display objects released');
 const shapes = new Set();
 for (let i=0;i<12;i++) {
@@ -66,8 +66,8 @@ for (const age of [0,1000,10000,20000,30000,60000,1200000,1400000,1620000,192000
   assert.equal(sprite.tint,(state.color[0]<<16)|(state.color[1]<<8)|state.color[2]); assert.equal(sprite.alpha,state.opacity/.6);
   assert.equal(view.grassViews.get(0).nextAt,ecology.nextGrassVisualChangeAt(sample,at));
 }
-assert.equal(geometry,commandsAfterBaking);assert.equal(generated,1);assert.equal(h.textureCount(),startTextures+13);
+assert.equal(geometry,commandsAfterBaking);assert.equal(generated,1);assert.equal(h.textureCount(),startTextures+16);
 view.destroy();grassLayer.destroy();puddleLayer.destroy();atlas.destroy();
 assert.equal(h.textureCount(),startTextures);assert.equal(h.live.size,startObjects);
-assert.deepEqual(releasedFrames,Array(13).fill(false));assert.equal(sourceDestroyed,true);
+assert.deepEqual(releasedFrames,Array(16).fill(false));assert.equal(sourceDestroyed,true);
 console.log('PASS: 12 finite curved tuft variants, no blobs/model RNG, stable non-diagonal selection, exact lifecycle transforms/deadlines, zero recurring geometry/textures, view/frame/source cleanup.');

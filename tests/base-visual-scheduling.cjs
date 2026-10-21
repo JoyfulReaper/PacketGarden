@@ -113,7 +113,7 @@ waterWork.reset();puddles.clock.now=firstDeadline-1;puddles.tick();assert.equal(
 const beforeDue=puddles.run('puddleVisualState(testWater,Date.now())');assert(beforeWater.size-beforeDue.size<.5);
 puddles.clock.now=Math.ceil(firstDeadline);puddles.drawing.length=0;puddles.tick();assert.equal(waterWork.base,1);
 const afterWater=puddles.run('puddleVisualState(testWater,Date.now())');assert(Math.abs(36-afterWater.size-.5)<.001);
-assert(puddles.drawing.some(call=>call[0]==='ellipse'&&call[3]>0));
+assert(puddles.drawing.some(call=>call[0]==='drawImage'&&call[4]>0),'cached water tile is redrawn at the existing deadline');
 assert.equal(state(puddles).includes('testWater'),false);
 let previous=afterWater.size,drainRebuilds=1;
 while(puddles.run('gardenState.puddles.length')){

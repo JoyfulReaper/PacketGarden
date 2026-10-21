@@ -3,6 +3,7 @@
   'use strict';
   const ecologyCore = typeof module !== 'undefined' && module.exports ? require('./garden-ecology.js') : window.PacketGardenEcology;
   const grassArt = typeof module !== 'undefined' && module.exports ? require('./garden-grass.js') : window.PacketGardenGrassArt;
+  const puddleArt = typeof module !== 'undefined' && module.exports ? require('./garden-puddle-art.js') : window.PacketGardenPuddleArt;
   const grassKey = cell => cell.row * 32 + cell.column;
   const grassVariants = grassArt.variants.length;
   const grassVariant = grassArt.variantFor;
@@ -21,19 +22,16 @@
       }
       patch.position.set(variant * 64, 0); sheet.addChild(patch); grassPatches.push(patch); keys.push(`grass:${variant}`);
     }
-    // A unit-radius 36px pool, matching the three Canvas lobes and stable rotation.
-    const water = new P.Graphics();
-    for (const [x, y, rx, ry] of [[0, 0, 1, .65], [-.4, .16, .7, .5], [.38, -.18, .72, .48]]) {
-      water.ellipse(32 + x * 18, 32 + y * 18, rx * 18, ry * 18);
+    // Same finite contours, colors and flattened alpha as the Canvas tiles.
+    for (let variant=0;variant<puddleArt.variants.length;variant++) {
+      const water = new P.Graphics();
+      for (const layer of puddleArt.variants[variant]) {
+        for (const [method,...args] of layer.path) water[method](...args);
+        const start=layer.path[0];water.lineTo(start[1],start[2]);
+        water.fill({color:layer.color,alpha:layer.alpha});
+      }
+      water.position.set((grassVariants+variant)*64,0);sheet.addChild(water);grassPatches.push(water);keys.push(`puddle:${variant}`);
     }
-    water.fill(0x497579).stroke({ color: 0x253f46, alpha: .6, width: .6 });
-    // Short highlight arc, baked once using a few points.
-    for (let i = 0; i <= 12; i++) {
-      const a = Math.PI * (1.1 + i / 12 * .6), x = 32 - 1.8 + Math.cos(a) * 11.7, y = 32 - 2.34 + Math.sin(a) * 5.94;
-      if (i === 0) water.moveTo(x, y); else water.lineTo(x, y);
-    }
-    water.stroke({ color: 0xb2c9c0, alpha: .5, width: .5 });
-    water.position.set(grassVariants * 64, 0); sheet.addChild(water); keys.push('puddle');
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, keys.length * 64, 64), resolution: 2 });
     // Release owned construction contexts explicitly; shared atlas frames survive.
     for (const patch of grassPatches) patch.destroy();
@@ -65,7 +63,7 @@
       } else if (kind === 'grass-removed') {
         grassViews.get(grassKey(item)).sprite.destroy(); grassViews.delete(grassKey(item)); counters.grassRemoved++;
       } else if (kind === 'puddle-added') {
-        const sprite = new P.Sprite(frames.get('puddle')); sprite.anchor.set(.5); sprite.position.set(item.x, item.y);
+        const sprite = new P.Sprite(frames.get(`puddle:${puddleArt.variantFor(item)}`)); sprite.anchor.set(.5); sprite.position.set(item.x, item.y);
         sprite.rotation = item.seed * Math.PI * 2; puddleLayer.addChild(sprite); puddleViews.set(item, sprite); counters.puddleAdded++;
         updatePuddle(item, sprite, at);
       } else if (kind === 'puddle-refreshed') {
@@ -76,7 +74,7 @@
     }
     function updatePuddle(puddle, sprite, at) {
       const state = ecologyCore.puddleVisualState(puddle, at);
-      sprite.scale.set(state.size / 18); sprite.alpha = state.opacity;
+      sprite.scale.set(state.size / puddleArt.referenceSize); sprite.alpha = puddleArt.opacityFor(state.opacity);
     }
     return { grassViews, puddleViews, counters, change,
       tick(at) {
@@ -88,7 +86,7 @@
         }
       },
       animate(at) { for (const [puddle, sprite] of puddleViews) updatePuddle(puddle, sprite, at); },
-      snapshot() { return { grassViews: grassViews.size, puddleViews: puddleViews.size, grassTextures: grassVariants, puddleTextures: 1, ecologyCounters: { ...counters } }; },
+      snapshot() { return { grassViews: grassViews.size, puddleViews: puddleViews.size, grassTextures: grassVariants, puddleTextures: puddleArt.variants.length, ecologyCounters: { ...counters } }; },
       destroy() { for (const { sprite } of grassViews.values()) sprite.destroy(); for (const sprite of puddleViews.values()) sprite.destroy(); grassViews.clear(); puddleViews.clear(); }
     };
   }

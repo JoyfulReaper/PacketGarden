@@ -1,3 +1,105 @@
+# Illustrated storm puddles (2026-10-21)
+
+Storm water now has **four shared finite shape/palette recipes** in
+`garden-puddle-art.js`. Asymmetrical quadratic contours form soft irregular
+shores, with subdued teal, blue-green and slate interiors, shallow silt/pebble
+marks, broken reflected-sky slivers and occasional static glints. Filled,
+translucent shore bands replace the overlapping stroked ellipses. Overlapping
+patches retain individual color fields without stacked black outlines. Small
+fresh pools, larger mature water, grass, frogs, night and heavy rain remain
+readable; nearly drained water becomes small and faint naturally.
+
+The existing seed selects one of four recipes, and the existing seed rotation
+is retained. Selection uses no randomness. Refresh and drainage retain the same
+recipe, exact puddle object and Sprite. **`garden-ecology.js` and
+`puddleVisualState` are unchanged**: probability/cadence, cap eight, position and
+clustering, logical size, growth, drainage, weather and grass/specimen behavior
+all remain authoritative. Artwork normalizes the existing maximum `.38` opacity
+to wetness when drawing the flattened tile; baked surface alpha supplies the
+stronger water colors. Radius still follows the exact shared size and fading
+remains linear in shared opacity. Frog thresholds and exact references continue
+to use the original model values, independent of the richer artwork.
+
+Canvas builds four page-owned **128×128** tiles once (64 logical pixels at
+resolution two, **256 KiB RGBA** total). It submits at most eight tile copies
+only when its existing cached base is dirty. The original aggregate analytic
+**0.5px / 0.02 model-opacity** deadlines, hidden handling and grass -> water ->
+specimen order are intact. No paths are generated on terrain repaints and no
+base bitmap is copied into the dynamic overlay. The finite tiles live with the
+page, independent of puddle births/removals.
+
+Pixi bakes the same contours, colors and alpha into its existing ecology atlas:
+**12 grass + 4 puddle frames = 16**, up from 13. Backing grows from
+**1664×128 to 2048×128**, **832 KiB to 1 MiB RGBA (+192 KiB)** before driver
+overhead. There is still **one ecology texture source**, one startup bake and
+one Sprite per puddle (maximum eight). All sixteen construction Graphics
+contexts are explicitly destroyed; frame/source ownership and teardown remain
+unchanged. The current garden retains **817 frames across four atlas sources**
+(767 main, 16 ecology, 13 ambient, 21 gnome). No extra shader, filter, particle,
+timer, render loop or per-frame geometry/texture generation was added. Artwork
+is static under both motion preferences. No gnome puddle interactions were added.
+
+Validation: all **59 Node entry points** passed, including the new
+`tests/puddle-art.cjs`, original ecology/frog/lifecycle/scheduling coverage and
+updated cached-art/count expectations. The new test checks four distinct stable
+variants, tile margins, no model RNG, exact Canvas/Pixi bake commands, identity,
+unchanged radius/fade, 30 refresh/expiry cycles, finite Canvas caches, reduced
+motion, hidden expiry, zero recurring geometry/textures and owned resource
+cleanup. Grass fixture commands were retained; only the reviewed puddle artwork
+commands changed. Chrome independently verifies transparent tile margins and
+**pixel-identical grass atlas content**; mean absolute premultiplied RGBA tile
+differences between Canvas and Pixi are **1.11–1.16 / 255** (rasterization).
+
+The complete installed-Chrome suite passed: cache upgrade, root/index SSE and
+stats, weather/audio, gnome incidents/landscaping/overcrowding/weed harvest,
+underpants, Amanita/buds, Stillbloom, frogs, grass inspection, resizing,
+centralized clicks, Canvas and the isolated stress page. Twenty browser ecology
+cycles each retained Sprite/texture identity on refresh, then ended with zero
+water views and destroyed owned Sprites; one bake/source remained constant.
+Debug/Release .NET builds, backend checks and real ASP.NET polling -> SSE tests
+passed without backend edits. The checks-project restore reported **NU1900**:
+NuGet vulnerability metadata was unavailable; compilation and checks succeeded.
+
+Before/after captures use identical seeds, objects, positions, clocks and normal
+garden scale: **small fresh, large mature, overlapping, wild grass, two frogs,
+night, botnet hurricane and nearly drained**, in both renderers (**32 images**).
+Canvas's hurricane fixture explicitly sets nonzero intensity. Captures and
+resource reports are under `artifacts/puddle-art/{before,after}/`; open
+`artifacts/puddle-art/comparison.html` for paired full-size images. The baseline
+serves only the two old artwork adapters from **ab1919c**, without modifying the
+checkout. Native-clock CPU probes run separately from frozen screenshot clocks.
+
+| Local Chrome probe | Before | After |
+| --- | ---: | ---: |
+| Ecology atlas backing / sources | 832 KiB / 1 | 1024 KiB / 1 |
+| Ecology startup bake, one observation | 4ms | 6ms |
+| Pixi CPU submission, mean of 120 frames, dense grass + eight pools | 0.224ms | 0.227ms |
+| Pixi mean ticker interval | 16.680ms | 16.681ms |
+| Canvas cached-base submission, mean of 240 forced paints, eight pools | 0.068ms | 0.041ms |
+
+These short, separate probes show similar recurring Pixi submission cost in this
+run; lower Canvas timings are not proof of a sustained speedup. They do not measure GPU
+completion, retained driver memory or long-term frame pacing. The fixed cache
+sizes above are RGBA accounting, not process-memory measurements. Other browsers,
+GPUs and long live-traffic soaks remain unverified. One pre-existing Chrome
+page-close race appeared with both old and new art: a visibility callback can
+call `app.stop()` after pagehide has destroyed its ticker. Scene/cycle error
+checks run before page closure; that unrelated teardown race remains unchanged.
+
+Reproduction with the already available Playwright/Chrome runtime (no install):
+
+```powershell
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/puddle-art/before'
+node tests/pixi-default-browser.cjs --run --puddle-art-only --puddle-baseline
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/puddle-art/after'
+node tests/pixi-default-browser.cjs --run --puddle-art-only
+# Complete Chrome regression:
+node tests/pixi-default-browser.cjs --run
+```
+
+The dated sections below preserve historical counts and artwork descriptions.
+
 # Passive puddle frogs (2026-10-21)
 
 `garden-frogs.js` is one renderer-neutral wildlife model, called on the existing

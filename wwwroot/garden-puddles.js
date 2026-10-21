@@ -1,7 +1,7 @@
 // Canvas presentation adapter for the shared weather-residue model.
 const { puddleConfig, puddleFormationChances, puddleVisualState } = gardenEcologyCore;
-// Main ellipse radius steps of 0.5 logical px (offset/rotated edges move <0.58 px),
-// or 0.02 fill-opacity changes. No change to the interpolation used by drawing.
+// Radius steps of 0.5 logical px (irregular/rotated shores move <0.66 px),
+// or 0.02 model-opacity changes. No change to the interpolation or deadlines.
 const puddleVisualThresholds = { size: 0.5, opacity: 0.02 };
 
 let nextPuddleCheckAt = gardenEcology.nextPuddleCheckAt;
@@ -45,7 +45,15 @@ function updateGardenPuddles(now = Date.now(), random = Math.random) {
   nextPuddleCheckAt = gardenEcology.nextPuddleCheckAt; return changed;
 }
 
-const puddleEllipses = [[0, 0, 1, 0.65], [-0.4, 0.16, 0.7, 0.5], [0.38, -0.18, 0.72, 0.48]];
+const puddleArt = window.PacketGardenPuddleArt;
+// Four page-owned tiles, built once. Flattened alpha matches the atlas when
+// fading; no shape construction or artwork regeneration on a terrain repaint.
+const puddleTiles = puddleArt.variants.map((_, variant) => {
+  const tile = document.createElement('canvas');
+  tile.width = tile.height = puddleArt.tileSize * puddleArt.resolution;
+  const brush = tile.getContext('2d');brush.scale(puddleArt.resolution,puddleArt.resolution);
+  puddleArt.paintCanvas(brush,variant);return tile;
+});
 
 // Cached terrain: grass below, specimens above. Shape is stable; only slow drainage changes it.
 function drawGardenPuddles(now) {
@@ -55,20 +63,9 @@ function drawGardenPuddles(now) {
     context.save();
     context.translate(puddle.x, puddle.y);
     context.rotate(puddle.seed * Math.PI * 2);
-    context.fillStyle = `rgba(73, 117, 121, ${opacity})`;
-    context.strokeStyle = `rgba(37, 63, 70, ${opacity * 0.6})`;
-    context.lineWidth = 1.2;
-    context.beginPath();
-    for (const [x, y, rx, ry] of puddleEllipses) {
-      context.moveTo((x + rx) * size, y * size);
-      context.ellipse(x * size, y * size, rx * size, ry * size, 0, 0, Math.PI * 2);
-    }
-    context.fill(); context.stroke();
-    context.strokeStyle = `rgba(178, 201, 192, ${opacity * 0.5})`;
-    context.lineWidth = 1;
-    context.beginPath();
-    context.ellipse(-size * 0.1, -size * 0.13, size * 0.65, size * 0.33, 0, Math.PI * 1.1, Math.PI * 1.7);
-    context.stroke();
+    const extent = puddleArt.tileSize * size / puddleArt.referenceSize;
+    context.globalAlpha = puddleArt.opacityFor(opacity);
+    context.drawImage(puddleTiles[puddleArt.variantFor(puddle)],-extent/2,-extent/2,extent,extent);
     context.restore();
   }
 }

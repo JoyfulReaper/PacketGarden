@@ -166,13 +166,15 @@ for(const type of ['vine','wirefern']){
     for(let i=0;i<8;i++)createStormPuddle(Date.now(),()=>.5);drawGarden()`);
   weather(dense);
   dense.run('for(let i=0;i<3;i++){createFirstSeenCuriosity(gardenState.specimens[i],()=>.875);scheduleLooseDrop(gardenState.specimens[i],"amanita_muscaria",()=>.5,Date.now()-5000)}updateLooseDrops();startGnomeIncident(Date.now(),()=>.5);gardenPerf.reset()');
-  const denseStart=dense.clock.now;let bitmapCopies=0;
+  const denseStart=dense.clock.now;let bitmapCopies=0,waterTiles=0;
   for(let frame=1;frame<=120;frame++){
     dense.drawing.length=0;dense.frame(denseStart+frame*1000/120);if(frame%30===0)dense.tick();
-    bitmapCopies+=dense.drawing.filter(call=>call[0]==='drawImage').length;
+    bitmapCopies+=dense.drawing.filter(call=>call[0]==='drawImage'&&call.surface==='overlay').length;
+    waterTiles+=dense.drawing.filter(call=>call[0]==='drawImage'&&call.surface==='base').length;
   }
   const work=snapshot(dense);
   assert.equal(work.counts.baseRebuilds,1);assert.equal(work.counts.overlayPaints,30);assert.equal(bitmapCopies,0);
+  assert.equal(waterTiles,8,'finite puddle tiles only submit on the single cached-base deadline');
   assert.equal(work.counts.vineLookupBuilds,1);assert.equal(work.counts.vineNeighborChecks,type==='vine'?5120:0);
   assert.equal(type==='vine'?work.counts.vinesRendered:work.counts.wirefernsRendered,640);
 }

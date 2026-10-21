@@ -803,13 +803,22 @@ Implemented first slice:
   drain gradually;
 - 30 seconds after the last refresh, water gradually shrinks/fades over eight
   minutes before disappearing;
-- three stable procedural ellipses per patch render in the cached scene after
-  grass and before specimens; no RAF-based terrain rendering or extra timers;
+- four shared illustrated pool variants replace the three overlapping ellipses:
+  irregular soft shores, blue-green/slate water, lighter shallows, broken sky
+  reflections and restrained static glints. The existing seed selects a stable
+  silhouette/palette through growth, refresh and drainage. Canvas caches four
+  tiles; Pixi bakes four frames into the existing ecology atlas with one Sprite
+  per puddle. Cached order remains grass -> water -> specimens, with unchanged
+  visual deadlines and no extra animation, shader, particle or timer;
 - no collection, Recent activity entry, provenance, inventory, or persistence.
 
 Water does not damage plants or create a survival mechanic. Grass beneath water
 looks tinted/partially submerged and returns to normal as the puddle drains,
 without any change to grass lifetime, influence, or spreading.
+The artwork pass changes no logical dimensions, positions, weather eligibility,
+creation rolls, frog wetness thresholds or exact-puddle references. Matching
+small/large/overlap/grass/frog/day/night/hurricane/drain captures and resource
+measurements are recorded in [Pixi live notes](PIXI-LIVE.md#illustrated-storm-puddles-2026-10-21).
 
 Temporary water now supports the passive frogs described above. Further
 interactions remain future work:

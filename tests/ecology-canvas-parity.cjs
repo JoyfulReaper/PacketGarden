@@ -6,4 +6,4 @@ for(const test of require('./fixtures/production-ecology-art.json').cases){
   else garden.run(`gardenState.puddles=[fixtureItem];drawGardenPuddles(${test.at})`);
   assert.deepEqual(JSON.parse(JSON.stringify(garden.drawing)),test.commands,`reviewed Canvas ${test.kind} artwork at ${test.at}ms`);
 }
-console.log('PASS: exact reviewed grass artwork and original puddle commands/styles across growth/fade/color/drain/expiry boundaries.');
+console.log('PASS: exact reviewed grass artwork and cached puddle commands/styles across growth/fade/color/drain/expiry boundaries.');

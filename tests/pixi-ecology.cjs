@@ -5,7 +5,7 @@ const E=require('../wwwroot/garden-ecology.js'),presentation=require('../wwwroot
 const liveCore=require('../wwwroot/pixi-live-core.js'),shared=require('../wwwroot/pixi-stress.js');
 const {createView}=require('../wwwroot/pixi-live.js');
 const startTextures=harness.textureCount(),startGenerated=harness.generated();
-const atlas=presentation.makeEcologyAtlas(P,renderer);assert.equal(atlas.frames.size,13);
+const atlas=presentation.makeEcologyAtlas(P,renderer);assert.equal(atlas.frames.size,16);
 assert.equal(new Set([...atlas.frames.values()].map(t=>t.source)).size,1);
 const view=createView(P,{stage:new P.Container()},cache.frames,liveCore,shared);
 const ev=presentation.createEcologyView(P,view.grassLayer,view.puddleLayer,atlas.frames);
@@ -30,7 +30,7 @@ for(let cycle=0;cycle<10;cycle++){
   for(const [k,s] of puddleViews)assert.equal(ev.puddleViews.get(k),s);
   for(const p of m.puddles)m.refreshStormPuddle(p,now);
   for(const [k,s] of puddleViews)assert.equal(ev.puddleViews.get(k),s);
-  assert.equal(harness.textureCount(),startTextures+13);assert.equal(harness.generated(),startGenerated+1);
+  assert.equal(harness.textureCount(),startTextures+16);assert.equal(harness.generated(),startGenerated+1);
   assert.equal(view.snapshot().displayObjects,1366);
   m.clear();assert.equal(ev.grassViews.size,0);assert.equal(ev.puddleViews.size,0);
 }
@@ -51,4 +51,4 @@ assert.doesNotMatch(ec,/EventSource|fetch\(|setTimeout|setInterval|localStorage|
 assert.match(script,/ecology.resetCadence\(at\)/);assert.match(script,/ecology.tick\(at\)/);
 assert.equal((fs.readFileSync('wwwroot/pixi-live-core.js','utf8').match(/new Source/g)||[]).length,1);
 assert.doesNotMatch(fs.readFileSync('wwwroot/canvas.html','utf8'),/pixi/i);
-console.log('PASS: persistent grass/puddle identity/exact removal; 640+8 ownership; 13 fixed frames/one source across repeated births; static grass deadlines; unchanged weather ownership; local seed/clear; shared lifecycle/visibility; production isolation.');
+console.log('PASS: persistent grass/puddle identity/exact removal; 640+8 ownership; 16 fixed frames/one source across repeated births; static grass deadlines; unchanged weather ownership; local seed/clear; shared lifecycle/visibility; production isolation.');

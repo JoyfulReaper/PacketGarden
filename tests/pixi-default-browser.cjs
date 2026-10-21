@@ -16,6 +16,10 @@ async function run() {
   const legacy = new Map(['pixi-live.js','pixi-live.css'].map(file => [file,
     execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], {cwd:root})]));
   const unversioned = process.argv.includes('--unversioned');
+  const puddleBaseline=process.argv.includes('--puddle-baseline');
+  const puddleCheckpoint='ab1919ce100f3073bfe5aa07bd0c826a54df29da';
+  const oldPuddleArt=new Map(puddleBaseline?['garden-puddles.js','pixi-live-ecology.js'].map(file=>[file,
+    execFileSync('git',['show',`${puddleCheckpoint}:wwwroot/${file}`],{cwd:root})]):[]);
   const output = path.resolve(root, process.env.PACKETGARDEN_BROWSER_OUTPUT || path.join('artifacts', unversioned ? 'homepage-negative' : 'homepage-browser'));
   await fs.mkdir(output, {recursive:true});
   let promoted = false, connections = 0;
@@ -54,6 +58,11 @@ async function run() {
     PacketGardenStillbloom.createModel=(...args)=>{const model=createStillbloom(...args);window.__gardenTestStillbloom??=model;return model;};
     PacketGardenCore.createGardenModel=(...args)=>{const garden=createGarden(...args);window.__gardenTestGarden??=garden;return garden;};
     PacketGardenEcology.createEcologyModel=(...args)=>(window.__gardenTestEcology=createEcology(...args));
+    const makeEcologyAtlas=PacketGardenPixiEcology.makeEcologyAtlas,createEcologyView=PacketGardenPixiEcology.createEcologyView;
+    window.__gardenEcologyBakes=0;
+    PacketGardenPixiEcology.makeEcologyAtlas=(...args)=>{const at=performance.now();window.__gardenEcologyBakes++;
+      const atlas=window.__gardenTestEcologyAtlas=makeEcologyAtlas(...args);window.__gardenEcologyBakeMs=performance.now()-at;return atlas;};
+    PacketGardenPixiEcology.createEcologyView=(...args)=>(window.__gardenTestEcologyView=createEcologyView(...args));
     const createAmbient=PacketGardenAmbient.createAmbientModel;
     PacketGardenAmbient.createAmbientModel=(...args)=>(window.__gardenTestAmbient=createAmbient(...args));
     const makeAmbientAtlas=PacketGardenPixiAmbient.makeAmbientAtlas,createAmbientView=PacketGardenPixiAmbient.createAmbientView;
@@ -63,7 +72,8 @@ async function run() {
     if(window.PacketGardenFrogs){
       const createFrogs=PacketGardenFrogs.createModel,frogRandom=PacketGardenFrogs.seededRandom(731),createFrogView=PacketGardenPixiAmbient.createFrogView;
       // Isolate unrelated regression fixtures from chance; diagnostic planning uses its own fixed stream.
-      PacketGardenFrogs.createModel=options=>(window.__gardenTestFrogs=createFrogs({...options,random:()=>window.__frogPlanning?frogRandom():.99}));
+      PacketGardenFrogs.createModel=options=>(window.__gardenTestFrogs=createFrogs({...options,
+        random:()=>window.__frogPlanning||new URLSearchParams(location.search).has('puddle-art')?frogRandom():.99}));
       PacketGardenPixiAmbient.createFrogView=(...args)=>(window.__gardenTestFrogView=createFrogView(...args));
     }
     const createGnomeView=PacketGardenPixiGnomes.createGnomeView,makeGnomeAtlas=PacketGardenPixiGnomes.makeGnomeAtlas;
@@ -97,6 +107,10 @@ async function run() {
       const url = new URL(req.url, 'http://localhost'), file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
       requests.push({url:req.url, promoted});
       if (file === 'favicon.ico') { res.writeHead(204); res.end(); return; }
+      if(file==='__puddle-canvas.js'){res.setHeader('Content-Type','text/javascript');res.end(`{
+        const create=PacketGardenFrogs.createModel,random=PacketGardenFrogs.seededRandom(731);
+        PacketGardenFrogs.createModel=options=>create({...options,random});
+      }`);return;}
       if (file === '__capture.js') { res.setHeader('Content-Type','text/javascript');
         // The historical warm atlas only knows network species. New ambient art
         // is tested after promotion; it must not break the cache regression setup.
@@ -113,7 +127,7 @@ async function run() {
       }
       const absolute = path.resolve(assets, file);
       if (!absolute.startsWith(assets + path.sep)) { res.writeHead(404); res.end(); return; }
-      let body = await fs.readFile(absolute);
+      let body = oldPuddleArt.get(file) ?? await fs.readFile(absolute);
       if (file.endsWith('.html')) {
         let html = body.toString();
         // Warm the checkpoint's original unversioned URLs, even when the current
@@ -123,6 +137,8 @@ async function run() {
         // Capture the actual application without changing its scheduling or drawing.
         html = html.replace(/(<script src="pixi-live\.js(?:\?[^"]*)?" defer)/,
           '<script src="/__capture.js" defer></script>\n$1');
+        if(file==='canvas.html'&&url.searchParams.has('puddle-art'))html=html.replace(/(<script src="garden\.js(?:\?[^"]*)?" defer)/,
+          '<script src="/__puddle-canvas.js" defer></script>\n$1');
         body = Buffer.from(html);
       }
       res.setHeader('Content-Type', file.endsWith('.html') ? 'text/html' : file.endsWith('.js') ? 'text/javascript' : 'text/css');
@@ -137,6 +153,7 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--puddle-art-only')){promoted=true;await checkPuddleArt();return;}
     if(process.argv.includes('--frogs-only')){promoted=true;await checkFrogs();return;}
     if(process.argv.includes('--gnome-harvest-only')){promoted=true;await checkHarvest();return;}
     if(process.argv.includes('--weed-bud-only')){
@@ -314,6 +331,7 @@ async function run() {
     await checkWeedBuds(diagnostic);
     await checkHarvest();
     await checkFrogs();
+    await checkPuddleArt();
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -337,6 +355,97 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+
+  async function checkPuddleArt() {
+    const at=Date.UTC(2026,9,21,12),errors=[],report={};
+    // Exactly the same authoritative objects, clocks, seeds and locations before/after artwork changes.
+    async function scene(page,pixi,name) {
+      await page.evaluate(({pixi,name,at})=>{
+        const ecology=pixi?__gardenTestEcology:gardenEcology,frogs=pixi?__gardenTestFrogs:gardenFrogs;
+        frogs.clear(at);const large=name!=='small',age=name==='drained'?500000:large?20000:0;
+        const pool=(x,y,seed)=>({x,y,seed,size:large?36:10,maxSize:large?36:18,createdAt:at-age,lastRefreshedAt:at-age});
+        const puddles=name==='overlap'?[pool(448,300,.03),pool(480,304,.29),pool(511,294,.56)]:
+          name==='frogs'?[pool(460,300,.29)]:[.03,.29,.56,.83].map((seed,i)=>pool(270+i*140,300,seed));
+        const grassCells=name==='grass'?Array.from({length:128},(_,i)=>({column:6+i%20,row:7+Math.floor(i/20),createdAt:at-60000,lastInfluencedAt:at})):[];
+        ecology.seed({puddles,grassCells});
+        if(name==='frogs'){frogs.spawnSimulated(at-1000);frogs.spawnSimulated(at-1000);frogs.tick(at);}
+        if(!pixi){gardenLighting.setMode(name==='night'?'night':'day');updateGardenLighting(at,true);drawGarden();drawGardenOverlay(true);}
+      },{pixi,name,at});
+      if(pixi){await page.locator('#lighting-mode').selectOption(name==='night'?'night':'day');
+        await page.getByLabel('Manual weather',{exact:true}).selectOption(name==='hurricane'?'botnet_hurricane':'quiet');
+        const n=await page.evaluate(()=>__gardenTestPaints);await page.waitForFunction(n=>__gardenTestPaints>n+1,n);
+      }else {await page.getByLabel('Events/min',{exact:true}).fill('10000');await page.getByLabel('Events/min',{exact:true}).dispatchEvent('change');
+        await page.getByLabel('Weather',{exact:true}).selectOption(name==='hurricane'?'botnet_hurricane':'quiet');
+        await page.waitForTimeout(100);}
+    }
+    for(const pixi of [true,false]){
+      const kind=pixi?'pixi':'canvas',page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});
+      page.on('pageerror',e=>errors.push(String(e.stack)));await page.clock.setFixedTime(at);await page.goto(origin+(pixi?'/pixi-live.html':'/canvas.html')+'?puddle-art=1');
+      if(pixi){await page.waitForFunction(()=>window.__gardenTestEcologyView);await page.locator('#probes').uncheck();}
+      await page.getByLabel('Weather source',{exact:true}).selectOption('manual');
+      for(const name of ['small','large','overlap','grass','frogs','night','hurricane','drained']){
+        await scene(page,pixi,name);
+        await page.locator(pixi?'#view canvas':'.garden-stage').screenshot({path:path.join(output,`puddles-${kind}-${name}.png`)});
+      }
+      if(pixi){
+        const png=await page.evaluate(()=>__gardenTestApp.renderer.extract.canvas(__gardenTestEcologyAtlas.atlas).toDataURL());
+        await fs.writeFile(path.join(output,'ecology-atlas.png'),Buffer.from(png.split(',')[1],'base64'));
+      }else{
+        const pngs=await page.evaluate(()=>typeof puddleTiles==='undefined'?[]:puddleTiles.map(tile=>tile.toDataURL()));
+        for(let i=0;i<pngs.length;i++)await fs.writeFile(path.join(output,`canvas-tile-${i}.png`),Buffer.from(pngs[i].split(',')[1],'base64'));
+      }
+      if(pixi)report.resources=await page.evaluate(()=>{
+        const ecology=__gardenTestEcology,view=__gardenTestEcologyView,atlas=__gardenTestEcologyAtlas,cycles=[];
+        for(let n=0;n<20;n++){
+          const now=Date.now();PacketGardenPixiEcology.seedDenseEcology(ecology,now);const sprites=[...view.puddleViews.values()];
+          const frames=sprites.map(s=>s.texture);for(const p of ecology.puddles)ecology.refreshStormPuddle(p,now+1000);
+          view.animate(now+30000);const stable=sprites.every((s,i)=>s===view.puddleViews.get(ecology.puddles[i])&&s.texture===frames[i]);
+          ecology.clear();cycles.push({stable,remaining:view.puddleViews.size,destroyed:sprites.every(s=>s.destroyed)});
+        }
+        return {cycles,bakes:__gardenEcologyBakes,bakeMs:__gardenEcologyBakeMs,frames:atlas.frames.size,
+          backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],sources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
+      });
+      // Assert live scene/cycle errors before closing. Both baseline and current
+      // app have a separate page-close visibility/ticker race after pagehide.
+      assert.deepEqual(errors,[]);page.removeAllListeners('pageerror');await page.close();
+    }
+    assert(report.resources.cycles.every(c=>c.stable&&c.remaining===0&&c.destroyed));assert.equal(report.resources.bakes,1);assert.equal(report.resources.sources,1);
+    assert.equal(report.resources.frames,puddleBaseline?13:16);assert.deepEqual(report.resources.backing,puddleBaseline?[1664,128]:[2048,128]);
+    const sharp=require('sharp');
+    if(!puddleBaseline){
+      report.pixelParity=[];
+      for(let i=0;i<4;i++){
+        const gpu=await sharp(path.join(output,'ecology-atlas.png')).extract({left:(12+i)*128,top:0,width:128,height:128}).ensureAlpha().raw().toBuffer();
+        const cpu=await sharp(path.join(output,`canvas-tile-${i}.png`)).ensureAlpha().raw().toBuffer();let error=0,edge=0;
+        for(let p=0;p<gpu.length;p+=4){for(let c=0;c<3;c++)error+=Math.abs(gpu[p+c]*gpu[p+3]/255-cpu[p+c]*cpu[p+3]/255);
+          error+=Math.abs(gpu[p+3]-cpu[p+3]);const x=p/4%128,y=Math.floor(p/4/128);if(!x||!y||x===127||y===127)edge+=gpu[p+3];}
+        const average=error/gpu.length;assert(average<3,'recognizably matching premultiplied Canvas/Pixi artwork');assert.equal(edge,0,'transparent atlas margins');report.pixelParity.push(average);
+      }
+      const oldAtlas=path.join(output,'..','before','ecology-atlas.png');
+      try{const old=await sharp(oldAtlas).extract({left:0,top:0,width:1536,height:128}).raw().toBuffer();
+        const current=await sharp(path.join(output,'ecology-atlas.png')).extract({left:0,top:0,width:1536,height:128}).raw().toBuffer();
+        assert(old.equals(current),'all twelve grass frames remain pixel-identical');report.grassPixelsUnchanged=true;
+      }catch(e){if(e.code==='ENOENT'||/Input file is missing/.test(e.message))report.grassPixelsUnchanged='baseline not present';else throw e;}
+    }
+    // Native clocks for CPU measurements; screenshot clocks deliberately freeze drainage.
+    const perf=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');
+    await perf.waitForFunction(()=>window.__gardenTestEcologyView);await perf.locator('#probes').uncheck();
+    await perf.evaluate(()=>PacketGardenPixiEcology.seedDenseEcology(__gardenTestEcology,Date.now()));report.pixi=await sample(perf,120);await perf.close();
+    const cp=await browser.newPage();await cp.goto(origin+'/canvas.html');
+    report.canvas=await cp.evaluate(()=>{
+      const at=Date.now(),puddles=Array.from({length:8},(_,i)=>({x:150+i%4*210,y:180+Math.floor(i/4)*240,seed:i/8,size:36,maxSize:36,createdAt:at,lastRefreshedAt:at}));
+      gardenEcology.seed({puddles});const times=[];for(let i=0;i<240;i++){gardenBaseDirty=true;const start=performance.now();paintGardenBase(at);times.push(performance.now()-start);}
+      return {paints:times.length,averageMs:times.reduce((a,b)=>a+b,0)/times.length,worstMs:Math.max(...times)};
+    });await cp.close();assert.deepEqual(errors,[]);
+    await fs.writeFile(path.join(output,'puddle-resources.json'),JSON.stringify(report,null,2));
+    const scenes=['small','large','overlap','grass','frogs','night','hurricane','drained'];
+    await fs.writeFile(path.join(output,'..','comparison.html'),`<!doctype html><meta charset="utf-8"><title>PacketGarden puddle artwork comparison</title>
+      <style>body{background:#1c2922;color:#e1e9d9;font:16px system-ui;margin:24px}section{margin-bottom:32px}h2{font-size:20px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}img{width:100%}figure{margin:0}a{color:#b9d6d0}</style>
+      <h1>Storm puddles: before / after</h1><p>Identical local simulated puddles, seeds, positions, clocks and viewport. No network growth or ecology changes. Full captures retain normal garden scale.</p>
+      ${['pixi','canvas'].flatMap(kind=>scenes.map(scene=>`<section><h2>${kind}: ${scene}</h2><div class="pair">${['before','after'].map(phase=>`<figure><figcaption>${phase}</figcaption><a href="${phase}/puddles-${kind}-${scene}.png"><img src="${phase}/puddles-${kind}-${scene}.png"></a></figure>`).join('')}</div></section>`)).join('')}
+      <p>Measurements: <a href="before/puddle-resources.json">before</a> / <a href="after/puddle-resources.json">after</a>. CPU submission measures do not measure GPU completion.</p>`);
+    console.log('PASS: matching Canvas/Pixi puddle scenes (small/mature/overlap/grass/frogs/night/hurricane/drained), stable frames and 20 cleanup cycles:',JSON.stringify(report));
   }
 
   async function checkFrogs() {
