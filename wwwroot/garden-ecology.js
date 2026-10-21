@@ -18,7 +18,11 @@
     spreadChance: 0.5,
     fadingSeedChance: 0.4,
     maxSpreadAttempts: 4,
-    maxFadingSeedChecksPerTick: 6
+    maxFadingSeedChecksPerTick: 6,
+    initialSeeds: 12,
+    reseedEveryMs: 60_000,
+    reseedChance: 0.25,
+    reseedMinFreeCells: 8
   };
 
   const puddleConfig = {
@@ -50,7 +54,7 @@
     const decline = Math.min(1, Math.max(0,
       (idleMs - grassConfig.fadingAfterMs) / (grassConfig.expiredAfterMs - grassConfig.fadingAfterMs)));
     // Green -> yellow -> brown -> dead turf; interpolate rather than jumping colors.
-    const colors = [[86, 127, 71], [144, 137, 74], [133, 105, 67], [112, 93, 69]];
+    const colors = [[91, 151, 64], [144, 137, 74], [133, 105, 67], [112, 93, 69]];
     const thresholds = [grassConfig.fadingAfterMs, grassConfig.dyingAfterMs,
       grassConfig.deadAfterMs, grassConfig.expiredAfterMs];
     const colorStage = idleMs < thresholds[1] ? 0 : idleMs < thresholds[2] ? 1 : 2;
@@ -94,6 +98,7 @@
     const gardenState = { grassCells: [], puddles: [] };
     const random = () => defaultRandom();
     let nextGrassSpreadAt = 0, weatherLevel = weather;
+    let nextGrassReseedAt = clock() + grassConfig.reseedEveryMs;
     let puddleStormActive = puddleFormationChances.has(weatherLevel);
     let nextPuddleCheckAt = clock() + puddleConfig.checkEveryMs;
     const notify = (kind, item) => onChange({ kind, item });
@@ -160,6 +165,36 @@
       if (index < 0) return null;
       const [grass] = gardenState.grassCells.splice(index, 1);
       notify('grass-removed', grass); return grass;
+    }
+
+    function seedInitialGrass(at = clock()) {
+      const total = columns * rows, count = grassConfig.initialSeeds;
+      for (let region = 0; region < count; region++) {
+        const start = Math.floor(region * total / count), end = Math.floor((region + 1) * total / count);
+        const empty = [];
+        for (let cell = start; cell < end; cell++) {
+          if (!isCellOccupied(cell % columns, Math.floor(cell / columns))
+            && !gardenState.grassCells.some(grass => grass.row * columns + grass.column === cell)) empty.push(cell);
+        }
+        if (!empty.length) continue;
+        const cell = empty[Math.floor(random() * empty.length)];
+        influenceGrassCell(cell % columns, Math.floor(cell / columns), at);
+      }
+    }
+
+    function reseedGrass(at) {
+      if (at < nextGrassReseedAt) return;
+      const missedWindow = at >= nextGrassReseedAt + grassConfig.reseedEveryMs;
+      nextGrassReseedAt = at + grassConfig.reseedEveryMs;
+      if (missedWindow || gardenState.grassCells.length) return;
+      // Only an empty population needs this bounded occupancy scan, once per minute.
+      const empty = [];
+      for (let cell = 0; cell < columns * rows; cell++) {
+        if (!isCellOccupied(cell % columns, Math.floor(cell / columns))) empty.push(cell);
+      }
+      if (empty.length < grassConfig.reseedMinFreeCells || random() >= grassConfig.reseedChance) return;
+      const cell = empty[Math.floor(random() * empty.length)];
+      influenceGrassCell(cell % columns, Math.floor(cell / columns), at);
     }
 
     function grassSpreadAttemptCount(activeCount) {
@@ -311,12 +346,18 @@
     }
     function tickGrass(at = clock(), hidden = false) {
       removeExpiredGrass(at);
-      if (hidden) nextGrassSpreadAt = at + grassConfig.spreadEveryMs;
-      else if (gardenState.grassCells.length) spreadGrass(at);
+      if (hidden) {
+        nextGrassSpreadAt = at + grassConfig.spreadEveryMs;
+        nextGrassReseedAt = at + grassConfig.reseedEveryMs;
+      } else {
+        if (gardenState.grassCells.length) spreadGrass(at);
+        reseedGrass(at);
+      }
     }
     function updateWeatherEligibility(level, at = clock()) { weatherLevel = level; updatePuddleWeather(at); }
     function resetCadence(at = clock()) {
       nextGrassSpreadAt = at + grassConfig.spreadEveryMs;
+      nextGrassReseedAt = at + grassConfig.reseedEveryMs;
       resetPuddleFormationClock(at);
     }
     function clearGrass() { const cells = gardenState.grassCells; gardenState.grassCells = []; for (const cell of cells) notify('grass-removed', cell); }
@@ -350,8 +391,9 @@
       get puddles() { return gardenState.puddles; },
       set puddles(entries) { gardenState.puddles = entries; },
       get nextGrassSpreadAt() { return nextGrassSpreadAt; }, set nextGrassSpreadAt(at) { nextGrassSpreadAt = at; },
+      get nextGrassReseedAt() { return nextGrassReseedAt; },
       get nextPuddleCheckAt() { return nextPuddleCheckAt; }, set nextPuddleCheckAt(at) { nextPuddleCheckAt = at; },
-      influenceGrass, influenceGrassCell, removeGrassCell, grassNeighbors, grassSpreadAttemptCount, spreadGrass, tickGrass, removeExpiredGrass, updateWeatherEligibility, tickPuddles,
+      influenceGrass, influenceGrassCell, removeGrassCell, seedInitialGrass, grassNeighbors, grassSpreadAttemptCount, spreadGrass, tickGrass, removeExpiredGrass, updateWeatherEligibility, tickPuddles,
       createStormPuddle, refreshStormPuddle, removeExpiredPuddles, resetPuddleFormationClock, resetCadence,
       seed, clearGrass, clearPuddles, clear() { clearGrass(); clearPuddles(); },
       tick(at = clock(), { hidden = false } = {}) { tickGrass(at, hidden); return tickPuddles(at, defaultRandom, hidden); }

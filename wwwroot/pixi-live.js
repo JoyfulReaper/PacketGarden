@@ -408,8 +408,8 @@
         ecologyView.change(change, Date.now());
         if (change.kind === 'grass-removed') ui.grassRemoved(change.item);
       } });
-    // Production begins with five distributed grass seeds; real TCPNoise never gains grass influence.
-    for (let i = 0; i < 5; i++) { const cell = i * 128 + Math.floor(Math.random() * 128); ecology.influenceGrassCell(cell % 32, Math.floor(cell / 32)); }
+    // Distributed local seeds; real TCPNoise never gains grass influence.
+    ecology.seedInitialGrass();
     // The default garden omits development controls and timing collection entirely.
     const measurements = hud ? shared.frameWindow() : null;
     const sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');

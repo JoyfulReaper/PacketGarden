@@ -1,3 +1,131 @@
+# Fuller wild grass and natural recovery (2026-10-20)
+
+Canvas and Pixi now share 12 finite grass recipes in `garden-grass.js`: broader
+curved blades, three low groundcover clumps and two or three irregular taller
+fans, with four muted shade groups. The healthy shared tint is richer green;
+the yellow/brown/dead color anchors, growth, decline, opacity, inspection and
+visual deadlines remain. Canvas's rounded blobs and Pixi's thin highlighted
+fans are replaced. Grass still sits below puddles and specimens, and passes
+through the existing local-time surface light. No lighting/weather/audio rules change.
+
+Pixi retains **12 grass frames + one unchanged puddle frame**, one source,
+1664×128 backing (~832 KiB RGBA), and **one Sprite per grass cell**. Construction
+uses 12 temporary Graphics, released after the single startup bake. Shared
+recipes use private deterministic randomness, consuming no ecology or specimen
+rolls. Mature turf creates no frame geometry, texture or transform work; Canvas
+keeps the existing cached-base scheduling. Neighboring clumps can overlap while
+leaving organic soil gaps. The artwork introduces no continuous grass animation.
+
+Both entry points now call shared `seedInitialGrass`: **12** random seeds, one
+per distributed region, skipping occupied cells (and skipping a full region).
+Ordinary spread remains **4 seconds / 50% / 1–4 bounded attempts** from suitable
+mature turf, excluding occupied destinations and never refreshing parents.
+Fading still begins at 20 minutes, dying at 27, dry at 32, expiry at 35; the
+bounded one-time 40% fading seed opportunity is unchanged. Three fixed-seed,
+traffic-free simulations produced 29–31 patches at two minutes and 245–258 at
+ten minutes. This supported keeping the existing spreading probability.
+
+The shared ecology's grass tick now also runs with zero grass. Natural recovery
+checks at most once per **60 seconds**. Only **zero living patches** and **at
+least eight unoccupied specimen cells** permit **one 25% roll**. Success chooses
+one random empty cell and calls `influenceGrassCell`, which rechecks occupancy;
+failure or a newly occupied target produces no retry. At most one new patch is
+created. Surviving dry/unexpired turf also suppresses recovery. The occupancy
+scan is bounded at 640 cells, only on a due empty-population check; normal frame
+work gains no occupancy scans. Hidden ticks skip rolls, visibility transitions
+reset a fresh minute, and whole missed check windows are discarded, with no
+catch-up loop. This allows complete grass loss followed by gnome/expiry soil
+release, a possible natural seed, then ordinary neighboring spread. Isolated
+free cells may still prevent spreading until adjacent soil opens.
+
+This is uncertain ambient ecology: specimen removals do not directly plant
+grass. No changes to SSE/NATS, provenance, accepted growth statistics, Recent
+activity, specimen capacity/lifetimes/rarity, collectibles or gnome rules.
+
+## Visual comparison and reproduction
+
+The installed-Chrome artwork runner adds `--green-grass`, preserving older art
+fixtures. This comparison uses committed baseline
+`dd7f4356b6ed3bcbc3d1d7c3683e1c1af9d76301`; an explicit checkpoint keeps it
+reproducible after later commits. Use the already available Playwright/Chrome
+runtime, without installing dependencies:
+
+```powershell
+node tests/pixi-vine-art-browser.cjs --run --green-grass --checkpoint=dd7f4356b6ed3bcbc3d1d7c3683e1c1af9d76301 --baseline --seconds=5
+node tests/pixi-vine-art-browser.cjs --run --green-grass --checkpoint=dd7f4356b6ed3bcbc3d1d7c3683e1c1af9d76301 --seconds=5
+```
+
+Ignored `artifacts/grass-green/before/` and `after/` hold full-size Pixi and
+Canvas captures, 720px Pixi captures, atlas images/bounds, pixel checks and timing
+JSON. `comparison.png` places both renderers' before/after screenshots together.
+Fixtures use identical simulated specimen coordinates, grass ages/positions,
+weather and lighting: sparse young grass, expanding young clusters, 256 moderate
+patches, 512 dense patches with empty cells, mixed 160 specimens/384 grass,
+640 fading/dying/dry cells, fixed daytime/night and hurricane/eight puddles.
+
+Normal-scale inspection showed fuller, greener overlapping clumps replacing
+the separated thin fans and round Canvas blobs, while retaining open soil,
+young-to-mature size differences, fading straw/brown cues and clear specimens.
+The first review prompted more irregular clump positions and a correction to
+an atlas-margin overhang. The fixture's night preset now explicitly applies
+its surface matrix before capture. Night turf stays readable and rain/puddles
+retain their layer order. Finite patterns remain discoverable in artificial
+uniform fields; this is stylized grass, not a continuously animated lawn.
+
+Pixel checks find **2.69% → 9.57%** mean nontransparent grass-tile coverage,
+with transparent frame margins in all 12 variants. This measures atlas ink,
+not a percentage of garden soil. Every plant/mutation/rain/probe atlas pixel
+and the puddle tile remain byte-identical. Frame dimensions/counts and scene
+object counts are unchanged for comparable populations. Startup's seven extra
+seed Sprites are the only deliberate initial object-count increase.
+
+## Validation and limits
+
+All **53 Node test entry points** pass, including new `grass-recovery.cjs`:
+distributed seeding, exact `.25`/eight-free-cell boundaries, failed checks,
+occupancy revalidation/no retry, suppression with survivors, expiry/real gnome
+recovery, bounded scans, hidden/resume/no catch-up, unchanged spread/lifetimes,
+and Canvas/Pixi state parity. Twenty application recovery/clear cycles retain
+fixed texture generation, atlas frames and live-object counts, and teardown
+releases ownership. Existing artwork/deadline/occupancy/inspection/lighting/weather
+tests remain; Canvas grass command snapshots were deliberately updated for the
+reviewed artwork, while original puddle command snapshots remain unchanged.
+
+Installed Chrome passes the full root/index HTTP-cache/SSE/resize/inspection,
+audio, gnomes/both landscaping modes, hidden/reduced-motion, lighting/night
+rain/bolt, Canvas and stress regression suite, plus this artwork comparison.
+`.NET build` passes with zero warnings/errors; backend checks and actual ASP.NET
+weather-to-SSE integration pass. Backend checks retain NU1900 warnings because
+the NuGet vulnerability-data service is unavailable; no backend code changed.
+
+The five-second artwork samples report CPU render submission and ticker
+intervals, not GPU/compositor completion. Grass produces zero recurring Graphics
+calls or texture generations in these frozen-state samples, and no display
+object growth. The final full comparison ran after the regression browser closed:
+
+| Fixture | Grass / display objects | Mean CPU submission before → after |
+| --- | --- | --- |
+| Moderate mature | 256 / 273 | .098 → .108ms |
+| Dense mature | 512 / 529 | .112 → .121ms |
+| Fading/dying/dry | 640 / 657 | .110 → .118ms |
+| Mixed specimens + grass | 384 / 577 | .113 → .131ms |
+| Mixed + hurricane/puddles | 384 / 585 | .177 → .204ms |
+
+Revised mean ticker intervals were about **16.68ms**, with no >50ms gaps in
+these short samples. Timing differences this small are noisy and are not a
+speedup/regression guarantee. A separate matching 512-patch Canvas fixture,
+12 deliberately forced `drawGarden()` repaints, measured **4.27 → 4.78ms mean**
+and **6.30 → 7.60ms worst**. This includes base drawing and overlay submission;
+it is not a per-frame cost. Static mature grass still schedules no routine base
+repaint, while growing/fading art uses the existing bounded visual deadlines.
+Reproduce that focused measurement with `--scene=grass-mature`, `--baseline`
+and `--label=canvas-before`, then without `--baseline` and with
+`--label=canvas-after`; JSON/captures are saved in those separate directories.
+Allocation checks cover display objects, cached
+textures and geometry ownership, not a heap-allocation or GPU-memory profile. Longer live
+NATS soaks, other browsers/devices/GPUs and extended visual tuning remain.
+Historical measurements below describe their older checkpoints.
+
 # Local-time lighting (2026-10-20)
 
 Pixi's default/diagnostic gardens and the Canvas fallback now share

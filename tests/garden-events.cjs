@@ -42,8 +42,8 @@ vm.runInContext(fs.readFileSync('wwwroot/garden-mutations.js', 'utf8'), sandbox)
 vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ecology.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ambient.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('wwwroot/garden.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('wwwroot/garden.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js', 'utf8'), sandbox);
 const run = code => vm.runInContext(code, sandbox);
 const reset = () => run('gardenState.specimens=[]; gardenState.grassCells=[]; nextGrassSpreadAt=1000000;');
@@ -64,9 +64,9 @@ assert.equal(element('#weather-level').disabled, true);
 assert.equal(element('#weather-intensity').disabled, true);
 assert.equal(element('#weather-status').textContent, 'Live weather disconnected');
 source.onopen(); assert.equal(element('#weather-status').textContent, 'Live weather connected');
-assert.equal(run('gardenState.grassCells.length'), 5, 'garden starts with exactly five grass seeds');
-assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`)).size'), 5, 'initial grass seeds are distinct');
-assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => [g.column, g.row]))'), '[[0,0],[0,4],[0,8],[0,12],[0,16]]');
+assert.equal(run('gardenState.grassCells.length'), 12, 'garden starts with twelve grass seeds');
+assert.equal(run('new Set(gardenState.grassCells.map(g => `${g.column},${g.row}`)).size'), 12, 'initial grass seeds are distinct');
+assert.equal(run('JSON.stringify(gardenState.grassCells.map(g => g.row*32+g.column))'), JSON.stringify(Array.from({length:12},(_,i)=>Math.floor(i*640/12))));
 assert(run('gardenState.grassCells.every(g => g.createdAt === 1000 && g.lastInfluencedAt === 1000)'));
 
 for (const [port, type] of [[443,'broadleaf'],[445,'broadleaf'],[22,'redbloom'],[2222,'redbloom'],[70,'mushroom'],[5432,'flower'],[420,'weed'],[42069,'weed'],[419,'flower'],[421,'flower'],[42068,'flower'],[42070,'flower'],[65535,'flower']]) {
@@ -416,5 +416,5 @@ run("spawnSpecimen('flower','dns',3)");
 assert.equal(run('gardenState.grassCells.length'),0,'fake influence cannot seed beneath a saturated occupied garden');
 sandbox.restoreGrowthSound=originalGrowthSound;
 run('gardenSound.maybePlayGrowthSound=restoreGrowthSound');
-console.log('PASS: five initial grass seeds, growth/vigor/rendering, saturated vigor competition/protection/status/sound isolation, free-cell clustering, fake controls/traffic, DNS/HTTP-only grass, Manual/Live and severe weather, one SSE connection.');
+console.log('PASS: twelve distributed grass seeds, growth/vigor/rendering, saturated vigor competition/protection/status/sound isolation, free-cell clustering, fake controls/traffic, DNS/HTTP-only grass, Manual/Live and severe weather, one SSE connection.');
 require('./garden-audio.cjs')().catch(error => { console.error(error); process.exitCode=1; });

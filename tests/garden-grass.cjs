@@ -4,7 +4,8 @@ const E = require('../wwwroot/garden-ecology.js'), createCanvas = require('./bro
 assert.deepEqual(E.grassConfig, { influenceChances: { dns: .45, http: .65 }, secondCellChance: .35, sameCellChance: .5,
   influenceRadius: 1, growingAfterMs: 10000, matureAfterMs: 30000, fadingAfterMs: 1200000,
   dyingAfterMs: 1620000, deadAfterMs: 1920000, expiredAfterMs: 2100000,
-  spreadEveryMs: 4000, spreadChance: .5, fadingSeedChance: .4, maxSpreadAttempts: 4, maxFadingSeedChecksPerTick: 6 });
+  spreadEveryMs: 4000, spreadChance: .5, fadingSeedChance: .4, maxSpreadAttempts: 4, maxFadingSeedChecksPerTick: 6,
+  initialSeeds:12, reseedEveryMs:60000, reseedChance:.25, reseedMinFreeCells:8 });
 for (const test of require('./fixtures/production-ecology.json').cases) {
   let i = 0;
   const model = E.createEcologyModel({ random: () => test.rolls[i++ % test.rolls.length] });
@@ -56,6 +57,9 @@ for(const [age,stage,growth] of [[0,'sprout',.18],[10000,'growing',.3],[30000,'m
   const v=E.grassVisualState({createdAt:0,lastInfluencedAt:0},age);assert.equal(v.stage,stage);assert.equal(v.growth,growth);
 }
 const grass={createdAt:0,lastInfluencedAt:0};assert.equal(E.nextGrassVisualChangeAt(grass,30000),1200000);
+for(const [at,color] of [[30000,[91,151,64]],[1620000,[144,137,74]],[1920000,[133,105,67]],[2100000,[112,93,69]]]) {
+  assert.deepEqual(E.grassVisualState(grass,at).color,color,'richer healthy green retains the established yellow/brown/dead anchors');
+}
 assert.equal(E.nextGrassVisualChangeAt(grass,1200000),1201000);
 for(const roll of [.399999,.4]) {
   const m=make([roll,0,0]);m.influenceGrassCell(10,10,0);m.tickGrass(1200000);

@@ -2,39 +2,22 @@
 (function () {
   'use strict';
   const ecologyCore = typeof module !== 'undefined' && module.exports ? require('./garden-ecology.js') : window.PacketGardenEcology;
+  const grassArt = typeof module !== 'undefined' && module.exports ? require('./garden-grass.js') : window.PacketGardenGrassArt;
   const grassKey = cell => cell.row * 32 + cell.column;
-  const grassVariants = 12;
-  function grassVariant(cell) {
-    const seed = Math.imul(grassKey(cell) ^ 0x45d9f3b, 0x45d9f3b);
-    return ((seed ^ seed >>> 16) >>> 0) % grassVariants;
-  }
+  const grassVariants = grassArt.variants.length;
+  const grassVariant = grassArt.variantFor;
   function makeEcologyAtlas(P, renderer) {
     const sheet = new P.Container(), keys = [], grassPatches = [];
     for (let variant = 0; variant < grassVariants; variant++) {
-      const patch = new P.Graphics(), bases = []; let seed = variant + 173;
-      const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-      // Separated little fans leave transparent soil gaps even at 640 cells.
-      // Neutral shades inherit the existing green -> straw -> brown tint.
-      for (let tuft = 0; tuft < 2 + variant % 2; tuft++) {
-        let x = 18 + random() * 28, y = 24 + random() * 26;
-        for (let attempt = 0; attempt < 4 && bases.some(base => Math.hypot(base.x - x, base.y - y) < 8); attempt++) {
-          x = 18 + random() * 28; y = 24 + random() * 26;
+      const patch = new P.Graphics();
+      for (let shade = 0; shade < grassArt.shades.length; shade++) {
+        for (const blade of grassArt.variants[variant]) {
+          if (blade.shade !== shade) continue;
+          const p = blade.path;
+          patch.moveTo(p[0], p[1]).quadraticCurveTo(p[2], p[3], p[4], p[5])
+            .quadraticCurveTo(p[6], p[7], p[8], p[9]).lineTo(p[0], p[1]);
         }
-        bases.push({ x, y });
-        patch.moveTo(x - 2, y + .3).quadraticCurveTo(x, y + 1, x + 2, y - .2)
-          .stroke({ color: 0x6c795b, alpha: .4, width: 1 });
-        const blades = 5 + (variant + tuft) % 3;
-        for (let blade = 0; blade < blades; blade++) {
-          const bx = x + (random() - .5) * 3, by = y + (random() - .5) * 2;
-          const lean = (blade / (blades - 1) - .5) * 10.5 + (random() - .5) * 5;
-          const height = 6 + random() * 8, width = .65 + random() * .65;
-          const tipX = bx + lean, tipY = by - height;
-          patch.moveTo(bx - width * .5, by).quadraticCurveTo(bx + lean * .12 - width, by - height * .58, tipX, tipY)
-            .quadraticCurveTo(bx + lean * .45 + width * .4, by - height * .42, bx + width * .5, by)
-            .fill({ color: [0xc6d0bd, 0xdce2c9, 0xb0bfa4][blade % 3], alpha: .6 });
-          if (blade % 2 === 0) patch.moveTo(tipX, tipY).quadraticCurveTo(bx + lean * .28, by - height * .62, bx + lean * .12, by - height * .3)
-            .stroke({ color: 0xffffff, alpha: .5, width: .45 });
-        }
+        patch.fill({ color: grassArt.shades[shade], alpha: .6 });
       }
       patch.position.set(variant * 64, 0); sheet.addChild(patch); grassPatches.push(patch); keys.push(`grass:${variant}`);
     }

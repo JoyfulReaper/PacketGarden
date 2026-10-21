@@ -509,7 +509,8 @@ The existing chance thresholds and cadence remain unchanged. Plant expiry or
 collection creates no grass automatically; neighboring spread may reclaim that
 soil later. Fixture imports also skip occupied cells, so the full 640-specimen
 diagnostic seed starts with zero grass and gains available soil as plants expire.
-With no surviving grass nearby, expiry alone cannot restart a grass population.
+If every grass patch has gone, the implemented natural reseeding below can
+eventually restart the population once sufficient soil becomes available.
 
 The integration uses successful placement callbacks and event-driven removal,
 without a new animation loop or per-frame occupancy sweep. Placement, rarity,
@@ -537,20 +538,37 @@ Ideas already discussed include:
 This should remain light ecology, not a hidden strategy game. Natural expiry should
 continue to matter and equal-strength traffic should not cause constant churn.
 
-## Fuller, greener wild grass (wishlist)
+## Fuller, greener wild grass (implemented)
 
-The current denser grass tufts and grass-clearing behavior are implemented,
-but the grass artwork still looks somewhat sparse and insufficiently green.
-Consider a deliberate **visual-art pass**, not another blind increase in blade
-count: fuller irregular clumps, broader overlapping blades, a richer natural
-green palette with subtle depth variation, and fewer exposed thin stalks.
-It should read as soft living turf rather than isolated spikes or neon carpet.
+Canvas and Pixi share 12 finite recipes of irregular overlapping broad blades,
+low groundcover and two or three taller tufts. Four restrained shades and a
+healthier green tint replace thin highlighted Pixi fans and Canvas's round blobs.
+Growth/shrink/opacity deadlines, yellow-to-brown aging, visible soil, specimen
+silhouettes, picking, puddles and local-time lighting retain their behavior.
+Pixi bakes once at startup, keeps one Sprite per grass cell and releases its
+construction contexts and owned atlas resources. Canvas paints the same recipes
+only when its cached base needs an update; there is no grass animation loop.
 
-Compare real **before/after screenshots** of sparse, growing, mature and fading
-patches at normal garden scale (both Pixi and the Canvas fallback). Preserve
-visible soil, specimen legibility, lifecycle color/state cues, bounded cached
-textures, and performance. Do not change grass ecology, occupancy, probabilities,
-timers or specimen dimensions just to improve the artwork.
+One shared helper starts both gardens with 12 seeds, one random empty cell in
+each distributed region. Natural spreading remains every four seconds, 50% per
+attempt, with 1–4 attempts according to suitable mature population. Parents are
+never refreshed by spreading. Fixed-seed ten-minute fixtures reached 245–258
+patches from 12, so no probability or attempt increase was needed.
+
+Zero living grass now permits occasional natural recovery: at most one check
+per minute, at least eight unoccupied specimen cells, one 25% roll, at most one
+new patch on random empty soil through `influenceGrassCell`. Failures wait;
+surviving turf suppresses recovery. Hidden/resumed pages reset cadence and
+missed whole windows are skipped. Saturation can still eliminate all grass;
+gnomes or expiry merely release soil, allowing a later uncertain natural seed.
+No network events, growth statistics, provenance, rarity or Recent activity change.
+
+Comparable Chrome captures cover sparse/young, moderate/dense, mixed specimens,
+fading/dying, day/night and rain/puddles in both renderers. They prompted more
+irregular clump positioning and transparent atlas-margin corrections. The result
+is fuller and greener with soil gaps and readable specimens. Finite variants
+can still repeat in artificial uniform fields; long live-traffic and other-GPU
+visual tuning remain. See [measurements and reproduction](PIXI-LIVE.md#fuller-wild-grass-and-natural-recovery-2026-10-20).
 
 ## Visual variation
 

@@ -22,7 +22,7 @@ for (const id of ['trigger-gnomes','gnome-test-status','trigger-landscaping','tr
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0 } = {}) {
   let now = 100000, app, observer;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
   let model, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
@@ -60,7 +60,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   const doc = {hidden:false, querySelector:element, currentScript:null,
     body:{classList:{toggle(){}}}, addEventListener:(name, fn) => docHandlers.set(name, fn)};
-  const context = {document:doc, Date:class extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
+  const context = {document:doc, Date:class extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => random()}),
     EventSource:Source, console:{error:error => errors.push(error)},
     ResizeObserver:class {constructor(fn){observer=this;this.callback=fn;} observe(){} disconnect(){this.disconnected=true;}},
     window:{PIXI:{...h.P,Application},AudioContext,matchMedia:()=>media,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
@@ -132,7 +132,7 @@ async function checkDefault() {
   source.onerror(); assert.equal(g.element('#connection').textContent, 'disconnected/reconnecting');
   source.onopen();
   g.frame(5000); assert.equal(plants.children.length, 0, 'no automatic simulated specimens');
-  assert.equal(root.children[3].children.length, 5, 'same five initial grass seeds');
+  assert.equal(root.children[3].children.length, 12, 'shared twelve distributed initial grass seeds');
   assert.equal(root.children[10].visible, false, 'no green probe');
   for (const level of ['quiet','rain','botnet_hurricane']) {
     emit('weather', {level,eventsPerMinute:10000});

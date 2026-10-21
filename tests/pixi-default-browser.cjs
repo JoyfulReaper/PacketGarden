@@ -198,7 +198,10 @@ async function run() {
         await page.getByRole('heading',{name:'Flower',exact:true}).waitFor();
         assert.equal(await page.locator('#specimen-sensor').textContent(),'browser-fixture');
         await page.getByRole('button',{name:'Close specimen information'}).click();
-        assert(soilPixels(png(await page.locator('#view canvas').screenshot())).coverage > .7);
+        // This fixture now has 639 fuller grass patches. Keep visible-soil
+        // checks without requiring the former sparse artwork's bare area.
+        const resizedSoil=soilPixels(png(await page.locator('#view canvas').screenshot()));
+        assert(resizedSoil.coverage > .35,JSON.stringify(resizedSoil));
         assert(await page.locator('.network-activity').isVisible());
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow from activity section');
         if (viewport.width === 320) await page.screenshot({path:path.join(output,route === '/' ? 'root-small-stats.png' : 'index-small-stats.png')});

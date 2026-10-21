@@ -75,7 +75,11 @@ gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
 and collection audio, plus the same Gnome Incident rules. Subsequent Pixi-only
 art passes made plants larger and more distinctive and grass more tuft-like,
 without changing the 32×20 model, ecology, or specimen lifetimes.
-Pixi grass tufts now have slightly fuller fans of pointed blades. Clicking a
+Both renderers now draw fuller, irregular wild grass with broad overlapping
+blades, low groundcover, taller tufts and restrained green shade variation.
+Pixi still uses 12 cached variants and one Sprite per grass cell; Canvas uses
+the same finite shape recipes. Soil gaps, young growth, yellow/brown aging,
+puddle layering and local-time lighting remain visible. Clicking a
 grass-covered tile without a specimen or collectible hit opens a compact
 **Wild grass** card with its current state. This is background ecology, not a
 collectible specimen. Specimens retain priority; bare soil closes the card.
@@ -310,6 +314,16 @@ TCPNoise growth does not directly seed or refresh grass. Grass does not occupy
 specimen slots or affect specimen counts. Natural spread also skips specimen
 cells. Removing/expiring a specimen creates no grass automatically; neighboring
 turf may reclaim the newly available soil on a later ordinary spread attempt.
+Both gardens start with **12 patches**, randomized within distributed regions
+through one shared helper, skipping occupied specimen cells. If no living grass
+survives, a separate bounded check on the existing logical tick runs at most
+once per **60 seconds**: with at least **eight free specimen cells**, a **25%**
+roll may create **one** patch on random available soil. Failed checks wait for
+the next minute. Hidden/resumed pages start a fresh cadence, with no catch-up
+seeds; missed whole check windows are discarded. This can recover turf after
+overcrowding and later gnome removals or expiry, but never guarantees help.
+It creates no network events, Recent activity, provenance or accepted-growth counts.
+
 Once seeded, sparse grass expands into ragged turf on available soil
 over 30 seconds without further traffic. Healthy mature grass now receives 1–4
 bounded spread attempts every 4 seconds as active mature coverage grows; each

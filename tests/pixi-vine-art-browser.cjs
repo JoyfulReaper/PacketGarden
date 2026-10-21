@@ -4,6 +4,7 @@
 // --plants compares Phase 2B against the committed vine renderer, including small views.
 // --grass compares Phase 2C against the committed plant renderer and ecology atlas.
 // --fuller-grass compares the small fullness pass against d91b7a1, preserving older artifacts.
+// --green-grass compares this shared-art/recovery slice against HEAD, including Canvas/night.
 // --size compares specimen presentation scale against the committed tufted-grass garden.
 if (!process.argv.includes('--run')) console.log('SKIP: optional vine-art browser fixture; pass --run.');
 else run().catch(error => { console.error(error); process.exitCode = 1; });
@@ -12,23 +13,27 @@ async function run() {
   const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path');
   const {execFileSync}=require('node:child_process'),{chromium}=require('playwright');
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline'),plants=process.argv.includes('--plants');
-  const fullerGrass=process.argv.includes('--fuller-grass'),grassArt=process.argv.includes('--grass')||fullerGrass;assert(!(plants&&grassArt));
+  const greenGrass=process.argv.includes('--green-grass');
+  const fullerGrass=process.argv.includes('--fuller-grass')||greenGrass,grassArt=process.argv.includes('--grass')||fullerGrass;assert(!(plants&&grassArt));
   const sizeArt=process.argv.includes('--size');assert(!sizeArt||!plants&&!grassArt);
   const seconds=Number(process.argv.find(arg=>arg.startsWith('--seconds='))?.split('=')[1]??20);
   assert(seconds>=5&&seconds<=60);
   const label=process.argv.find(arg=>arg.startsWith('--label='))?.split('=')[1]??(baseline?'before':'after');
-  const sceneNames=sizeArt?['size-sparse','size-dense','size-hurricane']:grassArt?['grass-sparse','grass-young','grass-mature','grass-fading','mixed-grass','mixed-grass-hurricane']:
+  const sceneNames=greenGrass?['grass-sparse','grass-young','grass-moderate','grass-mature','grass-fading','mixed-grass','grass-night','mixed-grass-hurricane']:sizeArt?['size-sparse','size-dense','size-hurricane']:grassArt?['grass-sparse','grass-young','grass-mature','grass-fading','mixed-grass','mixed-grass-hurricane']:
     plants?['broadleaf','blackthorn','weed','mixed','mixed-hurricane']:['vines-quiet','vines-hurricane','mixed-hurricane'];
   const onlyScene=process.argv.find(arg=>arg.startsWith('--scene='))?.split('=')[1];
   assert(!onlyScene||sceneNames.includes(onlyScene));
   assert(/^[a-z0-9-]+$/.test(label));
-  const artifactRoot=path.join(root,'artifacts',fullerGrass?'grass-fullness':sizeArt?'plant-size':grassArt?'grass-art':plants?'plant-art':'vine-art');
+  const artifactRoot=path.join(root,'artifacts',greenGrass?'grass-green':fullerGrass?'grass-fullness':sizeArt?'plant-size':grassArt?'grass-art':plants?'plant-art':'vine-art');
   const output=path.join(artifactRoot,label);await fs.mkdir(output,{recursive:true});
-  const checkpoint=fullerGrass?'d91b7a1':sizeArt?'8b60c29b44546d27a71a06766ae392aee555210c':grassArt?'a90c779b5b8875aa446a780d3b6fef7562e0d62d':plants?'916e7b969ea9218478202593088f6e9de614df26':'a7e391cf0f8a614d763d6fa86f9f474d4a2dd075';
+  const checkpoint=greenGrass?(process.argv.find(arg=>arg.startsWith('--checkpoint='))?.slice(13)??execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim()):fullerGrass?'d91b7a1':sizeArt?'8b60c29b44546d27a71a06766ae392aee555210c':grassArt?'a90c779b5b8875aa446a780d3b6fef7562e0d62d':plants?'916e7b969ea9218478202593088f6e9de614df26':'a7e391cf0f8a614d763d6fa86f9f474d4a2dd075';
+  assert(/^[a-f0-9]{7,40}$/.test(checkpoint));
   const oldRenderer=baseline?execFileSync('git',['show',checkpoint+':wwwroot/pixi-live.js'],{cwd:root}):null;
   const oldEcology=baseline&&grassArt?execFileSync('git',['show',checkpoint+':wwwroot/pixi-live-ecology.js'],{cwd:root}):null;
   const capture=`
     const fixture=window.__vineFixture={paints:[],gaps:[],geometry:0,textures:0,atlases:[],last:null};
+    if(${greenGrass}){const create=PacketGardenLighting.createModel;PacketGardenLighting.createModel=options=>(fixture.lighting=create({...options,getLocalHour:()=>12}));}
+    if(${greenGrass}){const create=PacketGardenLightingView.createSurface;PacketGardenLightingView.createSurface=(...args)=>(fixture.lightSurface=create(...args));}
     const init=PIXI.Application.prototype.init;
     PIXI.Application.prototype.init=function(...args){
       fixture.app=this;
@@ -63,7 +68,7 @@ async function run() {
         return result;
       });
     };
-    for(const name of ['clear','stroke']){const original=PIXI.Graphics.prototype[name];
+    for(const name of ${greenGrass}?['clear','stroke','fill','moveTo','quadraticCurveTo']:['clear','stroke']){const original=PIXI.Graphics.prototype[name];
       PIXI.Graphics.prototype[name]=function(...args){fixture.geometry++;return original.apply(this,args);};}
     for(const [api,name,key] of [[PacketGardenCore,'createGardenModel','garden'],[PacketGardenEcology,'createEcologyModel','ecology']]){
       const original=api[name];api[name]=function(...args){const model=original(...args);fixture[key]=model;return model;};}
@@ -83,7 +88,7 @@ async function run() {
         res.writeHead(200,{'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
         res.write('event: weather\ndata: {"level":"quiet","eventsPerMinute":0}\n\n');return;}
       const absolute=path.resolve(assets,file);if(!absolute.startsWith(assets+path.sep)){res.writeHead(404);res.end();return;}
-      let body=file==='pixi-live.js'&&oldRenderer?oldRenderer:file==='pixi-live-ecology.js'&&oldEcology?oldEcology:await fs.readFile(absolute);
+      let body=file==='pixi-live.js'&&oldRenderer?oldRenderer:file==='pixi-live-ecology.js'&&oldEcology?oldEcology:baseline&&greenGrass&&['garden.js','garden-ecology.js'].includes(file)?execFileSync('git',['show',checkpoint+':wwwroot/'+file],{cwd:root}):await fs.readFile(absolute);
       if(file.endsWith('.html'))body=Buffer.from(body.toString().replace(/(<script src="pixi-live\.js(?:\?[^"]*)?" defer)/,
         '<script src="/__vine-fixture.js" defer></script>$1'));
       res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':'text/css');res.end(body);
@@ -98,6 +103,10 @@ async function run() {
       window.__resetVineRandom=()=>{random=1234;};Math.random=()=>{random=(Math.imul(random,1664525)+1013904223)>>>0;return random/4294967296;};});
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(()=>window.__vineFixture?.app?.ticker?.started);
+    let canvas;
+    if(greenGrass){canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:1});
+      await canvas.addInitScript(()=>{Date.now=()=>1800000000000;let seed=1234;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
+      canvas.on('pageerror',error=>errors.push(String(error.stack)));await canvas.goto(`http://127.0.0.1:${server.address().port}/canvas.html`);}
     const atlas=await page.evaluate(()=>({png:window.__vineFixture.atlasPng,bounds:window.__vineFixture.tileBounds}));
     await fs.writeFile(path.join(output,'atlas.png'),Buffer.from(atlas.png.split(',')[1],'base64'));
     await fs.writeFile(path.join(output,'tile-bounds.json'),JSON.stringify(atlas.bounds,null,2));
@@ -110,11 +119,12 @@ async function run() {
     for(const scene of onlyScene?[onlyScene]:sceneNames){
       const hurricane=scene.endsWith('hurricane');
       for(const stream of streams)stream.write(`event: weather\ndata: ${JSON.stringify({level:hurricane?'botnet_hurricane':'quiet',eventsPerMinute:hurricane?10000:0})}\n\n`);
-      const fixture=await page.evaluate(({scene,plants,grassArt,sizeArt})=>{
+      const fixture=await page.evaluate(({scene,plants,grassArt,sizeArt,greenGrass})=>{
         const f=window.__vineFixture,at=Date.now(),mixed=scene.startsWith('mixed');window.__resetVineRandom();
+        if(greenGrass){f.lighting.setMode(scene==='grass-night'?'night':'day');f.lightSurface.apply(f.lighting.state);}
         const start=performance.now();
-        f.garden.seed(Array.from({length:grassArt&&!mixed?0:sizeArt&&scene==='size-sparse'?96:640},(_,index)=>{
-          const cell=sizeArt&&scene==='size-sparse'?(index*73+7)%640:index;
+        f.garden.seed(Array.from({length:greenGrass?(mixed?160:0):grassArt&&!mixed?0:sizeArt&&scene==='size-sparse'?96:640},(_,index)=>{
+          const cell=greenGrass?(index*73+7)%640:sizeArt&&scene==='size-sparse'?(index*73+7)%640:index;
           const type=mixed||sizeArt?PacketGardenCore.species[index%10]:plants?scene:'vine',timing=PacketGardenCore.timings[type];
           const stage=sizeArt?Math.floor(index/10)%8:Math.floor(cell/32)%8,age=grassArt?(type==='redbloom'?5000:timing.matureAfterMs+1000):!plants&&!sizeArt?(mixed&&cell%10===5?5000:120000):type==='redbloom'?5000:
             stage===0?1000:stage===1?timing.growingAfterMs+1000:stage===7?timing.expiredAfterMs-1000:timing.matureAfterMs+1000;
@@ -124,21 +134,31 @@ async function run() {
         const grass=sizeArt?(scene==='size-sparse'?32:640):plants&&scene!=='mixed-hurricane'?0:640,puddles=sizeArt?(scene.endsWith('hurricane')?8:0):grass?8:0;
         let cells=Array.from({length:grass},(_,cell)=>({column:cell%32,row:Math.floor(cell/32),createdAt:at-60000,lastInfluencedAt:at}));
         if(grassArt){
+          if(greenGrass&&['grass-moderate','grass-mature','grass-night','mixed-grass','mixed-grass-hurricane'].includes(scene))cells=cells.filter(cell=>(cell.column*13+cell.row*7)%10<(scene==='grass-moderate'?4:8));
           if(scene==='grass-sparse')cells=Array.from({length:32},(_,i)=>{const cell=(i*73+17)%640;return {column:cell%32,row:Math.floor(cell/32),createdAt:at-60000,lastInfluencedAt:at};});
           if(scene==='grass-young')cells=cells.filter(cell=>Math.min(...[[6,6],[16,10],[25,14]].map(([x,y])=>Math.hypot(cell.column-x,cell.row-y)))<4.5).map(cell=>{
             const distance=Math.min(...[[6,6],[16,10],[25,14]].map(([x,y])=>Math.hypot(cell.column-x,cell.row-y)));
             return {...cell,createdAt:at-(distance<1.5?60000:1000+(4.5-distance)/4.5*27000)};});
           if(scene==='grass-fading')cells=cells.map((cell,i)=>{const idle=(21+i%14)*60000;return {...cell,createdAt:at-idle-60000,lastInfluencedAt:at-idle};});
+          if(greenGrass&&scene==='grass-sparse')cells=cells.map(cell=>({...cell,createdAt:at-18000}));
         }
         const waterCount=grassArt?(scene.endsWith('hurricane')?8:0):puddles;
         f.ecology.seed({grassCells:cells,puddles:Array.from({length:waterCount},(_,i)=>({x:150+i%4*210,y:180+Math.floor(i/4)*240,seed:i/8,size:18,maxSize:18,createdAt:at-20000,lastRefreshedAt:at}))});
+        if(greenGrass)cells=f.ecology.grassCells;
         if(grassArt||sizeArt)f.ecology.resetCadence(at);
         return {buildMs:performance.now()-start,grass:cells.length,puddles:waterCount,
           grassState:grassArt||sizeArt?cells.map(c=>[c.column,c.row,c.createdAt,c.lastInfluencedAt]):undefined,
           positions:f.garden.specimens.map(p=>[p.type,p.column,p.row,p.vigor,p.colorVariant,...(plants||grassArt||sizeArt?[p.stage]:[])])};
-      },{scene,plants,grassArt,sizeArt});
+      },{scene,plants,grassArt,sizeArt,greenGrass});
       await page.waitForTimeout(1000);
       await page.locator('#view canvas').screenshot({path:path.join(output,`${scene}.png`)});
+      let canvasPaint;
+      if(canvas){const state=await page.evaluate(()=>({specimens:__vineFixture.garden.specimens,grassCells:__vineFixture.ecology.grassCells,puddles:__vineFixture.ecology.puddles}));
+        await canvas.evaluate(({state,scene,hurricane})=>{gardenModel.seed(state.specimens);gardenEcology.seed(state);gardenEcology.resetCadence();
+          gardenLighting.setMode(scene==='grass-night'?'night':'day');updateGardenLighting(Date.now(),true);
+          weatherState.source='manual';weatherState.level=hurricane?'botnet_hurricane':'quiet';weatherState.eventsPerMinute=hurricane?10000:0;drawGarden();},{state,scene,hurricane});
+        await canvas.locator('.garden-stage').screenshot({path:path.join(output,`${scene}-canvas.png`)});
+        canvasPaint=await canvas.evaluate(()=>{const samples=[];for(let i=0;i<12;i++){const start=performance.now();drawGarden();samples.push(performance.now()-start);}return {meanMs:samples.reduce((a,b)=>a+b)/samples.length,worstMs:Math.max(...samples),forcedPaints:samples.length};});}
       const layouts=[];
       const checkSize=async(viewport)=>{
         const layout=await page.evaluate(()=>{
@@ -206,9 +226,9 @@ async function run() {
         assert.equal(data.releasedArtContexts,320,'all new construction contexts released');
         if(grassArt||sizeArt)assert.equal(data.releasedGrassContexts,12,'all temporary grass contexts released');
       }
-      results.push({scene,...fixture,...data});assert.deepEqual(errors,[]);
+      results.push({scene,...fixture,...data,canvasPaint});assert.deepEqual(errors,[]);
       await fs.writeFile(path.join(output,'measurements.json'),JSON.stringify({baseline,checkpoint,seconds,browser:browser.version(),results,errors},null,2));
-      console.log(JSON.stringify({scene,objects:data.objects,linkStrokes:data.linkStrokes,interval:data.interval,submission:data.submission}));
+      console.log(JSON.stringify({scene,objects:data.objects,linkStrokes:data.linkStrokes,interval:data.interval,submission:data.submission,canvasPaint}));
     }
     if(sizeArt&&!baseline){
       const sharp=require('sharp');
@@ -238,17 +258,26 @@ async function run() {
         if(tile===12)assert(!different,'puddle pixels remain identical');
         else {
           assert(different);assert.equal(edge,0,'grass has transparent atlas margins');
-          assert(ink/16384>.01&&ink/16384<.18,'bounded blade coverage, not a solid carpet');
+          assert(ink/16384>.01&&ink/16384<(greenGrass?.4:.18),'bounded blade coverage, not a solid carpet');
           if(!fullerGrass)assert(ink<oldInk/2,'soil gaps come from transparent artwork');
           coverage.before.push(oldInk/16384);coverage.after.push(ink/16384);
         }
       }
       if(fullerGrass){const sum=values=>values.reduce((a,b)=>a+b,0),ratio=sum(coverage.after)/sum(coverage.before);
-        assert(ratio>1.08&&ratio<1.6,'modest increase in transparent blade coverage');coverage.ratio=ratio;}
+        assert(ratio>1.08&&ratio<(greenGrass?15:1.6),'bounded increase in transparent blade coverage');coverage.ratio=ratio;}
       const bounds=JSON.parse(await fs.readFile(path.join(output,'grass-bounds.json'),'utf8'));
       for(const b of bounds)assert(b.x>=1&&b.y>=1&&b.x+b.width<=63&&b.y+b.height<=63,'grass paths stay inside tiles');
       await fs.writeFile(path.join(output,'atlas-pixel-checks.json'),JSON.stringify(coverage,null,2));
       console.log('PASS: all specimen/mutation/rain/probe and puddle pixels unchanged; 12 bounded nonblank grass frames with clear borders and soil gaps.');
+      if(greenGrass&&!onlyScene){
+        const sheet=await browser.newPage({viewport:{width:1640,height:900}}),figures=[];
+        for(const scene of sceneNames){for(const [version,suffix] of [['before',''],['after',''],['before','-canvas'],['after','-canvas']]){
+          const bytes=await fs.readFile(path.join(artifactRoot,version,scene+suffix+'.png'));
+          figures.push(`<figure style="margin:0"><figcaption>${scene} · ${suffix?'Canvas':'Pixi'} ${version}</figcaption><img style="display:block;width:100%" src="data:image/png;base64,${bytes.toString('base64')}"></figure>`);
+        }}
+        await sheet.setContent(`<body style="margin:0;padding:12px;background:#17201b;color:#d4ded3;font:13px system-ui;display:grid;grid-template-columns:repeat(4,1fr);gap:12px">${figures.join('')}</body>`);
+        await sheet.screenshot({path:path.join(artifactRoot,'comparison.png'),fullPage:true});await sheet.close();
+      }
     }
     if(plants&&!baseline){
       const sharp=require('sharp'),beforePath=path.join(artifactRoot,'before','atlas.png'),afterPath=path.join(output,'atlas.png');

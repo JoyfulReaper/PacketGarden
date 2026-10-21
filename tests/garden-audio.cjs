@@ -36,8 +36,8 @@ function createGarden(options = {}) {
   vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-ecology.js', 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-ambient.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js','utf8'),sandbox);
+  vm.runInContext(fs.readFileSync('wwwroot/garden.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox);
   const grow=(type,time=state.now)=>{

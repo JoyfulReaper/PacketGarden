@@ -314,8 +314,9 @@ function updateGarden(now = Date.now()) {
     updateGardenStatus();
   }
   if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) { gardenBaseDirty = true; gardenPerf?.reason("specimen-change"); }
-  gardenEcology.removeExpiredGrass(now);
-  if (gardenState.grassCells.length) spreadGrass(now);
+  gardenEcology.nextGrassSpreadAt = nextGrassSpreadAt;
+  gardenEcology.tickGrass(now, document.hidden);
+  nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
 }
 
 fakeDnsButton.addEventListener("click", () => {
@@ -819,38 +820,27 @@ function drawGrass(grass, now) {
   context.beginPath();
   context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
   context.clip();
-  context.fillStyle = `rgb(${color.join(", ")})`;
   context.globalAlpha = opacity;
-  context.beginPath();
-  const seed = grass.column * 37 + grass.row * 61;
-  for (let blob = 0; blob < 9; blob++) {
-    const angle = (seed % 17) * 0.37 + blob * 2.4;
-    const blobX = x + ((blob % 3 - 1) * 8 + Math.cos(angle) * 1.5) * growth;
-    const blobY = y + ((Math.floor(blob / 3) - 1) * 8 + Math.sin(angle) * 1.5) * growth;
-    const radiusX = (10 + (seed + blob * 3) % 3) * growth * (1 - decline * 0.65);
-    const radiusY = radiusX * (0.78 + ((seed + blob) % 3) * 0.06);
-    const rotation = angle + 0.4;
-    context.moveTo(blobX + Math.cos(rotation) * radiusX, blobY + Math.sin(rotation) * radiusX);
-    context.ellipse(blobX, blobY, radiusX, radiusY, rotation, 0, Math.PI * 2);
+  const art = window.PacketGardenGrassArt;
+  context.translate(x, y);
+  const scale = growth * (1 - decline * .65);
+  context.scale(scale, scale);
+  context.translate(-32, -32);
+  const blades = art.variants[art.variantFor(grass)];
+  for (let shade = 0; shade < art.shades.length; shade++) {
+    const tint = art.shades[shade];
+    context.fillStyle = `rgb(${Math.round(color[0] * (tint >> 16) / 255)}, ${Math.round(color[1] * (tint >> 8 & 255) / 255)}, ${Math.round(color[2] * (tint & 255) / 255)})`;
+    context.beginPath();
+    for (const blade of blades) {
+      if (blade.shade !== shade) continue;
+      const p = blade.path;
+      context.moveTo(p[0], p[1]);
+      context.quadraticCurveTo(p[2], p[3], p[4], p[5]);
+      context.quadraticCurveTo(p[6], p[7], p[8], p[9]);
+      context.closePath();
+    }
+    context.fill();
   }
-  // One fill keeps overlapping blobs translucent enough to retain soil/grid detail.
-  context.fill();
-
-  context.strokeStyle = decline > 0 ? "#a08d60" : "#738254";
-  context.globalAlpha = 0.45 * (1 - 0.8 * decline);
-  context.lineWidth = 1;
-  context.beginPath();
-  const blades = 7;
-  for (let blade = 0; blade < blades; blade++) {
-    // Stable cell-based variation keeps tufts irregular without flickering on redraw.
-    const baseX = x + ((seed + blade * 7) % 21 - 10) * growth;
-    const baseY = y + ((seed + blade * 11) % 21 - 10) * growth;
-    const lean = (grass.column + grass.row + blade) % 3 - 1;
-    const height = (3 + (grass.column * 3 + grass.row + blade * 2) % 4) * growth * (1 - decline * 0.6);
-    context.moveTo(baseX, baseY);
-    context.quadraticCurveTo(baseX + lean, baseY - height / 2, baseX + lean * 2, baseY - height);
-  }
-  context.stroke();
   context.restore();
 }
 
@@ -1111,21 +1101,14 @@ function resizeGarden() {
     || pixelRatio !== gardenView.pixelRatio) drawGarden("resize");
 }
 
-function seedInitialGrass(count = 5, now = Date.now()) {
-  const totalCells = columns * rows;
-  const seeds = Math.min(count, totalCells);
-  for (let seed = 0; seed < seeds; seed++) {
-    const start = Math.floor(seed * totalCells / seeds);
-    const end = Math.floor((seed + 1) * totalCells / seeds);
-    const cell = start + Math.floor(Math.random() * (end - start));
-    influenceGrassCell(cell % columns, Math.floor(cell / columns), now);
-  }
-}
+function seedInitialGrass(now = Date.now()) { gardenEcology.seedInitialGrass(now); }
 
 seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
+  gardenEcology.resetCadence(Date.now());
+  nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
   if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
   if (document.hidden) syncWeatherAnimation();
   else {

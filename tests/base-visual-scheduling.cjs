@@ -86,7 +86,7 @@ grass.run('gardenState.specimens=[];gardenState.grassCells=[{column:0,row:0,crea
 const born=grass.clock.now;
 for(let second=1;second<=30;second++){
   grassWork.reset();grass.drawing.length=0;tick(grass,1000);assert.equal(grassWork.base,1);
-  assert(grass.drawing.some(call=>call[0]==='ellipse'),'growing grass remains visible');
+  assert(grass.drawing.some(call=>call[0]==='quadraticCurveTo'),'growing grass remains visible');
 }
 assert.equal(grass.run('nextBaseVisualAt'),born+1200000);
 grassWork.reset();for(let i=0;i<120;i++)tick(grass);assert.equal(grassWork.base,0);
