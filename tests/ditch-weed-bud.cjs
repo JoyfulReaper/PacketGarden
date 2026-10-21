@@ -60,19 +60,19 @@ for(const action of ['remove','clear','replace','copy','createdAt','id','cell','
   else s[action]++;
   x.ambient.tick(160000);assert.equal(x.ambient.pendingDrops.size,0,action);assert.equal(x.ambient.drops.length,0,action);
 }
-// Four simultaneously due candidates of two types use one three-slot cap, with no eviction/retry.
-const capped=setup();for(let i=0;i<2;i++)capped.ambient.acceptLiveSpecimen(capped.live());
-capped.time(155000);for(let i=0;i<2;i++)capped.ambient.acceptLiveSpecimen(capped.live('mushroom',70));
-capped.time(160000);capped.ambient.tick();assert.equal(capped.ambient.drops.length,3);
-assert.deepEqual(capped.ambient.drops.map(d=>d.type),['ditch_weed_bud','ditch_weed_bud','amanita_muscaria']);
+// Six simultaneously due candidates of two types use one five-slot cap, with no eviction/retry.
+const capped=setup();for(let i=0;i<3;i++)capped.ambient.acceptLiveSpecimen(capped.live());
+capped.time(155000);for(let i=0;i<3;i++)capped.ambient.acceptLiveSpecimen(capped.live('mushroom',70));
+capped.time(160000);capped.ambient.tick();assert.equal(capped.ambient.drops.length,5);
+assert.deepEqual(capped.ambient.drops.map(d=>d.type),['ditch_weed_bud','ditch_weed_bud','ditch_weed_bud','amanita_muscaria','amanita_muscaria']);
 assert.equal(capped.ambient.counts.dropsCapSkipped,1);assert.equal(capped.ambient.pendingDrops.size,0);
-capped.ambient.removeDrop(capped.ambient.drops[0]);capped.ambient.tick(160250);assert.equal(capped.ambient.drops.length,2);
+capped.ambient.removeDrop(capped.ambient.drops[0]);capped.ambient.tick(160250);assert.equal(capped.ambient.drops.length,4);
 const budCap=setup(),waiting=budCap.live();budCap.ambient.acceptLiveSpecimen(waiting);budCap.time(154000);
-for(let n=0;n<3;n++)budCap.ambient.acceptLiveSpecimen(budCap.live('mushroom',70));
-budCap.ambient.tick(159000);assert.equal(budCap.ambient.drops.length,3);budCap.ambient.tick(160000);
+for(let n=0;n<5;n++)budCap.ambient.acceptLiveSpecimen(budCap.live('mushroom',70));
+budCap.ambient.tick(159000);assert.equal(budCap.ambient.drops.length,5);budCap.ambient.tick(160000);
 assert.equal(budCap.ambient.counts.dropsCapSkipped,1);assert.equal(budCap.ambient.pendingDrops.size,0);
 budCap.ambient.removeDrop(budCap.ambient.drops[0]);budCap.ambient.acceptLiveSpecimen(waiting);budCap.ambient.tick(160250);
-assert.equal(budCap.ambient.drops.length,2,'bud cap skip is consumed permanently');
+assert.equal(budCap.ambient.drops.length,4,'bud cap skip is consumed permanently');
 for(const mechanism of ['hidden ticks','stopped tab','late tick']){
   const x=setup();for(let n=0;n<8;n++)x.ambient.acceptLiveSpecimen(x.live());
   if(mechanism!=='late tick')x.ambient.setHidden(true,100000);

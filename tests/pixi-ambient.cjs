@@ -24,6 +24,15 @@ for(let cycle=0;cycle<10;cycle++){
   if(pebble){const s=view.curiosityViews.get(ambient.idFor(pebble)).sprite;assert.equal(s.position.x,pebble.x);assert.equal(s.position.y,pebble.y);}
   ambient.clear();assert.equal(view.curiosityViews.size,0);assert.equal(view.dropViews.size,0);
 }
+for(let cycle=0;cycle<10;cycle++){
+  ambient.seed({drops:Array.from({length:5},(_,i)=>({type:i%2?'amanita_muscaria':'ditch_weed_bud',
+    createdAt:now,expiresAt:now+20000,x:100+i*100,y:300,phase:0}))});
+  assert.equal(view.dropViews.size,5);assert.equal(dropLayer.children.length,5);
+  assert.throws(()=>ambient.seed({drops:Array(6).fill(ambient.drops[0])}),/Invalid ambient seed/);
+  assert.equal(view.dropViews.size,5,'invalid six-drop seed leaves existing five intact');
+  ambient.tick(now+20000);assert.equal(view.dropViews.size,0);assert.equal(dropLayer.children.length,0);
+  assert.equal(h.textureCount(),textureBefore+6);assert.equal(h.generated(),generatedBefore+1);
+}
 V.seedAmbient(ambient,now);const last=ambient.drops[2];ambient.drops[0].expiresAt=now;ambient.tick(now);
 assert.equal(view.dropViews.size,2);assert(view.dropViews.has(ambient.idFor(last)));
 now+=20000;ambient.tick(now);assert.equal(view.curiosityViews.size,0);assert.equal(view.dropViews.size,0);
@@ -38,4 +47,4 @@ view.destroy();curiosityLayer.destroy();dropLayer.destroy();atlas.destroy();asse
 const sourceCode=fs.readFileSync('wwwroot/pixi-live-ambient.js','utf8');assert.doesNotMatch(sourceCode,/setTimeout|setInterval|EventSource|fetch\(|localStorage|sessionStorage/);
 assert.doesNotMatch(fs.readFileSync('wwwroot/canvas.html','utf8'),/pixi/i);
 assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-stress.html','utf8'),/ambient/);
-console.log('PASS: persistent visitor/drop views, movement identity/exact removal, 3+3 caps, six fixed frames across repeated seed/expiry/clear, pebble static, exact-source replacement cancellation, teardown and page isolation.');
+console.log('PASS: persistent visitor/drop views, movement identity/exact removal, 3 visitor/5 drop caps, six fixed frames across repeated seed/expiry/clear, pebble static, exact-source replacement cancellation, teardown and page isolation.');

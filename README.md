@@ -305,7 +305,7 @@ Successful live TCPNoise mushroom growth also gets an independent 1% browser-onl
 roll for a tiny Amanita muscaria loose drop, appearing beside that exact mushroom
 after five seconds. Removing/expiring/displacing the source before then cancels
 the attempt. The mushroom's type, color, vigor, provenance, cell, and lifetime
-remain unchanged. Up to three drops have their own 20-second active lifetime;
+remain unchanged. Up to five drops have their own 20-second active lifetime;
 due candidates at the cap are consumed without retry. Drops occupy no specimen
 cells, affect no grass or puddles, and share the dynamic overlay without repainting
 ecology. Click priority is curiosity, loose drop, mutation, then inspection.
@@ -318,7 +318,7 @@ placed live TCPNoise ordinary `weed` gets exactly one **3%** roll, regardless of
 listening port. A successful attempt waits for that exact weed's maturity
 (60 seconds); removal, replacement or expiry before then cancels it. The small
 olive-green bud lives independently for 20 seconds and leaves its parent intact.
-Buds and Amanita share **three active slots total**, with no eviction or retries
+Buds and Amanita share **five active slots total**, with no eviction or retries
 at the cap. Missed bud activations while hidden or more than 1.5 seconds late
 are discarded. Buds remain still, including with reduced motion enabled.
 
@@ -328,7 +328,7 @@ Recent activity stay unchanged. The port-22 collectible mutation retains its
 separate rules and message. Only `/pixi-live.html` has **Seed weed buds
 (simulated)**, a three-drop mixed/overlap fixture with simulated plants and
 normal drop expiry. Canvas and Pixi share its rules and compact leaf artwork;
-Pixi adds one cached frame, keeping the same three-Sprite limit.
+Pixi adds one cached frame, with at most five loose-drop Sprites.
 
 Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
 and frogs/water interactions remain future work.

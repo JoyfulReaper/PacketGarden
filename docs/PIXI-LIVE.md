@@ -1,5 +1,9 @@
 # Ditch Weed Bud (2026-10-21)
 
+The shared loose-drop cap was subsequently raised from three to **five** for
+both renderers. The mixed diagnostic fixture still seeds three objects; visitors
+and collectible mutations retain their separate caps of three.
+
 Implemented through the existing shared `garden-ambient.js` loose-drop registry,
 pending-source map, logical tick and removal notifications. Successfully placed
 live TCPNoise canonical weeds get one strict **3%** creation roll, with no port
@@ -9,7 +13,7 @@ lifetime are checked again. Pre-activation removal/replacement/expiry/collection
 or clear cancels the pending object. A replacement cannot inherit it.
 
 An activated bud has an independent **20-second** lifetime and never alters its
-parent. Buds and Amanita share **three active drops total**. Due cap skips are
+parent. Buds and Amanita share **five active drops total**. Due cap skips are
 consumed without retry, eviction or backlog. Amanita retains its 1% mushroom roll,
 five-second delay, parent cancellation and original hidden/resume behavior.
 Buds missed while hidden or over **1.5 seconds late** are discarded instead of
@@ -26,13 +30,13 @@ pointed leaves and a shaded interior. The bud stays still with all motion
 preferences. Canvas draws on its existing overlay without invalidating the base.
 Pixi adds **one finite frame** to its startup ambient atlas: **5 → 6** frames,
 still **one GPU source**, with backing **320×64 → 384×64** at resolution two.
-That adds **16 KiB RGBA** before driver/mipmap overhead. The three-drop Sprite cap
-and bake count remain unchanged; collection/expiry/clear destroy owned Sprites.
+That adds **16 KiB RGBA** before driver/mipmap overhead. At most five loose-drop
+Sprites share this atlas; the bake count remains unchanged. Collection/expiry/clear destroy owned Sprites.
 There is no runtime geometry or texture generation for buds.
 
 Development-only **Seed weed buds (simulated)** replaces local fixture state with
 two simulated weeds, a mushroom, grass, one nearby bud and a partially overlapping
-Amanita/bud pair. All three drop slots are shared, all drops expire normally,
+Amanita/bud pair. All five drop slots are shared, all drops expire normally,
 and incoming counters/activity remain untouched. The public pages expose no new
 development controls. Changed scripts have new cache versions.
 

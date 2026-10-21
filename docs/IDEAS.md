@@ -191,7 +191,7 @@ or anything beyond a connection to listening port 22.
 An exact successful live mushroom gets a 1% cosmetic browser roll for a separate
 tiny Amanita muscaria drop after five seconds. The mushroom remains unchanged;
 removal/expiry/displacement before activation cancels the attempt. Drops live in
-their own transient array, with a max-three cap independent of curiosities and
+their own transient array, with a max-five cap independent of curiosities and
 mutations and a 20-second active lifetime. A due attempt at the cap never retries.
 Logical cleanup shares the existing tick, while procedural red caps, white spots,
 and pale stems bob on the dynamic overlay without invalidating base ecology.
@@ -217,7 +217,7 @@ plants and the port-22 redbloom mutation do not produce buds.
 
 The tiny compact olive-green leaf cluster is a separate loose object with its
 own 20-second lifetime. Collecting or ignoring it leaves the weed unchanged.
-Amanita and buds share three active slots total; due cap skips are consumed
+Amanita and buds share five active slots total; due cap skips are consumed
 without retries, queues or eviction. Bud deadlines missed while hidden or more
 than 1.5 seconds late are discarded without catch-up. Amanita keeps its original
 1% live-mushroom roll, five-second delay and hidden/resume behavior.

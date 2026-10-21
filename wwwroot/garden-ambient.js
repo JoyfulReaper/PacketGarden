@@ -5,7 +5,7 @@
   const { width, height, cellSize } = core.dimensions;
   const curiosityConfig = { maxActive: 3, lifetimeMs: 20_000, hitRadius: 9, placementPadding: 14 };
   const curiosityTypes = Object.freeze(['ladybug', 'snail', 'moth', 'shiny_pebble']);
-  const dropConfig = { amanitaDropChance: .01, delayMs: 5_000, maxActiveDrops: 3,
+  const dropConfig = { amanitaDropChance: .01, delayMs: 5_000, maxActiveDrops: 5,
     lifetimeMs: 20_000, hitRadius: 9, placementPadding: 14 };
   const dropTypes = Object.freeze({
     amanita_muscaria: Object.freeze({ sourceType: 'mushroom', chance: .01, delayMs: 5_000 }),
