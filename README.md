@@ -99,6 +99,16 @@ competition, lifecycle, ecology, ambient, mutation and interaction rules.
 The production status area includes Noise Observatory events/minute (five-minute
 average) and its actual last-hour event count, distinct from specimen growth.
 Both Pixi pages include rare, optional storm illumination and opt-in thunder.
+The Canvas-to-Pixi gameplay port is substantially complete: both renderers use the
+same collectible weed mutation of live port-22 redblooms, separate Amanita muscaria
+mushroom drops, the four first-seen visitors, click/collection priority, gnomes,
+grass ecology, Stillbloom and opt-in audio. The ordinary weed species does **not**
+yet shed separate collectible buds; that is a future addition, distinct from the
+port-22 mutation. Deliberate interface/presentation differences remain: Canvas
+retains manual fake-traffic and numerical weather-intensity controls and its
+`?perf=1` profiler, while Pixi uses its own development fixtures/HUD and adds
+optional storm lightning/thunder. The older `docs/PIXI-LIVE.md` sections describing
+missing Pixi systems are preserved historical checkpoints, not a current backlog.
 The desktop/screensaver edition remains an idea; see [Ideas](docs/IDEAS.md).
 
 Both garden renderers now follow the viewer's **local browser time**. Soft cool
