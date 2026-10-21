@@ -266,6 +266,7 @@ async function run() {
     await checkGnomes(diagnostic,broadcast);
     await checkStorm(diagnostic);
     await checkLandscaping(diagnostic);
+    await checkOvercrowding(diagnostic);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -276,7 +277,7 @@ async function run() {
     const canvas = await context.newPage(); await canvas.goto(origin + '/canvas.html');
     await canvas.getByRole('button',{name:'Generate fake DNS event',exact:true}).click();
     assert.match(await canvas.locator('#garden-status').textContent(),/1 flower/);
-    await checkCanvasLandscaping(canvas); await canvas.close();
+    await checkCanvasLandscaping(canvas); await checkCanvasOvercrowding(canvas); await canvas.close();
     const stress = await context.newPage(); await stress.goto(origin + '/pixi-stress.html');
     await stress.waitForFunction(() => document.querySelector('#hud').textContent.includes('WEBGL'));
     await stress.getByRole('combobox',{name:'Scene',exact:true}).selectOption('vines'); await stress.close();
@@ -444,6 +445,57 @@ async function run() {
     assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),remaining);
     await page.emulateMedia({reducedMotion:'no-preference'});
     console.log('PASS: Chrome landscaping real-time sequential snips, two transient sprites, cleanup/cooldown, reduced motion, hidden cancellation and screenshots.');
+  }
+  async function checkOvercrowding(page) {
+    await page.reload();await page.waitForFunction(()=>window.__gardenTestGnomes);
+    await page.locator('#trigger-overcrowding').click();
+    await page.evaluate(()=>{window.__overcrowdingAudit=__gardenTestGnomes.incident;});
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.incident.mode),'overcrowding');
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.byCell.size),640);
+    await page.waitForFunction(()=>__gardenTestGnomes.actors[0]?.state==='snip');
+    await page.locator('#view canvas').screenshot({path:path.join(output,'overcrowding-snip.png')});
+    await page.waitForFunction(()=>!__gardenTestGnomes.incident,null,{timeout:60000});
+    const result=await page.evaluate(()=>({cuts:__overcrowdingAudit.removals,occupied:__gardenTestGarden.byCell.size,
+      sprites:__gardenTestApp.stage.children[0].children[6].children.length}));
+    assert(result.cuts>0&&result.cuts<=32);assert.equal(result.occupied,640-result.cuts);assert.equal(result.sprites,result.occupied);
+    assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[8].children.length),0);
+    assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),0,'silent crew does not initialize audio');
+    await page.locator('#trigger-landscaping').click();
+    assert.match(await page.locator('#landscaping-test-status').textContent(),/cooldown/);
+    await page.emulateMedia({reducedMotion:'reduce'});await page.reload();
+    await page.waitForFunction(()=>window.__gardenTestGnomes);await page.locator('#trigger-overcrowding').click();
+    assert(await page.evaluate(()=>__gardenTestGnomes.actors[0].x===__gardenTestGnomes.actors[0].targetX));
+    await page.waitForFunction(()=>__gardenTestGnomes.actors[0]?.state==='snip');
+    const left=await page.evaluate(()=>{
+      Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));
+      return __gardenTestGarden.byCell.size;
+    });
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.actors.length),0);
+    assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[8].children.length),0);
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});
+      document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.byCell.size),left);
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.incident),null);
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    console.log('PASS: Chrome overcrowding bounded best-effort cuts:',JSON.stringify(result),'shared cooldown, reduced motion, silent/hidden cleanup.');
+  }
+  async function checkCanvasOvercrowding(page) {
+    await page.reload();await page.waitForFunction(()=>typeof gardenGnomes!=='undefined');
+    await page.evaluate(()=>{
+      const types=['flower','mushroom','broadleaf','vine','wirefern','weed'];
+      gardenModel.seed(Array.from({length:640},(_,i)=>({type:types[i%types.length],column:i%32,
+        row:Math.floor(i/32),createdAt:Date.now()-65000,colorVariant:0})));
+      gardenGnomes.startLandscaping(Date.now(),undefined,'overcrowding');
+      window.__canvasOvercrowdingAudit=gardenGnomes.incident;
+    });
+    await page.waitForFunction(()=>gardenGnomes.actors[0]?.state==='snip');
+    await page.locator('canvas').first().screenshot({path:path.join(output,'overcrowding-canvas.png')});
+    await page.waitForFunction(()=>!gardenGnomes.incident,null,{timeout:60000});
+    const result=await page.evaluate(()=>({cuts:__canvasOvercrowdingAudit.removals,occupied:gardenModel.byCell.size}));
+    assert(result.cuts>0&&result.cuts<=32);assert.equal(result.occupied,640-result.cuts);
+    assert.equal(await page.evaluate(()=>gardenState.actors.length),0);
+    assert.match(await page.locator('#garden-status').textContent(),/flower/);
+    console.log('PASS: Chrome Canvas overcrowding bounded best-effort cuts:',JSON.stringify(result),'counts and actor cleanup.');
   }
   async function checkCanvasLandscaping(page) {
     await page.evaluate(()=>{

@@ -1,4 +1,80 @@
-# Gnome Landscaping Department (2026-10-20)
+# Emergency overcrowding relief (2026-10-20)
+
+The existing shared landscaping incident now has an explicit `mode`: `vine` or
+`overcrowding`. Actors, clipper poses, rendering, removal notifications and cleanup
+are reused unchanged in Pixi and Canvas. There are still just 14 shared gnome
+frames, one GPU source, and two incident sprites in one temporary group. No new
+timer, render loop, texture, dependency or backend change.
+
+On the existing 45-second check, the original four-gnome dispute keeps its 2%
+priority. If still idle and off the shared seven-minute landscaping cooldown:
+
+- **640 occupied specimen cells:** make one overcrowding roll, successful only
+  below **.25**. Never also make a vine roll, even if vines qualify or relief fails.
+- **Below capacity:** retain the existing 20-vine/40%-coverage eligibility and
+  **.10** vine roll, 25% trim share and eight-target cap.
+- Failure schedules no retry until the next check and never changes cooldown.
+  Successful arrival, including a subsequently cancelled visit, starts cooldown.
+
+Overcrowding samples at most **64 random original eligible specimens without
+replacement**. Any ordinary living species can qualify; protected rare species,
+Pixi palette index 4, every Canvas rare palette (including `broadleafVariant ===
+'rainbow'`), active/pending mutations and collectible mutations cannot. Each
+scheduled cut uses the same immediate object/id/cell/coordinates/creation-time,
+occupancy, lifetime and protection revalidation before `source.remove()`.
+Stale remaining sampled targets are skipped. Replacement specimens and new
+arrivals are never added to the route.
+
+Stop cutting at **32 currently free cells**, **32 successful removals**, sample
+exhaustion, or a **45-second work deadline**. The free-cell check uses the
+authoritative occupancy Map; unrelated expiry/collection can satisfy the goal.
+Only successful `remove()` calls increment the incident's local removal count.
+Incoming traffic can refill freed cells, so even 32 cuts can leave no free space.
+The fixed sample and deadline keep repeated replacement/refill from extending
+work indefinitely. Ideal 250ms ticks complete a full visit in about 41 seconds;
+real timer delays can exhaust the deadline with fewer cuts even without traffic. An exit
+already underway can finish up to 750ms plus logical-tick rounding after the
+deadline; a visit still working at the deadline clears immediately.
+
+Worker travel (750ms) and visible snip holds (at least 500ms), stationary
+supervision, silence, reduced-motion poses, hidden cancellation and >1.5s logical
+stall cancellation are inherited. Action and stop decisions run only on logical
+ticks, with no per-frame population scans. Ordinary removal updates vine
+connections, cached rendering, inspection, mutation cleanup and cell occupancy.
+SSE/NATS, normal growth/competition/rarity, provenance, accepted-growth statistics
+and Recent activity are unchanged. These volunteers do not guarantee assistance.
+
+`/pixi-live.html` retains **Trigger landscaping (simulated)** for vine mode and
+adds **Trigger overcrowding relief (simulated)**. The latter seeds a full
+640-specimen ordinary mixed fixture if needed (flower, mushroom, broadleaf, vine,
+wirefern and weed), then starts relief without a probability roll. Both enforce
+their own mode's eligibility, mutual exclusion and the same cooldown. Clear
+does not reset cooldown; a blocked click does not reseed. Fixtures use simulated
+provenance and bypass network input, acceptance counters and Recent activity.
+No diagnostic control is present on `/` or `/index.html`.
+
+`node tests/gnome-overcrowding.cjs` covers 639/640 occupancy, exact .25 boundary,
+single scheduled rolls, mode priority, shared cooldown, random sampling and all
+protection forms, free-space/removal/duration stops, refilling, stale identities,
+hidden handling, Canvas/Pixi counts/connections/inspection parity, both diagnostic
+buttons and 20 repeated incidents without growing display-object/texture counts.
+The existing vine and four-gnome suites retain their original assertions.
+The installed-Chrome suite (`node tests/pixi-default-browser.cjs --run`) now
+exercises complete real-time overcrowding visits in both renderers and Pixi
+reduced-motion/hidden cancellation; screenshots use
+`artifacts/homepage-browser/overcrowding-*.png`. Long real-NATS traffic sessions,
+frequency tuning and GPU profiling remain outside this slice.
+
+Validation: all **51 Node entry points** pass, along with the installed-Chrome
+regression suite, .NET build (zero warnings/errors), backend checks and actual
+ASP.NET polling/SSE integration. The checks project retains its NU1900 warning
+about unavailable NuGet vulnerability data. Browser/local-server integration
+needed execution outside the sandbox's socket restrictions. In the final real-time
+run, Pixi made 32 cuts (608 occupied cells); Canvas made 31 cuts (609 occupied)
+before the work deadline. Both cleaned up correctly. This is intentional
+best-effort behavior, not a promise to restore all 32 empty cells.
+
+# Gnome Landscaping Department — vine mode (2026-10-20)
 
 Implemented in the shared `garden-gnomes.js` model for the default Pixi garden,
 `/pixi-live.html` and Canvas. The existing 45-second eligibility check first

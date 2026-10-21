@@ -81,7 +81,8 @@ When ordinary living vines reach **40% of living specimens**, with at least
 **20 eligible vines**, the shared 45-second gnome check gets a **10%** landscaping
 roll. A **seven-minute cooldown** runs from each crew's arrival, even if it is
 cancelled. The four-gnome dispute takes priority on a shared check; neither
-incident overlaps or interrupts the other.
+incident overlaps or interrupts the other. A full garden instead selects the
+overcrowding mode below, with no additional vine roll.
 
 Two gnomes arrive: a worker carries hedge clippers and a stationary supervisor
 watches unhelpfully. They select about **25% of eligible vines** (rounded, capped
@@ -106,6 +107,38 @@ No extra timers, per-frame population scans, persistence, scores or chores.
 vines if needed and starts a visit, while retaining eligibility and cooldown.
 Long live-traffic visual tuning remains a follow-up, not a gardening mechanic
 or network/security response.
+
+#### Emergency overcrowding relief (implemented)
+
+When **all 640 specimen cells are occupied**, the same department gets one **25%**
+roll per scheduled 45-second check. Failure does nothing until the next check and
+does not reset the shared seven-minute cooldown. Overcrowding takes priority over
+vine control when both qualify; the existing four-gnome dispute still goes first.
+These are unreliable volunteers with questionable professional qualifications,
+not guaranteed assistance or a garden management control.
+
+The same worker and supervisor aim for **32 empty cells** (5% of capacity),
+cutting random ordinary living plants of any species. They stop removing plants
+when 32 cells are free or **32 successful removals** have occurred. Traffic may
+immediately refill cleared cells, so free space is best effort. Rare species,
+all rare palettes (including rainbow broadleaves), active/pending mutations and
+collectibles are excluded. Exact identity, occupancy, creation time, lifetime and
+protection are rechecked before every cut; replacements are never targeted by cell.
+
+At arrival, sample at most **64 original targets without replacement**, with no
+new arrivals added to the route. Stale remaining targets are skipped and an
+exhausted sample ends the visit. A **45-second work deadline** also ends the
+incident; an exit already in progress takes at most another 750ms plus tick
+rounding. Ideal 250ms ticks complete 32 cuts in about 41 seconds; real timer
+delays can reach the deadline with fewer cuts even without incoming traffic.
+Shared hidden-tab, reduced-motion, silent presentation and cleanup rules apply. No changes to
+growth rules, acceptance counts, provenance, SSE/NATS or Recent activity.
+
+The development-only **Trigger overcrowding relief (simulated)** button at
+`/pixi-live.html` can seed a full ordinary mixed garden and start this mode
+independently of vine diagnostics. Both buttons retain the shared cooldown;
+neither is exposed on the homepage. Long real-traffic frequency/visual tuning
+remains a follow-up.
 
 Ambient incidents should not claim to represent attacks, failures, threat levels,
 or specific protocols unless an event is explicitly designed around trustworthy

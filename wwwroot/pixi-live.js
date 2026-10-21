@@ -373,18 +373,20 @@
         nextSimulatedWinner = simulatedWinner === 'green' ? 'red' : 'green';gnomeView.animate(Date.now());
       } else { simulatedWinner=null;if(status)status.textContent='Requires at least 30 living specimens. Seed a garden or wait for live growth.'; }
     });
-    document.querySelector('#trigger-landscaping')?.addEventListener('click', () => {
+    const triggerLandscaping = mode => {
       const status = document.querySelector('#landscaping-test-status');
       if (gnomes.incident) { status.textContent='An incident is already active.'; return; }
       if (Date.now() < gnomes.lastLandscapingAt + window.PacketGardenGnomes.landscapingConfig.cooldownMs) {
         status.textContent='Seven-minute landscaping cooldown is active.'; return;
       }
       // Explicit local fixture: no SSE events, fabricated provenance, activity or accepted-growth counts.
-      if (!gnomes.landscapingEligible()) model.seedLandscaping();
-      status.textContent = gnomes.startLandscaping() ? 'Simulated landscaping · real local vine removals, no network event.'
-        : 'Seven-minute landscaping cooldown is active.';
+      if (!gnomes.landscapingEligible(Date.now(), null, mode)) model.seedLandscaping(mode);
+      status.textContent = gnomes.startLandscaping(Date.now(), undefined, mode) ? `Simulated ${mode} landscaping · real local removals, no network event.`
+        : 'Landscaping could not start; eligibility and cooldown still apply.';
       gnomeView.animate(Date.now());
-    });
+    };
+    document.querySelector('#trigger-landscaping')?.addEventListener('click', () => triggerLandscaping('vine'));
+    document.querySelector('#trigger-overcrowding')?.addEventListener('click', () => triggerLandscaping('overcrowding'));
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
@@ -470,7 +472,7 @@
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
-        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.phase ?? 'idle'} · 14 cached frames / 1 GPU source`,
+        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · 14 cached frames / 1 GPU source`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,

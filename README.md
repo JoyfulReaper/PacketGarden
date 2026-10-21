@@ -213,15 +213,30 @@ identity, occupancy, creation time and current lifetime/eligibility are checked
 again; missing targets are skipped. Silvervines, mutations and unrelated or
 protected plants are never trimmed. Freed cells become available to normal growth.
 
-Both renderers share these rules. A visit lasts about 7–11 seconds at normal
-cadence, cannot overlap the four-gnome dispute, and leaves no incident actors or
+At **640 occupied specimen cells**, the same department may instead attempt
+**emergency overcrowding relief**: one 25% roll per 45-second check, with no vine
+roll on that check. A failed roll does nothing and does not reset the shared
+seven-minute cooldown. The gnomes are unreliable volunteers with questionable
+professional qualifications; assistance is not guaranteed. They cut random
+ordinary living plants of any species, excluding rare species/palettes,
+mutations and collectibles. They aim for 32 free cells but never make more than
+32 successful removals. Incoming traffic may refill those cells immediately.
+At most 64 original targets are sampled once; stale identities are skipped,
+new arrivals are never chased, and work ends after 45 seconds or sample exhaustion.
+
+Both renderers share these rules. Vine visits last about 7–11 seconds;
+overcrowding work is bounded at 45 seconds and timer delays can mean fewer cuts.
+Neither overlaps the four-gnome dispute, and both leave no incident actors or
 display objects behind. Reduced motion uses discrete positions and still poses.
 Hidden tabs or logical stalls over 1.5 seconds cancel the crew without replay;
 the cooldown remains. Landscaping is silent ambient nonsense, unrelated to
 network security, and adds no network events, Recent activity, scores or growth
 statistics. The development-only **Trigger landscaping (simulated)** button on
 `/pixi-live.html` seeds ordinary local vines if needed and skips the chance/wait
-for a check, retaining eligibility and cooldown. Clear does not reset cooldown.
+for a check, retaining eligibility and cooldown. **Trigger overcrowding relief
+(simulated)** independently seeds a full mixed ordinary garden if needed and
+starts that mode. Both diagnostic buttons share cooldown and mutual exclusion.
+Clear does not reset cooldown.
 Long live-traffic visual tuning remains; see [Pixi notes](docs/PIXI-LIVE.md).
 
 Very occasionally, a live port-22 redbloom may itself become a collectible weed
@@ -480,7 +495,11 @@ Gnome checks run with `node tests/gnome-events.cjs` (Canvas),
 (cached presentation, entry points, sound and cleanup).
 `node tests/gnome-landscaping.cjs` covers landscaping boundaries, stale targets,
 protected exclusions, sequential removals, Canvas/Pixi parity, hidden/reduced
-motion behavior and repeated resource cleanup. The optional installed-Chrome
+motion behavior and repeated resource cleanup.
+`node tests/gnome-overcrowding.cjs` adds exact capacity/probability,
+priority/shared cooldown, rare-palette exclusions, refill/stale-target safety,
+free-space/removal/time bounds and repeated Canvas/Pixi resource checks.
+The optional installed-Chrome
 suite `node tests/pixi-default-browser.cjs --run` includes real-time landscaping
 on both renderers and writes screenshots under `artifacts/homepage-browser/`.
 

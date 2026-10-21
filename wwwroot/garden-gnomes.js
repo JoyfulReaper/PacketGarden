@@ -6,9 +6,15 @@
     battleAfterMs:3000, resultAfterMs:7000, losersGoneAfterMs:9000, finishedAfterMs:12000 });
   const landscapingConfig = Object.freeze({ minimumVines:20, minimumShare:.4, incidentChance:.1,
     cooldownMs:420000, trimShare:.25, maxTargets:8, travelMs:750, snipMs:500, exitMs:750, maxTickGapMs:1500 });
-  const ordinaryVine = (p, at) => p.type === 'vine' && !garden.isProtected(p.type)
-    && !p.mutation && !p.pendingMutation && p.colorVariant !== 'silvervine' && p.colorVariant !== 4
+  const overcrowdingConfig = Object.freeze({ incidentChance:.25, freeCells:32, maxRemovals:32,
+    maxTargets:64, maxDurationMs:45000 });
+  // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
+  const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
+  const ordinarySpecimen = (p, at) => garden.species.includes(p.type) && !garden.isProtected(p.type)
+    && !p.mutation && !p.pendingMutation && !rareColors.has(p.colorVariant) && p.colorVariant !== 4
+    && !(p.type === 'broadleaf' && p.broadleafVariant === 'rainbow')
     && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
+  const eligibleTarget = (p, at, mode) => ordinarySpecimen(p, at) && (mode === 'overcrowding' || p.type === 'vine');
   function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,
     getReducedMotion = () => false, onChange = () => {}, onCue = () => {} }) {
     let actors = [], incident = null, nextCheckAt = now() + config.checkEveryMs;
@@ -16,10 +22,14 @@
     const changed = () => onChange({ actors, incident });
     const livingCount = at => getSpecimens().filter(p => at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired').length;
     const occupiedBy = p => source?.byCell.get(p.cell) === p;
-    function landscapingCandidates(at = now()) {
-      return getSpecimens().filter(p => ordinaryVine(p, at) && occupiedBy(p));
+    const freeCells = () => garden.dimensions.capacity - (source?.byCell.size ?? 0);
+    function landscapingCandidates(at = now(), mode = 'vine') {
+      return getSpecimens().filter(p => eligibleTarget(p, at, mode) && occupiedBy(p));
     }
-    function landscapingEligible(at = now(), candidates = landscapingCandidates(at)) {
+    function landscapingEligible(at = now(), candidates = null, mode = 'vine') {
+      candidates ??= landscapingCandidates(at, mode);
+      if (mode === 'overcrowding') return Boolean(source) && freeCells() === 0 && candidates.length > 0;
+      if (mode !== 'vine') return false;
       return Boolean(source) && candidates.length >= landscapingConfig.minimumVines
         && candidates.length >= livingCount(at) * landscapingConfig.minimumShare;
     }
@@ -31,20 +41,27 @@
       worker.targetX = destination.x; worker.targetY = destination.y;
       worker.state = 'approach'; incident.stepAt = at; incident.snipped = false; incident.phase = 'approach';
     }
-    function startLandscaping(at = now(), roll = random) {
+    function startLandscaping(at = now(), roll = random, mode = 'vine') {
       if (incident || at < lastLandscapingAt + landscapingConfig.cooldownMs) return false;
-      const candidates = landscapingCandidates(at);
-      if (!landscapingEligible(at, candidates)) return false;
-      const count = Math.min(landscapingConfig.maxTargets, Math.round(candidates.length * landscapingConfig.trimShare));
-      // Pick once; a short nearest-neighbor route makes the little visits readable.
-      const targets = [candidates.splice(Math.floor(roll() * candidates.length), 1)[0]];
-      while (targets.length < count) {
-        const previous = targets.at(-1);
-        candidates.sort((a,b) => Math.hypot(a.column-previous.column,a.row-previous.row)
-          - Math.hypot(b.column-previous.column,b.row-previous.row));
-        targets.push(candidates.shift());
+      const candidates = landscapingCandidates(at, mode);
+      if (!landscapingEligible(at, candidates, mode)) return false;
+      const targets = [];
+      if (mode === 'overcrowding') {
+        // Bounded random sample without replacement. Never chase newly arriving plants.
+        const count = Math.min(candidates.length, overcrowdingConfig.maxTargets);
+        while (targets.length < count) targets.push(candidates.splice(Math.floor(roll()*candidates.length),1)[0]);
+      } else {
+        const count = Math.min(landscapingConfig.maxTargets, Math.round(candidates.length * landscapingConfig.trimShare));
+        // Vine control retains its short nearest-neighbor route.
+        targets.push(candidates.splice(Math.floor(roll() * candidates.length), 1)[0]);
+        while (targets.length < count) {
+          const previous = targets.at(-1);
+          candidates.sort((a,b) => Math.hypot(a.column-previous.column,a.row-previous.row)
+            - Math.hypot(b.column-previous.column,b.row-previous.row));
+          targets.push(candidates.shift());
+        }
       }
-      incident = { type:'gnome_landscaping', createdAt:at, targets:targets.map(p => ({ specimen:p,
+      incident = { type:'gnome_landscaping', mode, removals:0, createdAt:at, targets:targets.map(p => ({ specimen:p,
         id:p.id, cell:p.cell, column:p.column, row:p.row, createdAt:p.createdAt })), index:0, lastTickAt:at };
       lastLandscapingAt = at;
       const first = point(incident.targets[0]);
@@ -68,22 +85,38 @@
       incident.lastTickAt = at;
       const age = at-incident.stepAt;
       if (incident.phase === 'exit') { if (age >= c.exitMs) clear(); return; }
+      if (incident.mode === 'overcrowding') {
+        if (at-incident.createdAt >= overcrowdingConfig.maxDurationMs) { clear(); return; }
+        if (freeCells() >= overcrowdingConfig.freeCells || incident.removals >= overcrowdingConfig.maxRemovals) {
+          // Finish the visible cut, but never remove another specimen after the goal is reached.
+          if (!incident.snipped || at >= incident.snippedAt+c.snipMs) leaveLandscaping(at);
+          return;
+        }
+      }
       if (!incident.snipped && age >= c.travelMs) {
         const target = incident.targets[incident.index], p = target.specimen;
         incident.snipped = true; incident.snippedAt = at; incident.phase = 'snip'; // Consume even an invalid target once.
-        if (p.id === target.id && p.cell === target.cell && p.column === target.column && p.row === target.row
-          && p.createdAt === target.createdAt && occupiedBy(p) && getSpecimens().includes(p) && ordinaryVine(p, at)) {
-          source.remove(p, 'landscaped');
-        }
+        if (validTarget(target, at) && source.remove(p, 'landscaped')) incident.removals++;
       }
       if (incident.snipped && at >= incident.snippedAt+c.snipMs) {
-        if (++incident.index < incident.targets.length) aim(at);
-        else {
-          const worker = actors[0]; incident.phase = 'exit'; incident.stepAt = at;
-          worker.startX = worker.x; worker.startY = worker.y;
-          worker.targetX = Math.max(6,worker.x-30); worker.targetY = worker.y;
+        incident.index++;
+        if (incident.mode === 'overcrowding') {
+          // Skip stale sampled targets without queuing replacement cells or extra cuts.
+          while (incident.index < incident.targets.length && !validTarget(incident.targets[incident.index],at)) incident.index++;
         }
+        if (incident.index < incident.targets.length) aim(at);
+        else leaveLandscaping(at);
       }
+    }
+    function validTarget(target, at) {
+      const p = target.specimen;
+      return p.id === target.id && p.cell === target.cell && p.column === target.column && p.row === target.row
+        && p.createdAt === target.createdAt && occupiedBy(p) && getSpecimens().includes(p) && eligibleTarget(p, at, incident.mode);
+    }
+    function leaveLandscaping(at) {
+      const worker = actors[0]; incident.phase = 'exit'; incident.stepAt = at;
+      worker.startX = worker.x; worker.startY = worker.y;
+      worker.targetX = Math.max(6,worker.x-30); worker.targetY = worker.y;
     }
     function start(at = now(), roll = random) {
       if (incident || livingCount(at) < config.minimumSpecimens) return false;
@@ -147,8 +180,12 @@
       if (at < nextCheckAt) return;
       resetCadence(at); // One fresh check, never replay missed intervals.
       if (livingCount(at) >= config.minimumSpecimens && roll() < config.incidentChance) start(at, roll);
-      if (!incident && at >= lastLandscapingAt + landscapingConfig.cooldownMs && landscapingEligible(at)
-        && roll() < landscapingConfig.incidentChance) startLandscaping(at, roll);
+      if (!incident && at >= lastLandscapingAt + landscapingConfig.cooldownMs) {
+        if (source && freeCells() === 0) {
+          // Exactly one overcrowding chance; a failed roll never falls through to vine control.
+          if (roll() < overcrowdingConfig.incidentChance) startLandscaping(at, roll, 'overcrowding');
+        } else if (landscapingEligible(at) && roll() < landscapingConfig.incidentChance) startLandscaping(at, roll);
+      }
     }
     return { start, startLandscaping, landscapingEligible, landscapingCandidates, advance, tick, clear, resetCadence, suspend, livingCount,
       get lastLandscapingAt() { return lastLandscapingAt; },
@@ -167,6 +204,6 @@
     const spread = closed ? 1 : 5;
     return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
   }
-  const api = { config, landscapingConfig, createModel, appearance, clipperLines };
+  const api = { config, landscapingConfig, overcrowdingConfig, createModel, appearance, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();
