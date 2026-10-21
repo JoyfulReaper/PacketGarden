@@ -1,7 +1,10 @@
 // Canvas presentation adapter for the shared, renderer-neutral Gnome Incident.
 const ambientEventConfig = window.PacketGardenGnomes.config;
+const gnomeReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');
 const gardenGnomes = window.PacketGardenGnomes.createModel({
+  garden: gardenModel,
   getSpecimens: () => gardenState.specimens,
+  getReducedMotion: () => gnomeReducedMotion?.matches ?? false,
   onCue: stage => gardenSound.maybePlayGnomeSound(stage)
 });
 let nextAmbientCheckAt = gardenGnomes.nextCheckAt;
@@ -12,7 +15,10 @@ function syncGnomeState() {
   nextAmbientCheckAt = gardenGnomes.nextCheckAt;
 }
 function livingSpecimenCount(now) { return gardenGnomes.livingCount(now); }
-document.addEventListener("visibilitychange", () => { gardenGnomes.resetCadence(Date.now()); syncGnomeState(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) gardenGnomes.suspend(Date.now()); else gardenGnomes.resetCadence(Date.now());
+  syncGnomeState();
+});
 function startGnomeIncident(now, random = Math.random) {
   if (!gardenGnomes.start(now, random)) return false;
   syncGnomeState(); drawGardenOverlay(true, now); syncWeatherAnimation(); return true;
@@ -33,7 +39,7 @@ function updateAmbientEvents(now, random = Math.random) {
 }
 function drawGardenActors(now) {
   for (const actor of gardenState.actors) {
-    const { step, battle, bounce, shove, rotation, alpha } = window.PacketGardenGnomes.appearance(actor, now);
+    const { step, battle, bounce, shove, rotation, alpha, clippers, closed } = window.PacketGardenGnomes.appearance(actor, now, gnomeReducedMotion?.matches);
     context.save();
     context.translate(actor.x + shove, actor.y + bounce);
     if (battle) context.rotate(rotation);
@@ -76,6 +82,13 @@ function drawGardenActors(now) {
       context.beginPath();
       context.moveTo(4, 2);
       context.lineTo(10, -5 - step * 2);
+      context.stroke();
+    }
+    if (clippers) {
+      context.strokeStyle = '#d3d8c5'; context.lineWidth = 1.6; context.beginPath();
+      for (const [x,y,endX,endY] of window.PacketGardenGnomes.clipperLines(closed)) {
+        context.moveTo(x,y); context.lineTo(endX,endY);
+      }
       context.stroke();
     }
     context.restore();

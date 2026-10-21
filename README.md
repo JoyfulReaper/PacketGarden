@@ -203,6 +203,27 @@ release the actors. On `/pixi-live.html`, **Trigger Gnome Incident (simulated)**
 requires 30 living specimens and alternates green/red winners through the normal
 12-second lifecycle, without network input or new growth. It is absent from `/`.
 
+The **Gnome Landscaping Department** occasionally offers unsolicited vine control.
+On the same 45-second check, at least 20 eligible ordinary living vines comprising
+40% of living specimens allow a 10% roll, with seven minutes between arrivals.
+A worker with hedge clippers visits a fixed route while a mostly useless
+supervisor watches. Roughly 25% of eligible vines, capped at eight, are removed
+one snip at a time through the authoritative garden model. Each target's exact
+identity, occupancy, creation time and current lifetime/eligibility are checked
+again; missing targets are skipped. Silvervines, mutations and unrelated or
+protected plants are never trimmed. Freed cells become available to normal growth.
+
+Both renderers share these rules. A visit lasts about 7–11 seconds at normal
+cadence, cannot overlap the four-gnome dispute, and leaves no incident actors or
+display objects behind. Reduced motion uses discrete positions and still poses.
+Hidden tabs or logical stalls over 1.5 seconds cancel the crew without replay;
+the cooldown remains. Landscaping is silent ambient nonsense, unrelated to
+network security, and adds no network events, Recent activity, scores or growth
+statistics. The development-only **Trigger landscaping (simulated)** button on
+`/pixi-live.html` seeds ordinary local vines if needed and skips the chance/wait
+for a check, retaining eligibility and cooldown. Clear does not reset cooldown.
+Long live-traffic visual tuning remains; see [Pixi notes](docs/PIXI-LIVE.md).
+
 Very occasionally, a live port-22 redbloom may itself become a collectible weed
 plant. Click it quickly enough and you collect some weed. This accomplishes
 absolutely nothing. A 5% browser-only roll schedules the change after three
@@ -457,6 +478,11 @@ Storm scheduling, audio, rendering and cancellation checks run with
 Gnome checks run with `node tests/gnome-events.cjs` (Canvas),
 `node tests/gnome-model.cjs` (shared rules), and `node tests/pixi-gnomes.cjs`
 (cached presentation, entry points, sound and cleanup).
+`node tests/gnome-landscaping.cjs` covers landscaping boundaries, stale targets,
+protected exclusions, sequential removals, Canvas/Pixi parity, hidden/reduced
+motion behavior and repeated resource cleanup. The optional installed-Chrome
+suite `node tests/pixi-default-browser.cjs --run` includes real-time landscaping
+on both renderers and writes screenshots under `artifacts/homepage-browser/`.
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
 5-second timeout. It trusts the source level and exposes `level`,

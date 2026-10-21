@@ -89,6 +89,15 @@
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, recentEvents, tick,
       clear: model.clear, remove: model.remove, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedLandscaping() {
+        const at = now();
+        model.seed(Array.from({length:50}, (_,i) => ({ type:i<32?'vine':'broadleaf', vigor:0,
+          column:10+i%10, row:6+Math.floor(i/10), createdAt:at-65000,
+          origin:{kind:'simulated',eventType:'landscaping-test'} })), at);
+        for (const p of model.specimens) if (p.type === 'vine') {
+          p.colorVariant = 0; view.update(p, model.byCell); // Diagnostic fixture is deliberately ordinary.
+        }
+      },
       seedInteraction() {
         const at = now();
         model.seed([

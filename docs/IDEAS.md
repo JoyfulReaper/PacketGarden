@@ -75,32 +75,37 @@ Possible gnome incidents:
 - a few gnomes build a tiny temporary campfire;
 - a much rarer **Gnome Civil War** as an escalated spectacle.
 
-### Gnome Landscaping Department — vine control (wishlist)
+### Gnome Landscaping Department — vine control (implemented)
 
-When vines begin taking over the **living garden**, a couple of gnomes with
-hedge clippers could emerge and perform completely unsolicited maintenance.
-One of them may do the cutting while the other supervises.
+When ordinary living vines reach **40% of living specimens**, with at least
+**20 eligible vines**, the shared 45-second gnome check gets a **10%** landscaping
+roll. A **seven-minute cooldown** runs from each crew's arrival, even if it is
+cancelled. The four-gnome dispute takes priority on a shared check; neither
+incident overlaps or interrupts the other.
 
-**Provisional tuning, not implemented:** consider an incident when vines make up
-roughly **40% of living specimens** (explore 30–50%) *and* at least **20 living
-vines** exist. On a bounded, infrequent eligibility check with a substantial
-cooldown (e.g. 5–10 minutes), the crew trims about **25% of current vines**,
-capped at eight targets per visit. These are starting values to tune visually,
-not an obligation to prune every time the threshold is crossed.
+Two gnomes arrive: a worker carries hedge clippers and a stationary supervisor
+watches unhelpfully. They select about **25% of eligible vines** (rounded, capped
+at **eight**) once, following a short route. Each visit has 750ms of travel and
+at least 500ms of visible snipping, followed by a 750ms exit. Normal visits last
+roughly 7–11 seconds. The existing logical tick performs each removal through
+the authoritative garden's `remove()` API, freeing the cell for normal growth.
 
-The targeted vines should actually be removed through the shared specimen
-model, one synchronized snip at a time, freeing their logical cells. Pick only
-currently living ordinary vines; if a target expired, was replaced or was
-otherwise removed before the snip, skip it safely. Do not touch rare plants or
-other species, or change the TCPNoise event stream, existing acceptance
-statistics, rarity, competition or provenance. This is local, playful ecology,
-not meaningful intrusion response or a gardening chore.
+Every scheduled target is checked again for exact object/id, cell occupancy,
+coordinates, creation time, lifetime and eligibility. Expired, replaced or
+collected targets are skipped with no substitutes. Silvervines, active/pending
+mutations, protected species and all unrelated plants are excluded. Network
+events, acceptance statistics, rarity, competition, provenance and Recent
+activity keep their existing meanings.
 
-Keep the incident brief, bound the actors and animations, prevent overlapping
-landscaping crews, and coordinate with the existing Gnome Incident rather than
-interrupting the four-gnome battle. Respect reduced-motion settings and make
-the visual action understandable without optional audio. No new per-frame
-population scan, persistence, score, or gameplay system.
+Canvas and Pixi share the rules and clipper poses. Reduced motion uses fixed
+poses and discrete positions; landscaping has no sound. Hiding the page cancels
+the crew immediately; a logical gap over 1.5 seconds also cancels instead of
+replaying snips. Actors and incident display objects are released on completion.
+No extra timers, per-frame population scans, persistence, scores or chores.
+`/pixi-live.html` has a development-only diagnostic that seeds local ordinary
+vines if needed and starts a visit, while retaining eligibility and cooldown.
+Long live-traffic visual tuning remains a follow-up, not a gardening mechanic
+or network/security response.
 
 Ambient incidents should not claim to represent attacks, failures, threat levels,
 or specific protocols unless an event is explicitly designed around trustworthy

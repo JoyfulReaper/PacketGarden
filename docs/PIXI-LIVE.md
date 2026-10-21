@@ -1,3 +1,73 @@
+# Gnome Landscaping Department (2026-10-20)
+
+Implemented in the shared `garden-gnomes.js` model for the default Pixi garden,
+`/pixi-live.html` and Canvas. The existing 45-second eligibility check first
+offers the original dispute its unchanged 2% roll. If idle, ordinary living vines
+comprising at least 40% of living specimens, with at least 20 eligible vines,
+get a 10% landscaping roll. The cooldown is seven minutes from arrival, including
+cancelled visits. One incident slot prevents crews/disputes from overlapping.
+
+A worker with hedge clippers visits a fixed nearest-neighbor route while a
+stationary red-hatted supervisor contributes nothing. Target count is 25% rounded
+to the nearest integer, capped at eight. Each target gets 750ms travel and at
+least 500ms of visible snipping, then the crew exits in 750ms: roughly 7–11
+seconds on the normal 250ms logical cadence. Reduced motion uses discrete
+positions, still legs and a fixed closed snip pose. Landscaping is silent.
+
+Only the existing logical tick can call the authoritative garden's `remove()`;
+the renderer's animation path only positions actors. Before each snip, exact
+object/id, original cell/coordinates, occupancy, creation time, current lifetime,
+species, palette and mutation state are revalidated. Canvas's `silvervine` and
+Pixi's palette index 4 are excluded, as are active/pending mutations, protected
+species and all non-vines. Missing/expired/replaced/collected targets consume
+their visit with no substitute. The ordinary removal lifecycle updates Pixi
+neighbor curves/views, Canvas's cached base, inspection, mutations and occupancy.
+Freed cells admit normal growth and later ordinary grass spread. No invented
+SSE/NATS event, provenance, Recent activity row or accepted-growth statistic.
+
+Pixi adds two clipper frames to the shared gnome atlas: **14 frames / one GPU
+source**, with 40×32 logical tiles and a 1120×64 physical atlas at resolution 2.
+The original gnome silhouette/anchor stays rooted at (16,18). Landscaping owns
+only two sprites in one transient group; both and the group are destroyed when
+the crew leaves or is cancelled. The fixed atlas is reused across incidents and
+released on page teardown. Canvas uses the same blade endpoints and pose model,
+with no incident textures. No new timers, animation loops or dependencies.
+
+Hiding the tab cancels landscaping immediately and resets the eligibility
+cadence. A logical tick gap greater than 1.5s also cancels the crew, so suspended
+or stalled tabs never replay destructive actions. A slow tick still shows a full
+snip hold before moving on. The original dispute retains its completion rules.
+`pagehide`, Clear and teardown also release actors; Clear retains the cooldown.
+
+Only `/pixi-live.html` exposes **Trigger landscaping (simulated)**. It seeds a
+50-specimen local fixture (32 ordinary mature vines, 18 broadleaves) if the
+current garden is ineligible, then attempts landscaping without waiting for a
+check/chance roll. Eligibility, incident exclusion and cooldown still apply;
+a cooldown-blocked click does not reseed. Fixture provenance is simulated;
+it bypasses SSE, acceptance counters and Recent activity. Reload starts fresh
+browser state as usual. The homepage has no landscaping control.
+
+Deterministic coverage: `node tests/gnome-landscaping.cjs` exercises threshold,
+chance and cooldown boundaries, fixed/capped selection, identity/occupancy/lifetime
+safety, all exclusions, sequential one-time snips, mutual exclusion, hidden and
+reduced-motion behavior, both entry points, Canvas/Pixi removal/rendering parity,
+inspection closure and 25 repeated incidents without additional objects or
+textures. `node tests/pixi-default-browser.cjs --run` extends the installed-Chrome
+suite with actual timed snips/cleanup, reduced motion, hidden cancellation and
+Canvas/Pixi screenshots. Long real NATS sessions and aesthetic tuning of crew
+frequency/routes remain outside this slice; no GPU performance claim is made.
+
+Validation for this slice: the Node regression entry points pass, including the
+original dispute and rendering/performance checks; the new suite repeats 25
+landscaping visits without leaked sprites, groups or growing texture counts.
+Installed Chrome passes the complete default/diagnostic/Canvas/stress suite,
+including real-time landscaping, reduced motion and hidden cancellation.
+Screenshots are saved in ignored `artifacts/homepage-browser/landscaping-*.png`.
+`dotnet build PacketGarden.slnx` passes with zero warnings/errors; backend checks
+and the actual ASP.NET polling/SSE integration pass. The checks project retains
+its NU1900 warning because NuGet vulnerability data could not be fetched.
+Local-server integration required running outside the sandbox's socket limits.
+
 # Grass clears when specimens occupy soil (2026-10-20)
 
 Canvas and Pixi now remove destination grass from the shared ecology model on

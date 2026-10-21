@@ -216,7 +216,13 @@ const speciesConfig = new Map([
 let gardenEcology = null;
 const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random(), onChange(change) {
   if (change.kind === 'added') gardenEcology?.removeGrassCell(change.specimen.column, change.specimen.row);
-  if (change.kind === 'removed') gardenMutations.removed(change.specimen, change.reason);
+  if (change.kind === 'removed') {
+    gardenMutations.removed(change.specimen, change.reason);
+    if (change.reason === 'landscaped') {
+      gardenBaseDirty = true; gardenPerf?.reason('specimen-change'); updateGardenStatus();
+      if (typeof inspectedSpecimen !== 'undefined' && inspectedSpecimen === change.specimen) closeSpecimenCard();
+    }
+  }
 }});
 const gardenMutations = window.PacketGardenMutations.createMutationModel({
   garden: gardenModel, now: () => Date.now(), random: () => Math.random()
@@ -1152,6 +1158,7 @@ window.setInterval(() => {
   invalidateDueBaseVisual(now);
   paintGardenBase(now);
   if (typeof updateAmbientEvents === "function") updateAmbientEvents(now);
+  if (gardenBaseDirty) paintGardenBase(now); // A landscaping snip uses the normal base/vine rebuild.
   if (gardenOverlayDirty) drawGardenOverlay(true, now);
   syncWeatherAnimation();
   if (typeof updateRecentActivity === "function") updateRecentActivity(now);

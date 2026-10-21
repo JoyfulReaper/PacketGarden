@@ -1,13 +1,90 @@
-// Pointless garden drama, independent of rendering, network input and ecology.
+// Renderer-neutral ambient gnomes. Only landscaping changes the authoritative garden.
 (function () {
   'use strict';
   const garden = typeof module !== 'undefined' && module.exports ? require('./garden-core.js') : window.PacketGardenCore;
   const config = Object.freeze({ checkEveryMs:45000, minimumSpecimens:30, incidentChance:.02,
     battleAfterMs:3000, resultAfterMs:7000, losersGoneAfterMs:9000, finishedAfterMs:12000 });
-  function createModel({ getSpecimens, now = Date.now, random = Math.random, onChange = () => {}, onCue = () => {} }) {
+  const landscapingConfig = Object.freeze({ minimumVines:20, minimumShare:.4, incidentChance:.1,
+    cooldownMs:420000, trimShare:.25, maxTargets:8, travelMs:750, snipMs:500, exitMs:750, maxTickGapMs:1500 });
+  const ordinaryVine = (p, at) => p.type === 'vine' && !garden.isProtected(p.type)
+    && !p.mutation && !p.pendingMutation && p.colorVariant !== 'silvervine' && p.colorVariant !== 4
+    && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
+  function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,
+    getReducedMotion = () => false, onChange = () => {}, onCue = () => {} }) {
     let actors = [], incident = null, nextCheckAt = now() + config.checkEveryMs;
+    let lastLandscapingAt = -Infinity;
     const changed = () => onChange({ actors, incident });
-    const livingCount = at => getSpecimens().filter(p => at - p.createdAt < garden.timings[p.type].expiredAfterMs).length;
+    const livingCount = at => getSpecimens().filter(p => at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired').length;
+    const occupiedBy = p => source?.byCell.get(p.cell) === p;
+    function landscapingCandidates(at = now()) {
+      return getSpecimens().filter(p => ordinaryVine(p, at) && occupiedBy(p));
+    }
+    function landscapingEligible(at = now(), candidates = landscapingCandidates(at)) {
+      return Boolean(source) && candidates.length >= landscapingConfig.minimumVines
+        && candidates.length >= livingCount(at) * landscapingConfig.minimumShare;
+    }
+    const point = target => ({ x:(target.column + .5) * garden.dimensions.cellSize - 10,
+      y:(target.row + .5) * garden.dimensions.cellSize + 6 });
+    function aim(at) {
+      const worker = actors[0], destination = point(incident.targets[incident.index]);
+      worker.startX = worker.x; worker.startY = worker.y;
+      worker.targetX = destination.x; worker.targetY = destination.y;
+      worker.state = 'approach'; incident.stepAt = at; incident.snipped = false; incident.phase = 'approach';
+    }
+    function startLandscaping(at = now(), roll = random) {
+      if (incident || at < lastLandscapingAt + landscapingConfig.cooldownMs) return false;
+      const candidates = landscapingCandidates(at);
+      if (!landscapingEligible(at, candidates)) return false;
+      const count = Math.min(landscapingConfig.maxTargets, Math.round(candidates.length * landscapingConfig.trimShare));
+      // Pick once; a short nearest-neighbor route makes the little visits readable.
+      const targets = [candidates.splice(Math.floor(roll() * candidates.length), 1)[0]];
+      while (targets.length < count) {
+        const previous = targets.at(-1);
+        candidates.sort((a,b) => Math.hypot(a.column-previous.column,a.row-previous.row)
+          - Math.hypot(b.column-previous.column,b.row-previous.row));
+        targets.push(candidates.shift());
+      }
+      incident = { type:'gnome_landscaping', createdAt:at, targets:targets.map(p => ({ specimen:p,
+        id:p.id, cell:p.cell, column:p.column, row:p.row, createdAt:p.createdAt })), index:0, lastTickAt:at };
+      lastLandscapingAt = at;
+      const first = point(incident.targets[0]);
+      actors = [{ type:'gnome', role:'worker', side:'green', x:Math.max(6,first.x-35), y:first.y, createdAt:at },
+        { type:'gnome', role:'supervisor', side:'red', x:Math.min(948,first.x+24), y:Math.max(18,first.y-20),
+          state:'supervise', createdAt:at }];
+      aim(at); advanceLandscaping(at); changed(); return true;
+    }
+    function advanceLandscaping(at) {
+      const worker = actors[0], age = Math.max(0, at-incident.stepAt);
+      const exiting = incident.phase === 'exit';
+      const progress = getReducedMotion() ? 1 : Math.min(1,age/landscapingConfig.travelMs);
+      worker.x = worker.startX + (worker.targetX-worker.startX)*progress;
+      worker.y = worker.startY + (worker.targetY-worker.startY)*progress;
+      worker.state = exiting ? 'exit' : incident.snipped ? 'snip' : 'approach';
+    }
+    function tickLandscaping(at) {
+      const c = landscapingConfig;
+      // A stalled logical clock never replays a backlog of destructive actions.
+      if (at-incident.lastTickAt > c.maxTickGapMs) { clear(); return; }
+      incident.lastTickAt = at;
+      const age = at-incident.stepAt;
+      if (incident.phase === 'exit') { if (age >= c.exitMs) clear(); return; }
+      if (!incident.snipped && age >= c.travelMs) {
+        const target = incident.targets[incident.index], p = target.specimen;
+        incident.snipped = true; incident.snippedAt = at; incident.phase = 'snip'; // Consume even an invalid target once.
+        if (p.id === target.id && p.cell === target.cell && p.column === target.column && p.row === target.row
+          && p.createdAt === target.createdAt && occupiedBy(p) && getSpecimens().includes(p) && ordinaryVine(p, at)) {
+          source.remove(p, 'landscaped');
+        }
+      }
+      if (incident.snipped && at >= incident.snippedAt+c.snipMs) {
+        if (++incident.index < incident.targets.length) aim(at);
+        else {
+          const worker = actors[0]; incident.phase = 'exit'; incident.stepAt = at;
+          worker.startX = worker.x; worker.startY = worker.y;
+          worker.targetX = Math.max(6,worker.x-30); worker.targetY = worker.y;
+        }
+      }
+    }
     function start(at = now(), roll = random) {
       if (incident || livingCount(at) < config.minimumSpecimens) return false;
       const centerX = garden.dimensions.width * (.4 + roll() * .2);
@@ -26,6 +103,7 @@
     function clear() { actors = []; incident = null; changed(); }
     function advance(at = now(), roll = random) {
       if (!incident) return;
+      if (incident.type === 'gnome_landscaping') { advanceLandscaping(at); return; }
       const age = Math.max(0, at - incident.createdAt);
       // Completion precedes phase/audio handling, including a suspended page.
       if (age >= config.finishedAfterMs) { clear(); return; }
@@ -56,22 +134,39 @@
       }
     }
     function resetCadence(at = now()) { nextCheckAt = at + config.checkEveryMs; }
+    function suspend(at = now()) {
+      resetCadence(at);
+      if (incident?.type === 'gnome_landscaping') clear();
+    }
     function tick(at = now(), roll = random, hidden = false) {
-      if (hidden) { resetCadence(at); return; }
-      if (incident) { advance(at, roll); return; }
+      if (hidden) { suspend(at); return; }
+      if (incident) {
+        if (incident.type === 'gnome_landscaping') tickLandscaping(at);
+        advance(at, roll); return;
+      }
       if (at < nextCheckAt) return;
       resetCadence(at); // One fresh check, never replay missed intervals.
       if (livingCount(at) >= config.minimumSpecimens && roll() < config.incidentChance) start(at, roll);
+      if (!incident && at >= lastLandscapingAt + landscapingConfig.cooldownMs && landscapingEligible(at)
+        && roll() < landscapingConfig.incidentChance) startLandscaping(at, roll);
     }
-    return { start, advance, tick, clear, resetCadence, livingCount,
+    return { start, startLandscaping, landscapingEligible, landscapingCandidates, advance, tick, clear, resetCadence, suspend, livingCount,
+      get lastLandscapingAt() { return lastLandscapingAt; },
       get actors() { return actors; }, get incident() { return incident; }, get nextCheckAt() { return nextCheckAt; } };
   }
-  function appearance(actor, at) {
-    const step = Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle';
+  function appearance(actor, at, reducedMotion = false) {
+    const still = reducedMotion || actor.role === 'supervisor';
+    const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle';
     return { step, battle, bounce:actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
+      clippers:actor.role === 'worker', closed:actor.state === 'snip' && (reducedMotion || step > 0),
       shove:battle ? step * (actor.side === 'green' ? 2 : -2) : 0, rotation:battle ? step * .12 : 0,
       alpha:actor.state === 'flee' ? Math.max(0,1-(at-actor.createdAt-config.resultAfterMs)/(config.losersGoneAfterMs-config.resultAfterMs)) : 1 };
   }
-  const api = { config, createModel, appearance };
+  // Local coordinates shared by both presentations; two small blades and handles.
+  function clipperLines(closed) {
+    const spread = closed ? 1 : 5;
+    return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
+  }
+  const api = { config, landscapingConfig, createModel, appearance, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();

@@ -10,7 +10,7 @@
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
   <script src="garden-core.js" defer></script>
-  <script src="garden-gnomes.js?v=gnomes-1" defer></script>
+  <script src="garden-gnomes.js?v=landscaping-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-ecology.js?v=grass-clear-1" defer></script>
   <script src="garden-ambient.js" defer></script>
@@ -18,10 +18,10 @@
   <script src="garden-ui-core.js" defer></script>
   <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
-  <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=landscaping-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
-  <script src="pixi-live-core.js?v=grass-clear-1" defer></script><script src="pixi-live.js?v=grass-clear-1" defer></script>
+  <script src="pixi-live-core.js?v=landscaping-1" defer></script><script src="pixi-live.js?v=landscaping-1" defer></script>
 </head>
 <body>
   <main>
@@ -35,6 +35,8 @@
       <button id="seed-pending-mutations" type="button">Seed 4 pending mutations (local simulated)</button>
       <button id="seed-interaction" type="button">Seed overlap fixture (local simulated)</button>
       <button id="trigger-gnomes" type="button">Trigger Gnome Incident (simulated)</button>
+      <button id="trigger-landscaping" type="button">Trigger landscaping (simulated)</button>
+      <span id="landscaping-test-status" role="status">Seeds a local vine garden if needed; seven-minute cooldown still applies. Clear does not reset cooldown.</span>
       <span id="gnome-test-status" role="status">Requires 30 living specimens; simulated winners alternate green/red.</span>
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>

@@ -357,9 +357,10 @@
     const gnomePresentation = window.PacketGardenPixiGnomes;
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
     // This existing world layer is above specimens and below rain. No idle group.
-    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames);
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
     let simulatedWinner = null, nextSimulatedWinner = 'green';
-    const gnomes = window.PacketGardenGnomes.createModel({ getSpecimens: () => model.specimens,
+    const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
+      getReducedMotion: () => reducedMotion?.matches ?? false,
       random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
       onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
       onCue: stage => sound?.maybePlayGnomeSound(stage) });
@@ -371,6 +372,18 @@
         if(status)status.textContent=`Simulated incident · ${simulatedWinner} will win. No network event.`;
         nextSimulatedWinner = simulatedWinner === 'green' ? 'red' : 'green';gnomeView.animate(Date.now());
       } else { simulatedWinner=null;if(status)status.textContent='Requires at least 30 living specimens. Seed a garden or wait for live growth.'; }
+    });
+    document.querySelector('#trigger-landscaping')?.addEventListener('click', () => {
+      const status = document.querySelector('#landscaping-test-status');
+      if (gnomes.incident) { status.textContent='An incident is already active.'; return; }
+      if (Date.now() < gnomes.lastLandscapingAt + window.PacketGardenGnomes.landscapingConfig.cooldownMs) {
+        status.textContent='Seven-minute landscaping cooldown is active.'; return;
+      }
+      // Explicit local fixture: no SSE events, fabricated provenance, activity or accepted-growth counts.
+      if (!gnomes.landscapingEligible()) model.seedLandscaping();
+      status.textContent = gnomes.startLandscaping() ? 'Simulated landscaping · real local vine removals, no network event.'
+        : 'Seven-minute landscaping cooldown is active.';
+      gnomeView.animate(Date.now());
     });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
@@ -457,7 +470,7 @@
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
-        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.phase ?? 'idle'} · winner ${gnomes.incident?.winner ?? 'undecided'} · 12 cached frames / 1 GPU source`,
+        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.phase ?? 'idle'} · 14 cached frames / 1 GPU source`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
@@ -491,6 +504,7 @@
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
       gnomes.resetCadence(at);
+      if (document.hidden) gnomes.suspend(at);
       storm.configure({hidden:document.hidden},at);
       if (document.hidden) app.stop(); else {
         model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
@@ -501,7 +515,7 @@
       }
     });
     window.addEventListener('pagehide', event => {
-      storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
+      gnomes.suspend();storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
       gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
       reducedMotion?.removeEventListener?.('change',updateLightning);storm.destroy();stormView.destroy();

@@ -62,6 +62,7 @@ function createGarden(options = {}) {
     }, EventSource: Source, ResizeObserver: class { observe() {} },
     window: {
       location: { search: options.search ?? '' }, PerformanceObserver: options.PerformanceObserver,
+      matchMedia: () => ({ matches: options.reduced ?? false }),
       innerWidth: 1200, innerHeight: 900, devicePixelRatio: 2,
       addEventListener(name, handler) { addHandler(windowHandlers, name, handler); },
       setInterval(handler, delay) { intervals.push({ handler, delay }); return intervals.length; },

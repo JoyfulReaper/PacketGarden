@@ -265,6 +265,7 @@ async function run() {
     assert.equal(await diagnostic.locator('#garden-score').textContent(),'Score: 0');
     await checkGnomes(diagnostic,broadcast);
     await checkStorm(diagnostic);
+    await checkLandscaping(diagnostic);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -274,7 +275,8 @@ async function run() {
     await diagnostic.close();
     const canvas = await context.newPage(); await canvas.goto(origin + '/canvas.html');
     await canvas.getByRole('button',{name:'Generate fake DNS event',exact:true}).click();
-    assert.match(await canvas.locator('#garden-status').textContent(),/1 flower/); await canvas.close();
+    assert.match(await canvas.locator('#garden-status').textContent(),/1 flower/);
+    await checkCanvasLandscaping(canvas); await canvas.close();
     const stress = await context.newPage(); await stress.goto(origin + '/pixi-stress.html');
     await stress.waitForFunction(() => document.querySelector('#hud').textContent.includes('WEBGL'));
     await stress.getByRole('combobox',{name:'Scene',exact:true}).selectOption('vines'); await stress.close();
@@ -407,9 +409,54 @@ async function run() {
       __gardenTestGnomes.incident.createdAt=Date.now()-20000;});
     await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
     assert.equal((await actors()).count,0);assert.equal(await tones(),beforeHidden,'suspended completion does not replay cues');
-    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:12,
-      atlasBacking:[768,64],estimatedAtlasRgbaBytes:768*64*4};
+    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:14,
+      atlasBacking:[1120,64],estimatedAtlasRgbaBytes:1120*64*4};
     await fs.writeFile(path.join(output,'gnome-timing.json'),JSON.stringify(results,null,2));console.log('Gnome timing:',JSON.stringify(results));
+  }
+  async function checkLandscaping(page) {
+    await page.reload();await page.waitForFunction(()=>window.__gardenTestGnomes);
+    await page.locator('#trigger-landscaping').click();
+    await page.waitForFunction(()=>__gardenTestGnomes.actors[0]?.state==='snip');
+    await page.locator('#view canvas').screenshot({path:path.join(output,'landscaping-snip.png')});
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.actors.length),2);
+    assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[8].children[0].children.length),2);
+    await page.waitForFunction(()=>!__gardenTestGnomes.incident);
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),42);
+    assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[8].children.length),0);
+    assert.equal(await page.locator('.recent-event').count(),0);
+    await page.locator('#trigger-landscaping').click();
+    assert.match(await page.locator('#landscaping-test-status').textContent(),/cooldown/);
+    await page.emulateMedia({reducedMotion:'reduce'});await page.reload();
+    await page.waitForFunction(()=>window.__gardenTestGnomes);await page.locator('#trigger-landscaping').click();
+    assert(await page.evaluate(()=>__gardenTestGnomes.actors[0].x===__gardenTestGnomes.actors[0].targetX));
+    await page.waitForFunction(()=>__gardenTestGnomes.actors[0]?.state==='snip');
+    assert(await page.evaluate(()=>PacketGardenGnomes.appearance(__gardenTestGnomes.actors[0],Date.now(),true).closed));
+    await page.locator('#view canvas').screenshot({path:path.join(output,'landscaping-reduced.png')});
+    const remaining=await page.evaluate(()=>{
+      Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));
+      return __gardenTestGarden.specimens.length;
+    });
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.actors.length),0);
+    assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[8].children.length),0);
+    await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});
+      document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
+    await page.waitForFunction(()=>__gardenTestApp.ticker.started);
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),remaining);
+    await page.emulateMedia({reducedMotion:'no-preference'});
+    console.log('PASS: Chrome landscaping real-time sequential snips, two transient sprites, cleanup/cooldown, reduced motion, hidden cancellation and screenshots.');
+  }
+  async function checkCanvasLandscaping(page) {
+    await page.evaluate(()=>{
+      gardenModel.seed(Array.from({length:50},(_,i)=>({type:i<32?'vine':'broadleaf',column:10+i%10,
+        row:6+Math.floor(i/10),createdAt:Date.now()-65000,colorVariant:'aqua'})));
+      gardenGnomes.startLandscaping(Date.now(),()=>.5);
+    });
+    await page.waitForFunction(()=>gardenGnomes.actors[0]?.state==='snip');
+    await page.locator('canvas').first().screenshot({path:path.join(output,'landscaping-canvas.png')});
+    await page.waitForFunction(()=>!gardenGnomes.incident);
+    assert.equal(await page.evaluate(()=>gardenModel.specimens.length),42);
+    assert.equal(await page.evaluate(()=>gardenState.actors.length),0);
+    console.log('PASS: Chrome Canvas landscaping sequential snips, actual removal, freed occupancy and actor cleanup.');
   }
   async function checkStorm(page) {
     const weather=level=>page.getByLabel('Manual weather',{exact:true}).selectOption(level);
