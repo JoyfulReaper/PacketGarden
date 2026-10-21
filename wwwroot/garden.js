@@ -237,7 +237,8 @@ const gardenMutations = window.PacketGardenMutations.createMutationModel({
   garden: gardenModel, now: () => Date.now(), random: () => Math.random()
 });
 gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), random: () => Math.random(),
-  isCellOccupied: (column, row) => gardenModel.byCell.has(row * columns + column), onChange({ kind }) {
+  isCellOccupied: (column, row) => gardenModel.byCell.has(row * columns + column), onChange({ kind, item }) {
+  if(kind==='puddle-removed' && typeof gardenGnomes!=='undefined')gardenGnomes.puddleRemoved(item);
   gardenBaseDirty = true; gardenPerf?.reason(kind.startsWith('grass-') ? 'grass-change' : 'puddle-change');
 }});
 const gardenAmbient = window.PacketGardenAmbient.createAmbientModel({

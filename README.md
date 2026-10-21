@@ -295,6 +295,24 @@ The existing optional collection sound is reused. `/pixi-live.html` has
 **Trigger weed harvest (simulated)**, a five-slot mixed-drop fixture and a
 message-roll selector; public pages have no additional diagnostic controls.
 
+Moving gnomes can now suffer **puddle mishaps** in Canvas and Pixi. Each fresh
+entry into genuinely visible water has an independent **20%** chance of a
+one-second stumble, tiny ripple and floating `!`, at most once per gnome per
+incident. Conservative interiors follow all four organic pool designs; dry
+shores, faint/drained water and standing in the same water do not cause repeated
+rolls. Overlapping pools count as continuous water. Fighting, travel, snips,
+harvesting, departure and underpants clicks continue normally. Reduced motion
+keeps the startled pose and ripple still. Hidden pages clear reactions without
+replaying crossings; no sounds, network events, activity or ecological changes
+are added.
+
+Only `/pixi-live.html` has **Trigger gnome puddle mishap**. This deterministic
+local fixture replaces the local water with one simulated pool and adds simulated
+broadleafs only if needed to reach the existing 30-gnome-incident threshold.
+The first green gnome demonstrates a valid water entry; natural probabilities
+and traffic statistics stay unchanged. It respects active-incident exclusion.
+See [screenshots, resources and limits](docs/PIXI-LIVE.md#gnome-puddle-mishaps-2026-10-21).
+
 Very occasionally, a live port-22 redbloom may itself become a collectible weed
 plant. Click it quickly enough and you collect some weed. This accomplishes
 absolutely nothing. A 5% browser-only roll schedules the change after three
@@ -624,6 +642,11 @@ Storm scheduling, audio, rendering and cancellation checks run with
 Gnome checks run with `node tests/gnome-events.cjs` (Canvas),
 `node tests/gnome-model.cjs` (shared rules), and `node tests/pixi-gnomes.cjs`
 (cached presentation, entry points, sound and cleanup).
+`node tests/gnome-puddles.cjs` checks organic-shape segment intersections,
+water/probability boundaries, overlapping-water debouncing, exact identities,
+independent randomness, hidden/clock cleanup, all incident action traces,
+underpants clicks and bounded Canvas/Pixi resources. The focused Chrome flag
+`--gnome-puddles-only` captures both renderers in day/night/storm/reduced motion.
 `node tests/gnome-landscaping.cjs` covers landscaping boundaries, stale targets,
 protected exclusions, sequential removals, Canvas/Pixi parity, hidden/reduced
 motion behavior and repeated resource cleanup.

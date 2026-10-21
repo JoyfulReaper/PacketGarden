@@ -4,6 +4,7 @@ const gnomeReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)
 const gardenGnomes = window.PacketGardenGnomes.createModel({
   garden: gardenModel,
   getSpecimens: () => gardenState.specimens,
+  getPuddles: () => gardenEcology.puddles,
   getReducedMotion: () => gnomeReducedMotion?.matches ?? false,
   hasPendingBud: specimen => gardenAmbient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
   onUnderpantsAttempt: (point,at) => gardenAmbient.dropGnomeUnderpants(point,at),
@@ -41,7 +42,12 @@ function updateAmbientEvents(now, random = Math.random) {
 }
 function drawGardenActors(now) {
   for (const actor of gardenState.actors) {
-    const { step, battle, x, y, rotation, alpha, clippers, closed, sack, surprised } = window.PacketGardenGnomes.presentation(actor, now, gnomeReducedMotion?.matches);
+    const { step, battle, x, y, rotation, alpha, clippers, closed, sack, surprised, water } = window.PacketGardenGnomes.presentation(actor, now, gnomeReducedMotion?.matches);
+    if(water){
+      const art=window.PacketGardenGnomePuddles.splashArt;context.save();context.translate(actor.x,actor.y);
+      context.globalAlpha=water.alpha*alpha;context.strokeStyle=`#${art.color.toString(16)}`;context.lineWidth=art.width;context.beginPath();
+      for(const [x,y,endX,endY] of art.lines){context.moveTo(x,y);context.lineTo(endX,endY);}context.stroke();context.restore();
+    }
     context.save();
     context.translate(x, y);
     if (rotation) context.rotate(rotation);

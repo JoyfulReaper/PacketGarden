@@ -42,6 +42,7 @@ vm.runInContext(fs.readFileSync('wwwroot/garden-gnomes.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-mutations.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ecology.js', 'utf8'), sandbox);
+  for(const file of ['garden-puddle-art.js','garden-gnome-puddles.js'])vm.runInContext(fs.readFileSync('wwwroot/'+file,'utf8'),sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ambient.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden.js', 'utf8'), sandbox);

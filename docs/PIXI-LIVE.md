@@ -1,3 +1,121 @@
+# Gnome puddle mishaps (2026-10-21)
+
+Moving gnomes now occasionally object to wet boots in **both renderers**.
+`garden-gnome-puddles.js` supplies one bounded renderer-neutral entry/reaction
+controller per existing gnome model. Only the existing **250ms logical tick**
+checks crossings; RAF presentation never rolls. At most **four actors × eight
+puddles** are examined. Segments are limited to the garden diagonal (1140px);
+backward time or gaps over **1500ms** establish a fresh baseline without replay.
+
+Water must be a current exact object in the authoritative ecology collection,
+with `puddleVisualState` size **>=8** and original model opacity **>=0.12**.
+Non-finite/future/empty, removed, fully drained and faint water is rejected.
+For each of the four artwork variants, the actual opaque-body quadratic contour
+is sampled once (maximum 90 points), then contracted to **55%** around its center.
+These conservative interiors follow seed rotation and current visual size;
+they deliberately exclude some visible shallow water and all soft shorelines.
+Tests check their margins against the illustrated body, including concavities.
+Neither puddle artwork nor `puddleVisualState` was changed.
+
+The gnome's unanimated foot path uses its logical position plus the existing
+11px foot offset. Segment/polygon intersection catches crossings even when both
+sample endpoints are on dry soil. Water intervals merge across overlapping
+pools, so traversing their overlap never earns extra rolls. Each fresh continuous
+entry gets exactly one strict **`roll < 0.20`** chance; failures wait for an exit
+and another entry. Consecutive wet foot samples also suppress false re-entry
+from a shrinking shoreline. At most one success per gnome per incident, even if its
+reaction ends or its puddle disappears. Newly observed/replaced water establishes
+occupancy without inheriting a past crossing. Exact identity and water state are
+revalidated after the roll; removal notifications clear owned reactions at once.
+The private seeded random stream uses crypto/clock initialization and no
+`Math.random` calls, leaving ecology, incident/winner scheduling, frog planning
+and network rarity streams untouched.
+
+A **1000ms** reaction reuses existing startled gnome frames and their small `!`,
+with a restrained tilt/bob and tiny fading splash/ripple. Reduced motion retains
+the pose/ripple without tilting or bobbing. The shared reaction is separate from
+the existing 600ms clicked-gnome surprise and underpants-attempt flag. Both
+presentations keep their existing last-rendered-transform hit testing and
+gnome-first click priority. Logical positions, snips, fights, harvests, departure,
+target selection, cooldowns and drops are unchanged. No new sound, collection,
+score, activity, network event or ecological effect is introduced.
+
+Canvas draws the shared eight-line splash recipe on its existing overlay.
+Pixi adds **one** cached 40×32 logical ripple tile to the existing gnome atlas:
+**21 -> 22 frames**, **1680×64 -> 1760×64** backing at resolution two,
+**420 -> 440 KiB RGBA (+20 KiB)** before driver overhead. It reuses the existing
+startled frames, source and gnome group. At most **four extra noninteractive
+ripple Sprites** accompany the existing four actors; no idle group or effect
+Sprite is retained. Hidden state immediately destroys ripple Sprites even when
+the original dispute itself remains suspended. Clear, actor departure, water
+removal and teardown release their owned resources. All temporary atlas Graphics
+contexts are explicitly destroyed after baking. There is no runtime texture or
+Graphics generation, shader, new source, timer or render loop. Total current
+cardinality is **818 frames across four atlas sources** (767 main, 16 ecology,
+13 ambient, 22 gnome).
+
+Only `/pixi-live.html` loads `garden-gnome-puddles-dev.js` and shows **Trigger
+gnome puddle mishap**. It refuses an active incident, adds explicitly simulated
+broadleafs only if needed for the existing 30-living threshold, and replaces
+local water with one known simulated pool across a deterministic approach path.
+The normal incident and geometric entry run unchanged; only that explicitly
+armed actor's first valid entry is guaranteed for the demonstration. Production
+chance remains 20%, and accepted traffic/Recent activity are untouched. New
+assets/integrations carry cache versions; no production homepage controls were
+added. The fixture may replace retained water (and visitors then follow their
+normal exact-puddle departure rules), so it is explicitly a local simulation.
+
+Validation: **all 60 Node entry points passed**. `tests/gnome-puddles.cjs`
+checks each organic interior and rotated segment path, wetness/size and 20%
+boundaries, complete crossings, overlapping/disjoint entries, failure debounce,
+one-success limit, removal/replacement and post-roll identity safety, independent
+RNG, clock/hidden handling, click/underpants behavior and 30 resource cycles.
+Fight, vine, overcrowding and weed-harvest traces with and without water have
+identical positions, states, action timing and removals. Existing ecology,
+frog, grass, Stillbloom, mutation, drop, audio and event suites passed.
+
+The **complete installed-Chrome suite passed**, including actual diagnostic
+clicks, both renderers, day/night/hurricane/reduced-motion captures, underpants
+clicks during a mishap, immediate hidden-state cleanup, and 25 repeated
+demonstrations. Every cycle ended with zero gnomes/ripples, destroyed owned
+Sprites, one atlas bake and one gnome source. Debug/Release application builds,
+backend checks and actual ASP.NET polling -> SSE integration passed without
+backend changes. The checks-project build reported **NU1900** because NuGet
+vulnerability metadata was unavailable; builds/checks succeeded.
+
+Artifacts: **eight screenshots** at
+`artifacts/gnome-puddles/browser/gnome-puddle-{canvas,pixi}-{day,night,storm,reduced}.png`,
+paired in `gnome-puddles.html`; `gnome-puddle-resources.json` contains the full
+resource and CPU results. Frozen screenshot clocks are separate from native-clock
+CPU probes. Both rendering paths are warmed before 240 forced submissions:
+
+| Local Chrome probe | Existing four gnomes | Four simultaneous reactions |
+| --- | ---: | ---: |
+| Pixi mean submission (view update + render) | 0.025ms | 0.014ms |
+| Canvas mean overlay submission | 0.020ms | 0.033ms |
+| Additional gnome texture sources | 0 | 0 |
+| Extra temporary Sprites | 0 | <=4 |
+
+The worst-case bounded logical probe (four moving gnomes, eight overlapping
+pools, 240 checks, failed rolls allowing fresh entries) averaged **0.093ms** per
+logical tick, **1.10ms** worst, and returned from four tracked actors to zero on
+clear. Short CPU samples contain timing/JIT/driver noise; the lower Pixi number
+does not imply a speedup. These measure submission, not GPU completion, process
+memory, sustained frame pacing or a real-traffic soak. Other browsers/GPUs remain
+unverified. The pre-existing page-close visibility/ticker race noted below is
+outside this slice; scene/cycle assertions run before page closure.
+
+Focused reproduction with the already installed Playwright/Chrome runtime:
+
+```powershell
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/gnome-puddles/browser'
+node tests/pixi-default-browser.cjs --run --gnome-puddles-only
+node tests/gnome-puddles.cjs
+```
+
+The dated sections below preserve historical counts and feature boundaries.
+
 # Illustrated storm puddles (2026-10-21)
 
 Storm water now has **four shared finite shape/palette recipes** in

@@ -820,13 +820,26 @@ creation rolls, frog wetness thresholds or exact-puddle references. Matching
 small/large/overlap/grass/frog/day/night/hurricane/drain captures and resource
 measurements are recorded in [Pixi live notes](PIXI-LIVE.md#illustrated-storm-puddles-2026-10-21).
 
-Temporary water now supports the passive frogs described above. Further
-interactions remain future work:
+Temporary water now supports passive frogs and **gnome puddle mishaps**.
+Moving gnomes get one independent 20% roll on a fresh entry into conservatively
+visible interior water, at most one successful mishap per actor/incident. The
+existing logical tick checks bounded foot-path segments using shared size and
+wetness. Four contracted organic contours exclude soft/transparent shores;
+overlapping pools count as continuous water and standing in water never retries.
+Removed, replaced, faint or drained water cannot inherit an entry or reaction.
+The gnome briefly stumbles, splashes and displays `!`, then continues after about
+one second. All work/fighting/departure schedules and underpants behavior remain
+unchanged; reduced motion uses a still reaction. Hidden/cleared incidents release
+reaction state/resources, with no missed-entry replay or new sounds. Canvas/Pixi
+share state/art; Pixi adds one finite ripple tile in the existing gnome atlas.
+The deterministic local-water demonstration is development-only. See
+[validation and resource measurements](PIXI-LIVE.md#gnome-puddle-mishaps-2026-10-21).
+
+Further interactions remain future work:
 
 - snails may be more likely after rain;
-- occasional small ripples;
+- occasional ambient water ripples, beyond the implemented mishap ripple;
 - a floating leaf;
-- a gnome can eventually walk through a puddle and become extremely displeased;
 - a first-seen curiosity could choose a frog when suitable water already exists.
 
 The useful causal chain is:

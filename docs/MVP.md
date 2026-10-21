@@ -14,6 +14,18 @@ sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
+- Gnome puddle mishaps in Canvas/Pixi: one independent 20% roll per fresh moving
+  entry into visible shared water (size >=8, model opacity >=0.12), at most one
+  success per gnome/incident. Conservative interiors derive from all four organic
+  water recipes; bounded foot-path segments are checked on the existing 250ms
+  tick, including complete crossings between samples. Overlapping pools merge
+  into continuous water; standing in water never repeats rolls. A one-second
+  startled/stumbling pose, tiny ripple and `!` leave movement, fighting, all
+  landscaping modes and underpants clicks unchanged. Reduced motion is still;
+  hidden/cleared/expired-water state and Sprites clean up without replay. One
+  extra cached gnome-atlas frame, at most four temporary ripple Sprites, no new
+  source/timer/loop/sound. Deterministic diagnostic trigger only on `/pixi-live.html`;
+  water, frogs, plants, drops, scores, traffic and Recent activity rules are unchanged.
 - Illustrated storm pools in Canvas/Pixi: four shared organic silhouettes chosen
   deterministically from each existing puddle seed, subdued teal/slate water,
   soft shores, shallow-water marks and static reflected-sky glints. Canvas uses
@@ -169,7 +181,7 @@ These are desired follow-ups, not descriptions of the code already implemented:
 - **Additional curiosity/drop types:** odd seeds, worthless coin-shaped objects,
   rainbow leaves, crystal shards, ghost petals, gnome hats, and other collectible
   drops remain future work beyond the four visitors and Amanita.
-- **Water interactions:** passive frogs and storm puddles are implemented; water-specific snails, collectible frogs and gnome reactions remain future work.
+- **Water interactions:** passive frogs, storm puddles and gnome wet-boots mishaps are implemented; water-specific snails and collectible frogs remain future work.
 - **Storm presentation follow-up:** evaluate the implemented Pixi bolts and thunder during longer live use; Canvas lightning parity and continuous weather ambience remain separate decisions. See [Ideas](IDEAS.md#storm-lightning-and-thunder-implemented-pixi-experiment).
 - **Optional desktop/screensaver:** investigate packaging the existing Pixi garden and a clearly simulated input mode; no commitment to Godot, pricing, or distribution. See [Ideas](IDEAS.md#optional-desktop--screensaver-experience-exploratory).
 

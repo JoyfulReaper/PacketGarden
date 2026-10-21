@@ -39,15 +39,20 @@
       }
       g.position.set(keys.length*40,0);sheet.addChild(g);keys.push(key);
     }
+    const splash=new P.Graphics(),art=(common?require('./garden-gnome-puddles.js'):window.PacketGardenGnomePuddles).splashArt;
+    for(const [x,y,endX,endY] of art.lines)splash.moveTo(x+16,y+18).lineTo(endX+16,endY+18);
+    splash.stroke({color:art.color,width:art.width});splash.position.set(keys.length*40,0);sheet.addChild(splash);keys.push('puddle:splash');
     const atlas = renderer.generateTexture({target:sheet,frame:new P.Rectangle(0,0,keys.length*40,32),resolution:2});
+    for(const patch of [...sheet.children])patch.destroy(); // Release owned construction contexts, including the ripple.
     sheet.destroy({children:true});
     const frames = new Map(keys.map((key,i)=>[key,new P.Texture({source:atlas.source,frame:new P.Rectangle(i*40,0,40,32)})]));
     return {frames,atlas,destroy(){for(const frame of frames.values())frame.destroy(false);atlas.destroy(true);}};
   }
   function createGnomeView(P, layer, frames, getReducedMotion = () => false) {
-    const views = new Map();let group = null;
+    const views = new Map(),splashes=new Map();let group = null;
     function change({actors}) {
       for (const [actor,sprite] of views) if (!actors.includes(actor)) { sprite.destroy();views.delete(actor); }
+      for (const [actor,sprite] of splashes) if (!actors.includes(actor)||!actor.puddleMishap) { sprite.destroy();splashes.delete(actor); }
       if (!actors.length) { if(group)group.destroy();group=null;return; }
       if (!group) {group=new P.Container();group.eventMode='none';layer.addChild(group);}
       for (const actor of actors) if(!views.has(actor)) {
@@ -62,9 +67,14 @@
           : pose.sack ? `sack:${actor.side}` : pose.clippers ? `clippers:${pose.closed}` : `${actor.side}:${pose.battle}:${step}`;
         sprite.texture=frames.get(key);
         sprite.position.set(pose.x,pose.y);sprite.rotation=pose.rotation;sprite.alpha=pose.alpha;
+        if(pose.water){
+          if(!splashes.has(actor)){const splash=new P.Sprite(frames.get('puddle:splash'));splash.anchor.set(16/40,18/32);
+            splash.eventMode='none';group.addChildAt(splash,0);splashes.set(actor,splash);}
+          const splash=splashes.get(actor);splash.position.set(actor.x,actor.y);splash.alpha=pose.water.alpha*pose.alpha;
+        }else if(splashes.has(actor)){splashes.get(actor).destroy();splashes.delete(actor);}
       }
     }
-    return {views,change,animate,snapshot(){return {sprites:views.size,containers:group?1:0,textures:frames.size};},
+    return {views,splashes,change,animate,snapshot(){return {sprites:views.size,splashes:splashes.size,containers:group?1:0,textures:frames.size};},
       destroy(){change({actors:[]});}};
   }
   const api={makeGnomeAtlas,createGnomeView};

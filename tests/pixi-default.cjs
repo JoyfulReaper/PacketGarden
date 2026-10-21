@@ -7,7 +7,7 @@ const html = read('index.html');
 const scripts = [...html.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const diagnosticScripts = [...read('pixi-live.html').matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const assetPath = url => url.split('?')[0];
-assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>name!=='garden-stillbloom-dev.js'), 'both pages use the same renderer and model order; Stillbloom simulation is diagnostic-only');
+assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>!['garden-stillbloom-dev.js','garden-gnome-puddles-dev.js'].includes(name)), 'both pages use the same renderer and model order; simulations are diagnostic-only');
 assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
 assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
 assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather normalizer must bypass cached code that drops hourly data');

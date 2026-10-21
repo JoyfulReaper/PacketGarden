@@ -80,7 +80,7 @@ async function run() {
     window.__gardenGnomeBakes=0;
     PacketGardenPixiGnomes.makeGnomeAtlas=(...args)=>{window.__gardenGnomeBakes++;return window.__gardenTestGnomeAtlas=makeGnomeAtlas(...args);};
     PacketGardenPixiGnomes.createGnomeView=(...args)=>(window.__gardenTestGnomeView=createGnomeView(...args));
-    PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
+    PacketGardenGnomes.createModel = options => (window.__gardenTestGnomes = createGnomes({...options,puddleRandom:()=>.99}));
     const createStorm = PacketGardenPixiStorm.createModel;
     PacketGardenPixiStorm.createModel = options => (window.__gardenTestStorm = createStorm({...options,random:PacketGardenPixi.seededRandom(77332)}));
     const createStormView = PacketGardenPixiStorm.createView;
@@ -153,6 +153,7 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--gnome-puddles-only')){promoted=true;await checkGnomePuddles();return;}
     if(process.argv.includes('--puddle-art-only')){promoted=true;await checkPuddleArt();return;}
     if(process.argv.includes('--frogs-only')){promoted=true;await checkFrogs();return;}
     if(process.argv.includes('--gnome-harvest-only')){promoted=true;await checkHarvest();return;}
@@ -332,6 +333,7 @@ async function run() {
     await checkHarvest();
     await checkFrogs();
     await checkPuddleArt();
+    await checkGnomePuddles();
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -355,6 +357,102 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+
+  async function checkGnomePuddles() {
+    const errors=[],resources={};let at=Date.UTC(2026,9,21,12);
+    for(const pixi of [true,false]){
+      const kind=pixi?'pixi':'canvas',page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});
+      page.on('pageerror',e=>errors.push(String(e.stack)));await page.clock.setFixedTime(at);await page.goto(origin+(pixi?'/pixi-live.html':'/canvas.html'));
+      if(pixi){await page.waitForFunction(()=>window.__gardenTestGnomes);await page.locator('#probes').uncheck();}
+      else await page.addScriptTag({url:origin+'/garden-gnome-puddles-dev.js'});
+      await page.getByLabel('Weather source',{exact:true}).selectOption('manual');
+      for(const scene of ['day','night','storm','reduced']){
+        await page.emulateMedia({reducedMotion:scene==='reduced'?'reduce':'no-preference'});
+        if(pixi){await page.locator('#lighting-mode').selectOption(scene==='night'?'night':'day');await page.getByLabel('Manual weather',{exact:true}).selectOption(scene==='storm'?'botnet_hurricane':'quiet');}
+        else{await page.getByLabel('Events/min',{exact:true}).fill('10000');await page.getByLabel('Events/min',{exact:true}).dispatchEvent('change');await page.getByLabel('Weather',{exact:true}).selectOption(scene==='storm'?'botnet_hurricane':'quiet');}
+        await page.evaluate(({pixi,scene})=>{
+          const g=pixi?__gardenTestGnomes:gardenGnomes,e=pixi?__gardenTestEcology:gardenEcology;
+          g.clear();e.clear();if(pixi)__gardenTestAmbient.clear();else gardenAmbient.clear();
+          // Same harmless local plants in both renderers; no accepted traffic.
+          const garden=pixi?__gardenTestGarden:gardenModel;
+          garden.seed(Array.from({length:30},(_,i)=>({type:'broadleaf',column:1+i,row:4,createdAt:Date.now()-65000,colorVariant:0,origin:{kind:'simulated',eventType:'puddle-mishap-capture'}})));
+          if(!pixi){gardenLighting.setMode(scene==='night'?'night':'day');updateGardenLighting(Date.now(),true);}
+        },{pixi,scene});
+        if(pixi)await page.locator('#trigger-gnome-puddle').click();
+        else await page.evaluate(()=>{PacketGardenGnomePuddlesDev.trigger({gnomes:gardenGnomes,garden:gardenModel,ecology:gardenEcology});syncGnomeState();drawGarden();});
+        for(let n=0;n<6;n++){at+=250;await page.clock.setFixedTime(at);await page.evaluate(pixi=>{
+          (pixi?__gardenTestGnomes:gardenGnomes).tick(Date.now());if(!pixi){syncGnomeState();drawGardenOverlay(true);}
+        },pixi);}
+        if(pixi){const paints=await page.evaluate(()=>__gardenTestPaints);await page.waitForFunction(n=>__gardenTestPaints>n+1,paints);}
+        const state=await page.evaluate(pixi=>{
+          const g=pixi?__gardenTestGnomes:gardenGnomes,a=g.actors[0],pose=PacketGardenGnomes.presentation(a,Date.now(),matchMedia('(prefers-reduced-motion: reduce)').matches);
+          return {reacted:Boolean(a.puddleMishap),water:pose.water,underpants:a.underpantsAttempted??false};
+        },pixi);assert(state.reacted);assert.equal(state.underpants,false);
+        if(scene==='reduced'){assert.equal(state.water.rotation,0);assert.equal(state.water.bounce,0);}
+        await page.locator(pixi?'#view canvas':'.garden-stage').screenshot({path:path.join(output,`gnome-puddle-${kind}-${scene}.png`)});
+        // Click the actual displayed gnome. The new reaction never consumes an
+        // underpants attempt, and repeated hits still create just one drop.
+        const point=await page.evaluate(pixi=>{
+          const g=pixi?__gardenTestGnomes:gardenGnomes,a=g.actors[0],p=PacketGardenGnomes.presentation(a,Date.now());
+          if(pixi){const root=__gardenTestApp.stage.children[0],box=__gardenTestApp.canvas.getBoundingClientRect();return {x:box.left+root.position.x+p.x*root.scale.x,y:box.top+root.position.y+p.y*root.scale.y};}
+          const box=canvas.getBoundingClientRect();return {x:box.left+gardenView.offsetX+p.x*gardenView.scale,y:box.top+gardenView.offsetY+p.y*gardenView.scale};
+        },pixi);
+        await page.mouse.click(point.x,point.y);await page.mouse.click(point.x,point.y);
+        assert.equal(await page.evaluate(pixi=>(pixi?__gardenTestAmbient:gardenAmbient).drops.length,pixi),1);
+        // Both adapters receive hidden immediately, without missed entries on resume.
+        await page.evaluate(pixi=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));
+          const g=pixi?__gardenTestGnomes:gardenGnomes;if(g.actors[0]?.puddleMishap)throw Error('hidden reaction retained');
+          if(pixi&&__gardenTestGnomeView.splashes.size)throw Error('hidden ripple Sprite retained');
+          Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;g.clear();
+        },pixi);
+        if(pixi)assert.equal(await page.evaluate(()=>__gardenTestGnomeView.splashes.size),0);
+      }
+      if(pixi)resources.cycles=await page.evaluate(()=>{
+        const cycles=[],g=__gardenTestGnomes,v=__gardenTestGnomeView,e=__gardenTestEcology;
+        for(let cycle=0;cycle<25;cycle++){
+          const at=Date.now()+cycle*20000;PacketGardenGnomePuddlesDev.trigger({gnomes:g,garden:__gardenTestGarden,ecology:e,at});
+          for(let age=250;age<=1500;age+=250)g.tick(at+age);v.animate(at+1500);
+          const sprites=[...v.views.values(),...v.splashes.values()],active=v.splashes.size;
+          g.clear();v.animate(at+1500);cycles.push({active,gnomes:v.views.size,splashes:v.splashes.size,destroyed:sprites.every(s=>s.destroyed)});
+        }
+        return {cycles,frames:__gardenTestGnomeAtlas.frames.size,bakes:__gardenGnomeBakes,
+          backing:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight],sources:new Set([...__gardenTestGnomeAtlas.frames.values()].map(t=>t.source)).size};
+      });
+      assert.deepEqual(errors,[]);page.removeAllListeners('pageerror');await page.close();
+    }
+    assert(resources.cycles.cycles.every(c=>c.active===1&&c.gnomes===0&&c.splashes===0&&c.destroyed));assert.equal(resources.cycles.frames,22);assert.equal(resources.cycles.bakes,1);assert.equal(resources.cycles.sources,1);
+    // Isolated native-clock submission probes. Frozen fixtures above measure
+    // pixels/state only; these repeated calls compare the same four actors.
+    const perf=await browser.newPage();await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestGnomes);
+    resources.pixiCpu=await perf.evaluate(()=>{
+      PacketGardenGnomePuddlesDev.trigger({gnomes:__gardenTestGnomes,garden:__gardenTestGarden,ecology:__gardenTestEcology});
+      const g=__gardenTestGnomes,v=__gardenTestGnomeView,at=Date.now();
+      const sample=wet=>{for(const actor of g.actors){if(wet)actor.puddleMishap={startedAt:at,until:at+1000};else delete actor.puddleMishap;}
+        v.animate(at+250);const times=[];for(let n=0;n<240;n++){const start=performance.now();v.animate(at+250);__gardenTestApp.render();times.push(performance.now()-start);}
+        return {averageMs:times.reduce((a,b)=>a+b,0)/times.length,worstMs:Math.max(...times),sprites:v.views.size,splashes:v.splashes.size};};
+      sample(false);sample(true); // Warm both paths before measuring submission.
+      const baseline=sample(false),fourReactions=sample(true);g.clear();return {baseline,fourReactions};
+    });await perf.close();
+    const cp=await browser.newPage();await cp.goto(origin+'/canvas.html');
+    resources.canvasCpu=await cp.evaluate(()=>{
+      gardenModel.seed(Array.from({length:30},(_,i)=>({type:'broadleaf',column:i,row:4,createdAt:Date.now()})));gardenGnomes.start(Date.now(),()=>.5);syncGnomeState();const at=Date.now();
+      const sample=wet=>{for(const a of gardenGnomes.actors){if(wet)a.puddleMishap={startedAt:at,until:at+1000};else delete a.puddleMishap;}
+        const times=[];for(let n=0;n<240;n++){const start=performance.now();drawGardenOverlay(true,at+250);times.push(performance.now()-start);}
+        return {averageMs:times.reduce((a,b)=>a+b,0)/times.length,worstMs:Math.max(...times)};};
+      sample(false);sample(true);
+      const baseline=sample(false),fourReactions=sample(true);gardenGnomes.clear();return {baseline,fourReactions};
+    });await cp.close();
+    const logical=await browser.newPage();await logical.goto(origin+'/pixi-live.html');await logical.waitForFunction(()=>window.__gardenTestGnomes);
+    resources.logicalCpu=await logical.evaluate(()=>{
+      const at=Date.now(),water=Array.from({length:8},(_,i)=>({x:480+i%4*8,y:300+Math.floor(i/4)*10,seed:i/8,size:36,maxSize:36,createdAt:at,lastRefreshedAt:at}));
+      const actors=Array.from({length:4},(_,i)=>({x:440,y:289+i})),m=PacketGardenGnomePuddles.createModel({getPuddles:()=>water,random:()=>.99}),times=[];
+      m.tick(actors,at);for(let n=0;n<240;n++){for(const a of actors)a.x=n%2?440:540;const start=performance.now();m.tick(actors,at+(n+1)*250);times.push(performance.now()-start);}
+      const tracked=m.trackedActors;m.clear(actors);return {averageMs:times.reduce((a,b)=>a+b,0)/times.length,worstMs:Math.max(...times),samples:times.length,actors:4,puddles:8,trackedAfterClear:m.trackedActors,tracked};
+    });await logical.close();
+    await fs.writeFile(path.join(output,'gnome-puddle-resources.json'),JSON.stringify(resources,null,2));
+    await fs.writeFile(path.join(output,'gnome-puddles.html'),`<!doctype html><meta charset="utf-8"><title>Gnome puddle mishaps</title><style>body{background:#19271f;color:#dfebdb;font:16px system-ui}img{width:100%;max-width:1000px}figure{display:inline-block;width:47%}</style><h1>Gnome puddle mishaps</h1>${['day','night','storm','reduced'].map(scene=>`<h2>${scene}</h2>${['canvas','pixi'].map(kind=>`<figure><figcaption>${kind}</figcaption><a href="gnome-puddle-${kind}-${scene}.png"><img src="gnome-puddle-${kind}-${scene}.png"></a></figure>`).join('')}`).join('')}<p><a href="gnome-puddle-resources.json">Resource and CPU measurements</a></p>`);
+    console.log('PASS: Chrome deterministic puddle mishap fixture, Canvas/Pixi day/night/storm/reduced captures, real underpants clicks/hidden cleanup, 25 resource cycles and isolated CPU probes:',JSON.stringify(resources));
   }
 
   async function checkPuddleArt() {
@@ -573,7 +671,7 @@ async function run() {
         gnomeBakes:__gardenGnomeBakes,ambientBakes:__gardenAmbientBakes,
         gnomeBacking:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight]};
     });
-    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,21);assert.equal(resources.ambientFrames,13);
+    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,22);assert.equal(resources.ambientFrames,13);
     assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
     const canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
     await canvas.evaluate(()=>{gardenModel.clear();gardenEcology.clear();const at=Date.now();gardenModel.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:0,column:12+i*2,row:10,createdAt:at-65000,
@@ -815,8 +913,8 @@ async function run() {
       __gardenTestGnomes.incident.createdAt=Date.now()-20000;});
     await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
     assert.equal((await actors()).count,0);assert.equal(await tones(),beforeHidden,'suspended completion does not replay cues');
-    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:21,
-      atlasBacking:[1680,64],estimatedAtlasRgbaBytes:1680*64*4};
+    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:22,
+      atlasBacking:[1760,64],estimatedAtlasRgbaBytes:1760*64*4};
     await fs.writeFile(path.join(output,'gnome-timing.json'),JSON.stringify(results,null,2));console.log('Gnome timing:',JSON.stringify(results));
   }
   async function checkLandscaping(page) {

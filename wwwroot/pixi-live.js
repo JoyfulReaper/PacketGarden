@@ -392,6 +392,7 @@
     const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
     let simulatedWinner = null, nextSimulatedWinner = 'green';
     const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
+      getPuddles: () => ecology?.puddles ?? [],
       hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
       onUnderpantsAttempt: (point,at) => ambient.dropGnomeUnderpants(point,at),
       getReducedMotion: () => reducedMotion?.matches ?? false,
@@ -434,9 +435,11 @@
       onChange(change) {
         ecologyView.change(change, Date.now());
         if (change.kind === 'grass-removed') ui.grassRemoved(change.item);
+        if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
     // Distributed local seeds; real TCPNoise never gains grass influence.
     ecology.seedInitialGrass();
+    window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
     // The default garden omits development controls and timing collection entirely.
     const measurements = hud ? shared.frameWindow() : null;
     const sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
@@ -532,7 +535,7 @@
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,

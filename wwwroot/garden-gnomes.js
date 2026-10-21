@@ -17,14 +17,17 @@
     && !(p.type === 'broadleaf' && p.broadleafVariant === 'rainbow')
     && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
   function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,
+    getPuddles = () => [], puddleRandom,
     getReducedMotion = () => false, hasPendingBud = () => false, onUnderpantsAttempt = () => {},
     onChange = () => {}, onCue = () => {} }) {
     let actors = [], incident = null, nextCheckAt = now() + config.checkEveryMs;
     let lastLandscapingAt = -Infinity, suspended = false;
+    const puddles = (typeof module !== 'undefined' && module.exports ? require('./garden-gnome-puddles.js') : window.PacketGardenGnomePuddles)
+      .createModel({getPuddles,random:puddleRandom});
     const eligibleTarget = (p, at, mode) => ordinarySpecimen(p, at) && (mode === 'overcrowding'
       || mode === 'vine' && p.type === 'vine'
       || mode === 'weed_harvest' && p.type === 'weed' && garden.lifecycleStage(p,at) === 'mature' && !hasPendingBud(p));
-    const changed = () => onChange({ actors, incident });
+    const changed = () => {puddles.prune(actors);onChange({ actors, incident });};
     const livingCount = at => getSpecimens().filter(p => at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired').length;
     const occupiedBy = p => source?.byCell.get(p.cell) === p;
     const freeCells = () => garden.dimensions.capacity - (source?.byCell.size ?? 0);
@@ -75,7 +78,7 @@
       actors = [{ type:'gnome', role:'worker', side:'green', x:Math.max(6,first.x-35), y:first.y, createdAt:at },
         { type:'gnome', role:mode === 'weed_harvest' ? 'carrier' : 'supervisor', side:'red', x:Math.min(948,first.x+24), y:Math.max(18,first.y-20),
           state:'supervise', createdAt:at }];
-      aim(at); advanceLandscaping(at); changed(); return true;
+      aim(at); advanceLandscaping(at); puddles.tick(actors,at); changed(); return true;
     }
     function advanceLandscaping(at) {
       const worker = actors[0], age = Math.max(0, at-incident.stepAt);
@@ -144,9 +147,9 @@
             targetX:centerX + direction * 14, targetY:centerY + offset, state:'approach', createdAt:at });
         }
       }
-      changed(); return true;
+      puddles.tick(actors,at); changed(); return true;
     }
-    function clear() { actors = []; incident = null; changed(); }
+    function clear() { puddles.clear(actors);actors = []; incident = null; changed(); }
     function advance(at = now(), roll = random) {
       if (!incident) return;
       if (incident.type === 'gnome_landscaping') { advanceLandscaping(at); return; }
@@ -179,17 +182,18 @@
         }
       }
     }
-    function resetCadence(at = now()) { suspended = false; nextCheckAt = at + config.checkEveryMs; }
+    function resetCadence(at = now()) { suspended = false; puddles.suspend();nextCheckAt = at + config.checkEveryMs; }
     function suspend(at = now()) {
       resetCadence(at);
       suspended = true;
       if (incident?.type === 'gnome_landscaping') clear();
+      else changed(); // Release transient water presentation while a dispute is hidden.
     }
     function tick(at = now(), roll = random, hidden = false) {
       if (hidden) { suspend(at); return; }
       if (incident) {
         if (incident.type === 'gnome_landscaping') tickLandscaping(at);
-        advance(at, roll); return;
+        advance(at, roll); if(!suspended)puddles.tick(actors,at);return;
       }
       if (at < nextCheckAt) return;
       resetCadence(at); // One fresh check, never replay missed intervals.
@@ -233,17 +237,20 @@
       return true; // Repeated clicks still consume the click, never the plant underneath.
     }
     return { start, startLandscaping, landscapingEligible, landscapingCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+      puddleRemoved(puddle){puddles.removed(puddle);if(actors.length)changed();},
+      simulatePuddleEntry(actor){if(!actors.includes(actor))return false;puddles.armDemo(actor);return true;},
       get lastLandscapingAt() { return lastLandscapingAt; },
       get actors() { return actors; }, get incident() { return incident; }, get nextCheckAt() { return nextCheckAt; } };
   }
   function appearance(actor, at, reducedMotion = false) {
-    const surprised = at < (actor.surprisedUntil ?? -Infinity);
+    const water = (typeof module !== 'undefined' && module.exports ? require('./garden-gnome-puddles.js') : window.PacketGardenGnomePuddles).reactionState(actor,at,reducedMotion);
+    const surprised = at < (actor.surprisedUntil ?? -Infinity) || Boolean(water);
     const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier';
     const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle' && !surprised;
-    return { step, battle, surprised, sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
-      bounce:surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
+    return { step, battle, surprised, water, sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
+      bounce:water ? water.bounce : surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
       clippers:actor.role === 'worker' && !actor.carrySack, closed:surprised || actor.state === 'snip' && (reducedMotion || step > 0),
-      shove:battle ? step * (actor.side === 'green' ? 2 : -2) : 0, rotation:battle ? step * .12 : 0,
+      shove:battle ? step * (actor.side === 'green' ? 2 : -2) : 0, rotation:water ? water.rotation : battle ? step * .12 : 0,
       alpha:actor.state === 'flee' ? Math.max(0,1-(at-actor.createdAt-config.resultAfterMs)/(config.losersGoneAfterMs-config.resultAfterMs)) : 1 };
   }
   function presentation(actor, at, reducedMotion = false) {
