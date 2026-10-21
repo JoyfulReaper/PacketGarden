@@ -303,6 +303,23 @@ Collection says `You found Amanita muscaria. +0 points`, reuses optional quiet
 audio, and leaves Score at 0. Scheduling, activation, collection, and expiry add
 no Recent activity rows. This is cosmetic garden nonsense, with no protocol or
 security meaning; fake Gopher growth and dropped saturated events do not roll.
+**Ditch Weed Buds** now use that same loose-drop system. Every successfully
+placed live TCPNoise ordinary `weed` gets exactly one **3%** roll, regardless of
+listening port. A successful attempt waits for that exact weed's maturity
+(60 seconds); removal, replacement or expiry before then cancels it. The small
+olive-green bud lives independently for 20 seconds and leaves its parent intact.
+Buds and Amanita share **three active slots total**, with no eviction or retries
+at the cap. Missed bud activations while hidden or more than 1.5 seconds late
+are discarded. Buds remain still, including with reduced motion enabled.
+
+Collecting one briefly says `You smoked some ditch weed. +0 points` and reuses
+the optional collection sound. Score, occupancy, grass, growth statistics and
+Recent activity stay unchanged. The port-22 collectible mutation retains its
+separate rules and message. Only `/pixi-live.html` has **Seed weed buds
+(simulated)**, a three-drop mixed/overlap fixture with simulated plants and
+normal drop expiry. Canvas and Pixi share its rules and compact leaf artwork;
+Pixi adds one cached frame, keeping the same three-Sprite limit.
+
 Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
 and frogs/water interactions remain future work.
 

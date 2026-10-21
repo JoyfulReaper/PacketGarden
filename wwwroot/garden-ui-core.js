@@ -3,11 +3,11 @@
   'use strict';
   const mutations = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
   const fakeSourceNames = Object.freeze({ dns: 'Simulated DNS', gopher: 'Simulated Gopher', http: 'Simulated HTTP',
-    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe' });
+    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe', 'weed-bud-test': 'Simulated weed bud fixture' });
   const vigorNames = Object.freeze(['one-off', 'repeated', 'frequent', 'persistent']);
   const messages = Object.freeze({ ladybug: 'You caught a ladybug. +0 points', snail: 'You collected a snail. It seems annoyed. +0 points',
     moth: 'You caught a moth. +0 points', shiny_pebble: 'You found a rock. +0 points',
-    amanita_muscaria: 'You found Amanita muscaria. +0 points', collectible_weed: 'You collected some weed. +0 points' });
+    amanita_muscaria: 'You found Amanita muscaria. +0 points', ditch_weed_bud: 'You smoked some ditch weed. +0 points', collectible_weed: 'You collected some weed. +0 points' });
   const messageDurationMs = 2000;
   const capitalize = name => name.charAt(0).toUpperCase() + name.slice(1);
   function formatAge(ageMs) {

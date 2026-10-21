@@ -192,7 +192,41 @@ Collection says `You found Amanita muscaria. +0 points` with optional quiet soun
 Score stays 0, with no inventory, persistence, use, or consumption mechanics.
 Only live successful mushroom growth triggers the roll; it says nothing about
 traffic protocol, payload, remote identity, or security. The small loose-drop
-registry is a future reuse seam, with only Amanita implemented now.
+registry now also supports Ditch Weed Buds below. The original Amanita-only
+implementation is retained in the historical Pixi notes.
+
+### Ditch Weed Bud (implemented)
+
+The proposed ordinary-weed drop is now implemented in both Canvas and Pixi.
+Each successfully placed live TCPNoise canonical `weed`, regardless of port,
+gets exactly one 3% roll (`roll < 0.03`) at creation. No tick, refresh, maturity
+or collection rerolls it. A successful attempt waits for the exact parent's
+60-second maturity. Exact reference/id, cell/coordinates, creation time,
+eligibility and current lifetime must still match; removal, replacement,
+collection or clear before activation cancels it. Local/fake weeds, unrelated
+plants and the port-22 redbloom mutation do not produce buds.
+
+The tiny compact olive-green leaf cluster is a separate loose object with its
+own 20-second lifetime. Collecting or ignoring it leaves the weed unchanged.
+Amanita and buds share three active slots total; due cap skips are consumed
+without retries, queues or eviction. Bud deadlines missed while hidden or more
+than 1.5 seconds late are discarded without catch-up. Amanita keeps its original
+1% live-mushroom roll, five-second delay and hidden/resume behavior.
+
+Click priority remains curiosity → topmost loose drop → mutation → inspection.
+Only the selected bud disappears, briefly saying
+`You smoked some ditch weed. +0 points`, with existing optional quiet audio.
+No smoke effect, consumption animation, occupancy, grass/puddle change, Recent
+activity, acceptance count, inventory or scoring is introduced. Score stays 0.
+The separate port-22 mutation still collects the specimen itself and says
+`You collected some weed. +0 points`.
+
+Both renderers use the same finite leaf shapes; buds stay still, including with
+reduced motion. Canvas uses the dynamic overlay without base invalidation.
+Pixi adds one startup atlas frame and uses one owned Sprite per active bud.
+**Seed weed buds (simulated)** appears only on `/pixi-live.html`, seeding local
+simulated weeds, grass and a mixed three-drop overlap fixture. It changes no
+incoming statistics or activity. There are no new timers or backend contracts.
 
 ### Vine -> opium mutation
 

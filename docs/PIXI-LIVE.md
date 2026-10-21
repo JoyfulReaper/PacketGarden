@@ -1,3 +1,70 @@
+# Ditch Weed Bud (2026-10-21)
+
+Implemented through the existing shared `garden-ambient.js` loose-drop registry,
+pending-source map, logical tick and removal notifications. Successfully placed
+live TCPNoise canonical weeds get one strict **3%** creation roll, with no port
+restriction or rerolls. Buds activate at the exact source's **60-second maturity**;
+reference/id, occupancy, coordinates, creation time, ordinary eligibility and
+lifetime are checked again. Pre-activation removal/replacement/expiry/collection
+or clear cancels the pending object. A replacement cannot inherit it.
+
+An activated bud has an independent **20-second** lifetime and never alters its
+parent. Buds and Amanita share **three active drops total**. Due cap skips are
+consumed without retry, eviction or backlog. Amanita retains its 1% mushroom roll,
+five-second delay, parent cancellation and original hidden/resume behavior.
+Buds missed while hidden or over **1.5 seconds late** are discarded instead of
+appearing on resume. Existing port-22 mutation rules and message are unchanged.
+
+Collection retains curiosity → topmost loose drop → mutation → inspection
+priority. It removes only the selected object, says
+`You smoked some ditch weed. +0 points` for two seconds, and uses the existing
+optional collection sound. No source changes, cells, grass/puddles, acceptance
+statistics, Recent activity, scores, smoke effects, new loops or backend changes.
+
+Both renderers draw the same small olive-green cluster of seven overlapping
+pointed leaves and a shaded interior. The bud stays still with all motion
+preferences. Canvas draws on its existing overlay without invalidating the base.
+Pixi adds **one finite frame** to its startup ambient atlas: **5 → 6** frames,
+still **one GPU source**, with backing **320×64 → 384×64** at resolution two.
+That adds **16 KiB RGBA** before driver/mipmap overhead. The three-drop Sprite cap
+and bake count remain unchanged; collection/expiry/clear destroy owned Sprites.
+There is no runtime geometry or texture generation for buds.
+
+Development-only **Seed weed buds (simulated)** replaces local fixture state with
+two simulated weeds, a mushroom, grass, one nearby bud and a partially overlapping
+Amanita/bud pair. All three drop slots are shared, all drops expire normally,
+and incoming counters/activity remain untouched. The public pages expose no new
+development controls. Changed scripts have new cache versions.
+
+Validation and captures for this slice live in `artifacts/ditch-weed-bud/`:
+
+- `tests/ditch-weed-bud.cjs`: deterministic probability/one-attempt boundaries,
+  all-port eligibility, maturity, exact identity/cancellation, independent
+  lifetime, shared cap/no retries, hidden/late deadlines, Canvas/Pixi collection,
+  unchanged stats/activity, reduced motion, diagnostics and 30 resource cycles.
+- Chrome regression adds real overlapping-drop clicks, reduced-motion positions
+  and 20 create/collect/expire cycles. Ambient frames/source/bake counts stay
+  **6 / 1 / 1**; each cycle ends with zero views and destroyed owned Sprites.
+- Eight normal-scale captures: `browser/weed-bud-{pixi,canvas}-{nearby,grass,mixed,night}.png`.
+  They show the ordinary weed/bud distinction, grass coexistence, mixed Amanita
+  art and local-time night tint. Historical renderer artwork differences remain.
+- All 56 Node entry points passed, including the optional browser entry points'
+  default skip paths. The complete opt-in Chrome suite and focused bud pass also
+  passed, covering cache upgrades, collections/audio, both gnome modes, storms,
+  lighting, Stillbloom, Canvas and stress-page regression.
+- Isolated Debug and Release application builds passed with zero warnings;
+  backend checks and the actual ASP.NET polling → SSE integration passed.
+  The checks-project build emitted NU1900 because the NuGet vulnerability feed
+  was unavailable. No backend code/contracts were changed.
+
+The fixtures prove behavior and bounded object/texture ownership, not long-lived
+GPU/compositor smoothness. Other browsers and a long real-traffic soak remain
+unverified. Build output is isolated because a running local PacketGarden host
+can lock the usual executable. NuGet vulnerability-feed availability is separate
+from application build/test success.
+
+The sections below retain the history of earlier feature slices.
+
 # Stillbloom (2026-10-21)
 
 `garden-stillbloom.js` is one renderer-neutral scheduler, called by the existing

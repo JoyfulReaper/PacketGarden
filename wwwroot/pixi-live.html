@@ -18,15 +18,15 @@
   <script src="garden-mutations.js" defer></script>
   <script src="garden-grass.js?v=grass-green-1" defer></script>
   <script src="garden-ecology.js?v=grass-green-1" defer></script>
-  <script src="garden-ambient.js" defer></script>
+  <script src="garden-ambient.js?v=weed-bud-1" defer></script>
   <script src="garden-interaction.js" defer></script>
-  <script src="garden-ui-core.js?v=stillbloom-1" defer></script>
+  <script src="garden-ui-core.js?v=weed-bud-1" defer></script>
   <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
-  <script src="pixi-live-ambient.js" defer></script>
+  <script src="pixi-live-ambient.js?v=weed-bud-1" defer></script>
   <script src="pixi-live-gnomes.js?v=landscaping-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-green-1" defer></script>
-  <script src="pixi-live-core.js?v=stillbloom-1" defer></script><script src="pixi-live.js?v=stillbloom-1" defer></script>
+  <script src="pixi-live-core.js?v=weed-bud-1" defer></script><script src="pixi-live.js?v=weed-bud-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -46,6 +46,7 @@
       <button id="clear" type="button">Clear garden</button>
       <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>
+      <button id="seed-weed-buds" type="button">Seed weed buds (simulated)</button>
       <button id="seed-mutations" type="button">Seed 3 mutations (local simulated)</button>
       <button id="seed-pending-mutations" type="button">Seed 4 pending mutations (local simulated)</button>
       <button id="seed-interaction" type="button">Seed overlap fixture (local simulated)</button>
@@ -88,12 +89,13 @@
     </div>
     <pre id="hud" role="status">Initializing Pixi…</pre>
     <p class="note">Opt-in prototype. SSE growth and weather are real; dense seeding is local simulated state.
-      Grass, puddles, first-seen visitors and loose Amanita use shared production rules.
+      Grass, puddles, first-seen visitors, Amanita and weed buds use shared production rules.
       Ambient seeding cycles all four visitor types; visitors and drops expire after 20 seconds.
       Mutation appearance and lifetime use shared production rules. Pending seeds stay ordinary for 3 seconds;
       three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
       Overlap seeding replaces local garden state and cycles visitor types over one Amanita and mutation.
-      Click priority: visitors, Amanita, active mutation, then cell inspection. Score stays zero.
+      Weed bud seeding replaces local state with simulated plants, grass and three mixed drops; the nearby Amanita/bud pair overlaps.
+      Click priority: visitors, topmost loose drop, active mutation, then cell inspection. Score stays zero.
       Sound is optional and starts Off. Gnome triggers are simulated; ordinary incidents keep their rare shared rules. Pixi artwork is approximate.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>

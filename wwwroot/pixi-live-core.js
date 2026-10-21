@@ -92,6 +92,11 @@
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedWeedBuds() {
+        const at = now();
+        model.seed(['weed','weed','mushroom'].map((type,i) => ({ type, vigor:1, column:12+i*5,
+          row:10, createdAt:at-65000, origin:{kind:'simulated',eventType:'weed-bud-test'} })),at);
+      },
       seedLandscaping(mode = 'vine') {
         const at = now();
         const full = mode === 'overcrowding', ordinary = ['flower','mushroom','broadleaf','vine','wirefern','weed'];

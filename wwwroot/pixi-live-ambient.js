@@ -3,7 +3,7 @@
   'use strict';
   const ambientCore = typeof module !== 'undefined' && module.exports ? require('./garden-ambient.js') : window.PacketGardenAmbient;
   function makeAmbientAtlas(P, renderer) {
-    const sheet = new P.Container(), keys = [...ambientCore.curiosityTypes, 'amanita_muscaria'];
+    const sheet = new P.Container(), keys = [...ambientCore.curiosityTypes, ...Object.keys(ambientCore.dropTypes)];
     for (const [i, type] of keys.entries()) {
       const g = new P.Graphics();
       if (type === 'ladybug') {
@@ -25,6 +25,12 @@
       } else if (type === 'shiny_pebble') {
         g.poly([12,18,13,14,17,13,20,16,19,19]).fill(0xa9aaa1);
         g.moveTo(14,15).lineTo(17,14).lineTo(18,16).stroke({color:0xcecec0,width:1});
+      } else if (type === 'ditch_weed_bud') {
+        g.ellipse(16,16,4.5,5).fill(0x39462b);
+        for (const [color,x,y,cx,cy,tx,ty,ex,ey] of ambientCore.weedBudLeaves) {
+          g.moveTo(16+x,16+y).quadraticCurveTo(16+cx,16+cy,16+tx,16+ty)
+            .quadraticCurveTo(16+ex,16+ey,16+x,16+y).fill(color);
+        }
       } else {
         g.rect(14.7,15,2.6,6).fill(0xede4cd);
         g.moveTo(10,13.5).bezierCurveTo(10,8.8,22,8.8,22,13.5)
@@ -71,6 +77,13 @@
     drops:Array.from({length:3},(_,i)=>({type:'amanita_muscaria',createdAt:at,expiresAt:at+ambientCore.dropConfig.lifetimeMs,
       x:285+i*240,y:355,phase:i*.7}))});
   }
-  const api={makeAmbientAtlas,createAmbientView,seedAmbient};
+  function seedWeedBuds(model, at) {
+    // Three shared slots: a nearby bud, then a partially overlapping Amanita/bud pair.
+    model.seed({drops:['ditch_weed_bud','amanita_muscaria','ditch_weed_bud'].map((type,i) => ({
+      type, createdAt:at, expiresAt:at+ambientCore.dropConfig.lifetimeMs,
+      x:[395,545,551][i], y:315, phase:0
+    }))});
+  }
+  const api={makeAmbientAtlas,createAmbientView,seedAmbient,seedWeedBuds};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else window.PacketGardenPixiAmbient=api;
 })();

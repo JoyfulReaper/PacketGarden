@@ -226,6 +226,7 @@ const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random
   if (change.kind === 'added') gardenEcology?.removeGrassCell(change.specimen.column, change.specimen.row);
   if (change.kind === 'removed') {
     gardenMutations.removed(change.specimen, change.reason);
+    gardenAmbient.cancelSource(change.specimen);
     if (change.reason === 'landscaped') {
       gardenBaseDirty = true; gardenPerf?.reason('specimen-change'); updateGardenStatus();
       if (typeof inspectedSpecimen !== 'undefined' && inspectedSpecimen === change.specimen) closeSpecimenCard();
@@ -1136,6 +1137,7 @@ seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
+  gardenAmbient.setHidden(document.hidden);
   gardenStillbloom.configure({hidden:document.hidden});
   gardenEcology.resetCadence(Date.now());
   nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
@@ -1155,6 +1157,8 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", event => {
+  gardenAmbient.setHidden(true);
+  if (!event?.persisted) gardenAmbient.clear();
   gardenStillbloom.configure({hidden:true});
   if(!event?.persisted)gardenStillbloom.destroy();
   if (!event?.persisted && typeof disposeGardenLighting === 'function') disposeGardenLighting();

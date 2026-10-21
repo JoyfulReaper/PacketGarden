@@ -54,6 +54,12 @@ async function run() {
     PacketGardenStillbloom.createModel=(...args)=>{const model=createStillbloom(...args);window.__gardenTestStillbloom??=model;return model;};
     PacketGardenCore.createGardenModel=(...args)=>{const garden=createGarden(...args);window.__gardenTestGarden??=garden;return garden;};
     PacketGardenEcology.createEcologyModel=(...args)=>(window.__gardenTestEcology=createEcology(...args));
+    const createAmbient=PacketGardenAmbient.createAmbientModel;
+    PacketGardenAmbient.createAmbientModel=(...args)=>(window.__gardenTestAmbient=createAmbient(...args));
+    const makeAmbientAtlas=PacketGardenPixiAmbient.makeAmbientAtlas,createAmbientView=PacketGardenPixiAmbient.createAmbientView;
+    window.__gardenAmbientBakes=0;
+    PacketGardenPixiAmbient.makeAmbientAtlas=(...args)=>{window.__gardenAmbientBakes++;return window.__gardenTestAmbientAtlas=makeAmbientAtlas(...args);};
+    PacketGardenPixiAmbient.createAmbientView=(...args)=>(window.__gardenTestAmbientView=createAmbientView(...args));
     PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
     const createStorm = PacketGardenPixiStorm.createModel;
     PacketGardenPixiStorm.createModel = options => (window.__gardenTestStorm = createStorm({...options,random:PacketGardenPixi.seededRandom(77332)}));
@@ -121,6 +127,10 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--weed-bud-only')){
+      promoted=true;const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
+      await page.waitForFunction(()=>window.__gardenTestAmbient);await checkWeedBuds(page);await page.close();return;
+    }
     if(process.argv.includes('--stillbloom-only')){
       promoted=true;const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
       await page.waitForFunction(()=>window.__gardenTestStillbloom);await checkStillbloom(page);await page.close();return;
@@ -289,6 +299,7 @@ async function run() {
     await checkOvercrowding(diagnostic);
     await checkLighting(diagnostic);
     await checkStillbloom(diagnostic);
+    await checkWeedBuds(diagnostic);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -312,6 +323,66 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+
+  async function checkWeedBuds(page) {
+    await page.reload();await page.waitForFunction(()=>window.__gardenTestAmbientView);
+    const errors=[];page.on('pageerror',error=>errors.push(String(error)));
+    await page.locator('#probes').uncheck();await page.locator('#seed-weed-buds').click();
+    assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),3);
+    assert(await page.evaluate(()=>__gardenTestGarden.specimens.every(p=>p.origin.kind==='simulated')));
+    const fixture=scene=>{
+      const at=Date.now(),origin={kind:'simulated',eventType:'weed-bud-test'};
+      return {plants:['weed','weed','mushroom'].slice(0,scene==='nearby'||scene==='grass'?1:3).map((type,i)=>({
+        type,vigor:1,column:12+i*5,row:10,createdAt:at-65000,origin})),
+      grassCells:scene==='nearby'?[]:[13,14,18,19].map(column=>({column,row:10,createdAt:at-60000,lastInfluencedAt:at})),
+      drops:['ditch_weed_bud','amanita_muscaria','ditch_weed_bud'].slice(0,scene==='nearby'||scene==='grass'?1:3).map((type,i)=>({
+        type,createdAt:at,expiresAt:at+20000,x:[395,545,551][i],y:315,phase:0}))};
+    };
+    await page.evaluate(()=>__gardenTestApp.stop());
+    for(const scene of ['nearby','grass','mixed','night']){
+      await page.evaluate(data=>{__gardenTestGarden.seed(data.plants);__gardenTestEcology.seed({grassCells:data.grassCells});
+        __gardenTestAmbient.seed({drops:data.drops});__gardenTestLighting.setMode(data.scene==='night'?'night':'day');
+        __gardenTestLighting.tick(Date.now(),true);__gardenTestApp.render();},{...fixture(scene),scene});
+      await page.locator('#view canvas').screenshot({path:path.join(output,`weed-bud-pixi-${scene}.png`)});
+    }
+    // Newest overlapping bud alone is collected, with its Amanita neighbor and both weeds intact.
+    const point=await page.evaluate(()=>{const app=__gardenTestApp,root=app.stage.children[0],r=app.canvas.getBoundingClientRect(),d=__gardenTestAmbient.drops[2];
+      return {x:r.left+(root.position.x+d.x*root.scale.x)*r.width/app.renderer.screen.width,
+        y:r.top+(root.position.y+d.y*root.scale.y)*r.height/app.renderer.screen.height};});
+    await page.mouse.click(point.x,point.y);
+    assert.equal(await page.locator('#collection-message').textContent(),'You smoked some ditch weed. +0 points');
+    assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),2);
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),3);
+    assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');
+    const resources=await page.evaluate(()=>{
+      const ambient=__gardenTestAmbient,view=__gardenTestAmbientView;
+      const states=[];for(let cycle=0;cycle<20;cycle++){
+        PacketGardenPixiAmbient.seedWeedBuds(ambient,Date.now());
+        const removed=[...view.dropViews.values()].map(v=>v.sprite);
+        ambient.removeDrop(ambient.drops[0],'collected');ambient.tick(Date.now()+20000);
+        states.push({views:view.dropViews.size,destroyed:removed.every(s=>s.destroyed)});
+      }
+      const atlas=__gardenTestAmbientAtlas;
+      return {cycles:states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,
+        backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],gpuSources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
+    });
+    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,6);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
+    await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#seed-weed-buds').click();
+    const positions=await page.evaluate(()=>{const v=__gardenTestAmbientView;v.animate(Date.now());const a=[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y]);
+      v.animate(Date.now()+10000);return [a,[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y])];});
+    assert.deepEqual(positions[0],positions[1]);await page.emulateMedia({reducedMotion:'no-preference'});
+    const canvas=await page.context().newPage();await canvas.goto(origin+'/canvas.html');
+    for(const scene of ['nearby','grass','mixed','night']){
+      await canvas.evaluate(data=>{gardenModel.seed(data.plants);gardenEcology.seed({grassCells:data.grassCells});gardenAmbient.seed({drops:data.drops});
+        gardenLighting.setMode(data.scene==='night'?'night':'day');updateGardenLighting(Date.now(),true);drawGarden();},{...fixture(scene),scene});
+      await canvas.locator('.garden-stage').screenshot({path:path.join(output,`weed-bud-canvas-${scene}.png`)});
+    }
+    await canvas.evaluate(()=>{gardenAmbient.clear();drawGardenOverlay(true);syncWeatherAnimation();});
+    assert.equal(await canvas.evaluate(()=>gardenAmbient.drops.length),0);await canvas.close();
+    await page.locator('#clear').click();await page.evaluate(()=>__gardenTestApp.start());assert.deepEqual(errors,[]);
+    await fs.writeFile(path.join(output,'weed-bud-resources.json'),JSON.stringify(resources,null,2));
+    console.log('PASS: Chrome bud diagnostics/mixed overlap/collection, eight Canvas-Pixi day/grass/mixed/night screenshots, reduced motion, 20 resource cycles:',JSON.stringify(resources));
   }
 
   async function checkStillbloom(page) {

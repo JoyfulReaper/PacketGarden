@@ -1,7 +1,8 @@
 // Canvas-only drawing, hit helpers and collection feedback around the shared model.
 const looseDropConfig = window.PacketGardenAmbient.dropConfig;
 const looseDropTypes = new Map([
-  ["amanita_muscaria", { render: drawAmanitaDrop, message: window.PacketGardenUiCore.messages.amanita_muscaria }]
+  ["amanita_muscaria", { render: drawAmanitaDrop, message: window.PacketGardenUiCore.messages.amanita_muscaria }],
+  ["ditch_weed_bud", { render: drawWeedBud, message: window.PacketGardenUiCore.messages.ditch_weed_bud }]
 ]);
 const pendingLooseDrops = gardenAmbient.pendingDrops;
 function isLooseDropSourceAlive(specimen, now, living = null) { return gardenAmbient.isSourceAlive(specimen, now, living); }
@@ -39,6 +40,15 @@ function drawLooseDrops(now) {
 }
 
 const amanitaDropSpots = [[-3, -3.5], [0, -4.5], [3, -3.5], [-1.5, -1.7], [2, -1.7]];
+function drawWeedBud() {
+  context.fillStyle = '#39462b';
+  context.beginPath(); context.ellipse(0, 0, 4.5, 5, 0, 0, Math.PI * 2); context.fill();
+  for (const [color,x,y,cx,cy,tx,ty,ex,ey] of window.PacketGardenAmbient.weedBudLeaves) {
+    context.fillStyle = `#${color.toString(16).padStart(6,'0')}`;
+    context.beginPath(); context.moveTo(x,y); context.quadraticCurveTo(cx,cy,tx,ty);
+    context.quadraticCurveTo(ex,ey,x,y); context.closePath(); context.fill();
+  }
+}
 function drawAmanitaDrop() {
   context.fillStyle = "#ede4cd";
   context.fillRect(-1.3, -1, 2.6, 6);

@@ -470,6 +470,11 @@
     let ambientSeedVariant = 0;
     const seedAmbient = () => ambientPresentation.seedAmbient(ambient, Date.now(), ambientSeedVariant++ % 4);
     document.querySelector('#seed-ambient')?.addEventListener('click', seedAmbient);
+    document.querySelector('#seed-weed-buds')?.addEventListener('click', () => {
+      const at = Date.now(); model.seedWeedBuds();
+      ecology.seed({grassCells:[13,14,18,19].map(column => ({column,row:10,createdAt:at-60000,lastInfluencedAt:at}))});
+      ambientPresentation.seedWeedBuds(ambient,at);
+    });
     document.querySelector('#seed-mutations')?.addEventListener('click', () => model.seedMutations());
     document.querySelector('#seed-pending-mutations')?.addEventListener('click', () => model.seedMutations(true));
     let interactionSeedVariant = 0;
@@ -511,7 +516,7 @@
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
-        `Amanita ${ambient.drops.length}/3 · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
+        `Loose drops ${ambient.drops.length}/3 · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · unified logical click priority`,
         `Mutations ${mc.active}/3 · pending ${mc.pending} · views ${counts.mutationViews} · activations ${mc.activations} · cap skips ${mc.capSkips} · cancellations ${mc.cancellations} · expiries ${mc.expiries} · 1 cached frame in specimen atlas`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
@@ -541,6 +546,7 @@
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
     document.addEventListener('visibilitychange', () => {
+      ambient.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
       stillbloom.configure({hidden:document.hidden},at);
@@ -557,6 +563,7 @@
       }
     });
     window.addEventListener('pagehide', event => {
+      ambient.setHidden(true);
       stillbloom.configure({hidden:true});
       gnomes.suspend();storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
