@@ -50,7 +50,9 @@ async function run() {
       getLocalHour:new URLSearchParams(location.search).has('live-lighting')?PacketGardenLighting.localHour:()=>12}));
     PacketGardenLightingView.createSurface=(...args)=>(window.__gardenTestLightingSurface=createSurface(...args));
     const createGarden=PacketGardenCore.createGardenModel,createEcology=PacketGardenEcology.createEcologyModel;
-    PacketGardenCore.createGardenModel=(...args)=>(window.__gardenTestGarden=createGarden(...args));
+    const createStillbloom=PacketGardenStillbloom.createModel;
+    PacketGardenStillbloom.createModel=(...args)=>{const model=createStillbloom(...args);window.__gardenTestStillbloom??=model;return model;};
+    PacketGardenCore.createGardenModel=(...args)=>{const garden=createGarden(...args);window.__gardenTestGarden??=garden;return garden;};
     PacketGardenEcology.createEcologyModel=(...args)=>(window.__gardenTestEcology=createEcology(...args));
     PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
     const createStorm = PacketGardenPixiStorm.createModel;
@@ -79,7 +81,10 @@ async function run() {
       const url = new URL(req.url, 'http://localhost'), file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
       requests.push({url:req.url, promoted});
       if (file === 'favicon.ico') { res.writeHead(204); res.end(); return; }
-      if (file === '__capture.js') { res.setHeader('Content-Type','text/javascript'); res.end(capture); return; }
+      if (file === '__capture.js') { res.setHeader('Content-Type','text/javascript');
+        // The historical warm atlas only knows network species. New ambient art
+        // is tested after promotion; it must not break the cache regression setup.
+        res.end((promoted?'':'PacketGardenPixiLiveCore.species=PacketGardenPixiLiveCore.eventSpecies;\n')+capture);return; }
       if (file === 'api/garden/events') {
         connections++; streams.add(res); res.on('close', () => streams.delete(res));
         res.writeHead(200, {'Content-Type':'text/event-stream','Cache-Control':'no-cache'});
@@ -116,6 +121,10 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--stillbloom-only')){
+      promoted=true;const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
+      await page.waitForFunction(()=>window.__gardenTestStillbloom);await checkStillbloom(page);await page.close();return;
+    }
     const warm = await context.newPage();
     await warm.goto(origin + '/pixi-live.html');
     await warm.waitForFunction(() => window.__gardenTestPaints > 2);
@@ -279,6 +288,7 @@ async function run() {
     await checkLandscaping(diagnostic);
     await checkOvercrowding(diagnostic);
     await checkLighting(diagnostic);
+    await checkStillbloom(diagnostic);
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -302,6 +312,52 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+
+  async function checkStillbloom(page) {
+    await page.reload();await page.waitForFunction(()=>window.__gardenTestStillbloom);
+    const errors=[];page.on('pageerror',error=>errors.push(String(error)));
+    await page.locator('#probes').uncheck();await page.locator('#clear').click();
+    await page.locator('#stillbloom-roll').selectOption('0.1');await page.locator('#stillbloom-qualify').click();
+    assert.match(await page.locator('#stillbloom-test-status').textContent(),/Simulation: 600s verified quiet · 0\/2 · 1 rolls/);
+    await page.locator('#stillbloom-scenario').selectOption('stale');assert.match(await page.locator('#stillbloom-test-status').textContent(),/Simulation: 0s/);
+    await page.locator('#stillbloom-roll').selectOption('0.099999');await page.locator('#stillbloom-qualify').click();
+    assert.match(await page.locator('#stillbloom-test-status').textContent(),/Simulation: 600s verified quiet · 1\/2 · 1 rolls/);
+    await page.locator('#stillbloom-check').click();assert.match(await page.locator('#stillbloom-test-status').textContent(),/2\/2 · 2 rolls/);
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),0,'virtual telemetry never touches the organic garden');
+    await page.locator('#trigger-stillbloom').click();await page.locator('#trigger-stillbloom').click();await page.locator('#trigger-stillbloom').click();
+    assert.equal(await page.evaluate(()=>__gardenTestGarden.specimens.length),2);assert.match(await page.locator('#stillbloom-test-status').textContent(),/No placement/);
+    const saved=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>p.origin)));
+    assert(!saved.includes('tcpnoise'));assert(saved.includes('simulated'));
+    const buildCounts=await page.evaluate(()=>({objects:__gardenTestApp.stage.children[0].children[6].children.length,frames:document.querySelector('#hud').textContent.match(/atlas frames (\d+)/)?.[1]}));
+    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'767');
+    const metrics={resources:buildCounts,day:await sample(page)};
+    // Fixed fixtures use the real model, existing cached artwork and surface light.
+    const fixture=async(age,mixed=false)=>page.evaluate(({age,mixed})=>{
+      __gardenTestApp.stop();const at=Date.now();__gardenTestGarden.clear();__gardenTestEcology.clear();
+      const plants=mixed?Array.from({length:140},(_,i)=>({type:PacketGardenCore.eventSpecies[i%10],column:(i*73+7)%640%32,row:Math.floor((i*73+7)%640/32),vigor:i%4,createdAt:at-(i%10===5?3000:65000),origin:{kind:'simulated',eventType:'stillbloom-comparison'}})).filter(p=>p.column!==16||p.row!==10):[];
+      __gardenTestGarden.seed([...plants,{type:'stillbloom',vigor:0,column:16,row:10,createdAt:at-age,origin:{kind:'simulated',eventType:'stillbloom-test'}}],at);
+      __gardenTestGarden.tick(at+1000);__gardenTestApp.render();return 336;
+    },{age,mixed});
+    for(const [name,age,mixed,phase] of [['young-day',12000,false,'day'],['growing-day',45000,false,'day'],['mature-day',120000,false,'day'],['mature-night',120000,false,'night'],['mixed-day',120000,true,'day'],['mixed-night',120000,true,'night'],['fading-night',1110000,true,'night']]){
+      await fixture(age,mixed);await page.locator('#lighting-mode').selectOption(phase);
+      await page.locator('#view canvas').screenshot({path:path.join(output,`stillbloom-${name}.png`)});
+    }
+    await page.getByLabel('Weather source',{exact:true}).selectOption('manual');await page.getByLabel('Manual weather',{exact:true}).selectOption('rain');
+    const count=await page.evaluate(()=>__gardenTestGarden.specimens.filter(p=>p.type==='stillbloom').length);assert.equal(count,1);
+    await page.locator('#view canvas').screenshot({path:path.join(output,'stillbloom-quiet-to-rain.png')});
+    await page.evaluate(()=>{__gardenTestApp.start();});metrics.nightRain=await sample(page);
+    await page.locator('#clear').click();assert.equal(await page.evaluate(()=>__gardenTestApp.stage.children[0].children[6].children.length),0);
+    // Real Canvas counterpart, including inspection and normal removal.
+    const canvas=await page.context().newPage();await canvas.goto(origin+'/canvas.html');
+    for(const phase of ['day','night']){
+      await canvas.evaluate(phase=>{gardenModel.clear();gardenEcology.clear();const at=Date.now();gardenModel.seed([{type:'stillbloom',vigor:0,column:16,row:10,createdAt:at-120000,origin:{kind:'quiet'}}]);gardenLighting.setMode(phase);updateGardenLighting(Date.now(),true);drawGarden();},phase);
+      await canvas.locator('.garden-stage').screenshot({path:path.join(output,`stillbloom-canvas-${phase}.png`)});
+    }
+    await canvas.evaluate(()=>{renderSpecimenCard(gardenModel.specimens[0],100,100);});assert.equal(await canvas.locator('#specimen-source').textContent(),'Sustained quiet');
+    await canvas.close();assert.deepEqual(errors,[]);
+    await fs.writeFile(path.join(output,'stillbloom-resources.json'),JSON.stringify(metrics,null,2));
+    console.log('PASS: Chrome Stillbloom diagnostics/boundaries/cap, cached poses/day/night/mixed/fade/rain, Canvas origin and cleanup:',JSON.stringify(metrics));
   }
 
   async function checkGrass(page,label) {
@@ -473,10 +529,16 @@ async function run() {
     });
     await page.locator('#lighting-mode').selectOption('day');const dayResources=await resources(),dayTiming=await sample(page);
     await page.locator('#lighting-mode').selectOption('night');const nightTiming=await sample(page),nightResources=await resources();
+    await page.getByLabel('Day/night cycle',{exact:true}).uncheck();
+    assert.equal(await page.evaluate(()=>__gardenTestApp.canvas.style.filter),'none');
+    assert(await page.locator('#lighting-mode').isDisabled());assert(await page.locator('#lighting-hour').isDisabled());
+    await page.getByLabel('Day/night cycle',{exact:true}).check();
+    assert.equal(await page.evaluate(()=>__gardenTestLighting.state.phase),'night');
+    assert.match(await page.evaluate(()=>__gardenTestApp.canvas.style.filter),/garden-local-light/);
     assert.equal(nightResources.objects,dayResources.objects);assert.equal(nightResources.frames,dayResources.frames);
     assert.equal(await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>[p.id,p.cell,p.type,p.createdAt,p.origin]))),footprint);
     await page.evaluate(()=>{
-      __gardenTestApp.stop();const at=Date.now(),types=PacketGardenCore.species;
+      __gardenTestApp.stop();const at=Date.now(),types=PacketGardenCore.eventSpecies;
       __gardenTestGarden.seed(Array.from({length:240},(_,i)=>{const type=types[i%types.length];return {
         type,vigor:i%4,column:4+i%24,row:5+Math.floor(i/24),createdAt:at-(type==='redbloom'?3000:65000),
         origin:{kind:'simulated',eventType:'lighting-comparison'}};}),at);
@@ -523,6 +585,11 @@ async function run() {
     assert.equal(await page.evaluate(()=>__gardenTestLighting.snapshot().samples),beforeHidden+1,'one immediate resume sample');
     const fixture=await page.evaluate(()=>({specimens:__gardenTestGarden.specimens,grass:__gardenTestEcology.grassCells}));
     const canvas=await page.context().newPage();await canvas.goto(origin+'/canvas.html');
+    await canvas.evaluate(()=>{gardenLighting.setMode('night');updateGardenLighting(Date.now(),true);});
+    await canvas.getByLabel('Day/night cycle',{exact:true}).uncheck();
+    assert.equal(await canvas.locator('.garden-stage').evaluate(node=>node.style.filter),'none');
+    await canvas.getByLabel('Day/night cycle',{exact:true}).check();
+    assert.match(await canvas.locator('.garden-stage').evaluate(node=>node.style.filter),/garden-local-light/);
     await canvas.evaluate(fixture=>{gardenModel.seed(fixture.specimens);gardenEcology.seed({grassCells:fixture.grass,puddles:[]});drawGarden();},fixture);
     for(const phase of ['dawn','day','golden','dusk','night']) {
       await canvas.evaluate(phase=>{gardenLighting.setMode(phase);updateGardenLighting(Date.now(),true);},phase);
@@ -542,6 +609,10 @@ async function run() {
       await livePage.goto(origin+'/?live-lighting=1');await livePage.waitForFunction(()=>window.__gardenTestLighting?.state);
       const live=await livePage.evaluate(()=>({mode:__gardenTestLighting.mode,hour:__gardenTestLighting.state.hour,expected:PacketGardenLighting.localHour(Date.now())}));
       assert.equal(live.mode,'live');assert(Math.abs(live.hour-live.expected)<.01);assert.equal(await livePage.locator('#lighting-mode').count(),0);
+      await livePage.getByLabel('Day/night cycle',{exact:true}).uncheck();
+      assert.equal(await livePage.evaluate(()=>__gardenTestApp.canvas.style.filter),'none');
+      await livePage.getByLabel('Day/night cycle',{exact:true}).check();
+      assert.equal(await livePage.evaluate(()=>__gardenTestLighting.enabled),true);
       await liveContext.close();
     }
     assert.deepEqual(errors,[]);await fs.writeFile(path.join(output,'lighting-comparison.json'),JSON.stringify(metrics,null,2));

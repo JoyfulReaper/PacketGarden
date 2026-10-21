@@ -27,6 +27,17 @@ for(const mode of Object.keys(L.presets)) {m.setMode(mode);near(m.state.hour,L.p
 assert(!m.setMode('bad'));assert(!m.setHour(NaN));assert(!m.setHour(24.01));assert(!m.setHour(-.01));
 m.setHour(17.5);assert.equal(m.mode,'hour');near(m.state.hour,17.5);m.setHour(24);assert.equal(m.state.hour,0);
 hour=7.2;m.setMode('live');near(m.state.hour,7.2);m.destroy();assert(!m.tick(at+30000));
+{
+  let hour=0,reads=0,at=0;
+  const model=L.createModel({now:()=>at,getLocalHour:()=>{reads++;return hour;}});
+  model.tick();assert.equal(model.enabled,true);assert.equal(model.state.phase,'night');
+  assert(model.setEnabled(false));assert.equal(model.mode,'live');assert.equal(model.state.phase,'day');
+  const samples=model.snapshot().samples,oldReads=reads;at+=3600000;hour=6;
+  assert(!model.needsSample(at));assert(!model.tick());assert.equal(reads,oldReads);assert.equal(model.snapshot().samples,samples);
+  assert(model.setEnabled(true));assert.equal(model.state.phase,'dawn','reenabling reads current local time immediately');
+  model.setHour(18.5);model.setEnabled(false);model.setEnabled(true);assert.equal(model.state.hour,18.5,'diagnostic hour survives off/on');
+  assert(!model.setEnabled('false'));model.destroy();assert(!model.setEnabled(false));
+}
 
 const matrix={setAttribute(name,value){this[name]=value;}},surface={style:{}},document={querySelector:()=>matrix};
 const view=V.createSurface(document,surface);
@@ -52,6 +63,7 @@ for(const page of ['index.html','pixi-live.html','canvas.html']) {
   const values=html.match(/id="garden-light-matrix"[^>]*values="([^"]+)"/)[1].split(' ').map(Number);
   assert.deepEqual(values,L.compose(L.atHour(12)),'valid shared initial matrix');
   assert.equal(html.includes('id="lighting-mode"'),page==='pixi-live.html');
+  assert.match(html,/id="day-night-enabled" type="checkbox" checked/);
 }
 
 async function adapters() {
@@ -74,6 +86,18 @@ async function adapters() {
     assert.equal(h.generated(),built);assert.equal(h.live.size,objects);assert.equal(h.textureCount(),textureCount);
     assert.deepEqual(g.view.snapshot(),before,'no Pixi views, geometry, textures, or vine-neighbor work');
     assert.equal(JSON.stringify(g.model.specimens),planted);assert.equal(JSON.stringify(g.model.counts),counts);assert.equal(JSON.stringify(g.model.recentEvents),recent);
+    const toggle=g.element('#day-night-enabled');assert(toggle.checked);
+    g.lighting.setMode('night');g.lightingSurface.apply(g.lighting.state);
+    c.run("gardenLighting.setMode('night');updateGardenLighting(Date.now(),true)");
+    toggle.checked=false;toggle.handlers.get('change')();
+    c.element('#day-night-enabled').checked=false;c.element('#day-night-enabled').handlers.get('change')[0]();
+    assert.equal(g.lighting.enabled,false);assert.equal(g.app.canvas.style.filter,'none');assert.equal(c.element('.garden-stage').style.filter,'none');
+    if(page==='pixi-live.html')assert(g.element('#lighting-mode').disabled&&g.element('#lighting-hour').disabled);
+    toggle.checked=true;toggle.handlers.get('change')();
+    c.element('#day-night-enabled').checked=true;c.element('#day-night-enabled').handlers.get('change')[0]();
+    assert.equal(g.lighting.state.phase,'night');assert.match(g.app.canvas.style.filter,/garden-local-light/);
+    assert.equal(g.element('#garden-light-matrix').attributes.values,c.element('#garden-light-matrix').attributes.values);
+    assert.equal(c.run('lightBaseRebuilds'),0,'checkbox only updates the surface filter');assert.equal(h.generated(),built);assert.equal(h.live.size,objects);
     const sampled=g.lighting.snapshot().samples;g.doc.hidden=true;g.docHandlers.get('visibilitychange')();
     g.advance(3600000);assert.equal(g.lighting.snapshot().samples,sampled,'hidden stops sampling');
     g.doc.hidden=false;g.docHandlers.get('visibilitychange')();assert.equal(g.lighting.snapshot().samples,sampled+1,'one fresh resume sample');
@@ -95,6 +119,7 @@ async function adapters() {
     for(const handler of c.windowHandlers.get('pageshow'))handler({persisted:true});
     assert.equal(c.run('gardenLighting.snapshot().samples'),cachedSamples+1,'cached Canvas page restores current light');
     g.winHandlers.get('pagehide')({persisted:false});assert.equal(g.app.canvas.style.filter,'none');
+    assert(!toggle.handlers.has('change'),'checkbox listener released on teardown');
     const after=g.lighting.snapshot().samples;assert(!g.lighting.tick(g.context.Date.now()+30000));assert.equal(g.lighting.snapshot().samples,after);
     for(const handler of c.windowHandlers.get('pagehide'))handler();assert.equal(c.element('.garden-stage').style.filter,'none');
     assert.equal(c.windowHandlers.get('pageshow').length,0,'Canvas restore listener released on final departure');

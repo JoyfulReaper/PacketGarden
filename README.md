@@ -108,6 +108,11 @@ interpolate smoothly; there is no geolocation or sunrise service. Existing pale
 ghostbloom halos and crystal highlights stand out against the cooler terrain.
 Time of day changes presentation only, with no ecology, rarity or network effects.
 
+The checked **Day/night cycle** checkbox beside Lightning turns this lighting
+on or off. Off holds daylight; turning it back on samples the current local time
+immediately. Canvas has the same checkbox near Sound. The choice lasts for the
+current page session; Lightning remains independent.
+
 Lighting samples on the existing logical tick at most every 30 seconds, writes
 only meaningfully different color values, and resumes directly at current time
 after hiding. Cached plant/terrain artwork is preserved; day adds no color pass.
@@ -299,7 +304,26 @@ audio, and leaves Score at 0. Scheduling, activation, collection, and expiry add
 no Recent activity rows. This is cosmetic garden nonsense, with no protocol or
 security meaning; fake Gopher growth and dropped saturated events do not roll.
 Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
-Stillbloom, and frogs/water interactions remain future work.
+and frogs/water interactions remain future work.
+
+**Stillbloom** is an uncommon ivory flower with silver-green growth and pale
+lavender details, created by sustained **verified live quiet weather**. After
+ten continuously observed minutes of authoritative `level === "quiet"`, one
+10% roll occurs every three minutes, starting at the ten-minute boundary. At
+most two live for twenty minutes. They use free specimen cells, never replace
+plants, and are protected from competition and landscaping. Quiet never means
+zero events/minute, manual weather or broken telemetry. Backend upstream-health
+leases distinguish fresh polling from retained last-known weather; disconnects,
+staleness, non-quiet weather, hidden tabs and long logical stalls restart the
+qualification. Existing flowers continue aging when rain returns.
+
+Stillbloom grows for 90 seconds, matures, fades from minute 17 and expires at 20.
+Inspection says **Sustained quiet**, with no fabricated sensor, port or recurrence.
+It creates no TCPNoise acceptance count, Recent activity, sound or grass influence.
+The existing day/night cycle changes its appearance, never its eligibility.
+Only `/pixi-live.html` has a clearly simulated trigger and virtual quiet/health/
+probability controls; these do not certify organic weather. See [freshness
+contract](docs/REAL-DATA.md#upstream-health-and-stillbloom) and [visual/testing notes](docs/PIXI-LIVE.md#stillbloom-2026-10-21).
 
 Successful growth or stronger replacement clears wild grass from exactly the
 selected specimen cell, in both Canvas and Pixi, before presenting the new plant.
@@ -338,7 +362,8 @@ cycle to earn another final seed opportunity.
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,
 drizzle, rain, heavy rain, botnet thunderstorm, and botnet hurricane. Weather does
-not affect organisms or grass. A base ecology Canvas repaints on actual state
+not damage existing organisms or change grass; verified quiet permits the
+separate Stillbloom growth described above. A base ecology Canvas repaints on actual state
 changes or the earliest known visual deadline; mature/static ecology has no
 recurring one-second repaint. Logical cleanup still runs every 250 ms. A separate transparent overlay Canvas handles weather,
 gnomes, mutations, curiosities, and loose drops through one roughly 30 FPS scheduler, without

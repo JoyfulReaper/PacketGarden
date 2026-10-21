@@ -129,7 +129,7 @@ const read=p=>fs.readFileSync(p,'utf8'), source=read('wwwroot/garden-core.js'), 
 assert.doesNotMatch(source,/setTimeout|setInterval|requestAnimationFrame|document\.|PIXI|CanvasRenderingContext2D|localStorage|sessionStorage/);
 assert.doesNotMatch(live,/function stageAt|const timings\s*=|candidate\.vigor|victimIndex|preferAdjacent|protectedTypes/);
 assert.match(live,/garden\.createGardenModel/);assert.match(read('wwwroot/garden.js'),/gardenCore\.createGardenModel/);
-for(const page of ['index','pixi-live']) assert.match(read(`wwwroot/${page}.html`),/src="garden-core\.js"/);
+for(const page of ['index','pixi-live']) assert.match(read(`wwwroot/${page}.html`),/src="garden-core\.js(?:\?[^"]*)?"/);
 assert.doesNotMatch(read('wwwroot/canvas.html'),/pixi/i);
 assert.match(live,/new Source\('\/api\/garden\/events'\)/);
 assert.match(read('wwwroot/garden.js'),/new EventSource\("\/api\/garden\/events"\)/);

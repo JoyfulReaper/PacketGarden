@@ -13,10 +13,10 @@ for (const method of ['rect','roundRect','circle','ellipse','poly','moveTo','lin
   Graphics.prototype[method] = function(...args) { this.commands.push([method, ...args]); return this; };
 }
 const P = { ...h.P, Graphics }, keys = [];
-for (const type of core.species) for (let vigor=0; vigor<4; vigor++) for (let variant=0; variant<5; variant++)
+for (const type of core.eventSpecies) for (let vigor=0; vigor<4; vigor++) for (let variant=0; variant<5; variant++)
   for (const stage of type==='redbloom'?['mature','fading']:['sprout','growing','mature','fading']) keys.push(`${type}:${stage}:${vigor}:${variant}`);
-keys.push('rain','probe','collectible_weed');
-function capture(make) {
+keys.push('rain','probe','collectible_weed',...['sprout','growing','mature','fading'].map(stage=>'stillbloom:'+stage));
+function capture(make,legacy=false) {
   let tiles; const dimensions = [];
   const cache = make(P, { generateTexture(options) {
     dimensions.push([options.frame.width, options.frame.height, options.resolution]);
@@ -24,12 +24,12 @@ function capture(make) {
       graphic:object instanceof Graphics, commands:object.commands?JSON.parse(JSON.stringify(object.commands)):undefined, scale:[object.scale.x,object.scale.y],
       position:[object.position.x,object.position.y], anchor:object.anchor?[object.anchor.x,object.anchor.y]:undefined, tint:object.tint, alpha:object.alpha }));
     return { source:{}, destroy(){} };
-  } }, shared, core);
-  assert.equal(cache.frames.size,763); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
+  } }, shared,legacy?{...core,species:core.eventSpecies}:core);
+  assert.equal(cache.frames.size,legacy?763:767); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
   for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true);
   return { tiles, dimensions };
 }
-const before = capture(previous.exports.makeLiveAtlas), after = capture(current.makeLiveAtlas);
+const before = capture(previous.exports.makeLiveAtlas,true), after = capture(current.makeLiveAtlas);
 assert.deepEqual(after.dimensions, before.dimensions);
 assert.deepEqual(after.dimensions, [[512,448,2],[1024,768,2]]);
 const redesigned = new Set(['broadleaf','blackthorn','weed']);
@@ -37,6 +37,17 @@ const enlargement = { flower:1.12, mushroom:1.16, wirefern:1.16, crystalfungus:1
 const protectedTypes = new Set(['vine','redbloom','rain','probe','collectible_weed']);
 for (let i=0; i<keys.length; i++) {
   const a=after.tiles[i], b=before.tiles[i], [type,stage,vigor]=a.key.split(':');
+  if(type==='stillbloom'){
+    assert(a.graphic);assert.equal(a.object.destroyArgument,undefined);
+    for(const [kind,...args] of a.commands){
+      if(kind==='circle'||kind==='ellipse'){
+        const [x,y,rx,ry=rx]=args;assert(x-rx>=-15&&x+rx<=15&&y-ry>=-28&&y+ry<=2,'Stillbloom halo/ellipse stays within clear atlas margins');
+      } else if(['moveTo','lineTo','quadraticCurveTo','bezierCurveTo'].includes(kind)){
+        for(let j=0;j<args.length;j+=2)assert(args[j]>=-15&&args[j]<=15&&args[j+1]>=-28&&args[j+1]<=2,'Stillbloom path hull stays inside its own frame');
+      }
+    }
+    continue;
+  }
   assert.deepEqual(a.position,b.position,'atlas slots/root positions remain fixed');
   assert.equal(a.alpha,b.alpha,'fading opacity remains fixed');
   if (protectedTypes.has(type)) {
@@ -55,6 +66,6 @@ for (let i=0; i<keys.length; i++) {
     assert.deepEqual(a.anchor,type==='mushroom'?[.5,.94]:b.anchor,'mushroom bake origin preserves bottom margin');
   }
 }
-assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,320);
+assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,324);
 assert.equal(h.textureCount(),countBefore); assert.equal(h.live.size,objectsBefore,'construction display objects released');
 console.log('PASS: bounded Phase 2B artwork/leaflets/thorns, exact scale factors and stage differences, unchanged vine/redbloom/collectible commands, atlas cardinality/dimensions/ownership.');

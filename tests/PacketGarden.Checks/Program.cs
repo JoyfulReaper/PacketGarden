@@ -46,11 +46,31 @@ foreach (var bad in new[] { "null", "[]", "{}", weatherJson.Replace("rain", "unk
 using (var document = JsonDocument.Parse(JsonSerializer.Serialize(weather, new JsonSerializerOptions(JsonSerializerDefaults.Web))))
 {
     Check(document.RootElement.EnumerateObject().Select(p => p.Name).Order()
-        .SequenceEqual(new[] { "eventsLastHour", "eventsPerMinute", "hasSnapshot", "level" }), "Only normalized weather/availability fields serialized to SSE");
+        .SequenceEqual(new[] { "eventsLastHour", "eventsPerMinute", "freshUntil", "hasSnapshot", "level", "telemetryGeneration", "telemetryHealthy" }), "Only normalized weather/availability/freshness fields serialized to SSE");
     Check(document.RootElement.GetProperty("eventsLastHour").GetInt64() == 4321, "SSE camel-case hour serialization");
     Check(document.RootElement.GetProperty("hasSnapshot").GetBoolean(), "Validated source is available");
 }
 Console.WriteLine("PASS: weather normalization, optional actual hour/zero, hourly-only equality, startup availability, compatible rendering clamp and minimal SSE serialization.");
+{
+    var telemetry = new WeatherTelemetry();
+    var at = DateTimeOffset.FromUnixTimeMilliseconds(1_800_000_000_000);
+    var quiet = new GardenWeather("quiet", 0);
+    Check(!telemetry.Snapshot(at).HasSnapshot && !telemetry.Current.TelemetryHealthy, "Startup quiet fallback cannot certify calm");
+    var certified = telemetry.Success(quiet, at);
+    Check(certified.TelemetryHealthy && certified.FreshUntil == at.AddSeconds(30).ToUnixTimeMilliseconds() && certified.TelemetryGeneration == 1, "First successful upstream poll issues a 30-second lease");
+    Check(telemetry.Success(quiet, at.AddSeconds(10)) == certified, "Unchanged successful polls do not broadcast every 10 seconds");
+    var renewed = telemetry.Success(quiet, at.AddSeconds(20));
+    Check(renewed.FreshUntil == at.AddSeconds(50).ToUnixTimeMilliseconds() && renewed.TelemetryGeneration == 1, "20-second renewal preserves quiet continuity");
+    var failure = telemetry.Failure();
+    Check(failure.HasSnapshot && failure.Level == "quiet" && !failure.TelemetryHealthy && failure.FreshUntil is null, "Polling failure retains weather but invalidates quiet immediately");
+    Check(telemetry.Failure() == failure, "Repeated failure does not spam state changes");
+    var recovered = telemetry.Success(quiet, at.AddSeconds(30));
+    Check(recovered.TelemetryHealthy && recovered.TelemetryGeneration == 2 && recovered.Level == failure.Level, "Same-value recovery is published with new continuity generation");
+    Check(telemetry.Snapshot(at.AddSeconds(59)).TelemetryHealthy, "Fresh just before timeout");
+    Check(!telemetry.Snapshot(at.AddSeconds(60)).TelemetryHealthy, "Exact 30-second upstream staleness boundary");
+    Check(telemetry.Success(quiet, at.AddSeconds(61)).TelemetryGeneration == 3, "Freshness timeout starts a new period on recovery");
+}
+Console.WriteLine("PASS: upstream success/failure, same-value recovery, bounded lease renewal, retained weather and exact freshness timeout.");
 var good = """{"EventType":"tcpnoise.connection","Source":"tcpnoise","SchemaVersion":1,"Payload":{"listenPort":443,"remoteAddress":"sensitive-test-marker","remotePort":12345,"banner":"private","payload":"secret"}}""";
 Check(Parse(good) == new GardenGrowth("broadleaf", 443), "Valid message normalization");
 var json = JsonSerializer.Serialize(Parse(good), new JsonSerializerOptions(JsonSerializerDefaults.Web));

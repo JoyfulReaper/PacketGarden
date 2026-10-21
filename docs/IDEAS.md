@@ -355,37 +355,43 @@ noisemaker · :22 · redbloom · seen 2 · 9s
 This should stay visually subordinate to the garden. It is ambient context, not a
 replacement for Mission Control, logs, or proper observability.
 
-## Quiet-only growth
+## Quiet-only growth — Stillbloom (implemented)
 
 Quietness should have a positive visual identity instead of the garden becoming
 interesting only when sensors are busy.
 
-A rare species -- working name **Stillbloom** -- could grow only after a genuinely
-quiet period. It belongs to the aggregate/environmental layer rather than TCPNoise
-port rarity.
+A rare species, **Stillbloom**, now grows from the aggregate/environmental layer,
+independently of TCPNoise port rarity. It requires authoritative Live weather
+exactly `quiet`, a valid snapshot, healthy upstream polling and an unexpired
+backend freshness lease. Neither low/zero rates nor fallback/manual weather qualify.
 
 Important distinction: **quiet is not the same thing as broken telemetry**. A
 quiet-only plant should require a fresh/healthy aggregate source so a disconnected
 or stale sensor feed cannot accidentally create "peaceful" growth.
 
-A possible first version:
+Implemented behavior:
 
-- require activity to remain at zero or below a deliberately low threshold for
-  roughly 5–10 continuous minutes;
-- after the quiet threshold is reached, make only a small bounded roll every 2–5
-  minutes;
-- cap the rare quiet species at perhaps 1–2 active specimens;
-- do not replay missed rolls after tab suspension;
-- meaningful traffic immediately prevents new quiet-only growth;
+- require ten continuously observed minutes of verified quiet;
+- make one 10% roll at minute ten, then every three minutes; failures wait;
+- cap at two living specimens; free cells only, with no displacement;
+- reset on disconnection, unhealthy/stale leases, hidden time or a >1.5s logical
+  stall; no suspension credit or catch-up rolls;
+- any weather level other than exactly `quiet` immediately prevents new growth;
 - already-grown Stillblooms remain and age naturally rather than vanishing the
   instant activity resumes;
 - inspection should identify the source as something like `Sustained quiet`
   rather than inventing a sensor, port, or discrete event.
 
-Visually it should not be confused with ghostbloom: thin silver-green growth, a
-large pale flower, or another restrained design that reads as something able to
-appear only after the garden has been left in peace. A mature form could have a
-very faint glow under the implemented local-time night lighting.
+Thin silver-green growth supports a pale ivory cup flower with lavender/blue
+outer petals, distinct from ghostbloom's daisy and crystal fungi. Young growth
+and late fading update at bounded one-second visual deadlines; mature flowers
+are static. The lifecycle is sprout <30s, growing <90s, mature until minute 17,
+then gradual fading through expiry at minute 20. Four cached Pixi poses fit in
+the existing atlas allocation; Canvas draws the equivalent shape. Local-time
+lighting makes the pale flower stand out at night without changing eligibility.
+Competition and both landscaping modes protect it. No synthetic network events,
+acceptance statistics, Recent activity, grass influence, drops or sound are added.
+Development-only simulation stays separate from organic weather certification.
 
 Possible later quiet-only relatives include a silence fern, dewbell, or extremely
 rare glass lily, but begin with one species so seeing it stays special.

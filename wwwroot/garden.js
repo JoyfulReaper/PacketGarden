@@ -1,6 +1,7 @@
 const canvas = document.querySelector("canvas");
 let context = canvas.getContext("2d");
 const gardenPerf = typeof createGardenPerformanceDiagnostics === "function" ? createGardenPerformanceDiagnostics() : null;
+let gardenStillbloom = null, liveWeatherConnected = false;
 const fakeDnsButton = document.querySelector("#fake-dns");
 const fakeGopherButton = document.querySelector("#fake-gopher");
 const fakeHttpButton = document.querySelector("#fake-http");
@@ -17,6 +18,7 @@ let liveConnectionStatus = "Live weather connecting";
 
 function updateWeatherSource() {
   const live = weatherSourceControl.value === "live";
+  gardenStillbloom?.configure({live});
   weatherLevelControl.disabled = live;
   weatherIntensityControl.disabled = live;
   weatherStatus.textContent = live ? liveConnectionStatus : "Manual weather";
@@ -36,10 +38,12 @@ function applyLiveWeather() {
 // One same-origin connection carries garden input even when weather is Manual.
 const gardenEventSource = new EventSource("/api/garden/events");
 gardenEventSource.onopen = () => {
+  liveWeatherConnected=true;gardenStillbloom?.configure({connected:true});
   liveConnectionStatus = "Live weather connected";
   if (weatherSourceControl.value === "live") weatherStatus.textContent = liveConnectionStatus;
 };
 gardenEventSource.onerror = () => {
+  liveWeatherConnected=false;gardenStillbloom?.configure({connected:false});
   liveConnectionStatus = "Live weather disconnected";
   if (weatherSourceControl.value === "live") weatherStatus.textContent = liveConnectionStatus;
 };
@@ -50,11 +54,13 @@ gardenEventSource.addEventListener("weather", message => {
       throw new Error("Invalid weather state");
     }
     latestLiveWeather = { level: state.level, eventsPerMinute: Math.min(1_000_000, Math.max(0, state.eventsPerMinute)) };
+    gardenStillbloom?.setWeather(state);
     if (weatherSourceControl.value === "live") {
       weatherStatus.textContent = liveConnectionStatus;
       applyLiveWeather();
     }
   } catch {
+    gardenStillbloom?.setWeather(null);
     if (weatherSourceControl.value === "live") weatherStatus.textContent = "Live weather update invalid";
   }
 });
@@ -209,7 +215,8 @@ const speciesConfig = new Map([
   ["weed", { timings: weedTimings, render: drawWeed, plural: "weeds" }],
   ["ghostbloom", { timings: ghostbloomTimings, render: drawGhostbloom, plural: "ghostblooms" }],
   ["crystalfungus", { timings: crystalfungusTimings, render: drawCrystalfungus, singular: "crystal fungus", plural: "crystal fungi" }],
-  ["blackthorn", { timings: blackthornTimings, render: drawBlackthorn, plural: "blackthorns" }]
+  ["blackthorn", { timings: blackthornTimings, render: drawBlackthorn, plural: "blackthorns" }],
+  ["stillbloom", { timings: gardenCore.timings.stillbloom, render: drawStillbloom, plural: "stillblooms" }]
 ]);
 
 /** @typedef {{ type: "dns" | "gopher" | "http" | "ssh" | "port22-probe" }} GardenEvent */
@@ -235,6 +242,8 @@ gardenEcology = gardenEcologyCore.createEcologyModel({ now: () => Date.now(), ra
 const gardenAmbient = window.PacketGardenAmbient.createAmbientModel({
   now: () => Date.now(), random: () => Math.random(), getSpecimens: () => gardenModel.specimens
 });
+gardenStillbloom = window.PacketGardenStillbloom.createModel({garden:gardenModel,random:()=>Math.random(),onSpawn(){gardenBaseDirty=true;updateGardenStatus();}});
+gardenStillbloom.configure({connected:liveWeatherConnected,live:weatherSourceControl.value==='live',hidden:document.hidden});
 // Keep object references used by inspection and ecology; fixture assignment goes through the model too.
 const gardenState = {
   get specimens() { return gardenModel.specimens; },
@@ -316,6 +325,7 @@ function updateGarden(now = Date.now()) {
   if (typeof updateSpecimenMutations === "function" && updateSpecimenMutations(now)) { gardenBaseDirty = true; gardenPerf?.reason("specimen-change"); }
   gardenEcology.nextGrassSpreadAt = nextGrassSpreadAt;
   gardenEcology.tickGrass(now, document.hidden);
+  gardenStillbloom.tick(now);
   nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
 }
 
@@ -384,6 +394,25 @@ automaticTrafficButton.addEventListener("click", () => {
     ? "Stop automatic fake traffic" : "Start automatic fake traffic";
   automaticTrafficButton.setAttribute("aria-pressed", String(automaticTrafficRunning));
 });
+
+function drawStillbloom(specimen, now) {
+  const stage=gardenCore.lifecycleStage(specimen,now);if(stage==='expired')return;
+  const state=window.PacketGardenStillbloom.visual(specimen,now);
+  context.save();context.translate((specimen.column+.5)*cellSize,(specimen.row+.5)*cellSize+11);
+  context.scale(state.scale*1.25,state.scale*1.25);context.globalAlpha=state.alpha;
+  context.strokeStyle='#9eafa1';context.lineWidth=1.1;context.beginPath();context.moveTo(0,0);context.bezierCurveTo(-3,-6,3,-13,0,-18);context.stroke();
+  for(const side of [-1,1]){context.fillStyle=side<0?'#9cafad':'#bcc9b4';context.beginPath();context.moveTo(0,-6);context.quadraticCurveTo(side*11,-15,side*9,-12);context.quadraticCurveTo(side*5,-5,0,-6);context.fill();}
+  if(stage==='sprout'){context.fillStyle='#dce2d2';context.beginPath();context.ellipse(0,-18,2.2,3.8,-.15,0,Math.PI*2);context.fill();}
+  else {
+    context.fillStyle='rgba(213,220,245,.07)';context.beginPath();context.arc(0,-19,9,0,Math.PI*2);context.fill();
+    for(const [angle,color] of [[-1.1,'#d8dbee'],[1.1,'#dee6ed'],[-.55,'#f2efdf'],[.55,'#fff7e7'],[0,'#faf9eb']]){
+      context.save();context.translate(0,-17);context.rotate(angle);context.fillStyle=stage==='fading'?'#d1cfc5':color;
+      context.beginPath();context.moveTo(0,0);context.bezierCurveTo(-5,-3,-4,-9,0,-11);context.bezierCurveTo(4,-9,5,-3,0,0);context.fill();context.restore();
+    }
+    context.fillStyle='#c1b6d9';context.beginPath();context.ellipse(0,-18,2.4,1.5,0,0,Math.PI*2);context.fill();
+  }
+  context.restore();
+}
 
 function drawFlower(specimen, now) {
   const vigor = specimen.vigor ?? 0;
@@ -1107,6 +1136,7 @@ seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
 document.addEventListener("visibilitychange", () => {
+  gardenStillbloom.configure({hidden:document.hidden});
   gardenEcology.resetCadence(Date.now());
   nextGrassSpreadAt = gardenEcology.nextGrassSpreadAt;
   if (typeof resetPuddleFormationClock === "function" && resetPuddleFormationClock(Date.now())) { gardenBaseDirty = true; gardenPerf?.reason("puddle-change"); }
@@ -1125,6 +1155,8 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", event => {
+  gardenStillbloom.configure({hidden:true});
+  if(!event?.persisted)gardenStillbloom.destroy();
   if (!event?.persisted && typeof disposeGardenLighting === 'function') disposeGardenLighting();
   gardenPerf?.dispose();
   if (weatherAnimationFrame !== null) window.cancelAnimationFrame(weatherAnimationFrame);

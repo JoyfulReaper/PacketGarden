@@ -6,12 +6,13 @@ function updateGardenLighting(at=Date.now(),force=false,weatherChanged=false) {
   const sampled=gardenLighting.tick(at,{force});
   if(sampled||force||weatherChanged)gardenLightingSurface.apply(gardenLighting.state,weatherSoilDarkening());
 }
+const gardenLightingControls=window.PacketGardenLightingView.bindControls(document,gardenLighting,()=>updateGardenLighting(Date.now(),false,true));
 updateGardenLighting(Date.now(),true);
 function restoreGardenLighting(event) {
   if(event.persisted)updateGardenLighting(Date.now(),true);
 }
 function disposeGardenLighting() {
-  gardenLighting.destroy();gardenLightingSurface.destroy();
+  gardenLightingControls.destroy();gardenLighting.destroy();gardenLightingSurface.destroy();
   window.removeEventListener?.('pageshow',restoreGardenLighting);
 }
 window.addEventListener('pageshow',restoreGardenLighting);

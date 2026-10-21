@@ -34,14 +34,14 @@
       .map(v=>Math.round(v*config.precision)/config.precision);
   }
   function createModel({now=Date.now,getLocalHour=localHour,onChange=()=>{}}={}) {
-    let mode='live',hour=12,state=null,key='',lastSampleAt=null,disposed=false,samples=0,changes=0;
-    const needsSample=at=>!disposed&&(lastSampleAt===null||Math.abs(at-lastSampleAt)>=config.sampleEveryMs);
+    let mode='live',enabled=true,hour=12,state=null,key='',lastSampleAt=null,disposed=false,samples=0,changes=0;
+    const needsSample=at=>!disposed&&enabled&&(lastSampleAt===null||Math.abs(at-lastSampleAt)>=config.sampleEveryMs);
     function tick(at=now(),{hidden=false,force=false}={}) {
       if(disposed||hidden)return false;
       // Absolute difference also notices a backwards clock adjustment. No missed samples replay.
       if(!force && !needsSample(at))return false;
       lastSampleAt=at;samples++;
-      state=atHour(mode==='live'?getLocalHour(at):mode==='hour'?hour:presets[mode]);
+      state=atHour(!enabled?12:mode==='live'?getLocalHour(at):mode==='hour'?hour:presets[mode]);
       const next=compose(state).join(',');
       if(next!==key) {key=next;changes++;onChange(state);}
       return true; // Sampled; the surface adapter independently skips identical matrices.
@@ -54,8 +54,12 @@
       if(!Number.isFinite(value)||value<0||value>24)return false;
       hour=value;mode='hour';tick(at,{force:true});return true;
     }
-    return {tick,setMode,setHour,needsSample,get state(){return state;},get mode(){return mode;},
-      snapshot(){return {mode,hour:state?.hour??null,phase:state?.phase??null,samples,changes,lastSampleAt};},
+    function setEnabled(value,at=now()) {
+      if(disposed||typeof value!=='boolean'||value===enabled)return false;
+      enabled=value;tick(at,{force:true});return true;
+    }
+    return {tick,setMode,setHour,setEnabled,needsSample,get state(){return state;},get mode(){return mode;},get enabled(){return enabled;},
+      snapshot(){return {mode,enabled,hour:state?.hour??null,phase:state?.phase??null,samples,changes,lastSampleAt};},
       destroy(){disposed=true;}};
   }
   const api={config,presets,localHour,atHour,compose,createModel};

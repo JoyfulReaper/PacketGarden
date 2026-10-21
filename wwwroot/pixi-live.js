@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -134,7 +135,7 @@
       const index = keys.length; object.position.set(index % 32 * 32 + 16, Math.floor(index / 32) * 32 + 29);
       sheet.addChild(object); keys.push(key);
     }
-    for (const type of core.species) for (let vigor = 0; vigor <= 3; vigor++) for (let variant = 0; variant < 5; variant++) {
+    for (const type of core.eventSpecies) for (let vigor = 0; vigor <= 3; vigor++) for (let variant = 0; variant < 5; variant++) {
       for (const stage of type === 'redbloom' ? ['mature', 'fading'] : ['sprout', 'growing', 'mature', 'fading']) {
         if (type === 'vine') {
           const object = vineTile(P, vigor, variant, stage); artTiles.push(object);
@@ -167,6 +168,22 @@
     }
     mutation.circle(0, -21, 1.5).fill(0xd8c782).rect(2, -22, 1.5, 1.5).fill({ color: 0xf9efbb, alpha: .5 });
     tile('collectible_weed', mutation);
+    // Four poses share the existing sheet and source; at most two living flowers.
+    for(const stage of ['sprout','growing','mature','fading']) {
+      const g=new P.Graphics();
+      g.moveTo(0,0).bezierCurveTo(-3,-6,3,-13,0,-18).stroke({color:0x9eafa1,width:1.1});
+      for(const side of [-1,1])g.moveTo(0,-6).quadraticCurveTo(side*11,-15,side*9,-12).quadraticCurveTo(side*5,-5,0,-6).fill(side<0?0x9cafad:0xbcc9b4);
+      if(stage==='sprout')g.ellipse(0,-18,2.2,3.8).fill(0xdce2d2);
+      else {
+        g.circle(0,-19,9).fill({color:0xd5dcf5,alpha:.07});
+        for(const [angle,color] of [[-1.1,0xd8dbee],[1.1,0xdee6ed],[-.55,0xf2efdf],[.55,0xfff7e7],[0,0xfaf9eb]]) {
+          const p=(x,y)=>[x*Math.cos(angle)-y*Math.sin(angle),-17+x*Math.sin(angle)+y*Math.cos(angle)];
+          g.moveTo(0,-17).bezierCurveTo(...p(-5,-3),...p(-4,-9),...p(0,-11)).bezierCurveTo(...p(4,-9),...p(5,-3),0,-17).fill(stage==='fading'?0xd1cfc5:color);
+        }
+        g.ellipse(0,-18,2.4,1.5).fill(0xc1b6d9);
+      }
+      artTiles.push(g);tile(`stillbloom:${stage}`,g);
+    }
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -237,14 +254,16 @@
         if (neighbor?.type === 'vine') refreshVine(neighbor, byCell);
       }
     }
-    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : `${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
+    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : specimen.type==='stillbloom'?`stillbloom:${specimen.stage}`:`${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
     const specimenScale = { flower: 1.4, mushroom: 1.4, broadleaf: 1.35, wirefern: 1.4, weed: 1.4,
       redbloom: 1.25, ghostbloom: 1.3, crystalfungus: 1.3, blackthorn: 1.25 };
     function sizeSpecimen(specimen, sprite) {
       if (specimen.type === 'vine' && !specimen.mutation) return; // Preserve mirrored vines and their connection roots.
       // Scale the existing 2x cached tile, keeping its rooted anchor and stage
       // proportions. A top-row limit avoids crowding the second row to fit tall heads.
-      const scale = specimen.mutation ? 1 : Math.min(specimenScale[specimen.type] ?? 1, specimen.row === 0 ? 1.1 : Infinity);
+      const quietVisual=specimen.type==='stillbloom'?stillbloomCore.visual(specimen,Date.now()):null;
+      const scale = specimen.mutation ? 1 : Math.min(quietVisual?1.3*quietVisual.scale:specimenScale[specimen.type] ?? 1, specimen.row === 0 ? 1.1 : Infinity);
+      if(quietVisual)sprite.alpha=quietVisual.alpha;
       sprite.scale.set(scale);
       const x = (specimen.column + .5) * cellSize, y = (specimen.row + .5) * cellSize + 12;
       if (specimen.mutation) { sprite.position.set(x, y); return; }
@@ -424,8 +443,11 @@
     }
     updateNetworkActivity({ hasSnapshot: false });
     let currentWeather = { level: 'quiet', eventsPerMinute: 0 };
+    const stillbloom=stillbloomCore.createModel({garden:model});
+    const stillbloomDiagnostics=window.PacketGardenStillbloomDev?.bind({document,organic:stillbloom,garden:model});
     function updateWeather() {
       const live = !sourceControl || sourceControl.value === 'live';
+      stillbloom.configure({live,hidden:document.hidden});
       if (levelControl) levelControl.disabled = live;
       currentWeather = live ? latestWeather ?? { level: 'quiet', eventsPerMinute: 0 } : { level: levelControl.value, eventsPerMinute: 10000 };
       view.setWeather(currentWeather);
@@ -434,9 +456,9 @@
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
-    const stream = core.connectStream(EventSource, model, state => { latestWeather = state; updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
-      status = value; connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
-    });
+    const stream = core.connectStream(EventSource, model, state => { latestWeather = state;stillbloom.setWeather(state);updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
+      status = value;stillbloom.configure({connected:value==='connected'});connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
+    },()=>stillbloom.setWeather(null));
     sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();
     lightingControls=window.PacketGardenLightingView.bindControls(document,lighting,()=>updateLighting(Date.now(),false,true));
     document.querySelector('#trigger-lightning')?.addEventListener('click',()=>{
@@ -472,6 +494,7 @@
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
     document.querySelector('#reset')?.addEventListener('click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
+      stillbloomDiagnostics?.refresh();
       if (!hud) return;
       const data = measurements.snapshot(), counts = view.snapshot(), ec = ecologyView.snapshot(), ac = ambientView.snapshot(), mc = model.mutations.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
       hud.textContent = [`Pixi ${P.VERSION} · ${P.RendererType?.[app.renderer.type] || app.renderer.constructor.name} · native ticker`,
@@ -500,7 +523,7 @@
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
       if (elapsed > 0) { measurements?.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
       if (Date.now() >= nextLogicalAt) {
-        const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
+        const at = Date.now(); model.tick();stillbloom.tick(at);ecology.tick(at); ecologyView.tick(at);
         updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
         gnomes.tick(at, undefined, document.hidden);
@@ -520,6 +543,7 @@
     document.addEventListener('visibilitychange', () => {
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
+      stillbloom.configure({hidden:document.hidden},at);
       gnomes.resetCadence(at);
       if (document.hidden) gnomes.suspend(at);
       storm.configure({hidden:document.hidden},at);
@@ -533,8 +557,11 @@
       }
     });
     window.addEventListener('pagehide', event => {
+      stillbloom.configure({hidden:true});
       gnomes.suspend();storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
       observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
+      stillbloom.destroy();
+      stillbloomDiagnostics?.destroy();
       lightingControls.destroy();lighting.destroy();lightingSurface.destroy();
       gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
       reducedMotion?.removeEventListener?.('change',updateLightning);storm.destroy();stormView.destroy();

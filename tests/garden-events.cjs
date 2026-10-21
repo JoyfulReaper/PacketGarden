@@ -37,6 +37,7 @@ sandbox.Math.random = () => 0;
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-core.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('wwwroot/garden-stillbloom.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-gnomes.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-mutations.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);
@@ -190,7 +191,8 @@ for (const type of run('Array.from(speciesConfig.keys())')) {
     assert.equal(trace(type,vigor,timing.expiredAfterMs).length,0, `${type} vigor leaves expiry unchanged`);
   }
   const low = trace(type,0,mature), high = trace(type,3,mature);
-  assert.notDeepEqual(high,low, `${type} high vigor visibly changes drawing details`);
+  if(type==='stillbloom')assert.deepEqual(high,low,'ambient Stillbloom has no recurrence/vigor artwork');
+  else assert.notDeepEqual(high,low, `${type} high vigor visibly changes drawing details`);
   if (type !== 'crystalfungus') assert.deepEqual(commands(high,'scale'), commands(low,'scale'), 'vigor does not zoom the whole specimen');
   if (type === 'flower' || type === 'ghostbloom')
     assert(commands(high,type === 'flower' ? 'arc' : 'ellipse').length > commands(low,type === 'flower' ? 'arc' : 'ellipse').length, 'fuller petals');
@@ -208,6 +210,7 @@ for (const type of run('Array.from(speciesConfig.keys())')) {
   if (type === 'crystalfungus' || type === 'blackthorn') assert(commands(high,'stroke').length > commands(low,'stroke').length,'extra facets/branches');
   if (type === 'ghostbloom') assert(commands(high,'arc')[0][3] <= 15,'halo radius stays bounded');
   sandbox.Math.random = () => 0;
+  if(type==='stillbloom'){source.emit('garden',{specimenType:type,listenPort:443,vigor:3});assert.equal(run('gardenState.specimens.length'),0,'ambient-only species rejected by SSE');continue;}
   source.emit('garden',{specimenType:type,listenPort:type==='redbloom'?22:443,vigor:3});
   const before = run('JSON.stringify(gardenState.specimens[0])');
   run(`drawGarden(); updateGarden(${1000 + timing.expiredAfterMs - 1})`);

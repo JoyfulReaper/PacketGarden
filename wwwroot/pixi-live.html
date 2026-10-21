@@ -9,22 +9,24 @@
   <script src="garden-audio.js?v=storm-bolt-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
-  <script src="garden-core.js" defer></script>
-  <script src="garden-lighting.js?v=light-1" defer></script>
-  <script src="garden-lighting-view.js?v=light-1" defer></script>
+  <script src="garden-core.js?v=stillbloom-1" defer></script>
+  <script src="garden-stillbloom.js?v=stillbloom-1" defer></script>
+  <script src="garden-stillbloom-dev.js?v=stillbloom-1" defer></script>
+  <script src="garden-lighting.js?v=light-toggle-1" defer></script>
+  <script src="garden-lighting-view.js?v=light-toggle-1" defer></script>
   <script src="garden-gnomes.js?v=overcrowding-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-grass.js?v=grass-green-1" defer></script>
   <script src="garden-ecology.js?v=grass-green-1" defer></script>
   <script src="garden-ambient.js" defer></script>
   <script src="garden-interaction.js" defer></script>
-  <script src="garden-ui-core.js" defer></script>
+  <script src="garden-ui-core.js?v=stillbloom-1" defer></script>
   <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
   <script src="pixi-live-ambient.js" defer></script>
   <script src="pixi-live-gnomes.js?v=landscaping-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-green-1" defer></script>
-  <script src="pixi-live-core.js?v=overcrowding-1" defer></script><script src="pixi-live.js?v=grass-green-1" defer></script>
+  <script src="pixi-live-core.js?v=stillbloom-1" defer></script><script src="pixi-live.js?v=stillbloom-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -35,6 +37,12 @@
       <label>Lighting <select id="lighting-mode" aria-label="Lighting"><option value="live">Live local time</option><option value="dawn">Dawn</option><option value="day">Day</option><option value="golden">Golden hour</option><option value="dusk">Dusk</option><option value="night">Night</option><option value="hour">Simulated hour</option></select></label>
       <label>Local hour <input id="lighting-hour" type="range" min="0" max="24" step="0.05" value="12" aria-label="Simulated local hour"></label>
       <span id="lighting-status" role="status"></span>
+      <button id="trigger-stillbloom" type="button">Trigger Stillbloom (simulated)</button>
+      <label>Stillbloom simulation <select id="stillbloom-scenario"><option value="quiet">Verified quiet</option><option value="rain">Quiet → rain</option><option value="stale">Stale telemetry</option><option value="disconnected">Disconnected</option><option value="recovery">Recovery to quiet</option></select></label>
+      <label>Simulated roll <select id="stillbloom-roll"><option value="0.099999">0.099999 · success</option><option value="0.1">0.10 · failure</option></select></label>
+      <button id="stillbloom-qualify" type="button">Simulate 10 quiet minutes</button>
+      <button id="stillbloom-check" type="button">Simulate next 3 minutes</button>
+      <span id="stillbloom-test-status" role="status"></span>
       <button id="clear" type="button">Clear garden</button>
       <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>
@@ -50,6 +58,7 @@
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
       <label><input id="lightning-enabled" type="checkbox" checked> Lightning</label>
+      <label><input id="day-night-enabled" type="checkbox" checked> Day/night cycle</label>
       <button id="trigger-lightning" type="button">Trigger Lightning (simulated)</button>
       <span id="lightning-test-status" role="status">Manual thunderstorm/hurricane only; lightning respects reduced motion.</span>
       <label><input id="pause" type="checkbox"> Pause live garden events</label>

@@ -25,11 +25,12 @@ the fallback as a zero measurement. One warning per outage and a recovery messag
 avoid repeated stack logs.
 
 `/api/garden/events` sends the current state immediately and sends another frame
-only when the normalized state changes, including hourly-only changes. SSE framing is:
+when normalized values or upstream health change, including hourly-only changes
+and bounded freshness-lease renewal. SSE framing is:
 
 ```text
 event: weather
-data: {"level":"rain","eventsPerMinute":29.8,"eventsLastHour":4321,"hasSnapshot":true}
+data: {"level":"rain","eventsPerMinute":29.8,"eventsLastHour":4321,"hasSnapshot":true,"telemetryHealthy":true,"freshUntil":1792540830000,"telemetryGeneration":1}
 
 ```
 
@@ -38,7 +39,8 @@ Each frame ends with a blank line. The browser talks only to PacketGarden using
 inputs and updates the existing renderer. Manual remains an explicit override.
 SSE disconnection shows a small status, retains weather/ecology, and uses normal
 EventSource reconnection. Switching source modes does not reset the garden.
-Weather still has no ecological effects.
+Weather presentation retains its behavior; the verified-quiet Stillbloom species
+is now a separate aggregate-driven exception. Rain still does not damage plants.
 
 The full Observatory response is never forwarded. Weather rendering still uses
 only `level` and `eventsPerMinute`; optional aggregate activity is separate from
@@ -68,11 +70,50 @@ mapping and placement/competition outcomes.
 
 `hasSnapshot` means a valid source snapshot has been received, not that it is
 fresh: startup is false; successful fetches set it true, including valid zero
-activity; an outage retains the entire last valid state. Existing connection
-status still reports browser SSE disconnection/reconnection. There is no new
-freshness timer or browser polling. The default page updates both values from the
-same weather SSE callback; manual diagnostic weather never supplies activity
-statistics. Diagnostic controls/HUD and Canvas rendering remain unchanged.
+activity; an outage retains the last valid classification/rates/counts while
+invalidating their health certificate. Existing connection status still reports
+browser SSE disconnection/reconnection. The default page updates both activity
+values from the same weather SSE callback; manual previews supply no statistics.
+
+### Upstream health and Stillbloom
+
+The additive contract is:
+
+- `telemetryHealthy`: successful, currently usable upstream snapshot polling;
+  false at startup and immediately on a failed fetch/parse, even if retained
+  weather is `quiet` and `hasSnapshot` remains true.
+- `freshUntil`: Unix epoch milliseconds certifying freshness for at most 30
+  seconds after a successful upstream poll; null while unhealthy. Successful
+  polls are tracked every ten seconds. An unchanged certificate is renewed once
+  its remaining duration is at most 15 seconds (normally every 20 seconds),
+  avoiding a broadcast on every unchanged poll and leaving a scheduling margin.
+- `telemetryGeneration`: starts at zero, increments on each new healthy period.
+  Same-value recovery therefore breaks continuity even if an intermediate
+  unhealthy update was coalesced. A >30-second upstream polling gap also starts
+  a new healthy period.
+
+The existing adapter/pump owns this state and sends health transitions. No new
+backend loop, telemetry source, persistence or TCPNoise/NATS change is introduced.
+Normal weather classification and last-known rendering remain unchanged. Older
+SSE clients can ignore these fields; newer clients without them simply cannot
+grow organic Stillblooms. Freshness is based on upstream polling, never elapsed
+time since the last weather SSE frame. The browser accepts up to five seconds
+of positive timestamp skew rather than resetting on every slightly ahead-of-clock
+renewal. It still uses the absolute expiry, not time since receipt. Browser/server
+clocks should be aligned; materially wrong clocks cannot certify reliable freshness,
+and leases more than 35 seconds ahead fail closed.
+
+The shared browser scheduler requires Live mode, connected SSE, `hasSnapshot`,
+healthy telemetry, a valid continuity generation and unexpired lease with exactly
+`level === "quiet"`. It never infers calm from `eventsPerMinute`. Ten continuously
+observed minutes allow one 10% roll, followed by checks every three minutes.
+At most two flowers occupy genuinely free specimen cells; no displacement,
+incoming acceptance counts, fabricated provenance or Recent activity entries.
+Hidden time or >1.5-second logical stalls earn no qualification and no missed
+rolls. Disconnect, non-quiet weather, failure or lease expiry restarts the period;
+recovery must qualify anew. Existing flowers age for twenty minutes regardless
+of weather or local lighting. Manual/virtual diagnostic weather cannot create
+organic specimens; diagnostic flowers explicitly identify themselves as simulated.
 
 Verification: `dotnet run --project tests/PacketGarden.Checks` checks weather
 normalization/serialization alongside existing TCPNoise checks. After building,
@@ -153,7 +194,7 @@ Each SSE client has its own transient queue; new connections do not replay hits.
 The existing `/api/garden/events` endpoint multiplexes `garden` and `weather`
 frames. One browser EventSource stays connected in both weather modes: normalized
 garden frames always reach the shared specimen placement path, while weather
-frames affect rendering only in Live mode. Live weather is the default. Switching
+frames affect rendering and verified-quiet eligibility only in Live mode. Live weather is the default. Switching
 modes can apply the latest cached live weather without reopening the stream.
 
 The browser requires integer vigor 0–3 and ignores growth frames with missing or
@@ -369,8 +410,8 @@ weed mutations, Amanita loose drops, bounded first-seen curiosities, temporary s
 and the static zero score are implemented.
 
 Vine/opium, opium pods, rainbow leaves, crystal shards, ghost petals, gnome hats,
-other collectibles, Stillbloom,
-water/creature interactions, local-time lighting, persistence, other protocol/auth-aware adapters, and
+other collectibles,
+water/creature interactions, persistence, other protocol/auth-aware adapters, and
 richer specimen responses remain future work.
 
 See [MVP](MVP.md) for completed and remaining capabilities and

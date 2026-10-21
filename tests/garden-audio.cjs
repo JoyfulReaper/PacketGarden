@@ -31,6 +31,7 @@ function createGarden(options = {}) {
   vm.createContext(sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-core.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('wwwroot/garden-stillbloom.js', 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-gnomes.js', 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-mutations.js', 'utf8'), sandbox);
   vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);

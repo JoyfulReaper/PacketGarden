@@ -7,12 +7,13 @@ assert.doesNotMatch(read('wwwroot/canvas.html'), /pixi/i);
 assert.match(read('wwwroot/pixi-stress.html'), /pixi-stress\.js/);
 const html = read('wwwroot/pixi-live.html'), script = read('wwwroot/pixi-live.js'), modelScript = read('wwwroot/pixi-live-core.js');
 assert.match(html, /data-pixi-library/); assert.match(html, /pixi-live-core\.js/); assert.match(html, /pixi-live\.js/);
-assert.match(html, /src="garden-core\.js"/); assert.doesNotMatch(html, /src="garden\.js"/); assert.match(modelScript, /new Source\('\/api\/garden\/events'\)/);
+assert.match(html, /src="garden-core\.js(?:\?[^"]*)?"/); assert.doesNotMatch(html, /src="garden\.js"/); assert.match(modelScript, /new Source\('\/api\/garden\/events'\)/);
 assert.doesNotMatch(script + modelScript, /setTimeout|setInterval|localStorage|sessionStorage|fetch\(/);
 assert.match(script, /backgroundAlpha: 1/); assert.match(script, /nextLogicalAt = Date\.now\(\) \+ 250/);
 assert.deepEqual(Object.values(core.dimensions), [960,600,30,32,20,640]);
 const event = (type = 'flower', vigor = 0, port = 80) => ({specimenType:type, vigor, listenPort:port, sensor:'test', seenCount:'18446744073709551615'});
-for (const type of core.species) assert(core.normalizeGarden(event(type)));
+for (const type of core.eventSpecies) assert(core.normalizeGarden(event(type)));
+assert.equal(core.normalizeGarden(event("stillbloom")),null);
 for (const invalid of [null, {}, event('unknown'), event('flower', -1), event('flower', 4), event('flower', 1.1), event('flower', '1'), event('flower', 1, 0), event('flower', 1, 65536), event('flower', 1, 80.5)]) assert.equal(core.normalizeGarden(invalid), null);
 const safe = core.normalizeGarden({...event(), remoteIp:'secret', payload:'secret', banner:'secret', credentials:'secret', sensor:'x'.repeat(1000), seenCount:'bad'});
 assert.deepEqual(Object.keys(safe), ['specimenType','listenPort','vigor','sensor','seenCount']); assert.equal(safe.sensor.length,128); assert.equal(safe.seenCount,null);
@@ -21,7 +22,7 @@ for (const invalid of [null, {}, {level:'bogus',eventsPerMinute:12}, {level:'rai
 assert.equal(core.normalizeWeather({level:'rain',eventsPerMinute:1e8}).eventsPerMinute,1e6);
 assert.equal(core.normalizeWeather({level:'rain',eventsPerMinute:-1}).eventsPerMinute,0);
 assert.deepEqual(core.normalizeWeather({level:'rain',eventsPerMinute:29.8,eventsLastHour:4321}),
-  {level:'rain',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true});
+  {level:'rain',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true,telemetryHealthy:false,freshUntil:null,telemetryGeneration:null});
 for (const hour of [undefined,null,-1,1.5,'4321',NaN,Infinity,Number.MAX_SAFE_INTEGER+1]) {
   assert.equal(core.normalizeWeather({level:'rain',eventsPerMinute:29.8,eventsLastHour:hour}).eventsLastHour,null);
 }
@@ -87,7 +88,7 @@ class Texture{constructor(options){Object.assign(this,options);textureCount++;}d
 Texture.WHITE={};
 const P={Container,Graphics,Sprite,Particle,ParticleContainer,Rectangle,Texture};
 const renderer={generateTexture(){generated++;return {source:{},destroy(){}};}};
-const cache=makeLiveAtlas(P,renderer,shared,core); assert.equal(cache.frames.size,763);assert.equal(textureCount,763);assert.equal(live.size,0);
+const cache=makeLiveAtlas(P,renderer,shared,core); assert.equal(cache.frames.size,767);assert.equal(textureCount,767);assert.equal(live.size,0);
 assert.equal(new Set([...cache.frames.values()].map(frame=>frame.source)).size,1);
 let now=100000; const app={stage:new Container()}, view=createView(P,app,cache.frames,core,shared);
 const model=core.createModel(view,{now:()=>now,random:()=>.5});
@@ -104,7 +105,7 @@ const oldest=eligible.reduce((a,b)=>a.createdAt<=b.createdAt?a:b), victimSprite=
 const replacement=model.accept(event('weed',3));assert.equal(replacement.cell,oldest.cell);assert(!live.has(victimSprite));assert.equal(view.byId.size,640);
 assert.equal(view.counters.created,beforeCreated+1);assert.equal(model.counts.replacements,1);
 for(const [id,sprite] of others)if(id!==oldest.id)assert.equal(view.byId.get(id),sprite);
-assert.equal(textureCount,763);assert.equal(generated,2);
+assert.equal(textureCount,767);assert.equal(generated,2);
 const count=model.counts.acceptedLive;model.setPaused(true);assert.equal(model.accept(event('redbloom',3)),null);assert.equal(model.counts.acceptedLive,count);model.setPaused(false);
 // Protected-only saturated grid cannot churn even at maximum incoming vigor.
 for(const specimen of model.specimens)specimen.type='ghostbloom';assert.equal(model.accept(event('weed',3)),null);
@@ -121,11 +122,11 @@ vines.clear();
 const burstCreated=view.counters.created, fixedChildren=view.root.children.slice();
 for(let i=0;i<1000;i++)model.accept(event('flower',0));
 assert.equal(model.specimens.length,640);assert.equal(view.byId.size,640);assert.equal(view.counters.created,burstCreated+640);
-assert.deepEqual(view.root.children,fixedChildren);assert.equal(textureCount,763);assert.equal(generated,2);model.clear();
-for(let i=0;i<10;i++){model.seed();model.clear();assert.equal(view.byId.size,0);assert.equal(view.vineLinks.size,0);assert.equal(textureCount,763);}
+assert.deepEqual(view.root.children,fixedChildren);assert.equal(textureCount,767);assert.equal(generated,2);model.clear();
+for(let i=0;i<10;i++){model.seed();model.clear();assert.equal(view.byId.size,0);assert.equal(view.vineLinks.size,0);assert.equal(textureCount,767);}
 view.setWeather({level:'botnet_hurricane',eventsPerMinute:10000});assert.equal(view.snapshot().particles,400);
 const displayCount=live.size;for(let i=0;i<100;i++)for(const level of Object.keys(core.weatherLevels))view.setWeather({level,eventsPerMinute:10000});
-assert.equal(view.snapshot().particles,400);assert.equal(live.size,displayCount);assert.equal(textureCount,763);
+assert.equal(view.snapshot().particles,400);assert.equal(live.size,displayCount);assert.equal(textureCount,767);
 view.setWeather({level:'quiet',eventsPerMinute:10000});assert.equal(view.snapshot().particles,0);
 for(const size of [[390,844],[1280,900]]){const fit=shared.contain(...size);assert.equal(960*fit.scale/(600*fit.scale),1.6);}
 const samples=shared.frameWindow();for(let i=0;i<5000;i++)samples.add(17);assert.equal(samples.snapshot().size,240);
@@ -149,6 +150,6 @@ for(const port of [420,42069])for(const vigor of [0,1,2,3]) {
   assert.equal(specimen.origin.listenPort,port);assert.equal(specimen.origin.sensor,'public');assert.equal(specimen.origin.seenCount,seenCount);
   assert(!specimen.mutation && !specimen.pendingMutation,'ordinary port-mapped weed is not the port-22 collectible mutation');
 }
-view.destroy();assert.equal(live.size,1);assert.equal(textureCount,763);
+view.destroy();assert.equal(live.size,1);assert.equal(textureCount,767);
 console.log('PASS: Pixi live isolation/SSE/safe contract; production timing and placement parity; capacity/protected vigor competition; persistent views/local vine curves; bounded atlas/particles/timing; clear/seed/pause/lifecycle/resize.');
 module.exports = { P, renderer, cache, live, textureCount: () => textureCount, generated: () => generated };

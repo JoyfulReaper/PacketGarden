@@ -16,14 +16,19 @@
   }
   function bindControls(document,model,refresh) {
     const mode=document.querySelector('#lighting-mode'),hour=document.querySelector('#lighting-hour'),status=document.querySelector('#lighting-status');
-    if(!mode||!hour)return {refresh(){},destroy(){}};
-    const show=()=>{const s=model.snapshot();if(s.hour===null){status.textContent='Local lighting waits until visible.';return;}
+    const toggle=document.querySelector('#day-night-enabled');
+    const show=()=>{if(toggle)toggle.checked=model.enabled;
+      if(mode)mode.disabled=!model.enabled;if(hour)hour.disabled=!model.enabled;
+      if(!mode||!hour||!status)return;
+      if(!model.enabled){status.textContent='Day/night cycle off · Daylight';return;}
+      const s=model.snapshot();if(s.hour===null){status.textContent='Local lighting waits until visible.';return;}
       status.textContent=`${s.mode==='live'?'Live local':'Simulated'} · ${s.phase} · ${s.hour.toFixed(2)}h`;
       mode.value=model.mode;hour.value=String(s.hour);};
     const select=()=>{model.setMode(mode.value);refresh();show();};
     const slide=()=>{model.setHour(Number(hour.value));refresh();show();};
-    mode.addEventListener('change',select);hour.addEventListener('input',slide);show();
-    return {refresh:show,destroy(){mode.removeEventListener('change',select);hour.removeEventListener('input',slide);}};
+    const change=()=>{model.setEnabled(toggle.checked);refresh();show();};
+    toggle?.addEventListener('change',change);mode?.addEventListener('change',select);hour?.addEventListener('input',slide);show();
+    return {refresh:show,destroy(){toggle?.removeEventListener?.('change',change);mode?.removeEventListener?.('change',select);hour?.removeEventListener?.('input',slide);}};
   }
   const api={createSurface,bindControls};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else window.PacketGardenLightingView=api;

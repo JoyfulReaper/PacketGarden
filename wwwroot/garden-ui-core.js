@@ -38,6 +38,7 @@
   }
   function inspection(specimen, at, { colorName, sourceNames = fakeSourceNames } = {}) {
     const origin = specimen.origin ?? {}, vigor = specimen.vigor ?? 0;
+    if(specimen.type==='stillbloom')return {title:'Stillbloom',source:origin.kind==='quiet'?'Sustained quiet':'Simulated Stillbloom',sensor:'—',port:'—',seenCount:'—',vigor:'—',color:'Ivory · silver-green',age:formatAge(at-specimen.createdAt),mutation:'None'};
     const singular = { broadleaf: 'broad-leaf plant', redbloom: 'red bloom', crystalfungus: 'crystal fungus' }[specimen.type] ?? specimen.type;
     return { title: capitalize(singular), source: origin.kind === 'tcpnoise' ? 'Live TCPNoise' : sourceNames[origin.eventType] ?? 'Garden event',
       sensor: origin.sensor ?? (origin.kind === 'tcpnoise' ? 'Not supplied' : 'Development controls'),

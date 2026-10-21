@@ -47,7 +47,7 @@ for(const type of ['mixed','vine','wirefern'])for(const storm of [false,true]){
 // Every specimen renderer was audited as stage-based. Between boundaries it is static.
 const species=createGarden(),work=instrument(species);
 species.run('gardenState.grassCells=[]');
-for(const type of species.run('Array.from(speciesConfig.keys())')){
+for(const type of species.run('Array.from(speciesConfig.keys()).filter(type=>type!=="stillbloom")')){
   const timings=species.run(`speciesConfig.get('${type}').timings`),times=Object.values(timings).sort((a,b)=>a-b);
   species.run(`gardenState.specimens=[{type:'${type}',column:4,row:3,createdAt:Date.now(),vigor:3}];drawGarden()`);
   const specimen=species.run('gardenState.specimens[0]'),created=specimen.createdAt;

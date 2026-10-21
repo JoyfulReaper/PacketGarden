@@ -7,7 +7,7 @@ const html = read('index.html');
 const scripts = [...html.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const diagnosticScripts = [...read('pixi-live.html').matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const assetPath = url => url.split('?')[0];
-assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath), 'both pages use the same renderer, modules and load order');
+assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>name!=='garden-stillbloom-dev.js'), 'both pages use the same renderer and model order; Stillbloom simulation is diagnostic-only');
 assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
 assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
 assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather normalizer must bypass cached code that drops hourly data');
@@ -18,12 +18,12 @@ assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/
 assert.match(read('about.html'), /href="index.html"/);
 assert.match(read('canvas.html'), /src="garden\.js\?v=.+"/);
 assert(!scripts.includes('garden.js'));
-for (const id of ['trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
+for (const id of ['trigger-stillbloom','stillbloom-test-status','trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
 async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0 } = {}) {
-  let now = 100000, app, observer;
+  let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
   let model, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
@@ -78,6 +78,10 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create = context.window.PacketGardenEcology.createEcologyModel;
       context.window.PacketGardenEcology.createEcologyModel = (...args) => { ecology = create(...args); return ecology; };
     }
+    if(assetPath(script)==='garden-stillbloom.js'&&captureModel){
+      const create=context.window.PacketGardenStillbloom.createModel;
+      context.window.PacketGardenStillbloom.createModel=(...args)=>{const model=create(...args);stillbloom??=model;return model;};
+    }
     if (assetPath(script) === 'garden-gnomes.js' && captureModel) {
       const create = context.window.PacketGardenGnomes.createModel;
       context.window.PacketGardenGnomes.createModel = (...args) => { gnomes = create(...args); return gnomes; };
@@ -97,7 +101,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {

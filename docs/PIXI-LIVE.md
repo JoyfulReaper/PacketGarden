@@ -1,3 +1,96 @@
+# Stillbloom (2026-10-21)
+
+`garden-stillbloom.js` is one renderer-neutral scheduler, called by the existing
+250ms Canvas/Pixi logical tick. Organic growth requires connected SSE, Live
+weather, a validated snapshot, healthy upstream telemetry, an unexpired
+30-second certificate and authoritative `level === "quiet"`. Rates, zero traffic,
+initial fallback, manual previews and local lighting never establish calm.
+Ten continuously observed minutes earn one 10% roll; later checks are three
+minutes apart. Failure, full occupancy or two living flowers consumes that
+deadline without retry. At most one flower is added per interval. Hidden time,
+SSE disconnection, stale/unhealthy data, non-quiet weather, a continuity change
+or a >1.5-second logical stall resets qualification. No hidden/catch-up rolls.
+
+The weather adapter retains rendering values during outages, but now publishes
+`telemetryHealthy`, `freshUntil` (Unix milliseconds) and `telemetryGeneration`.
+Failures invalidate immediately; same-value recovery increments continuity.
+Successful polls remain every ten seconds with five-second timeouts. A
+30-second lease renews with <=15 seconds remaining (normally every 20 seconds),
+with scheduling margin rather than a broadcast on every unchanged poll. The
+existing adapter and SSE pump own this; there are no extra loops or providers.
+See [the additive contract and clock limitation](REAL-DATA.md#upstream-health-and-stillbloom).
+Older clients keep rendering; old backend frames without health cannot certify
+organic quiet. This proves successful snapshot polling, not independent health
+of every upstream collector or completeness of global network observations.
+
+The authoritative garden adds at most two Stillblooms to free cells, with no
+displacement. The ambient species is excluded from normalized garden/TCPNoise
+events, ordinary fake-event mappings, normal cosmetic rarity rolls and both
+landscaping modes; stronger-growth competition protects it. Placement uses the
+normal occupancy/grass-clearing lifecycle. Existing specimens are never removed
+to make room, and subsequent weather cannot kill a Stillbloom. Inspection says
+**Sustained quiet**, with em dashes for sensor/port/seen count/vigor. Simulated
+flowers say **Simulated Stillbloom**. No incoming acceptance counts, fabricated
+network events, Recent activity, grass influence, drops or sound are produced.
+
+Lifecycle: sprouting until 30 seconds, growing until 90 seconds, maturity until
+minute 17, then gradual fading/shrinkage through removal at minute 20. Young and
+fading flowers use bounded one-second visual deadlines; mature flowers are
+static. Canvas draws thin silver-green leaves/stem and five overlapping ivory
+cup petals with lavender/blue details. Pixi has four cached poses and one Sprite
+per flower; a faint baked halo needs no particles or dynamic geometry. Existing
+day/night lighting and its checkbox affect only appearance.
+
+The main atlas grows **763 → 767 frame objects**, retaining its **2048×1536**
+backing allocation (~12 MiB RGBA), source count and startup generation count.
+Four extra owned Graphics contexts are released after baking. Existing frame
+slots/art and other atlases remain. There is no per-frame flower geometry,
+texture generation or eligibility scan; at most two flowers receive the slow
+lifecycle transform/opacity updates.
+
+Only `/pixi-live.html` loads `garden-stillbloom-dev.js`. **Trigger Stillbloom
+(simulated)** exercises real local placement/cap without certifying weather.
+Separate virtual controls advance a private shared-rule simulation through
+verified quiet, ten-minute qualification, rain, stale/disconnected telemetry,
+recovery, `.099999` success / `.10` failure and the two-flower cap. Its state
+and results are labeled Simulation and cannot feed the organic scheduler.
+Existing Lighting presets provide day/night inspection. Public pages expose no
+Stillbloom diagnostics.
+
+Validation includes `stillbloom.cjs` and `stillbloom-integration.cjs`: exact
+weather/health/deadline/probability/cadence boundaries; fallback/legacy/stale
+data; real registered SSE disconnect/reconnect handlers; hidden/stalled/manual
+exclusion; full cells and protected targets; origin/counters/activity; aging;
+Canvas/Pixi parity under both motion preferences; and twenty growth/removal
+cycles with unchanged frame/source/generation/live-object counts and teardown.
+Backend checks cover normalization, exact 30-second staleness, ten-second
+unchanged polls, renewal and same-value failure/recovery. Actual ASP.NET/local
+snapshot integration covers the full polling-to-SSE path, including retained
+values, reconnection, unchanged recovery and lease renewal. NATS/TCPNoise tests
+retain all existing mappings/rarity outcomes.
+
+The Chrome runner supports a focused capture pass:
+
+```powershell
+$env:PACKETGARDEN_BROWSER_OUTPUT = 'artifacts/stillbloom/browser'
+node tests/pixi-default-browser.cjs --run --stillbloom-only
+```
+
+Ignored screenshots cover young/growing/mature, day/night, alone/among ordinary
+specimens, fading and quiet-to-rain, plus Canvas day/night. `stillbloom-resources.json`
+records 120-frame samples. Initial focused results: two flower Sprites, 767 main
+frames; ~16.68ms mean ticker interval and .208ms mean CPU submission for the
+two-flower daytime scene. The different mixed fading/rain fixture measured
+.348ms mean submission. These scenes are not a before/after speed comparison,
+and CPU submission does not measure GPU completion. Repeated live-traffic
+soaks, other browsers/devices and comprehensive heap/GPU profiling remain.
+
+The normal build output was locked by an already running PacketGarden process;
+validation uses isolated `artifacts/stillbloom/build` and `checks` outputs without
+stopping it. Main build passes with zero warnings/errors. Backend checks retain
+NU1900 vulnerability-feed warnings when NuGet metadata is unavailable. No
+server persistence, classification thresholds, port mapping or NATS changes.
+
 # Fuller wild grass and natural recovery (2026-10-20)
 
 Canvas and Pixi now share 12 finite grass recipes in `garden-grass.js`: broader
@@ -127,6 +220,13 @@ NATS soaks, other browsers/devices/GPUs and extended visual tuning remain.
 Historical measurements below describe their older checkpoints.
 
 # Local-time lighting (2026-10-20)
+
+**Day/night cycle** is checked by default beside Lightning on both Pixi pages,
+with the same control near Sound on Canvas. Unchecking applies daylight and
+skips routine clock sampling. Rechecking immediately restores current local
+lighting (or the retained diagnostic preset/hour on `/pixi-live.html`). Preview
+controls are disabled while off. The preference is page-local, independent of
+Lightning, and introduces no persistence, geometry rebuilding or timers.
 
 Pixi's default/diagnostic gardens and the Canvas fallback now share
 `garden-lighting.js`: browser-local hours, fixed anchors, smoothstep interpolation,
