@@ -35,6 +35,15 @@ plant artwork, larger specimen sprites, and separated grass tufts. The logical
 32×20 grid, capacity, ecology and lifetimes have not been enlarged or changed
 by those visual passes.
 
+Existing Canvas/Pixi mechanics now share the collectible weed mutation (of a
+live port-22 redbloom), the independent Amanita loose drop (from a live mushroom),
+all four first-seen curiosities, click priority and collection messages. The
+remaining differences are mostly controls, artwork and Pixi-only storm lightning:
+Canvas retains fake-event/manual intensity controls, while Pixi has diagnostic
+fixtures and its own HUD. Old `PIXI-LIVE.md` reports listing missing systems are
+historical snapshots, not current missing-feature lists. Ordinary live weed buds
+are a proposed **new drop**, not an unported Canvas feature.
+
 Both renderers now share opt-in Web Audio (Off initially, 12% initial volume)
 for successful growth, rare flourishes, pointless collections and the original
 Gnome Incident. Its shared model retains the 30-specimen threshold, 2% check
@@ -227,6 +236,26 @@ Pixi adds one startup atlas frame and uses one owned Sprite per active bud.
 **Seed weed buds (simulated)** appears only on `/pixi-live.html`, seeding local
 simulated weeds, grass and a mixed three-drop overlap fixture. It changes no
 incoming statistics or activity. There are no new timers or backend contracts.
+
+### Ordinary weed loose buds (wishlist; not implemented)
+
+A successful **live TCPNoise ordinary weed** (not a port-22 redbloom that later
+mutates into collectible weed) could occasionally produce a separate, little
+clickable bud. The parent weed remains a normal specimen with unchanged type,
+vigor, cell, age and safe origin. Use the existing shared Amanita loose-drop
+scheduler/renderer integration, its capped transient collection, and no invented
+network event. Fake traffic, seeded fixtures and existing collectible mutations
+must not trigger the organic bud roll. Rare drops should be noticeable but not
+constant, and should disappear harmlessly when ignored. Proposed collection text:
+
+```text
+You smoked some ditch weed. +0 points
+```
+
+The line is a joke, not an inventory item, consumption action, reward or useful
+mechanic. No smoke animation or gameplay effect is required. The static score
+remains zero. Keep the port-22 redbloom mutation's existing separate wording and
+behavior intact; do not change existing Amanita or first-seen eligibility.
 
 ### Vine -> opium mutation
 

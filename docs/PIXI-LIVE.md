@@ -67,6 +67,16 @@ The sections below retain the history of earlier feature slices.
 
 # Stillbloom (2026-10-21)
 
+> **Current Pixi parity note (2026-10-21):** This document intentionally retains
+> dated, historical migration snapshots farther below. Statements in those older
+> sections saying Pixi lacks loose Amanita drops, first-seen visitors, collectible
+> weed mutations, inspection/collection, gnomes, audio or grass are **no longer
+> current**. Shared Canvas/Pixi models and current cached Pixi artwork now cover
+> those features; [README](../README.md) and [MVP](MVP.md) summarize current
+> behavior. Separate collectible buds from ordinary weeds, opium pods, and frogs
+> are **not yet implemented** in either renderer. Canvas-specific fake-traffic/
+> numeric weather controls and Pixi-only storm bolts remain intentional differences.
+
 `garden-stillbloom.js` is one renderer-neutral scheduler, called by the existing
 250ms Canvas/Pixi logical tick. Organic growth requires connected SSE, Live
 weather, a validated snapshot, healthy upstream telemetry, an unexpired
