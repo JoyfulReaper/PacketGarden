@@ -9,8 +9,11 @@
     lifetimeMs: 20_000, hitRadius: 9, placementPadding: 14 };
   const dropTypes = Object.freeze({
     amanita_muscaria: Object.freeze({ sourceType: 'mushroom', chance: .01, delayMs: 5_000 }),
-    ditch_weed_bud: Object.freeze({ sourceType: 'weed', chance: .03, atMaturity: true })
+    ditch_weed_bud: Object.freeze({ sourceType: 'weed', chance: .03, atMaturity: true }),
+    gnome_underpants: Object.freeze({ clickedGnome: true })
   });
+  const underpantsArt = Object.freeze({ body:Object.freeze([-6,-4,6,-4,5,3,2,4,0,0,-2,4,-5,3]),
+    lines:Object.freeze([[-6,-3,6,-3],[-5,2,-2,3],[2,3,5,2],[0,-1,0,0]].map(Object.freeze)) });
   // The same compact, overlapping leaf recipe is baked once in Pixi and drawn on Canvas's overlay.
   const weedBudLeaves = Object.freeze([
     [0x536338, -2,4, -7,0, -5,-3, -1,-3], [0x647640, 1,4, 7,2, 6,-2, 1,-2],
@@ -33,7 +36,7 @@
     return { x: curiosity.x + dx, y: curiosity.y + dy };
   }
   function looseDropPosition(drop, now = Date.now()) {
-    if (drop.type === 'ditch_weed_bud') return { x: drop.x, y: drop.y }; // Still, including reduced motion.
+    if (drop.type === 'ditch_weed_bud' || drop.type === 'gnome_underpants') return { x: drop.x, y: drop.y }; // Still, including reduced motion.
     return { x: drop.x, y: drop.y + Math.sin((now - drop.createdAt) / 1400 + drop.phase) * .6 };
   }
   function curiosityAppearance(item, now) {
@@ -112,7 +115,7 @@
     }
     function scheduleLooseDrop(specimen, type, rng = random, at = now()) {
       const definition = Object.hasOwn(dropTypes,type) ? dropTypes[type] : null;
-      if (!definition || !isSourceAlive(specimen, at)
+      if (!definition || definition.clickedGnome || !isSourceAlive(specimen, at)
         || (definition.atMaturity && (!eligibleWeed(specimen, at) || scheduledBuds.has(specimen)))) return false;
       prunePendingDrops(at);
       if (pendingDrops.has(specimen)) return false;
@@ -175,6 +178,15 @@
       }
       hidden = value;
     }
+    function dropGnomeUnderpants(point, at = now()) {
+      if (hidden || !Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return null;
+      // Reclaim expired slots only; clicking never advances unrelated pending specimen drops.
+      for (let i=drops.length-1;i>=0;i--) if (at>=drops[i].expiresAt) removeDrop(drops[i],'expired');
+      if (drops.length >= dropConfig.maxActiveDrops) { counts.dropsCapSkipped++; return null; }
+      const item={type:'gnome_underpants',createdAt:at,expiresAt:at+dropConfig.lifetimeMs,
+        x:Math.max(14,Math.min(width-14,point.x+16)),y:Math.max(14,Math.min(height-14,point.y+8)),phase:0};
+      drops.push(item);counts.dropsActivated++;notify('drop-added',item,'gnome-click');return item;
+    }
     function tickDrops(at = now(), { hidden: isHidden = hidden, living = null } = {}) {
       setHidden(isHidden, at);
       let changed = false;
@@ -215,10 +227,10 @@
       get drops() { return drops; }, set drops(entries) { drops = entries; }, // legacy Canvas fixture access
       pendingDrops, counts, idFor, isSourceAlive, createFirstSeenCuriosity, acceptLiveSpecimen,
       expireCuriosities, removeCuriosity, removeDrop, cancelSource, prunePendingDrops,
-      scheduleLooseDrop, maybeScheduleAmanita, maybeScheduleWeedBud, activateLooseDrop, tickDrops, setHidden, clear, seed,
+      scheduleLooseDrop, maybeScheduleAmanita, maybeScheduleWeedBud, activateLooseDrop, tickDrops, setHidden, dropGnomeUnderpants, clear, seed,
       tick(at = now(), options) { const visitors = expireCuriosities(at); return tickDrops(at, options) || visitors; }
     };
   }
-  const api = { curiosityConfig, curiosityTypes, dropConfig, dropTypes, weedBudLeaves, curiosityPosition, curiosityAppearance, looseDropPosition, createAmbientModel };
+  const api = { curiosityConfig, curiosityTypes, dropConfig, dropTypes, weedBudLeaves, underpantsArt, curiosityPosition, curiosityAppearance, looseDropPosition, createAmbientModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenAmbient = api;
 })();

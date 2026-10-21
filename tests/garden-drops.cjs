@@ -41,7 +41,7 @@ assert.equal(garden.run('looseDropConfig.amanitaDropChance'), 0.01);
 assert.equal(garden.run('looseDropConfig.delayMs'), 5000);
 assert.equal(garden.run('looseDropConfig.maxActiveDrops'), 5);
 assert.equal(garden.run('looseDropConfig.lifetimeMs'), 20000);
-assert.equal(json(garden, 'Array.from(looseDropTypes.keys())'), '["amanita_muscaria","ditch_weed_bud"]');
+assert.equal(json(garden, 'Array.from(looseDropTypes.keys())'), '["amanita_muscaria","ditch_weed_bud","gnome_underpants"]');
 assert.equal(count(garden), 0);
 const sse = createGarden(); force(sse);
 sse.sources[0].emit({specimenType:'mushroom',listenPort:21,vigor:0,seenCount:'12'});

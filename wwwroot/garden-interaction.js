@@ -28,7 +28,10 @@
     const column = Math.floor(point.x / cellSize), row = Math.floor(point.y / cellSize);
     return specimens.find(p => p.column === column && p.row === row) ?? null;
   }
-  function resolve(point, { specimens = [], curiosities = [], drops = [] }, at = Date.now()) {
+  function resolve(point, { specimens = [], curiosities = [], drops = [], gnomes = null }, at = Date.now()) {
+    if (!validPoint(point)) return null;
+    const gnome = gnomes?.hitAt(point,at);
+    if (gnome) return {kind:'gnome',object:gnome};
     const curiosity = curiosityAt(point, curiosities, at);
     if (curiosity) return { kind: 'curiosity', object: curiosity };
     const drop = looseDropAt(point, drops, at);

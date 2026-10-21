@@ -5,6 +5,8 @@ const gardenGnomes = window.PacketGardenGnomes.createModel({
   garden: gardenModel,
   getSpecimens: () => gardenState.specimens,
   getReducedMotion: () => gnomeReducedMotion?.matches ?? false,
+  hasPendingBud: specimen => gardenAmbient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
+  onUnderpantsAttempt: (point,at) => gardenAmbient.dropGnomeUnderpants(point,at),
   onCue: stage => gardenSound.maybePlayGnomeSound(stage)
 });
 let nextAmbientCheckAt = gardenGnomes.nextCheckAt;
@@ -39,10 +41,10 @@ function updateAmbientEvents(now, random = Math.random) {
 }
 function drawGardenActors(now) {
   for (const actor of gardenState.actors) {
-    const { step, battle, bounce, shove, rotation, alpha, clippers, closed } = window.PacketGardenGnomes.appearance(actor, now, gnomeReducedMotion?.matches);
+    const { step, battle, x, y, rotation, alpha, clippers, closed, sack, surprised } = window.PacketGardenGnomes.presentation(actor, now, gnomeReducedMotion?.matches);
     context.save();
-    context.translate(actor.x + shove, actor.y + bounce);
-    if (battle) context.rotate(rotation);
+    context.translate(x, y);
+    if (rotation) context.rotate(rotation);
     if (actor.state === "flee") {
       context.globalAlpha = alpha;
     }
@@ -90,6 +92,18 @@ function drawGardenActors(now) {
         context.moveTo(x,y); context.lineTo(endX,endY);
       }
       context.stroke();
+    }
+    if (sack) {
+      const art=window.PacketGardenGnomes.sackArt;context.fillStyle='#96734d';context.strokeStyle='#604e35';context.lineWidth=1;
+      context.beginPath();for(let i=0;i<art.body.length;i+=2){if(i===0)context.moveTo(art.body[i],art.body[i+1]);else context.lineTo(art.body[i],art.body[i+1]);}
+      context.closePath();context.fill();context.beginPath();
+      for(const [x,y,endX,endY] of art.lines){context.moveTo(x,y);context.lineTo(endX,endY);}context.stroke();
+      // Sideways glance: suspiciously little supervision is taking place.
+      context.fillStyle='#433c32';context.fillRect(-2,-4,2,1);context.fillRect(2,-4,2,1);
+    }
+    if (surprised) {
+      context.strokeStyle='#f2efe3';context.lineWidth=1.4;context.beginPath();context.moveTo(10,-14);context.lineTo(10,-9);context.stroke();
+      context.fillStyle='#f2efe3';context.beginPath();context.arc(10,-6.5,.8,0,Math.PI*2);context.fill();
     }
     context.restore();
   }

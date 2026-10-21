@@ -25,6 +25,11 @@
       } else if (type === 'shiny_pebble') {
         g.poly([12,18,13,14,17,13,20,16,19,19]).fill(0xa9aaa1);
         g.moveTo(14,15).lineTo(17,14).lineTo(18,16).stroke({color:0xcecec0,width:1});
+      } else if (type === 'gnome_underpants') {
+        const art=ambientCore.underpantsArt;
+        g.poly(art.body.map((v,i)=>v+16)).fill(0xf2efe3).stroke({color:0xa5aba0,width:1});
+        for(const [x,y,endX,endY] of art.lines)g.moveTo(x+16,y+16).lineTo(endX+16,endY+16);
+        g.stroke({color:0xa5aba0,width:1});
       } else if (type === 'ditch_weed_bud') {
         g.ellipse(16,16,4.5,5).fill(0x39462b);
         for (const [color,x,y,cx,cy,tx,ty,ex,ey] of ambientCore.weedBudLeaves) {

@@ -60,6 +60,10 @@ async function run() {
     window.__gardenAmbientBakes=0;
     PacketGardenPixiAmbient.makeAmbientAtlas=(...args)=>{window.__gardenAmbientBakes++;return window.__gardenTestAmbientAtlas=makeAmbientAtlas(...args);};
     PacketGardenPixiAmbient.createAmbientView=(...args)=>(window.__gardenTestAmbientView=createAmbientView(...args));
+    const createGnomeView=PacketGardenPixiGnomes.createGnomeView,makeGnomeAtlas=PacketGardenPixiGnomes.makeGnomeAtlas;
+    window.__gardenGnomeBakes=0;
+    PacketGardenPixiGnomes.makeGnomeAtlas=(...args)=>{window.__gardenGnomeBakes++;return window.__gardenTestGnomeAtlas=makeGnomeAtlas(...args);};
+    PacketGardenPixiGnomes.createGnomeView=(...args)=>(window.__gardenTestGnomeView=createGnomeView(...args));
     PacketGardenGnomes.createModel = (...args) => (window.__gardenTestGnomes = createGnomes(...args));
     const createStorm = PacketGardenPixiStorm.createModel;
     PacketGardenPixiStorm.createModel = options => (window.__gardenTestStorm = createStorm({...options,random:PacketGardenPixi.seededRandom(77332)}));
@@ -127,6 +131,7 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--gnome-harvest-only')){promoted=true;await checkHarvest();return;}
     if(process.argv.includes('--weed-bud-only')){
       promoted=true;const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
       await page.waitForFunction(()=>window.__gardenTestAmbient);await checkWeedBuds(page);await page.close();return;
@@ -300,6 +305,7 @@ async function run() {
     await checkLighting(diagnostic);
     await checkStillbloom(diagnostic);
     await checkWeedBuds(diagnostic);
+    await checkHarvest();
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -323,6 +329,74 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+  }
+
+  async function checkHarvest() {
+    const page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2}),errors=[];
+    page.on('pageerror',e=>errors.push(String(e)));let at=Date.UTC(2026,9,21,12);
+    await page.clock.setFixedTime(at);await page.goto(origin+'/pixi-live.html');await page.waitForFunction(()=>window.__gardenTestGnomeView);
+    await page.locator('#probes').uncheck();await page.locator('#trigger-weed-harvest').click();
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.incident.mode),'weed_harvest');
+    const paint=async()=>{const n=await page.evaluate(()=>__gardenTestPaints);await page.waitForFunction(n=>__gardenTestPaints>n+1,n);};
+    at+=750;await page.clock.setFixedTime(at);await paint();
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.incident.removals),1);
+    await page.locator('#view canvas').screenshot({path:path.join(output,'harvest-pixi-day.png')});
+    const actorPoint=async(index=0)=>page.evaluate(index=>{const actor=__gardenTestGnomes.actors[index],sprite=__gardenTestGnomeView.views.get(actor),app=__gardenTestApp,
+      root=app.stage.children[0],r=app.canvas.getBoundingClientRect();return {x:r.left+(root.x+sprite.x*root.scale.x)*r.width/app.renderer.screen.width,
+        y:r.top+(root.y+(sprite.y-3)*root.scale.y)*r.height/app.renderer.screen.height};},index);
+    let point=await actorPoint();await page.mouse.click(point.x,point.y);await paint();
+    assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),1);assert(await page.evaluate(()=>__gardenTestGnomes.actors[0].underpantsAttempted));
+    await page.locator('#view canvas').screenshot({path:path.join(output,'harvest-pixi-surprise.png')});
+    point=await actorPoint();await page.mouse.click(point.x,point.y);assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),1);
+    point=await actorPoint(1);await page.mouse.click(point.x,point.y);assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),2);
+    await page.locator('#lighting-mode').selectOption('night');await paint();
+    await page.locator('#view canvas').screenshot({path:path.join(output,'harvest-pixi-night-sack.png')});
+    // Finish on normal logical deadlines; underpants remain after both volunteers depart.
+    for(let i=0;i<18;i++){at+=250;await page.clock.setFixedTime(at);await paint();}
+    assert.equal(await page.evaluate(()=>__gardenTestGnomes.actors.length),0);
+    assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),2);
+    await page.locator('#view canvas').screenshot({path:path.join(output,'underpants-pixi-departed.png')});
+    await page.locator('#seed-gnome-drops').click();assert.equal(await page.evaluate(()=>__gardenTestAmbient.drops.length),5);
+    await page.locator('#lighting-mode').selectOption('day');await paint();
+    await page.locator('#view canvas').screenshot({path:path.join(output,'underpants-pixi-mixed-day.png')});
+    await page.locator('#lighting-mode').selectOption('night');await paint();
+    await page.locator('#view canvas').screenshot({path:path.join(output,'underpants-pixi-mixed-night.png')});
+    const dropPoint=async()=>page.evaluate(()=>{const d=__gardenTestAmbient.drops.find(d=>d.type==='gnome_underpants'),app=__gardenTestApp,root=app.stage.children[0],r=app.canvas.getBoundingClientRect();
+      return {x:r.left+(root.x+d.x*root.scale.x)*r.width/app.renderer.screen.width,y:r.top+(root.y+d.y*root.scale.y)*r.height/app.renderer.screen.height};});
+    for(const [roll,message] of [['0.799999',"You stole a gnome's underpants. +0 points"],['0.8','Collected underpants +1, annoyed gnome -1']]){
+      await page.locator('#underpants-message-roll').selectOption(roll);const p=await dropPoint();await page.mouse.click(p.x,p.y);
+      assert.equal(await page.locator('#collection-message').textContent(),message);assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');
+    }
+    const resources=await page.evaluate(()=>{
+      const g=__gardenTestGnomes,a=__gardenTestAmbient,gv=__gardenTestGnomeView,av=__gardenTestAmbientView,states=[];
+      for(let i=0;i<20;i++){
+        g.clear();a.clear();const time=Date.now()+(i+1)*420000;
+        __gardenTestGarden.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:0,column:12+i*2,row:10,createdAt:time-65000,origin:{kind:'simulated',eventType:'weed-harvest-test'}})),time);
+        g.startLandscaping(time,()=>.5,'weed_harvest');gv.animate(time);
+        for(const actor of g.actors)g.click(actor,time);
+        const sprites=[...gv.views.values(),...av.dropViews.values()].map(v=>v.sprite??v);
+        g.clear();a.tick(time+20000);states.push({gnomes:gv.views.size,drops:av.dropViews.size,destroyed:sprites.every(s=>s.destroyed)});
+      }
+      return {states,gnomeFrames:__gardenTestGnomeAtlas.frames.size,ambientFrames:__gardenTestAmbientAtlas.frames.size,
+        gnomeBakes:__gardenGnomeBakes,ambientBakes:__gardenAmbientBakes,
+        gnomeBacking:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight]};
+    });
+    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,21);assert.equal(resources.ambientFrames,7);
+    assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
+    const canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
+    await canvas.evaluate(()=>{gardenModel.clear();gardenEcology.clear();const at=Date.now();gardenModel.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:0,column:12+i*2,row:10,createdAt:at-65000,
+      origin:{kind:'simulated',eventType:'weed-harvest-test'}})));gardenGnomes.startLandscaping(at,()=>.999,'weed_harvest');syncGnomeState();drawGarden();});
+    at+=750;await canvas.clock.setFixedTime(at);await canvas.waitForFunction(()=>gardenGnomes.incident.removals===1);
+    await canvas.locator('.garden-stage').screenshot({path:path.join(output,'harvest-canvas-day.png')});
+    await canvas.evaluate(()=>{const a=gardenGnomes.actors[0];gardenGnomes.click(a);gardenLighting.setMode('night');updateGardenLighting(Date.now(),true);drawGardenOverlay(true);});
+    await canvas.locator('.garden-stage').screenshot({path:path.join(output,'harvest-canvas-surprise-night.png')});
+    await canvas.evaluate(()=>{gardenGnomes.clear();syncGnomeState();gardenAmbient.seed({drops:['amanita_muscaria','ditch_weed_bud','gnome_underpants'].map((type,i)=>({type,x:395+i*70,y:315,phase:0,createdAt:Date.now(),expiresAt:Date.now()+20000}))});drawGardenOverlay(true);});
+    await canvas.locator('.garden-stage').screenshot({path:path.join(output,'underpants-canvas-mixed-night.png')});
+    await canvas.evaluate(()=>{gardenLighting.setMode('day');updateGardenLighting(Date.now(),true);drawGardenOverlay(true);});
+    await canvas.locator('.garden-stage').screenshot({path:path.join(output,'underpants-canvas-mixed-day.png')});
+    assert.equal(await canvas.locator('#garden-score').textContent(),'Score: 0');await canvas.close();
+    assert.deepEqual(errors,[]);await page.close();await fs.writeFile(path.join(output,'gnome-harvest-resources.json'),JSON.stringify(resources,null,2));
+    console.log('PASS: Chrome weed-harvest trigger/cuts/sacks, actual gnome clicks/one attempt, independent underpants, both 80/20 messages, day/night Canvas-Pixi captures and 20 cleanup cycles:',JSON.stringify(resources));
   }
 
   async function checkWeedBuds(page) {
@@ -367,7 +441,7 @@ async function run() {
       return {cycles:states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,
         backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],gpuSources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
     });
-    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,6);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
+    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,7);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
     await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#seed-weed-buds').click();
     const positions=await page.evaluate(()=>{const v=__gardenTestAmbientView;v.animate(Date.now());const a=[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y]);
       v.animate(Date.now()+10000);return [a,[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y])];});
@@ -549,8 +623,8 @@ async function run() {
       __gardenTestGnomes.incident.createdAt=Date.now()-20000;});
     await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;});
     assert.equal((await actors()).count,0);assert.equal(await tones(),beforeHidden,'suspended completion does not replay cues');
-    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:14,
-      atlasBacking:[1120,64],estimatedAtlasRgbaBytes:1120*64*4};
+    const results={quietIdle,quietActive,hurricaneIdle,hurricaneActive,extraDisplayObjects:5,atlasFrames:21,
+      atlasBacking:[1680,64],estimatedAtlasRgbaBytes:1680*64*4};
     await fs.writeFile(path.join(output,'gnome-timing.json'),JSON.stringify(results,null,2));console.log('Gnome timing:',JSON.stringify(results));
   }
   async function checkLandscaping(page) {

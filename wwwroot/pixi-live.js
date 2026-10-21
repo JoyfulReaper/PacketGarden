@@ -379,6 +379,8 @@
     },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
+      getGnomes: () => gnomes,
+      collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
       getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
     const gnomePresentation = window.PacketGardenPixiGnomes;
@@ -387,6 +389,8 @@
     const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
     let simulatedWinner = null, nextSimulatedWinner = 'green';
     const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
+      hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
+      onUnderpantsAttempt: (point,at) => ambient.dropGnomeUnderpants(point,at),
       getReducedMotion: () => reducedMotion?.matches ?? false,
       random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
       onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
@@ -414,6 +418,7 @@
     };
     document.querySelector('#trigger-landscaping')?.addEventListener('click', () => triggerLandscaping('vine'));
     document.querySelector('#trigger-overcrowding')?.addEventListener('click', () => triggerLandscaping('overcrowding'));
+    document.querySelector('#trigger-weed-harvest')?.addEventListener('click', () => triggerLandscaping('weed_harvest'));
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
@@ -475,6 +480,11 @@
       ecology.seed({grassCells:[13,14,18,19].map(column => ({column,row:10,createdAt:at-60000,lastInfluencedAt:at}))});
       ambientPresentation.seedWeedBuds(ambient,at);
     });
+    document.querySelector('#seed-gnome-drops')?.addEventListener('click', () => {
+      const at=Date.now();
+      ambient.seed({drops:['amanita_muscaria','ditch_weed_bud','gnome_underpants','gnome_underpants','gnome_underpants'].map((type,i)=>({
+        type,x:315+i*65,y:385,phase:0,createdAt:at,expiresAt:at+ambientCore.dropConfig.lifetimeMs}))});
+    });
     document.querySelector('#seed-mutations')?.addEventListener('click', () => model.seedMutations());
     document.querySelector('#seed-pending-mutations')?.addEventListener('click', () => model.seedMutations(true));
     let interactionSeedVariant = 0;
@@ -510,7 +520,7 @@
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
-        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · 14 cached frames / 1 GPU source`,
+        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,

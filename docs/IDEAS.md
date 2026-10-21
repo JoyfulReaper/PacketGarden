@@ -42,7 +42,7 @@ remaining differences are mostly controls, artwork and Pixi-only storm lightning
 Canvas retains fake-event/manual intensity controls, while Pixi has diagnostic
 fixtures and its own HUD. Old `PIXI-LIVE.md` reports listing missing systems are
 historical snapshots, not current missing-feature lists. Ordinary live weed buds
-are a proposed **new drop**, not an unported Canvas feature.
+are now implemented as a separate loose drop, alongside clicked-gnome underpants.
 
 Both renderers now share opt-in Web Audio (Off initially, 12% initial volume)
 for successful growth, rare flourishes, pointless collections and the original
@@ -149,6 +149,52 @@ independently of vine diagnostics. Both buttons retain the shared cooldown;
 neither is exposed on the homepage. Long real-traffic frequency/visual tuning
 remains a follow-up.
 
+#### Weed harvesting (implemented)
+
+The third landscaping mode, `weed_harvest`, uses the same 45-second logical
+check and seven-minute cooldown. At least three mature ordinary weeds allow one
+strict `< 0.05` roll. Priority remains fight → overcrowding → vine → harvest.
+A failed full-capacity overcrowding roll never falls through; a failed vine
+roll may allow harvest when its separate eligibility holds. Existing fight,
+vine and overcrowding probabilities are unchanged.
+
+A worker and mildly suspicious burlap-sack carrier visit 1–3 selected original
+weeds sequentially, using the existing 750ms travel, 500ms snip and 750ms departure.
+Before each cut, recheck exact object/id, cell/coordinates, creation time,
+living mature stage and ordinary eligibility. Rare palettes, protected species,
+mutations/pending mutations and sources with pending bud drops are excluded.
+No replacement is chased. The authoritative removal lifecycle frees the cells;
+already-active buds remain independent. Both gnomes leave, handing the sack to
+the worker. Hidden tabs or logical gaps over 1.5 seconds cancel without replay;
+reduced motion uses discrete positions and static poses. No new scheduling loop.
+
+### Clickable gnomes and underpants (implemented)
+
+All visible active gnomes take click priority before curiosities, loose drops,
+mutations and inspection. Both renderers record the exact logical pose used to
+draw each actor, including movement, shove, bounce and rotation; centralized
+click handling tests that transform. Hidden, removed, expired and unpainted
+actors cannot be clicked. A click is consumed even after an actor's one attempt,
+so it cannot also collect or inspect something underneath.
+
+The first click produces a brief 600ms surprise pose and one underpants attempt.
+At a full shared five-drop cap, the attempt is consumed without retry. The
+separate white `gnome_underpants` drop has a waistband/leg openings and lives
+20 seconds independently of its gnome. It shares Amanita/bud removal, collection,
+expiry and rendering cleanup, without network provenance, occupancy or ecology.
+
+On collection, a fresh roll strictly below 0.8 says
+`You stole a gnome's underpants. +0 points`; otherwise it says
+`Collected underpants +1, annoyed gnome -1`. The latter is only a zero-result
+joke: no score arithmetic, annoyance statistics, inventory or persistent state.
+Existing two-second feedback and optional sound remain; Score stays 0.
+
+Development-only `/pixi-live.html` controls trigger a simulated weed-harvest
+fixture, seed five mixed Amanita/bud/underpants drops and force either message
+boundary. Actual gnome clicks still enforce one attempt and the cap. The public
+homepage exposes none of these controls. Both renderers share the same bounded
+model and finite artwork; Pixi keeps at most four actor and five drop Sprites.
+
 Ambient incidents should not claim to represent attacks, failures, threat levels,
 or specific protocols unless an event is explicitly designed around trustworthy
 telemetry. Most of them can simply be garden nonsense.
@@ -222,7 +268,7 @@ without retries, queues or eviction. Bud deadlines missed while hidden or more
 than 1.5 seconds late are discarded without catch-up. Amanita keeps its original
 1% live-mushroom roll, five-second delay and hidden/resume behavior.
 
-Click priority remains curiosity → topmost loose drop → mutation → inspection.
+Click priority is now active gnome → curiosity → topmost loose drop → mutation → inspection.
 Only the selected bud disappears, briefly saying
 `You smoked some ditch weed. +0 points`, with existing optional quiet audio.
 No smoke effect, consumption animation, occupancy, grass/puddle change, Recent
@@ -237,7 +283,7 @@ Pixi adds one startup atlas frame and uses one owned Sprite per active bud.
 simulated weeds, grass and a mixed three-drop overlap fixture. It changes no
 incoming statistics or activity. There are no new timers or backend contracts.
 
-### Ordinary weed loose buds (wishlist; not implemented)
+### Ordinary weed loose buds (historical proposal; now implemented above)
 
 A successful **live TCPNoise ordinary weed** (not a port-22 redbloom that later
 mutates into collectible weed) could occasionally produce a separate, little

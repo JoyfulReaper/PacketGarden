@@ -88,7 +88,10 @@ function specimenAtCanvasPoint(clientX, clientY) {
 
 canvas.addEventListener("click", event => {
   const point = gardenPointFromClient(event.clientX, event.clientY);
-  const hit = window.PacketGardenInteraction.resolve(point, gardenState);
+  const hit = window.PacketGardenInteraction.resolve(point, {...gardenState,gnomes:typeof gardenGnomes === 'undefined' ? null : gardenGnomes});
+  if (hit?.kind === 'gnome') {
+    gardenGnomes.click(hit.object);drawGardenOverlay(true);syncWeatherAnimation();return;
+  }
   if (hit?.kind === "curiosity") {
     collectFirstSeenCuriosity(hit.object);
     return;

@@ -99,6 +99,11 @@
       },
       seedLandscaping(mode = 'vine') {
         const at = now();
+        if (mode === 'weed_harvest') {
+          model.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:1,column:12+i*2,row:10,createdAt:at-65000,
+            colorVariant:0,origin:{kind:'simulated',eventType:'weed-harvest-test'}})),at);
+          for(const p of model.specimens){p.colorVariant=0;view.update(p,model.byCell);}return;
+        }
         const full = mode === 'overcrowding', ordinary = ['flower','mushroom','broadleaf','vine','wirefern','weed'];
         model.seed(Array.from({length:full?dimensions.capacity:50}, (_,i) => ({ type:full?ordinary[i%ordinary.length]:i<32?'vine':'broadleaf', vigor:0,
           column:full?i%dimensions.columns:10+i%10, row:full?Math.floor(i/dimensions.columns):6+Math.floor(i/10), createdAt:at-65000,

@@ -8,17 +8,22 @@
     cooldownMs:420000, trimShare:.25, maxTargets:8, travelMs:750, snipMs:500, exitMs:750, maxTickGapMs:1500 });
   const overcrowdingConfig = Object.freeze({ incidentChance:.25, freeCells:32, maxRemovals:32,
     maxTargets:64, maxDurationMs:45000 });
+  const harvestConfig = Object.freeze({ minimumWeeds:3, incidentChance:.05, maxTargets:3 });
+  const reactionMs = 600, presentations = new WeakMap();
   // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
   const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
   const ordinarySpecimen = (p, at) => garden.species.includes(p.type) && !garden.isProtected(p.type)
     && !p.mutation && !p.pendingMutation && !rareColors.has(p.colorVariant) && p.colorVariant !== 4
     && !(p.type === 'broadleaf' && p.broadleafVariant === 'rainbow')
     && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
-  const eligibleTarget = (p, at, mode) => ordinarySpecimen(p, at) && (mode === 'overcrowding' || p.type === 'vine');
   function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,
-    getReducedMotion = () => false, onChange = () => {}, onCue = () => {} }) {
+    getReducedMotion = () => false, hasPendingBud = () => false, onUnderpantsAttempt = () => {},
+    onChange = () => {}, onCue = () => {} }) {
     let actors = [], incident = null, nextCheckAt = now() + config.checkEveryMs;
-    let lastLandscapingAt = -Infinity;
+    let lastLandscapingAt = -Infinity, suspended = false;
+    const eligibleTarget = (p, at, mode) => ordinarySpecimen(p, at) && (mode === 'overcrowding'
+      || mode === 'vine' && p.type === 'vine'
+      || mode === 'weed_harvest' && p.type === 'weed' && garden.lifecycleStage(p,at) === 'mature' && !hasPendingBud(p));
     const changed = () => onChange({ actors, incident });
     const livingCount = at => getSpecimens().filter(p => at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired').length;
     const occupiedBy = p => source?.byCell.get(p.cell) === p;
@@ -29,6 +34,7 @@
     function landscapingEligible(at = now(), candidates = null, mode = 'vine') {
       candidates ??= landscapingCandidates(at, mode);
       if (mode === 'overcrowding') return Boolean(source) && freeCells() === 0 && candidates.length > 0;
+      if (mode === 'weed_harvest') return Boolean(source) && candidates.length >= harvestConfig.minimumWeeds;
       if (mode !== 'vine') return false;
       return Boolean(source) && candidates.length >= landscapingConfig.minimumVines
         && candidates.length >= livingCount(at) * landscapingConfig.minimumShare;
@@ -51,7 +57,8 @@
         const count = Math.min(candidates.length, overcrowdingConfig.maxTargets);
         while (targets.length < count) targets.push(candidates.splice(Math.floor(roll()*candidates.length),1)[0]);
       } else {
-        const count = Math.min(landscapingConfig.maxTargets, Math.round(candidates.length * landscapingConfig.trimShare));
+        const count = mode === 'weed_harvest' ? 1 + Math.floor(roll()*harvestConfig.maxTargets)
+          : Math.min(landscapingConfig.maxTargets, Math.round(candidates.length * landscapingConfig.trimShare));
         // Vine control retains its short nearest-neighbor route.
         targets.push(candidates.splice(Math.floor(roll() * candidates.length), 1)[0]);
         while (targets.length < count) {
@@ -66,7 +73,7 @@
       lastLandscapingAt = at;
       const first = point(incident.targets[0]);
       actors = [{ type:'gnome', role:'worker', side:'green', x:Math.max(6,first.x-35), y:first.y, createdAt:at },
-        { type:'gnome', role:'supervisor', side:'red', x:Math.min(948,first.x+24), y:Math.max(18,first.y-20),
+        { type:'gnome', role:mode === 'weed_harvest' ? 'carrier' : 'supervisor', side:'red', x:Math.min(948,first.x+24), y:Math.max(18,first.y-20),
           state:'supervise', createdAt:at }];
       aim(at); advanceLandscaping(at); changed(); return true;
     }
@@ -77,6 +84,11 @@
       worker.x = worker.startX + (worker.targetX-worker.startX)*progress;
       worker.y = worker.startY + (worker.targetY-worker.startY)*progress;
       worker.state = exiting ? 'exit' : incident.snipped ? 'snip' : 'approach';
+      if (incident.mode === 'weed_harvest') {
+        const carrier = actors[1];
+        carrier.x = Math.min(948,worker.x+18); carrier.y = Math.max(18,worker.y-8);
+        carrier.state = exiting ? 'exit' : 'supervise';
+      }
     }
     function tickLandscaping(at) {
       const c = landscapingConfig;
@@ -117,6 +129,7 @@
       const worker = actors[0]; incident.phase = 'exit'; incident.stepAt = at;
       worker.startX = worker.x; worker.startY = worker.y;
       worker.targetX = Math.max(6,worker.x-30); worker.targetY = worker.y;
+      if (incident.mode === 'weed_harvest') { worker.carrySack = true; actors[1].handedOff = true; }
     }
     function start(at = now(), roll = random) {
       if (incident || livingCount(at) < config.minimumSpecimens) return false;
@@ -166,9 +179,10 @@
         }
       }
     }
-    function resetCadence(at = now()) { nextCheckAt = at + config.checkEveryMs; }
+    function resetCadence(at = now()) { suspended = false; nextCheckAt = at + config.checkEveryMs; }
     function suspend(at = now()) {
       resetCadence(at);
+      suspended = true;
       if (incident?.type === 'gnome_landscaping') clear();
     }
     function tick(at = now(), roll = random, hidden = false) {
@@ -184,26 +198,66 @@
         if (source && freeCells() === 0) {
           // Exactly one overcrowding chance; a failed roll never falls through to vine control.
           if (roll() < overcrowdingConfig.incidentChance) startLandscaping(at, roll, 'overcrowding');
-        } else if (landscapingEligible(at) && roll() < landscapingConfig.incidentChance) startLandscaping(at, roll);
+        } else {
+          if (landscapingEligible(at) && roll() < landscapingConfig.incidentChance) startLandscaping(at, roll);
+          if (!incident && landscapingEligible(at,null,'weed_harvest') && roll() < harvestConfig.incidentChance)
+            startLandscaping(at,roll,'weed_harvest');
+        }
       }
     }
-    return { start, startLandscaping, landscapingEligible, landscapingCandidates, advance, tick, clear, resetCadence, suspend, livingCount,
+    function clickable(actor, at) {
+      if (suspended || !incident || !actors.includes(actor)) return false;
+      if (incident.type === 'gnome_incident' && (at >= incident.createdAt+config.finishedAfterMs
+        || actor.state === 'flee' && at >= incident.createdAt+config.losersGoneAfterMs)) return false;
+      if (incident.type === 'gnome_landscaping' && (at-incident.lastTickAt > landscapingConfig.maxTickGapMs
+        || incident.phase === 'exit' && at >= incident.stepAt+landscapingConfig.exitMs)) return false;
+      return (presentations.get(actor)?.alpha ?? 0) > 0;
+    }
+    function hitAt(point, at = now()) {
+      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+      for (let i=actors.length-1;i>=0;i--) {
+        const actor=actors[i]; if (!clickable(actor,at)) continue;
+        const pose=presentations.get(actor),dx=point.x-pose.x,dy=point.y-pose.y;
+        const x=dx*Math.cos(pose.rotation)+dy*Math.sin(pose.rotation),y=-dx*Math.sin(pose.rotation)+dy*Math.cos(pose.rotation);
+        if (x>=-7 && x<=7 && y>=-16 && y<=12) return actor;
+      }
+      return null;
+    }
+    function click(actor, at = now()) {
+      if (!clickable(actor,at)) return false;
+      if (!actor.underpantsAttempted) {
+        actor.underpantsAttempted=true; actor.surprisedUntil=at+reactionMs;
+        onUnderpantsAttempt(presentations.get(actor),at); // Consumed even when the shared drop cap is full.
+        changed();
+      }
+      return true; // Repeated clicks still consume the click, never the plant underneath.
+    }
+    return { start, startLandscaping, landscapingEligible, landscapingCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
       get lastLandscapingAt() { return lastLandscapingAt; },
       get actors() { return actors; }, get incident() { return incident; }, get nextCheckAt() { return nextCheckAt; } };
   }
   function appearance(actor, at, reducedMotion = false) {
-    const still = reducedMotion || actor.role === 'supervisor';
-    const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle';
-    return { step, battle, bounce:actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
-      clippers:actor.role === 'worker', closed:actor.state === 'snip' && (reducedMotion || step > 0),
+    const surprised = at < (actor.surprisedUntil ?? -Infinity);
+    const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier';
+    const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle' && !surprised;
+    return { step, battle, surprised, sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
+      bounce:surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
+      clippers:actor.role === 'worker' && !actor.carrySack, closed:surprised || actor.state === 'snip' && (reducedMotion || step > 0),
       shove:battle ? step * (actor.side === 'green' ? 2 : -2) : 0, rotation:battle ? step * .12 : 0,
       alpha:actor.state === 'flee' ? Math.max(0,1-(at-actor.createdAt-config.resultAfterMs)/(config.losersGoneAfterMs-config.resultAfterMs)) : 1 };
   }
+  function presentation(actor, at, reducedMotion = false) {
+    const pose=appearance(actor,at,reducedMotion);
+    pose.x=actor.x+pose.shove;pose.y=actor.y+pose.bounce;
+    presentations.set(actor,pose);return pose;
+  }
+  const sackArt = Object.freeze({ body:Object.freeze([4,1, 6,-3, 10,-3, 13,2, 12,9, 5,9, 3,5]),
+    lines:Object.freeze([[6,-3,10,-3],[5,0,11,0],[6,3,7,7],[10,2,11,6]].map(Object.freeze)) });
   // Local coordinates shared by both presentations; two small blades and handles.
   function clipperLines(closed) {
     const spread = closed ? 1 : 5;
     return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
   }
-  const api = { config, landscapingConfig, overcrowdingConfig, createModel, appearance, clipperLines };
+  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();

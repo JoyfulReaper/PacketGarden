@@ -9,7 +9,13 @@
     for (const side of ['green','red']) for (const battle of [false,true]) for (const step of [-1,0,1])
       poses.push({side,battle,step,key:`${side}:${battle}:${step}`});
     for (const closed of [false,true]) poses.push({side:'green',battle:false,step:0,clippers:true,closed,key:`clippers:${closed}`});
-    for (const {side,battle,step,clippers,closed,key} of poses) {
+    for (const side of ['green','red']) poses.push({side,battle:false,step:0,sack:true,key:`sack:${side}`});
+    for (const side of ['green','red']) {
+      poses.push({side,battle:false,step:0,surprised:true,key:`surprise:${side}`});
+      poses.push({side,battle:false,step:0,surprised:true,sack:true,key:`surprise:sack:${side}`});
+    }
+    poses.push({side:'green',battle:false,step:0,clippers:true,closed:true,surprised:true,key:'surprise:clippers'});
+    for (const {side,battle,step,clippers,closed,sack,surprised,key} of poses) {
       const g = new P.Graphics();
       // Same rooted silhouette, dimensions and palette as garden-actors.js.
       g.moveTo(14,24).lineTo(13+step,29).moveTo(18,24).lineTo(19-step,29).stroke({color:0x433c32,width:2});
@@ -21,6 +27,15 @@
       if (clippers) {
         for (const [x,y,endX,endY] of core.clipperLines(closed)) g.moveTo(x+16,y+18).lineTo(endX+16,endY+18);
         g.stroke({color:0xd3d8c5,width:1.6});
+      }
+      if (sack) {
+        g.poly(core.sackArt.body.map((v,i)=>v+(i%2?18:16))).fill(0x96734d);
+        for(const [x,y,endX,endY] of core.sackArt.lines)g.moveTo(x+16,y+18).lineTo(endX+16,endY+18);
+        g.stroke({color:0x604e35,width:1});
+        g.rect(14,14,2,1).rect(18,14,2,1).fill(0x433c32);
+      }
+      if (surprised) {
+        g.moveTo(26,4).lineTo(26,9).stroke({color:0xf2efe3,width:1.4});g.circle(26,11.5,.8).fill(0xf2efe3);
       }
       g.position.set(keys.length*40,0);sheet.addChild(g);keys.push(key);
     }
@@ -42,9 +57,11 @@
     }
     function animate(at) {
       for(const [actor,sprite] of views) {
-        const pose=core.appearance(actor,at,getReducedMotion()),step=pose.step<-.33?-1:pose.step>.33?1:0;
-        sprite.texture=frames.get(pose.clippers?`clippers:${pose.closed}`:`${actor.side}:${pose.battle}:${step}`);
-        sprite.position.set(actor.x+pose.shove,actor.y+pose.bounce);sprite.rotation=pose.rotation;sprite.alpha=pose.alpha;
+        const pose=core.presentation(actor,at,getReducedMotion()),step=pose.step<-.33?-1:pose.step>.33?1:0;
+        const key=pose.surprised ? pose.sack ? `surprise:sack:${actor.side}` : pose.clippers ? 'surprise:clippers' : `surprise:${actor.side}`
+          : pose.sack ? `sack:${actor.side}` : pose.clippers ? `clippers:${pose.closed}` : `${actor.side}:${pose.battle}:${step}`;
+        sprite.texture=frames.get(key);
+        sprite.position.set(pose.x,pose.y);sprite.rotation=pose.rotation;sprite.alpha=pose.alpha;
       }
     }
     return {views,change,animate,snapshot(){return {sprites:views.size,containers:group?1:0,textures:frames.size};},

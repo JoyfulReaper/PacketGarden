@@ -2,7 +2,8 @@
 const looseDropConfig = window.PacketGardenAmbient.dropConfig;
 const looseDropTypes = new Map([
   ["amanita_muscaria", { render: drawAmanitaDrop, message: window.PacketGardenUiCore.messages.amanita_muscaria }],
-  ["ditch_weed_bud", { render: drawWeedBud, message: window.PacketGardenUiCore.messages.ditch_weed_bud }]
+  ["ditch_weed_bud", { render: drawWeedBud, message: window.PacketGardenUiCore.messages.ditch_weed_bud }],
+  ["gnome_underpants", { render: drawGnomeUnderpants, message: window.PacketGardenUiCore.messages.gnome_underpants }]
 ]);
 const pendingLooseDrops = gardenAmbient.pendingDrops;
 function isLooseDropSourceAlive(specimen, now, living = null) { return gardenAmbient.isSourceAlive(specimen, now, living); }
@@ -21,7 +22,7 @@ function collectLooseDrop(drop, now = Date.now()) {
   const index = gardenState.drops.indexOf(drop);
   if (index < 0 || now >= drop.expiresAt) return false;
   gardenAmbient.removeDrop(drop, "collected");
-  showCollectionMessage(looseDropTypes.get(drop.type).message, now);
+  showCollectionMessage(window.PacketGardenUiCore.collectionMessage(drop.type), now);
   drawGardenOverlay(true, now);
   syncWeatherAnimation();
   gardenSound.maybePlayCollectionSound();
@@ -40,6 +41,13 @@ function drawLooseDrops(now) {
 }
 
 const amanitaDropSpots = [[-3, -3.5], [0, -4.5], [3, -3.5], [-1.5, -1.7], [2, -1.7]];
+function drawGnomeUnderpants() {
+  const art=window.PacketGardenAmbient.underpantsArt;
+  context.fillStyle='#f2efe3';context.strokeStyle='#a5aba0';context.lineWidth=1;
+  context.beginPath();for(let i=0;i<art.body.length;i+=2){if(i===0)context.moveTo(art.body[i],art.body[i+1]);else context.lineTo(art.body[i],art.body[i+1]);}
+  context.closePath();context.fill();context.stroke();
+  context.beginPath();for(const [x,y,endX,endY] of art.lines){context.moveTo(x,y);context.lineTo(endX,endY);}context.stroke();
+}
 function drawWeedBud() {
   context.fillStyle = '#39462b';
   context.beginPath(); context.ellipse(0, 0, 4.5, 5, 0, 0, Math.PI * 2); context.fill();

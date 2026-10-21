@@ -85,7 +85,7 @@ assert.equal(a.pendingDrops.size,640);
 for(const source of specimens.specimens)assert.equal(a.maybeScheduleAmanita(source,0,()=>.5),false);
 assert.equal(a.pendingDrops.size,640);specimens.clear();a.tick(now,{hidden:true});assert.equal(a.pendingDrops.size,0);
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-ambient.js','utf8'),/document\.|CanvasRenderingContext2D|PIXI|setTimeout|setInterval|localStorage|sessionStorage/);
-for(const page of ['index','pixi-live'])assert.match(fs.readFileSync(`wwwroot/${page}.html`,'utf8'),/src="garden-ambient.js\?v=drop-cap-5"/);
+for(const page of ['index','pixi-live'])assert.match(fs.readFileSync(`wwwroot/${page}.html`,'utf8'),/src="garden-ambient.js\?v=gnome-harvest-1"/);
 assert.match(fs.readFileSync('wwwroot/garden.js','utf8'),/gardenAmbient.acceptLiveSpecimen/);
 assert.match(fs.readFileSync('wwwroot/pixi-live.js','utf8'),/ambient.acceptLiveSpecimen/);
 console.log('PASS: shared ambient exact production state/art/position oracle; eligible live success/caps/probabilities/RNG order; stable ids; five-second exact-source pending, hidden/cap/no retry, expiry/clear/replacement; independent bounded objects; shared consumers/no timers.');

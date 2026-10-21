@@ -1,3 +1,88 @@
+# Gnome weed harvest and underpants (2026-10-21)
+
+Implemented in both renderers through the existing shared models. `weed_harvest`
+is a third landscaping mode: at least **three mature ordinary weeds**, a strict
+**5%** roll on the existing **45-second** check and the same **seven-minute**
+arrival cooldown. Priority remains fight → overcrowding → vine → harvest;
+overcrowding failures never fall through, while a failed vine roll may allow
+eligible harvesting. Existing probabilities remain 2% / 25% / 10% for those
+earlier checks. A worker and suspicious burlap-sack carrier visit **1–3 original
+targets**, sharing the travel/snip/departure lifecycle and authoritative removal.
+
+Exact reference/id, cell/coordinates, creation time, lifetime, maturity and
+ordinary/protected status are revalidated before each cut. Rare palettes,
+mutations/pending mutations and weeds with **pending bud drops** are excluded.
+New replacements are never chased; active independent buds survive parent
+harvesting. The carrier follows the worker and hands over the single sack for
+departure. Hiding or a >1.5-second logical stall cancels safely without catch-up;
+reduced motion keeps static poses and discrete travel. No additional scheduler.
+
+All active gnomes are clickable before curiosities, loose drops, mutations and
+specimen/grass inspection. Both renderers record the logical transform actually
+used to paint the actor, then centralized hit testing applies its inverse
+rotation, including travel, shove and bounce offsets. Removed, hidden, expired,
+unpainted or zero-opacity actors cannot be clicked. There are no per-Sprite
+browser handlers. Repeated clicks still consume the click without touching an
+underlying plant or drop.
+
+Each actor has **one underpants attempt per appearance**, plus a **600ms**
+surprise pose. A full shared **five-drop cap** consumes the attempt without
+retry/eviction. White underpants with waistband and leg openings use the
+existing loose-drop array, notifications and Sprite ownership. They live
+**20 seconds independently** after their gnome leaves. Collecting chooses:
+
+- `< 0.8`: `You stole a gnome's underpants. +0 points`
+- `>= 0.8`: `Collected underpants +1, annoyed gnome -1`
+
+Only strings are chosen: no score arithmetic, annoyance totals, inventory,
+network provenance/events, Recent activity or acceptance statistics. Existing
+two-second messages and optional collection audio are reused. Score remains 0.
+Existing Amanita, bud and port-22 mutation rules/messages remain intact.
+
+`/pixi-live.html` alone adds **Trigger weed harvest (simulated)**, **Seed mixed
+gnome drops (simulated)** and an explicit message-boundary selector. The harvest
+button seeds mature simulated weeds when necessary, retaining cooldown/exclusion.
+The mixed fixture fills five slots with Amanita, bud and underpants artwork;
+ordinary clicks still enforce the one-attempt rule. The selector wraps on narrow
+screens. Public pages expose none of these diagnostics; changed scripts/styles
+have new cache versions.
+
+Resource bounds:
+
+- Gnome atlas **14 → 21 frames**, still one startup bake/source: two sack poses
+  and five surprise variants. Backing **1120×64 → 1680×64**, **+140 KiB RGBA**.
+- Ambient atlas **6 → 7 frames**, still one startup bake/source, for one
+  underpants frame. Backing **384×64 → 448×64**, **+16 KiB RGBA**.
+- Total added atlas pixels cost **156 KiB RGBA** before driver/mipmap overhead.
+  At most four actor Sprites/one temporary group and five shared drop Sprites;
+  no per-click textures, render passes, geometry generation or extra loops.
+- Painted transforms reuse each appearance object in a WeakMap; no population
+  scans during hit animation and no retained departed-actor lists.
+
+Validation: `tests/gnome-harvest-underpants.cjs` covers exact 5% and 80/20
+boundaries, priority/cooldown, maturity/protection/pending buds, identity-safe
+sequential cuts, all incident clicks, moving/fighting poses, cap consumption,
+independent expiry, unchanged score/statistics, Canvas/Pixi parity and 25 repeated
+resource cycles. All 57 Node entry points passed. Focused Chrome uses real
+centralized clicks, both messages, 20 cleanup cycles, and normal-scale captures.
+Every cycle ended with zero gnome/drop views and destroyed owned Sprites, with
+one bake per atlas. The full Chrome suite passed, including the 320px diagnostic
+layout, legacy cache upgrades, existing incidents/audio/storm/lighting/Stillbloom,
+Canvas and stress-page regressions. Debug/Release isolated builds and backend/SSE checks passed;
+the checks-project build reported NU1900 for the unavailable vulnerability feed.
+
+Captures and resources are in `artifacts/gnome-harvest/browser/`:
+`harvest-pixi-day.png`, `harvest-pixi-surprise.png`, `harvest-pixi-night-sack.png`,
+`underpants-pixi-departed.png`, `underpants-pixi-mixed-{day,night}.png`,
+`harvest-canvas-day.png`, `harvest-canvas-surprise-night.png`,
+`underpants-canvas-mixed-{day,night}.png`, and `gnome-harvest-resources.json`.
+
+Chrome's existing gnome timing probe observed approximately 16.68ms average
+ticker intervals and 0.13–0.19ms average CPU render submission in quiet/storm
+samples. These are local observations, not GPU completion or a long live-traffic
+soak. Other browsers remain unverified. Earlier dated notes below retain their
+original resource counts and interaction priorities as historical snapshots.
+
 # Ditch Weed Bud (2026-10-21)
 
 The shared loose-drop cap was subsequently raised from three to **five** for
@@ -77,8 +162,8 @@ The sections below retain the history of earlier feature slices.
 > weed mutations, inspection/collection, gnomes, audio or grass are **no longer
 > current**. Shared Canvas/Pixi models and current cached Pixi artwork now cover
 > those features; [README](../README.md) and [MVP](MVP.md) summarize current
-> behavior. Separate collectible buds from ordinary weeds, opium pods, and frogs
-> are **not yet implemented** in either renderer. Canvas-specific fake-traffic/
+> behavior. Ordinary-weed buds and clicked-gnome underpants are now implemented;
+> opium pods and frogs remain future work. Canvas-specific fake-traffic/
 > numeric weather controls and Pixi-only storm bolts remain intentional differences.
 
 `garden-stillbloom.js` is one renderer-neutral scheduler, called by the existing

@@ -5,7 +5,7 @@
   <title>PacketGarden · Pixi live soak</title>
   <link rel="stylesheet" href="pixi-stress.css">
   <link rel="stylesheet" href="garden-ui.css">
-  <link rel="stylesheet" href="pixi-live.css?v=audio-1">
+  <link rel="stylesheet" href="pixi-live.css?v=gnome-harvest-1">
   <script src="garden-audio.js?v=storm-bolt-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js" defer data-pixi-library></script>
@@ -14,19 +14,19 @@
   <script src="garden-stillbloom-dev.js?v=stillbloom-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
   <script src="garden-lighting-view.js?v=light-toggle-1" defer></script>
-  <script src="garden-gnomes.js?v=overcrowding-1" defer></script>
+  <script src="garden-gnomes.js?v=gnome-harvest-1" defer></script>
   <script src="garden-mutations.js" defer></script>
   <script src="garden-grass.js?v=grass-green-1" defer></script>
   <script src="garden-ecology.js?v=grass-green-1" defer></script>
-  <script src="garden-ambient.js?v=drop-cap-5" defer></script>
-  <script src="garden-interaction.js" defer></script>
-  <script src="garden-ui-core.js?v=weed-bud-1" defer></script>
-  <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
-  <script src="pixi-live-ambient.js?v=weed-bud-1" defer></script>
-  <script src="pixi-live-gnomes.js?v=landscaping-1" defer></script>
+  <script src="garden-ambient.js?v=gnome-harvest-1" defer></script>
+  <script src="garden-interaction.js?v=gnome-harvest-1" defer></script>
+  <script src="garden-ui-core.js?v=gnome-harvest-1" defer></script>
+  <script src="pixi-live-ui.js?v=gnome-harvest-1" defer></script>
+  <script src="pixi-live-ambient.js?v=gnome-harvest-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=gnome-harvest-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-green-1" defer></script>
-  <script src="pixi-live-core.js?v=weed-bud-1" defer></script><script src="pixi-live.js?v=drop-cap-5" defer></script>
+  <script src="pixi-live-core.js?v=gnome-harvest-1" defer></script><script src="pixi-live.js?v=gnome-harvest-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -53,7 +53,11 @@
       <button id="trigger-gnomes" type="button">Trigger Gnome Incident (simulated)</button>
       <button id="trigger-landscaping" type="button">Trigger landscaping (simulated)</button>
       <button id="trigger-overcrowding" type="button">Trigger overcrowding relief (simulated)</button>
-      <span id="landscaping-test-status" role="status">Vine or full 640-plant fixture seeded if needed. Both triggers share the seven-minute cooldown; Clear does not reset it.</span>
+      <button id="trigger-weed-harvest" type="button">Trigger weed harvest (simulated)</button>
+      <button id="seed-gnome-drops" type="button">Seed mixed gnome drops (simulated)</button>
+      <label class="gnome-message-preview">Underpants message <select id="underpants-message-roll"><option value="0.799999">80% · roll 0.799999</option><option value="0.8">20% · roll 0.8</option></select></label>
+      <span>Click an active gnome for one underpants attempt; repeated clicks never retry, including at the five-drop cap.</span>
+      <span id="landscaping-test-status" role="status">Vine, full 640-plant or mature-weed fixture seeded if needed. All three triggers share the seven-minute cooldown; Clear does not reset it.</span>
       <span id="gnome-test-status" role="status">Requires 30 living specimens; simulated winners alternate green/red.</span>
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
@@ -95,7 +99,8 @@
       three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
       Overlap seeding replaces local garden state and cycles visitor types over one Amanita and mutation.
       Weed bud seeding replaces local state with simulated plants, grass and three mixed drops; the nearby Amanita/bud pair overlaps.
-      Click priority: visitors, topmost loose drop, active mutation, then cell inspection. Score stays zero.
+      Mixed gnome drops fill all five slots with simulated Amanita, buds and underpants; the selector previews both collection messages.
+      Click priority: active gnomes, visitors, topmost loose drop, active mutation, then cell inspection. Score stays zero.
       Sound is optional and starts Off. Gnome triggers are simulated; ordinary incidents keep their rare shared rules. Pixi artwork is approximate.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>

@@ -1,6 +1,8 @@
 /* Presentation integration only; the card/activity/message rules are shared with Canvas. */
 .pixi-garden-stage { position: relative; }
 #view canvas { cursor: pointer; }
+.gnome-message-preview { flex-wrap: wrap; max-width: 100%; }
+#underpants-message-roll { min-width: 0; max-width: 100%; }
 .specimen-card { box-sizing: border-box; }
 .specimen-card-close { cursor: pointer; }
 .specimen-card-close:focus-visible { outline: 2px solid #e1e6d7; outline-offset: 3px; }

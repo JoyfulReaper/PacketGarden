@@ -274,6 +274,27 @@ starts that mode. Both diagnostic buttons share cooldown and mutual exclusion.
 Clear does not reset cooldown.
 Long live-traffic visual tuning remains; see [Pixi notes](docs/PIXI-LIVE.md).
 
+The department also makes rare **weed-harvesting expeditions**. At least three
+mature ordinary weeds allow a 5% roll on the same 45-second check, after the
+fight, overcrowding and vine checks. A failed full-garden roll never falls
+through. A worker and suspicious sack carrier collect 1–3 original weeds along
+a short route, sharing the seven-minute cooldown and normal safe removal,
+hidden-tab cancellation and reduced-motion rules. Rare palettes, mutations,
+protected plants and weeds with pending buds are excluded and checked again
+before each cut. They leave together with the sack; active buds remain independent.
+
+**Click an active gnome** in any incident and it briefly looks surprised,
+drops a tiny pair of white underpants beside itself, then continues. Each gnome
+gets one attempt per appearance, even if the shared five-drop cap is full.
+Underpants survive the gnome's departure for their own 20-second lifetime.
+Clicks now prioritize gnomes, curiosities, loose drops, mutations, then inspection.
+Collection says `You stole a gnome's underpants. +0 points` 80% of the time, or
+`Collected underpants +1, annoyed gnome -1` 20% of the time. These are only jokes:
+Score stays 0, with no points, annoyance totals, inventory or network events.
+The existing optional collection sound is reused. `/pixi-live.html` has
+**Trigger weed harvest (simulated)**, a five-slot mixed-drop fixture and a
+message-roll selector; public pages have no additional diagnostic controls.
+
 Very occasionally, a live port-22 redbloom may itself become a collectible weed
 plant. Click it quickly enough and you collect some weed. This accomplishes
 absolutely nothing. A 5% browser-only roll schedules the change after three
@@ -308,7 +329,7 @@ the attempt. The mushroom's type, color, vigor, provenance, cell, and lifetime
 remain unchanged. Up to five drops have their own 20-second active lifetime;
 due candidates at the cap are consumed without retry. Drops occupy no specimen
 cells, affect no grass or puddles, and share the dynamic overlay without repainting
-ecology. Click priority is curiosity, loose drop, mutation, then inspection.
+ecology. Click priority is active gnome, curiosity, loose drop, mutation, then inspection.
 Collection says `You found Amanita muscaria. +0 points`, reuses optional quiet
 audio, and leaves Score at 0. Scheduling, activation, collection, and expiry add
 no Recent activity rows. This is cosmetic garden nonsense, with no protocol or
