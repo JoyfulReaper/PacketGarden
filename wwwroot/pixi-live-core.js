@@ -151,9 +151,16 @@
   }
   function connectStream(Source, model, onWeather, onStatus, onInvalidWeather = () => {}) {
     const stream = new Source('/api/garden/events');
-    stream.onopen = () => onStatus('connected'); stream.onerror = () => onStatus('disconnected/reconnecting');
-    stream.addEventListener('garden', message => { try { model.accept(JSON.parse(message.data)); } catch { /* malformed frames never stop the stream */ } });
-    stream.addEventListener('weather', message => { try { const state = normalizeWeather(JSON.parse(message.data)); if (state) onWeather(state); else onInvalidWeather(); } catch { onInvalidWeather(); /* preserve last good rendered weather */ } });
+    let closed=false;const close=stream.close.bind(stream);
+    stream.onopen = () => {if(!closed)onStatus('connected');}; stream.onerror = () => {if(!closed)onStatus('disconnected/reconnecting');};
+    const garden=message=>{if(closed)return;try { model.accept(JSON.parse(message.data)); } catch { /* malformed frames never stop the stream */ } };
+    const weather=message=>{if(closed)return;try { const state = normalizeWeather(JSON.parse(message.data)); if (state) onWeather(state); else onInvalidWeather(); } catch { onInvalidWeather(); /* preserve last good rendered weather */ } };
+    stream.addEventListener('garden',garden);stream.addEventListener('weather',weather);
+    stream.close=()=>{
+      if(closed)return;closed=true;
+      stream.removeEventListener?.('garden',garden);stream.removeEventListener?.('weather',weather);
+      stream.onopen=stream.onerror=null;close();
+    };
     return stream;
   }
   const api = { dimensions, timings, species, eventSpecies, palettes, stageAt, normalizeGarden, normalizeWeather, colorVariant, colorName, weatherLevels, weatherSettings, createModel, connectStream };

@@ -20,6 +20,10 @@ async function run() {
   const puddleCheckpoint='ab1919ce100f3073bfe5aa07bd0c826a54df29da';
   const oldPuddleArt=new Map(puddleBaseline?['garden-puddles.js','pixi-live-ecology.js'].map(file=>[file,
     execFileSync('git',['show',`${puddleCheckpoint}:wwwroot/${file}`],{cwd:root})]):[]);
+  // Immutable negative control: this must fail on the original page-close race.
+  const lifecycleBaseline=process.argv.includes('--lifecycle-baseline');
+  const oldLifecycle=new Map(lifecycleBaseline?['pixi-live.js','pixi-live-core.js','pixi-stress.js'].map(file=>[file,
+    execFileSync('git',['show',`f7e3471c8ea01aa4f0b142f95b437811e038648e:wwwroot/${file}`],{cwd:root})]):[]);
   const output = path.resolve(root, process.env.PACKETGARDEN_BROWSER_OUTPUT || path.join('artifacts', unversioned ? 'homepage-negative' : 'homepage-browser'));
   await fs.mkdir(output, {recursive:true});
   let promoted = false, connections = 0;
@@ -61,6 +65,7 @@ async function run() {
     const makeEcologyAtlas=PacketGardenPixiEcology.makeEcologyAtlas,createEcologyView=PacketGardenPixiEcology.createEcologyView;
     window.__gardenEcologyBakes=0;
     PacketGardenPixiEcology.makeEcologyAtlas=(...args)=>{const at=performance.now();window.__gardenEcologyBakes++;
+      if(new URLSearchParams(location.search).has('lifecycle-fail-startup'))throw new Error('Startup failure (test)');
       const atlas=window.__gardenTestEcologyAtlas=makeEcologyAtlas(...args);window.__gardenEcologyBakeMs=performance.now()-at;return atlas;};
     PacketGardenPixiEcology.createEcologyView=(...args)=>(window.__gardenTestEcologyView=createEcologyView(...args));
     const createAmbient=PacketGardenAmbient.createAmbientModel;
@@ -93,12 +98,22 @@ async function run() {
     const init = PIXI.Application.prototype.init;
     PIXI.Application.prototype.init = function(...args) {
       window.__gardenTestApp = this; window.__gardenTestPaints = 0;
+      const lifecycle=new URLSearchParams(location.search).has('lifecycle');
+      if(lifecycle){const destroy=this.destroy;this.destroy=function(...args){__lifecycleTest.calls.push('destroy');return destroy.apply(this,args);};}
       const render = this.render;
       window.__gardenTestRenderMs = [];
       this.render = function(...args) { const at = performance.now(); window.__gardenTestPaints++;
         const value = render.apply(this,args); if (window.__gardenTestRenderMs.length < 240) window.__gardenTestRenderMs.push(performance.now()-at); return value; };
       if (new URLSearchParams(location.search).has('fail-init')) return Promise.reject(new Error('WebGL unavailable (test)'));
-      return init.apply(this,args);
+      return init.apply(this,args).then(value=>{
+        if(lifecycle){
+          for(const method of ['start','stop']){const original=this[method];this[method]=function(...args){__lifecycleTest.calls.push(method);return original.apply(this,args);};}
+          const add=this.ticker.add;
+          this.ticker.add=function(fn,...args){window.__lifecycleTest.ticks.push(fn);return add.call(this,fn,...args);};
+        }
+        if(new URLSearchParams(location.search).has('lifecycle-delay-init'))return new Promise(resolve=>{window.__finishLifecycleInit=()=>resolve(value);});
+        return value;
+      });
     };`;
   // A test-only HTTP origin reproduces normal browser caching. Playwright routing
   // would disable HTTP caching and miss this bug. No production server code is changed.
@@ -111,6 +126,21 @@ async function run() {
         const create=PacketGardenFrogs.createModel,random=PacketGardenFrogs.seededRandom(731);
         PacketGardenFrogs.createModel=options=>create({...options,random});
       }`);return;}
+      if(file==='__lifecycle-stress.js'){
+        res.setHeader('Content-Type','text/javascript');res.end(`{
+          const init=PIXI.Application.prototype.init;
+          PIXI.Application.prototype.init=function(...args){
+            window.__gardenTestApp=this;
+            const destroy=this.destroy;this.destroy=function(...args){__lifecycleTest.calls.push('destroy');return destroy.apply(this,args);};
+            return init.apply(this,args).then(value=>{
+              for(const method of ['start','stop']){const original=this[method];this[method]=function(...args){__lifecycleTest.calls.push(method);return original.apply(this,args);};}
+              const add=this.ticker.add;this.ticker.add=function(fn,...args){__lifecycleTest.ticks.push(fn);return add.call(this,fn,...args);};
+              if(new URLSearchParams(location.search).has('lifecycle-delay-init'))return new Promise(resolve=>{window.__finishLifecycleInit=()=>resolve(value);});
+              return value;
+            });
+          };
+        }`);return;
+      }
       if (file === '__capture.js') { res.setHeader('Content-Type','text/javascript');
         // The historical warm atlas only knows network species. New ambient art
         // is tested after promotion; it must not break the cache regression setup.
@@ -127,7 +157,7 @@ async function run() {
       }
       const absolute = path.resolve(assets, file);
       if (!absolute.startsWith(assets + path.sep)) { res.writeHead(404); res.end(); return; }
-      let body = oldPuddleArt.get(file) ?? await fs.readFile(absolute);
+      let body = oldLifecycle.get(file) ?? oldPuddleArt.get(file) ?? await fs.readFile(absolute);
       if (file.endsWith('.html')) {
         let html = body.toString();
         // Warm the checkpoint's original unversioned URLs, even when the current
@@ -137,6 +167,8 @@ async function run() {
         // Capture the actual application without changing its scheduling or drawing.
         html = html.replace(/(<script src="pixi-live\.js(?:\?[^"]*)?" defer)/,
           '<script src="/__capture.js" defer></script>\n$1');
+        if(file==='pixi-stress.html'&&url.searchParams.has('lifecycle'))html=html.replace(/(<script src="pixi-stress\.js(?:\?[^"]*)?" defer)/,
+          '<script src="/__lifecycle-stress.js" defer></script>\n$1');
         if(file==='canvas.html'&&url.searchParams.has('puddle-art'))html=html.replace(/(<script src="garden\.js(?:\?[^"]*)?" defer)/,
           '<script src="/__puddle-canvas.js" defer></script>\n$1');
         body = Buffer.from(html);
@@ -147,12 +179,27 @@ async function run() {
   });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${server.address().port}`;
-  let browser;
+  let browser;const suiteErrors=[],historicalErrors=[],observedContexts=new WeakSet(),observedPages=new WeakSet();
+  function observePage(page){
+    if(observedPages.has(page))return;observedPages.add(page);
+    // Only the explicit pre-promotion cache fixture executes historical code.
+    // Its expected failure is asserted below; current pages allow no errors.
+    const errors=promoted?suiteErrors:historicalErrors;
+    page.on('pageerror',error=>errors.push({url:page.url(),error:String(error.stack)}));
+  }
+  function observeContext(context){
+    if(!observedContexts.has(context)){observedContexts.add(context);context.on('page',observePage);}
+    return context;
+  }
+  async function newPage(options){
+    const page=await browser.newPage(options);observeContext(page.context());observePage(page);return page;
+  }
   try {
     browser = await chromium.launch({channel:process.env.PACKETGARDEN_BROWSER_CHANNEL || 'chrome', headless:true,
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
-    const context = await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2});
+    const context = observeContext(await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2}));
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--lifecycle-only')||lifecycleBaseline){promoted=true;await checkLifecycle();return;}
     if(process.argv.includes('--gnome-puddles-only')){promoted=true;await checkGnomePuddles();return;}
     if(process.argv.includes('--puddle-art-only')){promoted=true;await checkPuddleArt();return;}
     if(process.argv.includes('--frogs-only')){promoted=true;await checkFrogs();return;}
@@ -170,7 +217,18 @@ async function run() {
     await warm.waitForFunction(() => window.__gardenTestPaints > 2);
     await warm.getByRole('button',{name:'Seed dense garden + ecology (local simulated)',exact:true}).click();
     await warm.waitForFunction(() => window.__gardenTestApp.stage.children[0].children[6].children.length === 640);
+    await warm.evaluate(()=>{
+      window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));
+      Object.defineProperty(document,'hidden',{configurable:true,value:true});
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
     await warm.close();
+    assert(historicalErrors.length>0,'historical cache fixture must reproduce its null-ticker failure');
+    for(const {error} of historicalErrors){
+      assert.match(error,/^TypeError: Cannot read properties of null \(reading 'stop'\)/);
+      assert.match(error,/\/pixi-live\.js:\d+:/,'failure belongs to the unversioned historical script');
+    }
+    console.log('PASS: historical warm-cache negative control reproduces the exact pre-existing null-ticker stop error.');
     promoted = true;
     if(process.argv.includes('--lighting-only')) {
       const page=await context.newPage();await page.goto(origin+'/pixi-live.html');
@@ -334,6 +392,7 @@ async function run() {
     await checkFrogs();
     await checkPuddleArt();
     await checkGnomePuddles();
+    await checkLifecycle();
     await diagnostic.setViewportSize({width:320,height:700});
     await diagnostic.waitForFunction(()=>__gardenTestApp.renderer.screen.width===Math.round(document.querySelector('#view').getBoundingClientRect().width));
     assert(await diagnostic.locator('#sound-toggle').isVisible()); assert(await diagnostic.locator('#sound-volume').isVisible());
@@ -357,12 +416,189 @@ async function run() {
     console.log('PASS: real Chrome HTTP-cache upgrade, root/index pixels/SSE/stats/resize/reconnect, user-gesture-only native audio activation/volume/mute, silent inspection/dense fixtures, three collection cues, 320px controls, diagnostic/Canvas/stress pages.');
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
+    assert.deepEqual(suiteErrors,[],'all browser-page errors, including navigation and close');
+  }
+
+  async function checkLifecycle() {
+    const report=[];
+    async function fixture(route,query=''){
+      const page=await newPage(),errors=[],consoleErrors=[],shows=[];
+      page.on('pageerror',e=>errors.push(String(e.stack)));
+      page.on('console',e=>{if(e.type()==='error')consoleErrors.push(e.text());
+        if(e.text().startsWith('__lifecycle_pageshow:'))shows.push(e.text().endsWith('true'));});
+      await page.addInitScript(()=>{
+        const state=window.__lifecycleTest={listeners:[],calls:[],ticks:[],observers:[],sources:[]};
+        const add=EventTarget.prototype.addEventListener,remove=EventTarget.prototype.removeEventListener;
+        EventTarget.prototype.addEventListener=function(type,fn,options){
+          if(/\/(pixi-stress|pixi-live(?:-core|-ui)?|garden-(?:lighting-view|stillbloom-dev|gnome-puddles-dev))\.js/.test(new Error().stack.split('\n')[2]))state.listeners.push({target:this,type,fn,active:true});
+          return add.call(this,type,fn,options);
+        };
+        EventTarget.prototype.removeEventListener=function(type,fn,options){
+          for(const item of state.listeners)if(item.target===this&&item.type===type&&item.fn===fn)item.active=false;
+          return remove.call(this,type,fn,options);
+        };
+        const Observer=ResizeObserver;
+        window.ResizeObserver=class extends Observer{
+          constructor(fn){super(fn);this.callback=fn;this.disconnects=0;state.observers.push(this);}
+          disconnect(){this.disconnects++;return super.disconnect();}
+        };
+        const Source=EventSource;
+        window.EventSource=class extends Source{
+          constructor(...args){super(...args);this.closes=0;state.sources.push(this);}
+          close(){this.closes++;return super.close();}
+        };
+        window.__setLifecycleHidden=hidden=>{
+          Object.defineProperty(document,'hidden',{configurable:true,value:hidden});
+          document.dispatchEvent(new Event('visibilitychange'));
+        };
+        window.addEventListener('pageshow',e=>console.debug('__lifecycle_pageshow:'+e.persisted));
+      });
+      await page.goto(origin+route+'?lifecycle=1'+query);
+      return {page,errors,consoleErrors,shows};
+    }
+    for(const route of ['/','/pixi-live.html']){
+      const {page,errors,consoleErrors}=await fixture(route);
+      await page.waitForFunction(()=>window.__gardenTestApp?.ticker?.started);
+      const resume=await page.evaluate(()=>{
+        const s=__lifecycleTest,app=__gardenTestApp,g=__gardenTestGarden;
+        let ticks=0;const tick=g.tick;g.tick=function(...args){ticks++;return tick.apply(this,args);};
+        const originalNow=Date.now;let at=originalNow();Date.now=()=>at;
+        for(let i=0;i<3;i++){
+          __setLifecycleHidden(true);if(app.ticker.started)throw Error('ticker active while hidden');
+          at+=600000;const before=ticks;__setLifecycleHidden(false);
+          if(!app.ticker.started||ticks-before!==1)throw Error('resume must reconcile once');
+          const reconciled=ticks;for(const fn of s.ticks)fn({lastTime:performance.now()});
+          if(ticks!==reconciled)throw Error('resume replayed logical ticks');
+        }
+        Date.now=originalNow;delete document.hidden;
+        return {reconciliations:ticks,starts:s.calls.filter(c=>c==='start').length,stops:s.calls.filter(c=>c==='stop').length};
+      });
+      assert.equal(resume.reconciliations,3);assert.equal(resume.stops,3);assert.equal(resume.starts,4);
+      const race=await page.evaluate(()=>{
+        const s=__lifecycleTest,app=__gardenTestApp;
+        s.calls=[];
+        s.resources={};
+        for(const name of ['EcologyView','AmbientView','FrogView','GnomeView','StormView','EcologyAtlas','AmbientAtlas','GnomeAtlas','LightingSurface']){
+          const object=window['__gardenTest'+name];if(!object)continue;
+          const destroy=object.destroy;s.resources[name]=0;
+          object.destroy=function(...args){s.resources[name]++;return destroy.apply(this,args);};
+        }
+        s.root=app.stage;s.renderer=app.renderer;
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));
+        // The original bug: pagehide -> late visibilitychange -> app.stop() on
+        // a null ticker. Do not catch it: pageerror must fail the regression.
+        __setLifecycleHidden(true);__setLifecycleHidden(false);
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));delete document.hidden;
+        return {calls:s.calls,active:s.listeners.filter(item=>item.active).map(item=>item.type),tickerDestroyed:app.ticker===null,
+          resources:s.resources,rootDestroyed:s.root.destroyed,rendererDestroyed:app.renderer===null,
+          disconnects:s.observers.map(o=>o.disconnects),closes:s.sources.map(source=>source.closes)};
+      });
+      await page.waitForTimeout(50);assert.deepEqual(errors,[],'late visibility delivery after pagehide');
+      assert.equal(race.calls.filter(c=>c==='destroy').length,1);assert(race.tickerDestroyed);assert.deepEqual(race.active,[],'owned listeners removed');
+      assert(race.rootDestroyed&&race.rendererDestroyed);assert(Object.values(race.resources).every(n=>n===1));
+      assert(race.disconnects.length>0&&race.disconnects.every(n=>n===1));assert.deepEqual(race.closes,[1]);
+      await page.evaluate(()=>{
+        const s=__lifecycleTest;
+        // Already queued observers, ticker, media, input and SSE callbacks also
+        // survive removal from their event target. Invoke those exact closures.
+        for(const listener of s.listeners){
+          const event=listener.type==='pagehide'?new PageTransitionEvent('pagehide',{persisted:true})
+            :listener.type==='garden'?new MessageEvent('garden',{data:JSON.stringify({specimenType:'flower',vigor:0})})
+            :listener.type==='weather'?new MessageEvent('weather',{data:JSON.stringify({level:'rain',eventsPerMinute:100})})
+            :new Event(listener.type);
+          listener.fn.call(listener.target,event);
+        }
+        for(const observer of s.observers)observer.callback([]);
+        for(const tick of s.ticks)tick({lastTime:performance.now()});
+        if(s.calls.join(',')!=='stop,destroy')throw Error('stale callback touched Pixi');
+        if(s.listeners.some(l=>l.active))throw Error('stale callback registered an event');
+      });
+      await page.close();assert.deepEqual(errors,[],'page-close errors stay observed');assert.deepEqual(consoleErrors,[]);report.push({route,resume,...race});
+
+      // A persisted pagehide has the same release semantics, but keeps exactly
+      // one restore hook. Persisted pageshow reloads once into a fresh live app.
+      const cached=await fixture(route);await cached.page.waitForFunction(()=>window.__gardenTestApp?.ticker?.started);
+      const cachedState=await cached.page.evaluate(()=>{
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+        __setLifecycleHidden(true);__setLifecycleHidden(false);
+        return {destroyed:__gardenTestApp.ticker===null,active:__lifecycleTest.listeners.filter(l=>l.active).map(l=>l.type)};
+      });
+      assert(cachedState.destroyed);assert.deepEqual(cachedState.active,['pageshow']);
+      const navigation=cached.page.waitForEvent('load');
+      await cached.page.evaluate(()=>{const restore=__lifecycleTest.listeners.find(l=>l.active&&l.type==='pageshow').fn;
+        const event=new PageTransitionEvent('pageshow',{persisted:true});restore(event);restore(event);
+        if(__lifecycleTest.listeners.some(l=>l.active))throw Error('restore listener leaked');});
+      await navigation;await cached.page.waitForFunction(()=>window.__gardenTestApp?.ticker?.started);
+      const beforeBack=cached.shows.length;
+      await cached.page.goto(origin+'/about.html');await cached.page.goBack();
+      await cached.page.waitForFunction(()=>window.__gardenTestApp?.ticker?.started);
+      const navigationType=await cached.page.evaluate(()=>performance.getEntriesByType('navigation')[0].type);
+      await cached.page.close();assert.deepEqual(cached.errors,[]);assert.deepEqual(cached.consoleErrors,[]);
+      report.push({route,persistedPagehide:cachedState,backNavigation:navigationType,actualBackPageshows:cached.shows.slice(beforeBack)});
+
+      const delayed=await fixture(route,'&lifecycle-delay-init=1');
+      await delayed.page.waitForFunction(()=>window.__finishLifecycleInit);
+      const late=await delayed.page.evaluate(async()=>{
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));
+        __setLifecycleHidden(true);__finishLifecycleInit();await Promise.resolve();await Promise.resolve();
+        return {calls:__lifecycleTest.calls,canvases:document.querySelectorAll('#view canvas').length,sources:__lifecycleTest.sources.length,tickerDestroyed:__gardenTestApp.ticker===null};
+      });
+      assert.deepEqual(late.calls,['destroy']);assert.equal(late.canvases,0);assert.equal(late.sources,0);assert(late.tickerDestroyed);
+      await delayed.page.close();assert.deepEqual(delayed.errors,[]);assert.deepEqual(delayed.consoleErrors,[]);report.push({route,lateInit:late});
+    }
+    const stress=await fixture('/pixi-stress.html');
+    for(let cycle=0;cycle<3;cycle++){
+      if(cycle)await stress.page.reload();
+      await stress.page.waitForFunction(()=>window.__gardenTestApp?.ticker?.started);
+      const state=await stress.page.evaluate(()=>{
+        const app=__gardenTestApp,s=__lifecycleTest,root=app.stage;
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+        __setLifecycleHidden(true);__setLifecycleHidden(false);
+        if(app.ticker.started||app.stage!==root||root.destroyed)throw Error('stress bfcache must retain a stopped scene');
+        window.dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));
+        if(!app.ticker.started)throw Error('stress bfcache did not resume');
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));
+        __setLifecycleHidden(true);__setLifecycleHidden(false);
+        window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));
+        for(const item of s.listeners)item.fn.call(item.target,item.type==='pagehide'||item.type==='pageshow'
+          ?new PageTransitionEvent(item.type,{persisted:true}):new Event(item.type));
+        for(const tick of s.ticks)tick({lastTime:performance.now()});
+        for(const observer of s.observers)observer.callback([]);
+        return {calls:s.calls,active:s.listeners.filter(l=>l.active).map(l=>l.type),rootDestroyed:root.destroyed,
+          tickerDestroyed:app.ticker===null,rendererDestroyed:app.renderer===null,disconnects:s.observers.map(o=>o.disconnects)};
+      });
+      assert.deepEqual(state.calls,['start','stop','start','stop','destroy']);assert.deepEqual(state.active,[]);
+      assert(state.rootDestroyed&&state.tickerDestroyed&&state.rendererDestroyed);assert(state.disconnects.length>0&&state.disconnects.every(n=>n===1));
+      report.push({route:'/pixi-stress.html',cycle,...state});
+    }
+    await stress.page.close();assert.deepEqual(stress.errors,[]);assert.deepEqual(stress.consoleErrors,[]);
+    const delayedStress=await fixture('/pixi-stress.html','&lifecycle-delay-init=1');
+    await delayedStress.page.waitForFunction(()=>window.__finishLifecycleInit);
+    await delayedStress.page.evaluate(async()=>{
+      window.dispatchEvent(new PageTransitionEvent('pagehide',{persisted:false}));
+      __finishLifecycleInit();await Promise.resolve();await Promise.resolve();
+      if(__gardenTestApp.ticker!==null||document.querySelector('#view canvas'))throw Error('late stress initialization mounted resources');
+    });
+    await delayedStress.page.close();assert.deepEqual(delayedStress.errors,[]);assert.deepEqual(delayedStress.consoleErrors,[]);
+    for(const query of ['&fail-init=1','&lifecycle-fail-startup=1']){
+      const failed=await fixture('/pixi-live.html',query);
+      await failed.page.waitForFunction(()=>document.querySelector('#hud').textContent.startsWith('Garden initialization failed:'));
+      const cleanup=await failed.page.evaluate(()=>({calls:__lifecycleTest.calls,active:__lifecycleTest.listeners.filter(l=>l.active).map(l=>l.type),stageDestroyed:__gardenTestApp.stage===null||__gardenTestApp.stage.destroyed}));
+      assert(cleanup.stageDestroyed);assert.deepEqual(cleanup.active,[]);
+      assert.deepEqual(cleanup.calls,query.includes('startup')?['stop','destroy']:[]);
+      await failed.page.close();assert.deepEqual(failed.errors,[]);assert.equal(failed.consoleErrors.length,1);
+      assert.match(failed.consoleErrors[0],query.includes('startup')?/Startup failure \(test\)/:/WebGL unavailable \(test\)/);
+      report.push({query,cleanup,expectedInitializationError:failed.consoleErrors[0]});
+    }
+    await fs.writeFile(path.join(output,'lifecycle.json'),JSON.stringify(report,null,2));
+    console.log('PASS: Pixi lifecycle: late visibility/queued callbacks, repeated hide/show without catch-up, bfcache restore/back navigation, late/failed initialization and resource ownership.');
   }
 
   async function checkGnomePuddles() {
     const errors=[],resources={};let at=Date.UTC(2026,9,21,12);
     for(const pixi of [true,false]){
-      const kind=pixi?'pixi':'canvas',page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});
+      const kind=pixi?'pixi':'canvas',page=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});
       page.on('pageerror',e=>errors.push(String(e.stack)));await page.clock.setFixedTime(at);await page.goto(origin+(pixi?'/pixi-live.html':'/canvas.html'));
       if(pixi){await page.waitForFunction(()=>window.__gardenTestGnomes);await page.locator('#probes').uncheck();}
       else await page.addScriptTag({url:origin+'/garden-gnome-puddles-dev.js'});
@@ -419,12 +655,12 @@ async function run() {
         return {cycles,frames:__gardenTestGnomeAtlas.frames.size,bakes:__gardenGnomeBakes,
           backing:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight],sources:new Set([...__gardenTestGnomeAtlas.frames.values()].map(t=>t.source)).size};
       });
-      assert.deepEqual(errors,[]);page.removeAllListeners('pageerror');await page.close();
+      await page.close();assert.deepEqual(errors,[],'including page-close errors');
     }
     assert(resources.cycles.cycles.every(c=>c.active===1&&c.gnomes===0&&c.splashes===0&&c.destroyed));assert.equal(resources.cycles.frames,22);assert.equal(resources.cycles.bakes,1);assert.equal(resources.cycles.sources,1);
     // Isolated native-clock submission probes. Frozen fixtures above measure
     // pixels/state only; these repeated calls compare the same four actors.
-    const perf=await browser.newPage();await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestGnomes);
+    const perf=await newPage();await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestGnomes);
     resources.pixiCpu=await perf.evaluate(()=>{
       PacketGardenGnomePuddlesDev.trigger({gnomes:__gardenTestGnomes,garden:__gardenTestGarden,ecology:__gardenTestEcology});
       const g=__gardenTestGnomes,v=__gardenTestGnomeView,at=Date.now();
@@ -434,7 +670,7 @@ async function run() {
       sample(false);sample(true); // Warm both paths before measuring submission.
       const baseline=sample(false),fourReactions=sample(true);g.clear();return {baseline,fourReactions};
     });await perf.close();
-    const cp=await browser.newPage();await cp.goto(origin+'/canvas.html');
+    const cp=await newPage();await cp.goto(origin+'/canvas.html');
     resources.canvasCpu=await cp.evaluate(()=>{
       gardenModel.seed(Array.from({length:30},(_,i)=>({type:'broadleaf',column:i,row:4,createdAt:Date.now()})));gardenGnomes.start(Date.now(),()=>.5);syncGnomeState();const at=Date.now();
       const sample=wet=>{for(const a of gardenGnomes.actors){if(wet)a.puddleMishap={startedAt:at,until:at+1000};else delete a.puddleMishap;}
@@ -443,7 +679,7 @@ async function run() {
       sample(false);sample(true);
       const baseline=sample(false),fourReactions=sample(true);gardenGnomes.clear();return {baseline,fourReactions};
     });await cp.close();
-    const logical=await browser.newPage();await logical.goto(origin+'/pixi-live.html');await logical.waitForFunction(()=>window.__gardenTestGnomes);
+    const logical=await newPage();await logical.goto(origin+'/pixi-live.html');await logical.waitForFunction(()=>window.__gardenTestGnomes);
     resources.logicalCpu=await logical.evaluate(()=>{
       const at=Date.now(),water=Array.from({length:8},(_,i)=>({x:480+i%4*8,y:300+Math.floor(i/4)*10,seed:i/8,size:36,maxSize:36,createdAt:at,lastRefreshedAt:at}));
       const actors=Array.from({length:4},(_,i)=>({x:440,y:289+i})),m=PacketGardenGnomePuddles.createModel({getPuddles:()=>water,random:()=>.99}),times=[];
@@ -478,7 +714,7 @@ async function run() {
         await page.waitForTimeout(100);}
     }
     for(const pixi of [true,false]){
-      const kind=pixi?'pixi':'canvas',page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});
+      const kind=pixi?'pixi':'canvas',page=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});
       page.on('pageerror',e=>errors.push(String(e.stack)));await page.clock.setFixedTime(at);await page.goto(origin+(pixi?'/pixi-live.html':'/canvas.html')+'?puddle-art=1');
       if(pixi){await page.waitForFunction(()=>window.__gardenTestEcologyView);await page.locator('#probes').uncheck();}
       await page.getByLabel('Weather source',{exact:true}).selectOption('manual');
@@ -504,9 +740,7 @@ async function run() {
         return {cycles,bakes:__gardenEcologyBakes,bakeMs:__gardenEcologyBakeMs,frames:atlas.frames.size,
           backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],sources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
       });
-      // Assert live scene/cycle errors before closing. Both baseline and current
-      // app have a separate page-close visibility/ticker race after pagehide.
-      assert.deepEqual(errors,[]);page.removeAllListeners('pageerror');await page.close();
+      await page.close();assert.deepEqual(errors,[],'including page-close errors');
     }
     assert(report.resources.cycles.every(c=>c.stable&&c.remaining===0&&c.destroyed));assert.equal(report.resources.bakes,1);assert.equal(report.resources.sources,1);
     assert.equal(report.resources.frames,puddleBaseline?13:16);assert.deepEqual(report.resources.backing,puddleBaseline?[1664,128]:[2048,128]);
@@ -527,10 +761,10 @@ async function run() {
       }catch(e){if(e.code==='ENOENT'||/Input file is missing/.test(e.message))report.grassPixelsUnchanged='baseline not present';else throw e;}
     }
     // Native clocks for CPU measurements; screenshot clocks deliberately freeze drainage.
-    const perf=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');
+    const perf=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');
     await perf.waitForFunction(()=>window.__gardenTestEcologyView);await perf.locator('#probes').uncheck();
     await perf.evaluate(()=>PacketGardenPixiEcology.seedDenseEcology(__gardenTestEcology,Date.now()));report.pixi=await sample(perf,120);await perf.close();
-    const cp=await browser.newPage();await cp.goto(origin+'/canvas.html');
+    const cp=await newPage();await cp.goto(origin+'/canvas.html');
     report.canvas=await cp.evaluate(()=>{
       const at=Date.now(),puddles=Array.from({length:8},(_,i)=>({x:150+i%4*210,y:180+Math.floor(i/4)*240,seed:i/8,size:36,maxSize:36,createdAt:at,lastRefreshedAt:at}));
       gardenEcology.seed({puddles});const times=[];for(let i=0;i<240;i++){gardenBaseDirty=true;const start=performance.now();paintGardenBase(at);times.push(performance.now()-start);}
@@ -547,7 +781,7 @@ async function run() {
   }
 
   async function checkFrogs() {
-    const page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2}),errors=[];
+    const page=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2}),errors=[];
     page.on('pageerror',e=>errors.push(String(e)));let at=Date.UTC(2026,9,21,12);
     await page.clock.setFixedTime(at);await page.goto(origin+'/pixi-live.html');await page.waitForFunction(()=>window.__gardenTestFrogs);
     await page.locator('#probes').uncheck();await page.locator('#lighting-mode').selectOption('day');
@@ -589,7 +823,7 @@ async function run() {
       return {states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],
         sources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
     });assert(resources.states.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,13);assert.equal(resources.bakes,1);assert.equal(resources.sources,1);
-    const canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
+    const canvas=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
     await canvas.evaluate(()=>{gardenEcology.clear();const at=Date.now();gardenEcology.seed({puddles:[{x:480,y:300,size:18,maxSize:24,createdAt:at,lastRefreshedAt:at,seed:.3}]});
       gardenFrogs.spawnSimulated();gardenFrogs.spawnSimulated();gardenLighting.setMode('day');updateGardenLighting(at,true);drawGarden();});
     const canvasStart=at;
@@ -605,12 +839,12 @@ async function run() {
     assert.equal(await canvas.locator('#garden-score').textContent(),'Score: 0');await canvas.close();
     assert.deepEqual(errors,[]);await page.close();
     // CPU/ticker probes use fresh native clocks, separate from deterministic screenshot clocks.
-    const perf=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestFrogs);
+    const perf=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestFrogs);
     await perf.locator('#probes').uncheck();const idle=await sample(perf,60);
     await perf.evaluate(()=>window.__frogPlanning=true);await perf.locator('#trigger-frog').click();await perf.locator('#trigger-frog').click();await perf.evaluate(()=>window.__frogPlanning=false);
     const sitting=await sample(perf,60);await perf.waitForFunction(()=>__gardenTestFrogs.frogs.some(f=>PacketGardenFrogs.visualState(f,Date.now()).hopping));const hopping=await sample(perf,60);
     await perf.getByLabel('Weather source',{exact:true}).selectOption('manual');await perf.getByLabel('Manual weather',{exact:true}).selectOption('rain');const rain=await sample(perf,60);await perf.close();
-    const cp=await browser.newPage();await cp.goto(origin+'/canvas.html');
+    const cp=await newPage();await cp.goto(origin+'/canvas.html');
     const canvasCpu=await cp.evaluate(()=>{
       gardenEcology.seed({puddles:[{x:480,y:300,size:18,maxSize:24,createdAt:Date.now(),lastRefreshedAt:Date.now(),seed:.3}]});gardenFrogs.spawnSimulated();gardenFrogs.spawnSimulated();
       const drawFrogs=drawGardenFrogs;
@@ -622,7 +856,7 @@ async function run() {
   }
 
   async function checkHarvest() {
-    const page=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2}),errors=[];
+    const page=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2}),errors=[];
     page.on('pageerror',e=>errors.push(String(e)));let at=Date.UTC(2026,9,21,12);
     await page.clock.setFixedTime(at);await page.goto(origin+'/pixi-live.html');await page.waitForFunction(()=>window.__gardenTestGnomeView);
     await page.locator('#probes').uncheck();await page.locator('#trigger-weed-harvest').click();
@@ -673,7 +907,7 @@ async function run() {
     });
     assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,22);assert.equal(resources.ambientFrames,13);
     assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
-    const canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
+    const canvas=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await canvas.clock.setFixedTime(at);await canvas.goto(origin+'/canvas.html');
     await canvas.evaluate(()=>{gardenModel.clear();gardenEcology.clear();const at=Date.now();gardenModel.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:0,column:12+i*2,row:10,createdAt:at-65000,
       origin:{kind:'simulated',eventType:'weed-harvest-test'}})));gardenGnomes.startLandscaping(at,()=>.999,'weed_harvest');syncGnomeState();drawGarden();});
     at+=750;await canvas.clock.setFixedTime(at);await canvas.waitForFunction(()=>gardenGnomes.incident.removals===1);
@@ -1040,7 +1274,7 @@ async function run() {
     await sheet.screenshot({path:path.join(output,'lighting-comparison.png'),fullPage:true});await sheet.close();
     // Unmodified live mode under two real browser timezones; no public controls.
     for(const timezoneId of ['UTC','Asia/Tokyo']) {
-      const liveContext=await browser.newContext({timezoneId,viewport:{width:960,height:720}}),livePage=await liveContext.newPage();
+      const liveContext=observeContext(await browser.newContext({timezoneId,viewport:{width:960,height:720}})),livePage=await liveContext.newPage();
       await livePage.goto(origin+'/?live-lighting=1');await livePage.waitForFunction(()=>window.__gardenTestLighting?.state);
       const live=await livePage.evaluate(()=>({mode:__gardenTestLighting.mode,hour:__gardenTestLighting.state.hour,expected:PacketGardenLighting.localHour(Date.now())}));
       assert.equal(live.mode,'live');assert(Math.abs(live.hour-live.expected)<.01);assert.equal(await livePage.locator('#lighting-mode').count(),0);

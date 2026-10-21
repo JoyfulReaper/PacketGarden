@@ -334,6 +334,22 @@
     };
   }
   async function start() {
+    // One page owner invalidates callbacks BEFORE releasing their resources.
+    // Pixi.init is async: pagehide may arrive before it creates a ticker/renderer.
+    let stop=()=>{},reloadRequested=false;
+    const lifetime=window.PacketGardenPixi.pageLifetime(()=>stop()),{guard,own,listen,dispose}=lifetime;
+    listen(window,'pagehide',event=>{
+      try{dispose();}finally{if(event.persisted){
+        // Preserve the existing fresh-page policy on bfcache return. All GPU,
+        // stream and input ownership ends at pagehide; only this restore hook lives.
+        const restore=event=>{
+          if(!event.persisted||reloadRequested)return;
+          reloadRequested=true;window.removeEventListener('pageshow',restore);window.location.reload();
+        };
+        window.addEventListener('pageshow',restore);
+      }}
+    });
+    try {
     const P = window.PIXI, shared = window.PacketGardenPixi, core = window.PacketGardenPixiLiveCore;
     const ecologyCore = window.PacketGardenEcology, ecologyPresentation = window.PacketGardenPixiEcology;
     const ambientCore = window.PacketGardenAmbient, ambientPresentation = window.PacketGardenPixiAmbient;
@@ -342,23 +358,37 @@
     const sound = typeof gardenSound === 'undefined' ? null : gardenSound;
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
-    await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
-      backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
+    try {
+      await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
+        backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
+    } catch(error) {
+      // A rejected renderer init has no Application ticker/plugins to destroy.
+      own(()=>app.stage.destroy({children:true}));throw error;
+    }
+    own(()=>app.destroy(true));
+    if(lifetime.disposed)return; // A late init completion must not mount or start anything.
+    stop=()=>app.stop();
     viewElement.appendChild(app.canvas);
-    const cache = makeLiveAtlas(P, app.renderer, shared, core), view = createView(P, app, cache.frames, core, shared);
+    const cache = makeLiveAtlas(P, app.renderer, shared, core);
+    own(()=>{for(const frame of cache.frames.values())frame.destroy(false);cache.atlas.destroy(true);});
+    const view = createView(P, app, cache.frames, core, shared);own(()=>view.destroy());
     const lightingSurface=window.PacketGardenLightingView.createSurface(document,app.canvas);
+    own(()=>lightingSurface.destroy());
     const lighting=window.PacketGardenLighting.createModel();let lightingWeather=0,lightingControls=null;
+    own(()=>lighting.destroy());
     const updateLighting=(at=Date.now(),force=false,weatherChanged=false)=>{
-      if(document.hidden)return;
+      if(lifetime.disposed||document.hidden)return;
       if(lighting.tick(at,{force})||force||weatherChanged) {
         lightingSurface.apply(lighting.state,lightingWeather);lightingControls?.refresh();
       }
     };
     const stormPresentation = window.PacketGardenPixiStorm, stormView = stormPresentation.createView(P, app.renderer, view.root);
+    own(()=>stormView.destroy());
     // Separate random stream: effects never consume placement/ecology randomness.
     const stormSeed = window.crypto?.getRandomValues ? window.crypto.getRandomValues(new Uint32Array(1))[0] : Date.now();
     const storm = stormPresentation.createModel({random:shared.seededRandom(stormSeed),onChange:stormView.change,
       onThunder:level => sound?.maybePlayThunderSound(level)});
+    own(()=>storm.destroy());
     const lightningToggle = document.querySelector('#lightning-enabled');
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');let lightningEnabled = true;
     const updateLightning = () => {
@@ -367,14 +397,19 @@
         lightningToggle.title=reduced?'Suppressed by reduced-motion preference':'Rare atmospheric storm illumination';}
       storm.configure({enabled:lightningEnabled,reducedMotion:reduced,hidden:document.hidden});
     };
-    lightningToggle?.addEventListener('change',event=>{lightningEnabled=event.target.checked;updateLightning();});
-    reducedMotion?.addEventListener?.('change',updateLightning);updateLightning();
+    listen(lightningToggle,'change',event=>{lightningEnabled=event.target.checked;updateLightning();});
+    listen(reducedMotion,'change',updateLightning);updateLightning();
     const ambientCache = ambientPresentation.makeAmbientAtlas(P, app.renderer);
+    own(()=>ambientCache.destroy());
     const frogView=frogCore?ambientPresentation.createFrogView(P,view.dropLayer,ambientCache.frames,()=>reducedMotion?.matches??false):null;
+    own(()=>frogView?.destroy());
     const frogs=frogCore?.createModel({getPuddles:()=>ecology?.puddles??[],onChange(change){frogView.change(change,Date.now());}})??null;
+    own(()=>frogs?.clear());
     const ambientView = ambientPresentation.createAmbientView(P, view.curiosityLayer, view.dropLayer, ambientCache.frames);
+    own(()=>ambientView.destroy());
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
       onChange(change) { ambientView.change(change, Date.now()); } });
+    own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
     let ui, ecology = null;
     const model = core.createModel(view, { onAdded: source => ecology?.removeGrassCell(source.column, source.row), onLive: source => {
@@ -386,10 +421,13 @@
       collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
       getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
+    own(()=>ui.destroy());
     const gnomePresentation = window.PacketGardenPixiGnomes;
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
+    own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
     const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
+    own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
     const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
       getPuddles: () => ecology?.puddles ?? [],
@@ -399,7 +437,8 @@
       random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
       onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
       onCue: stage => sound?.maybePlayGnomeSound(stage) });
-    document.querySelector('#trigger-gnomes')?.addEventListener('click', () => {
+    own(()=>gnomes.clear());
+    listen(document.querySelector('#trigger-gnomes'),'click', () => {
       const status = document.querySelector('#gnome-test-status');
       if (gnomes.incident) { if(status)status.textContent='An incident is already active.';return; }
       simulatedWinner = nextSimulatedWinner;
@@ -420,26 +459,30 @@
         : 'Landscaping could not start; eligibility and cooldown still apply.';
       gnomeView.animate(Date.now());
     };
-    document.querySelector('#trigger-landscaping')?.addEventListener('click', () => triggerLandscaping('vine'));
-    document.querySelector('#trigger-overcrowding')?.addEventListener('click', () => triggerLandscaping('overcrowding'));
-    document.querySelector('#trigger-weed-harvest')?.addEventListener('click', () => triggerLandscaping('weed_harvest'));
+    listen(document.querySelector('#trigger-landscaping'),'click', () => triggerLandscaping('vine'));
+    listen(document.querySelector('#trigger-overcrowding'),'click', () => triggerLandscaping('overcrowding'));
+    listen(document.querySelector('#trigger-weed-harvest'),'click', () => triggerLandscaping('weed_harvest'));
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
       ui.click(point, { x: event.clientX, y: event.clientY });
     };
-    app.canvas.addEventListener('click', clickGarden);
+    listen(app.canvas,'click',clickGarden);
     const ecologyCache = ecologyPresentation.makeEcologyAtlas(P, app.renderer);
+    own(()=>ecologyCache.destroy());
     const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames);
+    own(()=>ecologyView.destroy());
     ecology = ecologyCore.createEcologyModel({ isCellOccupied: (column, row) => model.byCell.has(row * core.dimensions.columns + column),
       onChange(change) {
         ecologyView.change(change, Date.now());
         if (change.kind === 'grass-removed') ui.grassRemoved(change.item);
         if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
+    own(()=>ecology.clear());
     // Distributed local seeds; real TCPNoise never gains grass influence.
     ecology.seedInitialGrass();
-    window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
+    const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
+    own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
     const measurements = hud ? shared.frameWindow() : null;
     const sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
@@ -455,7 +498,9 @@
     updateNetworkActivity({ hasSnapshot: false });
     let currentWeather = { level: 'quiet', eventsPerMinute: 0 };
     const stillbloom=stillbloomCore.createModel({garden:model});
+    own(()=>stillbloom.destroy());
     const stillbloomDiagnostics=window.PacketGardenStillbloomDev?.bind({document,organic:stillbloom,garden:model});
+    own(()=>stillbloomDiagnostics?.destroy());
     function updateWeather() {
       const live = !sourceControl || sourceControl.value === 'live';
       stillbloom.configure({live,hidden:document.hidden});
@@ -467,12 +512,14 @@
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
-    const stream = core.connectStream(EventSource, model, state => { latestWeather = state;stillbloom.setWeather(state);updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
+    const stream = core.connectStream(EventSource, {accept:guard(raw=>model.accept(raw))}, guard(state => { latestWeather = state;stillbloom.setWeather(state);updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }), guard(value => {
       status = value;stillbloom.configure({connected:value==='connected'});connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
-    },()=>stillbloom.setWeather(null));
-    sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();
+    }),guard(()=>stillbloom.setWeather(null)));
+    own(()=>stream.close());
+    listen(sourceControl,'change',updateWeather); listen(levelControl,'change',updateWeather); updateWeather();
     lightingControls=window.PacketGardenLightingView.bindControls(document,lighting,()=>updateLighting(Date.now(),false,true));
-    document.querySelector('#trigger-lightning')?.addEventListener('click',()=>{
+    own(()=>lightingControls.destroy());
+    listen(document.querySelector('#trigger-lightning'),'click',()=>{
       const status=document.querySelector('#lightning-test-status');
       const started=sourceControl?.value==='manual' && storm.trigger();
       if(status)status.textContent=started?'Simulated atmospheric lightning; optional thunder follows.'
@@ -480,29 +527,29 @@
     });
     let ambientSeedVariant = 0;
     const seedAmbient = () => ambientPresentation.seedAmbient(ambient, Date.now(), ambientSeedVariant++ % 4);
-    document.querySelector('#seed-ambient')?.addEventListener('click', seedAmbient);
-    document.querySelector('#seed-weed-buds')?.addEventListener('click', () => {
+    listen(document.querySelector('#seed-ambient'),'click', seedAmbient);
+    listen(document.querySelector('#seed-weed-buds'),'click', () => {
       const at = Date.now(); model.seedWeedBuds();
       ecology.seed({grassCells:[13,14,18,19].map(column => ({column,row:10,createdAt:at-60000,lastInfluencedAt:at}))});
       ambientPresentation.seedWeedBuds(ambient,at);
     });
-    document.querySelector('#seed-gnome-drops')?.addEventListener('click', () => {
+    listen(document.querySelector('#seed-gnome-drops'),'click', () => {
       const at=Date.now();
       ambient.seed({drops:['amanita_muscaria','ditch_weed_bud','gnome_underpants','gnome_underpants','gnome_underpants'].map((type,i)=>({
         type,x:315+i*65,y:385,phase:0,createdAt:at,expiresAt:at+ambientCore.dropConfig.lifetimeMs}))});
     });
-    document.querySelector('#seed-mutations')?.addEventListener('click', () => model.seedMutations());
-    document.querySelector('#seed-pending-mutations')?.addEventListener('click', () => model.seedMutations(true));
+    listen(document.querySelector('#seed-mutations'),'click', () => model.seedMutations());
+    listen(document.querySelector('#seed-pending-mutations'),'click', () => model.seedMutations(true));
     let interactionSeedVariant = 0;
-    document.querySelector('#seed-interaction')?.addEventListener('click', () => {
+    listen(document.querySelector('#seed-interaction'),'click', () => {
       const source = model.seedInteraction(), at = Date.now(); ecology.clear();
       const point = { x: (source.column + .5) * 30, y: (source.row + .5) * 30 };
       const item = { ...point, createdAt: at, expiresAt: at + ambientCore.curiosityConfig.lifetimeMs, phase: 0 };
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
-    document.querySelector('#trigger-frog')?.addEventListener('click',()=>{
+    listen(document.querySelector('#clear'),'click', () => { model.clear(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    listen(document.querySelector('#trigger-frog'),'click',()=>{
       const at=Date.now();
       if(!frogs.eligiblePuddles(at).length){
         ecology.seed({grassCells:ecology.grassCells,puddles:[...ecology.puddles.slice(0,7),
@@ -512,18 +559,18 @@
       status.textContent=frog?'Simulated frog: sits, makes 2–3 small hops, leaves at 60s. Trigger again for two.':'Two frogs already visiting, or water not ready.';
       frogView.animate(at);
     });
-    document.querySelector('#seed')?.addEventListener('click', () => {
+    listen(document.querySelector('#seed'),'click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
     });
-    document.querySelector('#pause')?.addEventListener('change', event => model.setPaused(event.target.checked));
+    listen(document.querySelector('#pause'),'change', event => model.setPaused(event.target.checked));
     const updateProbes = () => { const value = document.querySelector('#probes')?.checked ?? false; view.setProbes(value); document.body.classList.toggle('probes-off', !value); };
-    document.querySelector('#probes')?.addEventListener('change', updateProbes); updateProbes();
-    const resize = () => { const box = viewElement.getBoundingClientRect(); app.renderer.resize(Math.max(1, Math.round(box.width)), Math.max(1, Math.round(box.height)), Math.min(window.devicePixelRatio || 1, 2));
-      const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); ui.position(); };
-    const observer = new ResizeObserver(resize); observer.observe(viewElement); window.addEventListener('resize', resize); resize();
+    listen(document.querySelector('#probes'),'change', updateProbes); updateProbes();
+    const resize = guard(() => { const box = viewElement.getBoundingClientRect(); app.renderer.resize(Math.max(1, Math.round(box.width)), Math.max(1, Math.round(box.height)), Math.min(window.devicePixelRatio || 1, 2));
+      const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); ui.position(); });
+    const observer = new ResizeObserver(resize);own(()=>observer.disconnect());observer.observe(viewElement);listen(window,'resize',resize);resize();
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
-    document.querySelector('#reset')?.addEventListener('click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
+    listen(document.querySelector('#reset'),'click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
       stillbloomDiagnostics?.refresh();
       if (!hud) return;
@@ -551,7 +598,8 @@
       ].join('\n');
     }
     app.ticker.maxFPS = 0;
-    app.ticker.add(ticker => {
+    const tick=guard(ticker => {
+      if(document.hidden)return;
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
       if (elapsed > 0) { measurements?.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
       if (Date.now() >= nextLogicalAt) {
@@ -574,7 +622,8 @@
       if (storm.active) stormView.animate(storm.active,Date.now());
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
-    document.addEventListener('visibilitychange', () => {
+    app.ticker.add(tick);own(()=>app.ticker.remove(tick));
+    listen(document,'visibilitychange', () => {
       frogs?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);
@@ -592,23 +641,11 @@
         nextLogicalAt = at + 250; lastTick = null; app.start();
       }
     });
-    window.addEventListener('pagehide', event => {
-      frogs?.setHidden(true);
-      ambient.setHidden(true);
-      stillbloom.configure({hidden:true});
-      gnomes.suspend();storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
-      observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); frogs?.clear();frogView?.destroy();ambientView.destroy();ambientCache.destroy();
-      stillbloom.destroy();
-      stillbloomDiagnostics?.destroy();
-      lightingControls.destroy();lighting.destroy();lightingSurface.destroy();
-      gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
-      reducedMotion?.removeEventListener?.('change',updateLightning);storm.destroy();stormView.destroy();
-      app.canvas.removeEventListener('click', clickGarden); ui.destroy();
-      ecology.clear(); ecologyView.destroy(); view.destroy(); ecologyCache.destroy();
-      for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true); app.destroy(true);
-    });
-    window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
     updateHud(); if (!document.hidden) app.start();
+    } catch(error) {
+      try{dispose();}catch(cleanupError){throw new AggregateError([error,cleanupError],'Garden initialization and teardown failed');}
+      throw error;
+    }
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { makeLiveAtlas, createView };
   else start().catch(error => {

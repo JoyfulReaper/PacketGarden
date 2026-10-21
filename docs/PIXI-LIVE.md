@@ -1,3 +1,81 @@
+# Pixi page lifecycle fix (2026-10-21)
+
+The page-close exception was an ownership race: `pagehide` destroyed Pixi's
+ticker while the registered `visibilitychange` closure could still call
+`app.stop()` or `app.start()`. Repeated pagehide could destroy the same resources
+again. Listeners were installed only after asynchronous initialization, allowing
+a closed page's late startup to mount and start an application. The isolated
+stress page had the same visibility/ticker problem.
+
+Both entry points now use a small shared page lifetime owner in the existing
+Pixi helper library. Disposal first invalidates guarded callbacks, unregisters
+owned listeners, stops the ticker, then releases acquired resources in reverse
+order. The exact application ticker callback is removed; observers, controls,
+views, atlas frames/sources and the application release once. A resource acquired
+after disposal releases immediately, so late initialization never mounts a
+canvas, connects SSE or starts presentation. Failed WebGL initialization releases
+the preallocated stage without calling uninitialized Pixi plugin destructors;
+later startup failures release everything acquired so far.
+
+The SSE connection unregisters its named handlers, nulls status handlers and
+closes once; already queued delivery becomes inert. Diagnostic and lighting
+bindings likewise unregister their callbacks and reject stale delivery. There
+are no new garden rules, artwork, schedulers, dependencies or server changes.
+SSE/NATS payloads, input acceptance, ecology and normal rendering are unchanged.
+Cleanup continues after a release error, then reports an `AggregateError`;
+ordinary callback errors still propagate. No global error suppression was added.
+
+Ordinary hidden/visible transitions preserve the existing cadence reset and
+single current-state reconciliation, without missed ticks or incident replay.
+For live pages, persisted pagehide now releases the complete page just like
+final pagehide. Only one restore listener remains; persisted pageshow removes it
+and requests one fresh reload, preserving the established live-page policy.
+The synthetic stress page preserves its existing policy instead: persisted
+pagehide retains a stopped scene, late visibility cannot restart it while cached,
+and persisted pageshow resumes without a time jump. Final disposal removes both
+transition listeners, preventing stale restoration from restarting a dead app.
+
+Validation: all **61 Node entry points**, the full installed-Chrome suite,
+Debug/Release .NET builds, backend checks and real ASP.NET polling-to-SSE checks
+passed. `tests/pixi-lifecycle.cjs` checks invalidation/reverse release, repeated
+cleanup, late acquisition and surfaced release/callback failures. Chrome checks
+both live routes and the stress page: pagehide -> hidden -> visible, repeated
+teardown, captured queued input/media/SSE/resize/ticker callbacks, three normal
+ten-minute hide/show gaps with one reconciliation each, initialization resolving
+after close, WebGL/startup rejection, persisted transitions and actual back
+navigation. Three stress reload/disposal cycles retain no owned listeners and
+destroy the stage, renderer and ticker once. Each live view/cache destroy ran
+once, both observed ResizeObservers disconnected once, and SSE closed once.
+All browser page-error checks remain attached through navigation and closure;
+the older scene-only exemptions have been removed. The historical HTTP-cache
+fixture deliberately runs old unversioned code and now forces/asserts its exact
+null-ticker `stop` failure as a negative control. Every current page requires
+zero page errors.
+
+The immutable pre-fix checkpoint `f7e3471` **fails** the same Chrome regression
+with null-ticker `stop`/`start` errors. Local ignored evidence is in
+`artifacts/pixi-lifecycle/baseline.log`, `after/lifecycle.json` and `chrome.log`.
+
+```powershell
+node tests/pixi-lifecycle.cjs
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/pixi-lifecycle/after'
+node tests/pixi-default-browser.cjs --run --lifecycle-only
+# Expected failure against the immutable original code:
+node tests/pixi-default-browser.cjs --run --lifecycle-baseline
+```
+
+Limits: persisted transitions are exercised deterministically with browser
+PageTransitionEvents; actual back navigation also runs, but bfcache admission
+depends on Chrome policy. This Chrome run used fresh back navigation rather than
+an actual persisted cache entry; the persisted branch is therefore validated
+with synthetic transitions. Other browsers, mobile lifecycle
+policies, driver-retained memory and abrupt process termination remain untested.
+The checks-project build reported NU1900 because NuGet vulnerability metadata
+was unavailable; compilation and backend assertions succeeded.
+
+---
+
 # Gnome puddle mishaps (2026-10-21)
 
 Moving gnomes now occasionally object to wet boots in **both renderers**.
@@ -102,8 +180,8 @@ logical tick, **1.10ms** worst, and returned from four tracked actors to zero on
 clear. Short CPU samples contain timing/JIT/driver noise; the lower Pixi number
 does not imply a speedup. These measure submission, not GPU completion, process
 memory, sustained frame pacing or a real-traffic soak. Other browsers/GPUs remain
-unverified. The pre-existing page-close visibility/ticker race noted below is
-outside this slice; scene/cycle assertions run before page closure.
+unverified. The page-close visibility/ticker race recorded during this slice
+is now fixed by the page lifecycle work above; errors are checked through closure.
 
 Focused reproduction with the already installed Playwright/Chrome runtime:
 
@@ -199,10 +277,9 @@ These short, separate probes show similar recurring Pixi submission cost in this
 run; lower Canvas timings are not proof of a sustained speedup. They do not measure GPU
 completion, retained driver memory or long-term frame pacing. The fixed cache
 sizes above are RGBA accounting, not process-memory measurements. Other browsers,
-GPUs and long live-traffic soaks remain unverified. One pre-existing Chrome
-page-close race appeared with both old and new art: a visibility callback can
-call `app.stop()` after pagehide has destroyed its ticker. Scene/cycle error
-checks run before page closure; that unrelated teardown race remains unchanged.
+GPUs and long live-traffic soaks remain unverified. The pre-existing Chrome
+page-close race seen with both old and new art is now fixed by the page lifecycle
+work above, with page-error checks continuing through closure.
 
 Reproduction with the already available Playwright/Chrome runtime (no install):
 
@@ -1963,8 +2040,8 @@ cache-transition correctness, not a new performance or long-soak claim.
 A separate pre-existing teardown exception was captured when closing Pixi pages:
 a visibility callback can call `app.stop()` after pagehide has destroyed its
 ticker (`Cannot read properties of null (reading 'stop')`). It also occurred on
-the unchanged stress page and was not the black-startup failure. It remains
-outside this homepage-only fix; pre-teardown page errors are checked separately.
+the stress page and was not the black-startup failure. The later page lifecycle
+fix above resolves both entry points and checks errors through teardown.
 
 ---
 

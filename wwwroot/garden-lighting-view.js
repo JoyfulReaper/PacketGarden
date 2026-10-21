@@ -15,6 +15,7 @@
     },snapshot(){return {updates,filter:key};},destroy(){disposed=true;target.style??={};target.style.filter='none';}};
   }
   function bindControls(document,model,refresh) {
+    let disposed=false;
     const mode=document.querySelector('#lighting-mode'),hour=document.querySelector('#lighting-hour'),status=document.querySelector('#lighting-status');
     const toggle=document.querySelector('#day-night-enabled');
     const show=()=>{if(toggle)toggle.checked=model.enabled;
@@ -24,11 +25,11 @@
       const s=model.snapshot();if(s.hour===null){status.textContent='Local lighting waits until visible.';return;}
       status.textContent=`${s.mode==='live'?'Live local':'Simulated'} · ${s.phase} · ${s.hour.toFixed(2)}h`;
       mode.value=model.mode;hour.value=String(s.hour);};
-    const select=()=>{model.setMode(mode.value);refresh();show();};
-    const slide=()=>{model.setHour(Number(hour.value));refresh();show();};
-    const change=()=>{model.setEnabled(toggle.checked);refresh();show();};
+    const select=()=>{if(disposed)return;model.setMode(mode.value);refresh();show();};
+    const slide=()=>{if(disposed)return;model.setHour(Number(hour.value));refresh();show();};
+    const change=()=>{if(disposed)return;model.setEnabled(toggle.checked);refresh();show();};
     toggle?.addEventListener('change',change);mode?.addEventListener('change',select);hour?.addEventListener('input',slide);show();
-    return {refresh:show,destroy(){toggle?.removeEventListener?.('change',change);mode?.removeEventListener?.('change',select);hour?.removeEventListener?.('input',slide);}};
+    return {refresh:show,destroy(){disposed=true;toggle?.removeEventListener?.('change',change);mode?.removeEventListener?.('change',select);hour?.removeEventListener?.('input',slide);}};
   }
   const api={createSurface,bindControls};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else window.PacketGardenLightingView=api;

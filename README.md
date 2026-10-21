@@ -69,6 +69,13 @@ manual previews remain on the development pages. No simulated specimen traffic
 starts automatically. WebGL is required; the Canvas garden is linked as an
 explicit fallback rather than switched to automatically.
 
+Pixi page teardown invalidates callbacks before stopping and releasing its ticker,
+views, atlases, stream and listeners. Late visibility/resize/input callbacks and
+repeated page closure are safe, including closure during asynchronous startup.
+Ordinary hide/show still reconciles once without catch-up. Live pages keep their
+fresh reload on back/forward-cache return; the isolated stress page resumes its
+retained scene. See [lifecycle validation and limits](docs/PIXI-LIVE.md#pixi-page-lifecycle-fix-2026-10-21).
+
 `/canvas.html` preserves the original Canvas garden, including manual and
 automatic fake traffic, manual weather/intensity controls, optional audio,
 gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
@@ -662,6 +669,13 @@ Canvas/Pixi parity and dense cache/cleanup bounds. The Chrome suite also capture
 the same populated garden at all five lighting phases and at night in a storm;
 use `--run --lighting-only` for this focused visual comparison. Set
 `PACKETGARDEN_BROWSER_OUTPUT` to choose an ignored artifact directory.
+
+`node tests/pixi-lifecycle.cjs` checks teardown ownership and error propagation.
+The Chrome suite's `--run --lifecycle-only` reproduces pagehide followed by late
+visibility callbacks, queued work, failed/late startup, repeated cleanup and
+back/forward restoration. `--run --lifecycle-baseline` runs against the immutable
+pre-fix checkpoint and **must fail** with the original null-ticker errors. Page
+errors remain observed through navigation and close.
 
 The backend polls `https://noise.kgivler.com/api/snapshot` every 10 seconds with a
 5-second timeout. It trusts the source level and exposes `level`,

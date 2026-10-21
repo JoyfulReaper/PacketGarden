@@ -48,7 +48,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       this.renderer = {...h.renderer, screen:{width:1218,height:650}, resize:(w,v,dpr) => {
         this.renderer.screen = {width:w,height:v}; this.canvas.width = w*dpr; this.canvas.height = v*dpr;
       }};
-      this.ticker = {add:fn => this.frame = fn};
+      this.ticker = {add:fn => this.frame = fn,remove:fn=>{if(this.frame===fn)this.frame=null;}};
     }
     async init(options) { this.options = options; if (failInit) throw new Error('WebGL unavailable'); }
     start() { this.active = true; } stop() { this.active = false; }
@@ -67,9 +67,9 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       addEventListener:(name,fn) => winHandlers.set(name,fn), removeEventListener:name => winHandlers.delete(name)}};
   vm.createContext(context);
   for (const script of pageScripts.filter(name => !name.startsWith('vendor/'))) {
-    doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && script === 'pixi-stress.js'};
+    doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && assetPath(script) === 'pixi-stress.js'};
     vm.runInContext(read(assetPath(script)), context, {filename:script});
-    if (script === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+    if (assetPath(script) === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
     if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
       context.window.PacketGardenPixiLiveCore.createModel = (...args) => { gardenView=args[0];model = create(...args); return model; };

@@ -12,7 +12,7 @@ const h=require('./pixi-live.cjs');
   class Application{
     constructor(){app=this;this.stage=new h.P.Container();this.canvas={...element('#test-canvas'),width:1218,height:650};this.active=false;
       this.renderer={...h.renderer,screen:{width:1218,height:650},resize:(w,v,dpr)=>{this.renderer.screen={width:w,height:v};this.canvas.width=w*dpr;this.canvas.height=v*dpr}};
-      this.ticker={add:fn=>this.frame=fn};}
+      this.ticker={add:fn=>this.frame=fn,remove:fn=>{if(this.frame===fn)this.frame=null;}};}
     async init(){}start(){this.active=true}stop(){this.active=false}destroy(){this.stage.destroy({children:true})}
   }
   class Source{constructor(url){this.url=url;this.handlers=new Map();sources.push(this)}addEventListener(name,fn){this.handlers.set(name,fn)}close(){this.closed=true}}

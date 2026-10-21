@@ -17,12 +17,15 @@
   }
   function bind(options) {
     const button=options.document.querySelector('#trigger-gnome-puddle');
-    button?.addEventListener('click',()=>{
+    let disposed=false;const click=()=>{
+      if(disposed)return;
       const status=options.document.querySelector('#gnome-puddle-status');
       const started=trigger(options);
       if(status)status.textContent=started?'Simulated wet-boots demonstration · watch the approaching green gnome. No network event.'
         :'An incident is already active, or the local fixture could not start.';
-    });
+    };
+    button?.addEventListener('click',click);
+    return {destroy(){disposed=true;button?.removeEventListener('click',click);}};
   }
   window.PacketGardenGnomePuddlesDev={trigger,bind};
 })();

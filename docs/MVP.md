@@ -14,6 +14,14 @@ sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
+- Pixi page lifetime ownership: idempotent teardown invalidates callbacks before
+  stopping/releasing resources, removes owned input/media/visibility/resize/SSE
+  listeners and the ticker callback, and cleans up late/failed initialization.
+  Normal hide/show resumes current state once without replay. Live pages retain
+  reload-on-bfcache-return; the synthetic stress page retains stopped resources
+  until restoration or final teardown. Focused Chrome tests reproduce the old
+  race and verify queued callbacks and cleanup; no garden or event rules changed.
+  See [validation and browser limits](PIXI-LIVE.md#pixi-page-lifecycle-fix-2026-10-21).
 - Gnome puddle mishaps in Canvas/Pixi: one independent 20% roll per fresh moving
   entry into visible shared water (size >=8, model opacity >=0.12), at most one
   success per gnome/incident. Conservative interiors derive from all four organic
