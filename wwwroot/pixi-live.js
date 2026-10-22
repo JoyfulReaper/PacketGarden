@@ -418,6 +418,7 @@
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
       getGnomes: () => gnomes,
+      getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
       collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
       getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
@@ -556,7 +557,7 @@
           {x:480,y:300,seed:.7199,size:18,maxSize:24,createdAt:at,lastRefreshedAt:at,simulated:true}]});
       }
       const frog=frogs.spawnSimulated(at),status=document.querySelector('#frog-test-status');
-      status.textContent=frog?'Simulated frog: sits, makes 2–3 small hops, leaves at 60s. Trigger again for two.':'Two frogs already visiting, or water not ready.';
+      status.textContent=frog?'Simulated frog: click once to be ignored; later clicks do nothing. Hops and leaves at 60s. Trigger again for two.':'Two frogs already visiting, or water not ready.';
       frogView.animate(at);
     });
     listen(document.querySelector('#seed'),'click', () => {

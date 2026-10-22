@@ -199,6 +199,7 @@ async function run() {
       ignoreDefaultArgs:['--autoplay-policy=no-user-gesture-required'],args:['--autoplay-policy=user-gesture-required']});
     const context = observeContext(await browser.newContext({viewport:{width:1280,height:900}, deviceScaleFactor:2}));
     context.setDefaultTimeout(15000);
+    if(process.argv.includes('--whimsy-only')){promoted=true;await checkWhimsy();return;}
     if(process.argv.includes('--lifecycle-only')||lifecycleBaseline){promoted=true;await checkLifecycle();return;}
     if(process.argv.includes('--gnome-puddles-only')){promoted=true;await checkGnomePuddles();return;}
     if(process.argv.includes('--puddle-art-only')){promoted=true;await checkPuddleArt();return;}
@@ -393,6 +394,7 @@ async function run() {
     await checkWeedBuds(diagnostic);
     await checkHarvest();
     await checkFrogs();
+    await checkWhimsy();
     await checkPuddleArt();
     await checkGnomePuddles();
     await checkLifecycle();
@@ -420,6 +422,91 @@ async function run() {
   } finally {
     if (browser) await browser.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve));
     assert.deepEqual(suiteErrors,[],'all browser-page errors, including navigation and close');
+  }
+
+  async function checkWhimsy() {
+    const report={};
+    for(const pixi of [true,false]){
+      const page=await newPage({viewport:{width:1100,height:800},deviceScaleFactor:2});
+      await page.addInitScript(()=>{
+        const state=window.__whimsy={contexts:0,resumes:0,voices:0,live:new Set(),maxLive:0};
+        function track(node){state.live.add(node);state.maxLive=Math.max(state.maxLive,state.live.size);
+          const disconnect=node.disconnect;node.disconnect=function(...args){state.live.delete(this);return disconnect.apply(this,args);};return node;}
+        const Native=window.AudioContext;
+        window.AudioContext=class extends Native {
+          constructor(...args){super(...args);state.contexts++;}
+          resume(...args){state.resumes++;return super.resume(...args);}
+          createOscillator(){state.voices++;return track(super.createOscillator());}
+          createGain(){return track(super.createGain());}
+          createBiquadFilter(){return track(super.createBiquadFilter());}
+        };
+      });
+      let at=Date.UTC(2026,9,22,12);await page.clock.setFixedTime(at);
+      await page.goto(origin+(pixi?'/pixi-live.html':'/canvas.html'));
+      await page.waitForFunction(pixi=>pixi?Boolean(window.__gardenTestFrogs):typeof gardenFrogs!=='undefined',pixi);
+      await page.evaluate(pixi=>{
+        const f=pixi?__gardenTestFrogs:gardenFrogs,e=pixi?__gardenTestEcology:gardenEcology;
+        f.clear();e.seed({puddles:[{x:480,y:300,size:18,maxSize:24,createdAt:Date.now(),lastRefreshedAt:Date.now(),seed:.3}]});f.spawnSimulated();
+      },pixi);
+      const advance=async ms=>{for(let n=0;n<ms;){const d=Math.min(250,ms-n);n+=d;at+=d;await page.clock.setFixedTime(at);
+        await page.evaluate(pixi=>{(pixi?__gardenTestFrogs:gardenFrogs).tick(Date.now());if(!pixi)updateGarden();},pixi);}};
+      async function point(){return page.evaluate(pixi=>{
+        const f=(pixi?__gardenTestFrogs:gardenFrogs).frogs[0],p=PacketGardenFrogs.visualState(f,Date.now(),matchMedia('(prefers-reduced-motion: reduce)').matches);
+        if(pixi){const a=__gardenTestApp,root=a.stage.children[0],r=a.canvas.getBoundingClientRect();return {x:r.left+(root.position.x+p.x*root.scale.x)*r.width/a.renderer.screen.width,y:r.top+(root.position.y+p.y*root.scale.y)*r.height/a.renderer.screen.height};}
+        const r=canvas.getBoundingClientRect(),scale=Math.min(r.width/992,r.height/632);return {x:r.left+(r.width-960*scale)/2+p.x*scale,y:r.top+(r.height-600*scale)/2+p.y*scale};
+      },pixi);}
+      await advance(10325);const before=await page.evaluate(pixi=>JSON.stringify((pixi?__gardenTestFrogs:gardenFrogs).frogs[0]),pixi);
+      await page.locator(pixi?'#view canvas':'.garden-stage').scrollIntoViewIfNeeded();
+      let p=await point();await page.mouse.click(p.x,p.y);
+      await page.waitForFunction(()=>document.querySelector('#collection-message').textContent==='The frog ignores you +0 points');
+      assert.equal(await page.evaluate(pixi=>JSON.stringify((pixi?__gardenTestFrogs:gardenFrogs).frogs[0]),pixi),before);
+      await page.locator(pixi?'#view canvas':'.garden-stage').screenshot({path:path.join(output,`frog-click-${pixi?'pixi':'canvas'}.png`)});
+      await advance(1500);await page.emulateMedia({reducedMotion:'reduce'});p=await point();await page.mouse.click(p.x,p.y);
+      await advance(500);await page.waitForFunction(()=>document.querySelector('#collection-message').hidden);
+      p=await point();await page.mouse.click(p.x,p.y);assert(await page.locator('#collection-message').isHidden());
+      assert.equal(await page.locator('#garden-score').textContent(),'Score: 0');assert(await page.locator('#specimen-card').isHidden());
+      assert.equal(await page.evaluate(()=>__whimsy.contexts),0,'frog clicks never initialize audio');
+      // All four actual shared starts route through the page's existing sound adapter.
+      async function begin(mode){return page.evaluate(({pixi,mode})=>{
+        const g=pixi?__gardenTestGnomes:gardenGnomes,source=pixi?__gardenTestGarden:gardenModel;
+        g.clear();const at=Date.now(),type=mode==='vine'?'vine':mode==='weed_harvest'?'weed':'broadleaf';
+        source.seed(Array.from({length:mode==='overcrowding'?640:40},(_,i)=>({type,column:i%32,row:Math.floor(i/32),createdAt:at-65000,colorVariant:0})),at);
+        const started=mode==='dispute'?g.start(at,()=>.5):g.startLandscaping(at,()=>.5,mode);
+        return {started,voices:__whimsy.voices};
+      },{pixi,mode});}
+      assert((await begin('dispute')).started);assert.equal(await page.evaluate(()=>__whimsy.contexts),0,'muted arrival never initializes audio');
+      await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
+      await page.waitForFunction(()=>__whimsy.contexts===1);const baseline=await page.evaluate(()=>__whimsy.live.size);
+      const cycles=[];
+      for(const mode of ['dispute','vine','overcrowding','weed_harvest','dispute','dispute']){
+        // Advance only wall time between fixtures; no deferred eligibility/snips are replayed.
+        at+=420000;await page.clock.setFixedTime(at);
+        const voices=await page.evaluate(()=>__whimsy.voices);
+        if(pixi&&mode==='overcrowding')await page.locator('#sound-volume').fill('100');
+        if(pixi&&['vine','overcrowding'].includes(mode))await page.evaluate(()=>window.__gardenAudioRecording=[]);
+        assert((await begin(mode)).started);assert.equal(await page.evaluate(()=>__whimsy.voices),voices+2,mode);
+        await page.evaluate(pixi=>{const g=pixi?__gardenTestGnomes:gardenGnomes;g.advance(Date.now());g.advance(Date.now());g.resetCadence();},pixi);
+        assert.equal(await page.evaluate(()=>__whimsy.voices),voices+2,'updates do not repeat arrival');
+        await page.waitForFunction(n=>__whimsy.live.size===n,baseline);
+        cycles.push({mode,remaining:await page.evaluate(()=>__whimsy.live.size)});
+        if(pixi&&mode==='vine')report.defaultOutput=await saveAudio(page,'gnomes-arrival-default');
+        if(pixi&&mode==='overcrowding'){
+          report.output=await saveAudio(page,'gnomes-arrival');assert.equal(report.output.clippedSamples,0);
+          assert(report.output.peak>report.defaultOutput.peak*5,'arrival honors volume through the real output chain');
+          await page.locator('#sound-volume').fill('12');
+        }
+      }
+      const voices=await page.evaluate(()=>__whimsy.voices);
+      await page.locator('#sound-volume').fill('0');at+=420000;await page.clock.setFixedTime(at);await begin('dispute');
+      assert.equal(await page.evaluate(()=>__whimsy.voices),voices);
+      await page.evaluate(pixi=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));
+        Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;},pixi);
+      assert.equal(await page.evaluate(()=>__whimsy.voices),voices,'resume never repeats arrival');
+      report[pixi?'pixi':'canvas']=await page.evaluate(cycles=>({cycles,contexts:__whimsy.contexts,resumes:__whimsy.resumes,maxLive:__whimsy.maxLive,live:__whimsy.live.size}),cycles);
+      await page.close();
+    }
+    assert.deepEqual(suiteErrors,[]);await fs.writeFile(path.join(output,'frog-gnome-resources.json'),JSON.stringify(report,null,2));
+    console.log('PASS: Chrome Canvas/Pixi first and repeat frog clicks during hops/reduced poses, unchanged visit/deadline/score, all four arrival routes, no duplicate/resume/mute initialization, real PCM and bounded node cleanup:',JSON.stringify(report));
   }
 
   async function checkLifecycle() {
@@ -1130,10 +1217,11 @@ async function run() {
     await age(12000);assert.deepEqual(await actors(),{count:0,phase:'idle',winner:null});assert.equal(await objects(),idleObjects);
     assert.equal(await tones(),mutedTones,'Off suppresses gnome cues');
     await page.getByRole('button',{name:'Sound: Off',exact:true}).click();
-    await trigger();await age(4000);assert.equal(await tones(),mutedTones+1,'one existing battle cue');
-    await age(4500);assert.equal(await tones(),mutedTones+1);
-    await age(7500);assert.equal((await actors()).winner,'red');assert.equal(await tones(),mutedTones+4,'existing three-tone victory cue');
-    await age(10000);await age(12000);assert.equal(await tones(),mutedTones+4);
+    await trigger();assert.equal(await tones(),mutedTones+2,'two-voice arrival once');
+    await age(4000);assert.equal(await tones(),mutedTones+3,'one existing battle cue');
+    await age(4500);assert.equal(await tones(),mutedTones+3);
+    await age(7500);assert.equal((await actors()).winner,'red');assert.equal(await tones(),mutedTones+6,'existing three-tone victory cue');
+    await age(10000);await age(12000);assert.equal(await tones(),mutedTones+6);
     assert.equal(await page.evaluate(()=>__gardenAudioContexts.length),1,'gnomes reuse shared context');
     await trigger();await clear();assert.equal((await actors()).count,0,'garden clear releases actors');
     await page.getByRole('button',{name:'Sound: On',exact:true}).click();

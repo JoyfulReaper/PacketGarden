@@ -50,6 +50,7 @@
       vigor: `${vigor} — ${vigorNames[vigor] ?? 'unknown'}`, color: colorName ?? 'Default',
       age: formatAge(at - specimen.createdAt), mutation: mutations.mutationLabel(specimen, at) };
   }
-  const api = { fakeSourceNames, vigorNames, messages, collectionMessage, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
+  const frogMessage = 'The frog ignores you +0 points';
+  const api = { fakeSourceNames, vigorNames, messages, collectionMessage, frogMessage, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenUiCore = api;
 })();

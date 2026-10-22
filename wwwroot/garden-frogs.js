@@ -1,4 +1,4 @@
-// Passive puddle wildlife. One bounded logical model; no weather, occupancy or interaction rules.
+// Puddle wildlife. One bounded logical model; clicks never change visit behavior.
 (function () {
   'use strict';
   const common=typeof module!=='undefined'&&module.exports;
@@ -69,6 +69,25 @@
         points,hopAges,leaveAt:null,leaveFrom:null,leaveTo:null,simulated};
       frogs.push(frog);counts.spawned++;notify('frog-added',frog,simulated?'simulated':'puddle-wildlife');return frog;
     }
+    // Weak ownership keeps acknowledgment on the exact visitor without retaining departures.
+    const acknowledged=new WeakSet();
+    function clickable(frog,at) {
+      return !hidden && at>=lastTickAt && at-lastTickAt<=config.maxTickGapMs
+        && frogs.includes(frog) && at>=frog.createdAt && at<frog.expiresAt && visualState(frog,at).alpha>0;
+    }
+    function hitAt(point,at=now(),reducedMotion=false) {
+      if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y))return null;
+      for(let index=frogs.length-1;index>=0;index--) {
+        const frog=frogs[index];if(!clickable(frog,at))continue;
+        const pose=visualState(frog,at,reducedMotion);
+        if(((point.x-pose.x)/8)**2+((point.y-pose.y)/6)**2<=1)return frog;
+      }
+      return null;
+    }
+    function click(frog,at=now()) {
+      if(!clickable(frog,at)||acknowledged.has(frog))return false;
+      acknowledged.add(frog);return true;
+    }
     function tick(at=now(),{hidden:isHidden=hidden}={}) {
       if(isHidden){setHidden(true,at);return;}
       if(hidden){setHidden(false,at);return;}
@@ -88,7 +107,7 @@
       const candidates=eligiblePuddles(at);if(!candidates.length)return;
       counts.checks++;if(random()<config.chance)spawn(at,false,candidates);
     }
-    return {frogs,counts,eligiblePuddles,tick,clear,setHidden,spawnSimulated:(at=now())=>spawn(at,true),
+    return {frogs,counts,eligiblePuddles,tick,clear,setHidden,hitAt,click,spawnSimulated:(at=now())=>spawn(at,true),
       get nextCheckAt(){return nextCheckAt;}};
   }
   // Finite shared art recipes: three earthy palettes, sitting and extended-leg hop poses.

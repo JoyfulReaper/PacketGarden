@@ -88,7 +88,9 @@ function specimenAtCanvasPoint(clientX, clientY) {
 
 canvas.addEventListener("click", event => {
   const point = gardenPointFromClient(event.clientX, event.clientY);
-  const hit = window.PacketGardenInteraction.resolve(point, {...gardenState,gnomes:typeof gardenGnomes === 'undefined' ? null : gardenGnomes});
+  const now = Date.now();
+  const hit = window.PacketGardenInteraction.resolve(point, {...gardenState,gnomes:typeof gardenGnomes === 'undefined' ? null : gardenGnomes,
+    frogs:gardenFrogs,reducedMotion:frogReducedMotion?.matches??false},now);
   if (hit?.kind === 'gnome') {
     gardenGnomes.click(hit.object);drawGardenOverlay(true);syncWeatherAnimation();return;
   }
@@ -103,6 +105,10 @@ canvas.addEventListener("click", event => {
   if (hit?.kind === "mutation") {
     collectSpecimenMutation(hit.specimen);
     return;
+  }
+  if (hit?.kind === 'frog') {
+    if(gardenFrogs.click(hit.object,now))showCollectionMessage(window.PacketGardenUiCore.frogMessage,now);
+    return; // Repeated clicks still shield plants and grass underneath.
   }
   if (!hit) {
     closeSpecimenCard();

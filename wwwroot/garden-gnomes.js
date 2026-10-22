@@ -78,7 +78,7 @@
       actors = [{ type:'gnome', role:'worker', side:'green', x:Math.max(6,first.x-35), y:first.y, createdAt:at },
         { type:'gnome', role:mode === 'weed_harvest' ? 'carrier' : 'supervisor', side:'red', x:Math.min(948,first.x+24), y:Math.max(18,first.y-20),
           state:'supervise', createdAt:at }];
-      aim(at); advanceLandscaping(at); puddles.tick(actors,at); changed(); return true;
+      aim(at); advanceLandscaping(at); puddles.tick(actors,at); onCue('arrival'); changed(); return true;
     }
     function advanceLandscaping(at) {
       const worker = actors[0], age = Math.max(0, at-incident.stepAt);
@@ -147,7 +147,7 @@
             targetX:centerX + direction * 14, targetY:centerY + offset, state:'approach', createdAt:at });
         }
       }
-      puddles.tick(actors,at); changed(); return true;
+      puddles.tick(actors,at); onCue('arrival'); changed(); return true;
     }
     function clear() { puddles.clear(actors);actors = []; incident = null; changed(); }
     function advance(at = now(), roll = random) {

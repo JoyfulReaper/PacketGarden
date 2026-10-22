@@ -272,7 +272,7 @@ overcrowding work is bounded at 45 seconds and timer delays can mean fewer cuts.
 Neither overlaps the four-gnome dispute, and both leave no incident actors or
 display objects behind. Reduced motion uses discrete positions and still poses.
 Hidden tabs or logical stalls over 1.5 seconds cancel the crew without replay;
-the cooldown remains. Landscaping is silent ambient nonsense, unrelated to
+the cooldown remains. Landscaping is ambient nonsense with an optional arrival cue, unrelated to
 network security, and adds no network events, Recent activity, scores or growth
 statistics. The development-only **Trigger landscaping (simulated)** button on
 `/pixi-live.html` seeds ordinary local vines if needed and skips the chance/wait
@@ -355,7 +355,7 @@ the attempt. The mushroom's type, color, vigor, provenance, cell, and lifetime
 remain unchanged. Up to five drops have their own 20-second active lifetime;
 due candidates at the cap are consumed without retry. Drops occupy no specimen
 cells, affect no grass or puddles, and share the dynamic overlay without repainting
-ecology. Click priority is active gnome, curiosity, loose drop, mutation, then inspection.
+ecology. Click priority is active gnome, curiosity, loose drop, visible frog, mutation, then inspection.
 Collection says `You found Amanita muscaria. +0 points`, reuses optional quiet
 audio, and leaves Score at 0. Scheduling, activation, collection, and expiry add
 no Recent activity rows. This is cosmetic garden nonsense, with no protocol or
@@ -484,14 +484,18 @@ at about 60 seconds. Lost or completely dry water prompts a brief fading exit;
 same-looking replacement water is a different puddle. Frogs stay within bounds,
 use an independent random stream and change no plants, grass, water or traffic.
 
-Frogs are passive wildlife: no clicks, collection, sounds, Score changes or
-Recent activity. They use none of the specimen, curiosity, drop or gnome slots.
+The first click on each exact visible frog shows **The frog ignores you +0 points**
+for two seconds. The frog continues its visit unchanged; later clicks consume
+the input without renewing the message or reaching a plant underneath. Picking
+uses its shared moving/hopping/departing position, including reduced motion.
+This is no collection: no sound, Score change, inventory or Recent activity.
+Frogs use none of the specimen, curiosity, drop or gnome slots.
 Reduced motion uses discrete sitting positions; hidden tabs and long stalls
 discard stale visits and restart the 45-second cadence without catch-up.
 Pixi keeps at most two persistent Sprites with six cached sitting/hopping frames;
 Canvas uses its existing dynamic overlay. Only `/pixi-live.html` has **Trigger
 frog (simulated)**: it seeds suitable local water if needed and can be pressed
-twice to show two frogs, their hops and natural departure. Other water-specific
+twice to show two frogs, their once-only click messages, hops and natural departure. Other water-specific
 creature interactions remain future work.
 
 TCPNoise port hits now create plants through NATS and SSE. The backend maps
@@ -644,12 +648,21 @@ development fixture seeding, dropped/paused/invalid events, reconnects, redraws
 and ordinary inspection are silent. Successful curiosity, Amanita and collectible
 weed interactions use the existing quiet collection pluck, once per removal.
 Sound Off mutes the master immediately, zero volume schedules no tones, and device
-failures leave growth/rendering/clicking intact. Gnomes on both renderers reuse
-the existing battle/victory cues once per phase through the same context and
-volume. Pixi's optional distant thunder accompanies actual lightning; continuous
+failures leave growth/rendering/clicking intact. Each successful dispute, vine,
+overcrowding or weed-harvest start emits one quiet, synthesized 560ms nasal
+two-part arrival motif suggesting “gnooo-mz!”; it uses no speech, samples or
+downloads. Failed starts, updates and resume never repeat it. Two short voices
+share the existing master/compressor; filters and gains disconnect on completion,
+mute or Sound Off, and overlapping arrivals are suppressed. The original
+battle/victory cues remain once per phase through the same context and volume.
+Pixi's optional distant thunder accompanies actual lightning; continuous
 weather ambience remains absent. Canvas does not trigger thunder.
 Focused parity/integration checks run with `node tests/pixi-audio.cjs` alongside
 `node tests/garden-audio.cjs`.
+Frog acknowledgment and arrival ownership checks run with
+`node tests/frog-clicks.cjs` and `node tests/gnome-arrival-audio.cjs`.
+Chrome's `--whimsy-only` flag exercises both pages, captures native audio and
+checks repeat cleanup; see [measurements and listening limits](docs/PIXI-LIVE.md#frog-clicks-and-gnome-arrival-2026-10-22).
 Storm scheduling, audio, rendering and cancellation checks run with
 `node tests/pixi-storm.cjs`.
 

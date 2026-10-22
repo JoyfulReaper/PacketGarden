@@ -6,7 +6,7 @@
   const text = common ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
   const ecology = common ? require('./garden-ecology.js') : window.PacketGardenEcology;
   function createUi({ document, window, garden, ambient, colorName, getGnomes = () => null, collectionRandom = Math.random,
-    getGrassCells = () => [], now = Date.now, onCollected = () => {} }) {
+    getGrassCells = () => [], getFrogs = () => null, getReducedMotion = () => false, now = Date.now, onCollected = () => {} }) {
     const element = id => document.querySelector(`#${id}`);
     const card = element('specimen-card'), title = element('specimen-card-title'), closeButton = element('specimen-card-close');
     const specimenDetails = element('specimen-details'), grassDetails = element('grass-details'), grassState = element('grass-state');
@@ -69,8 +69,11 @@
     function click(point, client, at = now()) {
       if (!interaction.validPoint(point)) return null; // Letterbox/outside clicks have no action.
       const gnomes=getGnomes();
-      const hit = interaction.resolve(point, { specimens: garden.specimens, curiosities: ambient.curiosities, drops: ambient.drops,gnomes }, at);
+      const frogs=getFrogs();
+      const hit = interaction.resolve(point, { specimens: garden.specimens, curiosities: ambient.curiosities, drops: ambient.drops,gnomes,
+        frogs,reducedMotion:getReducedMotion() }, at);
       if (hit?.kind === 'gnome') { gnomes.click(hit.object,at); return hit; }
+      if (hit?.kind === 'frog') { if(frogs.click(hit.object,at))showMessage(text.frogMessage,at);return hit; }
       if (!hit) {
         // Same logical tile lookup, after all existing specimen/collection priorities.
         const grass = interaction.specimenAt(point, getGrassCells());

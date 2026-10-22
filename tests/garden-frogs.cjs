@@ -66,7 +66,7 @@ for(const gap of ['hidden','suspended']){
 }
 const a=F.seededRandom(123),b=F.seededRandom(123);for(let n=0;n<40;n++)assert.equal(a(),b());
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-frogs.js','utf8'),/Math\.random|setTimeout|setInterval|requestAnimationFrame|EventSource|document\.|fetch\(/);
-const state={specimens:[],curiosities:[],drops:[],frogs:[{x:480,y:300}]};assert.equal(I.resolve({x:480,y:300},state),null,'passive frogs do not enter click priority');
+const state={specimens:[],curiosities:[],drops:[],frogs:null};assert.equal(I.resolve({x:480,y:300},state),null,'absent wildlife cannot enter click priority');
 
 (async()=>{
   for(const reduced of [false,true]){
@@ -113,5 +113,5 @@ const state={specimens:[],curiosities:[],drops:[],frogs:[{x:480,y:300}]};assert.
   button.handlers.get('click')();button.handlers.get('click')();button.handlers.get('click')();assert.equal(dev.frogs.frogs.length,2);assert.equal(dev.ecology.puddles.length,1);
   assert.equal(JSON.stringify(dev.model.counts),stats);assert.equal(JSON.stringify(dev.model.recentEvents),activity);
   dev.winHandlers.get('pagehide')({persisted:false});
-  console.log('PASS: frog .15 boundaries/wet visual water/exact puddle/2 cap/60s paths/no hidden catch-up/bounds/quiet-weather independence, Canvas-Pixi integration, passive clicks, independent RNG and 30 atlas/Sprite cleanup cycles.');
+  console.log('PASS: frog .15 boundaries/wet visual water/exact puddle/2 cap/60s paths/no hidden catch-up/bounds/quiet-weather independence, Canvas-Pixi integration, independent RNG and 30 atlas/Sprite cleanup cycles.');
 })().catch(e=>{console.error(e);process.exitCode=1});

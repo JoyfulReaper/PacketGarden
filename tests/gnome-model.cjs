@@ -12,9 +12,9 @@ at=180000;value=.019999;const state=JSON.stringify(specimens);model.tick(at);ass
 assert.equal(model.actors.length,4);assert.equal(model.start(at),false);assert.equal(rolls,4);
 assert(model.actors.filter(a=>a.side==='green').every(a=>a.x<model.actors.find(a=>a.side==='red').x));
 for(const age of [0,1500,2999]){model.advance(at+age);assert(model.actors.every(a=>a.state==='approach'));}
-model.advance(at+3000);assert.deepEqual(cues,['battle']);model.advance(at+6999);assert.deepEqual(cues,['battle']);
+model.advance(at+3000);assert.deepEqual(cues,['arrival','battle']);model.advance(at+6999);assert.deepEqual(cues,['arrival','battle']);
 let choices=0;model.advance(at+7000,()=>{choices++;return .499999;});
-assert.equal(model.incident.winner,'green');assert.equal(choices,1);assert.deepEqual(cues,['battle','victory']);
+assert.equal(model.incident.winner,'green');assert.equal(choices,1);assert.deepEqual(cues,['arrival','battle','victory']);
 const losers=model.actors.filter(a=>a.state==='flee');model.advance(at+8000,()=>{throw Error('winner rerolled');});
 assert.equal(model.incident.winner,'green');assert(losers.every(a=>a.x===(a.targetX+a.startX)/2));
 model.advance(at+8999);assert.equal(model.actors.length,4);model.advance(at+9000);assert.equal(model.actors.length,2);

@@ -28,6 +28,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   let lastOrdinaryAt = -Infinity;
   let lastRareAt = -Infinity;
   let thunder = null;
+  let arrival = null;
 
   function stopThunder() { thunder?.cancel(); }
 
@@ -44,6 +45,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
 
   function reportUnavailable() {
     stopThunder();
+    arrival?.cancel();
     enabled = false;
     activation++;
     try { applyVolume(); } catch { /* Device may have become unavailable. */ }
@@ -76,7 +78,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
 
   async function setSoundEnabled(value) {
     enabled = Boolean(value);
-    if (!enabled) stopThunder();
+    if (!enabled) { stopThunder(); arrival?.cancel(); }
     const request = ++activation;
     updateToggle();
     try {
@@ -91,7 +93,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   function setSoundVolume(value) {
     const numeric = Number(value);
     volume = Number.isFinite(numeric) ? Math.min(100, Math.max(0, numeric)) / 100 : 0;
-    if (volume === 0) stopThunder();
+    if (volume === 0) { stopThunder(); arrival?.cancel(); }
     try { applyVolume(); } catch { reportUnavailable(); }
   }
 
@@ -135,6 +137,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
 
   function maybePlayGnomeSound(stage) {
     if (!enabled || volume === 0 || audio?.state !== "running") return;
+    if (stage === 'arrival') { playGnomeArrival(); return; }
     if (stage !== "battle" && stage !== "victory") return;
     try {
       // A couple of tiny cues, substantially below the tuned growth envelopes.
@@ -142,6 +145,46 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
       notes.forEach((frequency, index) =>
         playTone(frequency, "sine", 0.12, audio.currentTime + index * 0.07, 0.045));
     } catch { reportUnavailable(); }
+  }
+
+  function playGnomeArrival() {
+    if (arrival) return; // A second diagnostic start cannot pile up scheduled voices.
+    const nodes=[];
+    const release=node=>{
+      if(node.done)return;node.done=true;
+      for(const resource of [node.oscillator,node.filter,node.envelope])try{resource?.disconnect();}catch{/* Device may be gone. */}
+      if(nodes.every(item=>item.done)&&arrival===sequence)arrival=null;
+    };
+    const sequence={cancel(){
+      for(const node of nodes){
+        if(node.done)continue;
+        try{if(node.started)node.oscillator.stop(audio.currentTime);}catch{/* Device may be gone. */}
+        release(node);
+      }
+      if(arrival===sequence)arrival=null;
+    }};
+    arrival=sequence;
+    try {
+      const start=audio.currentTime;
+      // A rounded nasal "gnooo" slides into a short softer buzz: musical, never speech.
+      for(let index=0;index<2;index++) {
+        const node={done:false,started:false};nodes.push(node);
+        node.oscillator=audio.createOscillator();node.filter=audio.createBiquadFilter();node.envelope=audio.createGain();
+        const at=start+(index?.32:0),duration=index?.23:.37;
+        node.oscillator.type=index?'sawtooth':'triangle';
+        node.oscillator.frequency.setValueAtTime(index?148:196,at);
+        node.oscillator.frequency.exponentialRampToValueAtTime(index?112:148,at+duration);
+        node.filter.type=index?'lowpass':'bandpass';node.filter.Q.setValueAtTime(index?.8:1.8,at);
+        node.filter.frequency.setValueAtTime(index?640:620,at);
+        node.filter.frequency.exponentialRampToValueAtTime(index?240:420,at+duration);
+        node.envelope.gain.setValueAtTime(0,at);
+        node.envelope.gain.linearRampToValueAtTime(index?.026:.075,at+.025);
+        node.envelope.gain.exponentialRampToValueAtTime(.0001,at+duration);
+        node.oscillator.connect(node.filter);node.filter.connect(node.envelope);node.envelope.connect(master);
+        node.oscillator.onended=()=>release(node);
+        node.oscillator.start(at);node.started=true;node.oscillator.stop(at+duration+.01);
+      }
+    } catch { sequence.cancel();reportUnavailable(); }
   }
 
   function maybePlayCollectionSound() {

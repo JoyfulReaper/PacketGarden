@@ -1,3 +1,80 @@
+# Frog clicks and gnome arrival (2026-10-22)
+
+Both garden pages now acknowledge the first click on each exact visible frog
+with **The frog ignores you +0 points** in the existing two-second message UI.
+The visitor stays put in the model and continues its planned visit. A model-owned
+WeakSet records acknowledgment without changing the frog's path/state or retaining
+departed visitors. Subsequent clicks are consumed without a message, deadline
+renewal, sound, collection, inspection, drop or score/activity change.
+
+Central shared picking prioritizes gnome → curiosity → loose drop → visible frog
+→ mutation → specimen/grass inspection. Frog picking uses `visualState` at the
+current logical coordinates, including hops, reduced-motion positions and fading
+departure. Exact membership, lifetime, positive opacity, hidden state and the
+existing 1.5-second suspension boundary reject stale clicks. Both adapters retain
+their existing scaled/letterboxed coordinate conversion and central listeners.
+There are no Sprite input handlers or new rendering resources.
+
+Successful starts of the original dispute and all three landscaping modes emit
+one `arrival` through the shared `onCue` callback. The local Web Audio controller
+synthesizes a **560ms** descending nasal two-part motif suggesting “gnooo-mz!”:
+a bandpassed triangle followed by a softer lowpassed sawtooth buzz. It uses no
+speech API, samples, downloads, random draws, timers or dependencies. Failed
+starts, repeated updates/ticks, phase changes and visibility resume never emit
+another arrival. The original battle/victory cues are unchanged.
+
+Sound remains Off initially at 12% volume. Only the existing explicit enable
+gesture can construct/resume a context. Off, zero volume, unavailable devices
+and suspended contexts do not start the cue. One active arrival guard prevents
+overlap; each sequence owns two oscillators, two filters and two envelope gains,
+disconnecting all six on completion, mute, Off or partial construction failure.
+The existing shared master, compressor and output gain remain unchanged.
+
+The diagnostic frog button now explains first/repeat clicks. Existing gnome
+triggers demonstrate the arrival when Sound is enabled. No production debug
+controls or additional preview listeners were added. Script versions on all
+three pages were advanced together to prevent mixed cached integrations.
+
+Validation and local artifacts (`artifacts/frog-gnome-ack/`, intentionally ignored):
+
+- All **66 Node check files** pass. New `frog-clicks.cjs` covers exact-instance
+  ownership, unchanged model/paths, shared priority, moving/reduced/departing hits,
+  expiry/hidden/suspension and both real page input adapters. New
+  `gnome-arrival-audio.cjs` covers all four starts, failed eligibility/probability,
+  shared cooldown, phase preservation, unavailable/suspended devices, mute/Off,
+  partial allocation failure and **100 sequences with zero connected transient nodes**.
+- Focused Chrome: `node tests/pixi-default-browser.cjs --run --whimsy-only`.
+  Both pages exercise first/repeat clicks during hops and reduced motion, unchanged
+  message deadlines and Score: 0, all four incident starts, updates/resume/mute,
+  and six real audio sequences each. Each page uses one context and no cue-driven
+  resume; connected tracked nodes peak at **8** (two existing output gains plus
+  six transient nodes) and return to **2** after every sequence. The existing
+  compressor is unaltered and not included in that tracked-node count.
+- Native Chrome PCM at 48kHz has peak **0.00358** at the default 12% and **0.05070**
+  at full volume; RMS approximately **0.000504 / 0.00713**, with **zero clipped
+  samples**. `gnomes-arrival-default-output.wav` and `gnomes-arrival-output.wav`
+  are test captures, not runtime assets. `frog-gnome-resources.json` records results.
+- `frog-click-canvas.png` and `frog-click-pixi.png` show the exact message and
+  retained visitor beside water. Existing full Chrome regressions also cover
+  gnomes/underpants, harvesting, both landscaping modes, frogs, puddles, grass,
+  Stillbloom, weather, audio/collection controls and lifecycle teardown.
+- No new artwork, atlas frames, Sprites, texture sources, per-frame work or loops.
+  Picking considers at most two frogs only on input. In this full Chrome run,
+  quiet gnome CPU submission averaged **0.143ms** active versus **0.169ms** idle;
+  hurricane active/idle averaged **0.168 / 0.190ms** at about 16.68ms/frame.
+  These short, noisy samples are regression observations, not a speedup claim.
+- Debug/Release .NET builds, backend validation and real host polling/SSE checks
+  pass. The backend-check build retains NU1900 because NuGet vulnerability
+  metadata was unavailable, including on retry; builds and assertions completed.
+
+Listening limitation: native output, pitch/envelope schedules, volume scaling
+and cleanup were verified, but this environment cannot audition audio. The
+nasal two-part design is intended as a musical “Gnomes!” illusion; reasonable
+word recognition still needs a human listening check. It is deliberately quiet,
+especially at the default volume. Other browsers/devices and long audio soaks
+remain unverified. Older reports below describing pass-through frog clicks or
+silent landscaping predate this slice.
+
 # Lush grass and reliable recovery (2026-10-21)
 
 The shared grass population previously recovered only at exactly zero patches,

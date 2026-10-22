@@ -45,8 +45,13 @@ historical snapshots, not current missing-feature lists. Ordinary live weed buds
 are now implemented as a separate loose drop, alongside clicked-gnome underpants.
 
 Both renderers now share opt-in Web Audio (Off initially, 12% initial volume)
-for successful growth, rare flourishes, pointless collections and the original
-Gnome Incident. Its shared model retains the 30-specimen threshold, 2% check
+for successful growth, rare flourishes, pointless collections and gnome arrivals.
+Every successful dispute and landscaping-mode start has one short synthesized
+nasal “gnooo-mz!” motif, suggesting a musical voice without speech, recordings
+or network access. Existing battle/victory cues remain. Failed attempts, ticks
+and resume are silent; two bounded voices use the existing volume and output
+chain and disconnect after completion or muting. The original incident's shared
+model retains the 30-specimen threshold, 2% check
 every 45 seconds, four actors and 12-second cleanup. The homepage also shows
 Noise Observatory's five-minute-average events/minute and actual reported
 last-hour count over the existing SSE feed. Exact TCPNoise listening ports
@@ -79,15 +84,21 @@ or a logical gap over 1.5 seconds discards stale visits and starts a fresh
 
 The bounded renderer-neutral model has its own random stream and uses the
 existing logical tick. It never changes ecology, specimen capacity, rarity,
-weather, scores, activity or acceptance statistics. Frogs have no click/collection
-or sound behavior and consume none of the existing curiosity/drop/gnome slots.
+weather, scores, activity or acceptance statistics. A frog's first click now shows
+`The frog ignores you +0 points` for two seconds, while its exact visit continues
+unchanged. Later clicks are consumed without a new message, timer renewal or
+fall-through. Shared picking follows its actual pose, after gnomes, curiosities
+and drops, before mutations/inspection. Hidden, departed, stale and fully faded
+frogs cannot be picked. This creates no collection or sound and consumes none
+of the existing curiosity/drop/gnome slots.
 Canvas uses its shared overlay; Pixi reuses six finite sit/hop frames across
 three green/olive palettes in the ambient atlas, with at most two persistent
 Sprites and no runtime geometry/textures. Gnome click priority is unchanged.
 
 Only `/pixi-live.html` has **Trigger frog (simulated)**. It seeds suitable local
 water when needed and can create two ordinary 60-second visits, without incoming
-network events or activity. Further frog interactions remain possibilities.
+network events or activity. It also demonstrates the once-only message. Further
+frog interactions remain possibilities.
 
 Additional possible visitors include:
 
@@ -167,7 +178,7 @@ exhausted sample ends the visit. A **45-second work deadline** also ends the
 incident; an exit already in progress takes at most another 750ms plus tick
 rounding. Ideal 250ms ticks complete 32 cuts in about 41 seconds; real timer
 delays can reach the deadline with fewer cuts even without incoming traffic.
-Shared hidden-tab, reduced-motion, silent presentation and cleanup rules apply. No changes to
+Shared hidden-tab, reduced-motion, optional arrival cue and cleanup rules apply. No changes to
 growth rules, acceptance counts, provenance, SSE/NATS or Recent activity.
 
 The development-only **Trigger overcrowding relief (simulated)** button at
@@ -295,7 +306,7 @@ without retries, queues or eviction. Bud deadlines missed while hidden or more
 than 1.5 seconds late are discarded without catch-up. Amanita keeps its original
 1% live-mushroom roll, five-second delay and hidden/resume behavior.
 
-Click priority is now active gnome → curiosity → topmost loose drop → mutation → inspection.
+Click priority is now active gnome → curiosity → topmost loose drop → visible frog → mutation → inspection.
 Only the selected bud disappears, briefly saying
 `You smoked some ditch weed. +0 points`, with existing optional quiet audio.
 No smoke effect, consumption animation, occupancy, grass/puddle change, Recent
