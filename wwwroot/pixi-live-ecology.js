@@ -18,7 +18,7 @@
           patch.moveTo(p[0], p[1]).quadraticCurveTo(p[2], p[3], p[4], p[5])
             .quadraticCurveTo(p[6], p[7], p[8], p[9]).lineTo(p[0], p[1]);
         }
-        patch.fill({ color: grassArt.shades[shade], alpha: .6 });
+        patch.fill({ color: grassArt.shades[shade], alpha: grassArt.baseOpacity ?? .6 });
       }
       patch.position.set(variant * 64, 0); sheet.addChild(patch); grassPatches.push(patch); keys.push(`grass:${variant}`);
     }
@@ -47,7 +47,7 @@
       const state = ecologyCore.grassVisualState(cell, at), sprite = record.sprite;
       sprite.scale.set(state.growth * (1 - state.decline * .65));
       sprite.tint = (state.color[0] << 16) | (state.color[1] << 8) | state.color[2];
-      sprite.alpha = state.opacity / .6; // patch fill already contains the .6 base opacity
+      sprite.alpha = state.opacity / .6; // shared lifecycle ratio over baked groundcover opacity
       record.nextAt = ecologyCore.nextGrassVisualChangeAt(cell, at) ?? Infinity;
       nextGrassScanAt = Math.min(nextGrassScanAt, record.nextAt);
       counters.grassVisualUpdates++;

@@ -647,12 +647,12 @@ cleanup and immediate closure of a removed Wild grass inspection card.
 Invalid, paused and saturated/dropped events leave grass untouched. Neighboring
 grass is not cleared. Natural spread and fake DNS/HTTP influence now consult
 the specimen cell map; occupied targets are skipped with no retry or extra roll.
-The existing chance thresholds and cadence remain unchanged. Plant expiry or
+Placement and input-influence thresholds remain unchanged. Plant expiry or
 collection creates no grass automatically; neighboring spread may reclaim that
 soil later. Fixture imports also skip occupied cells, so the full 640-specimen
 diagnostic seed starts with zero grass and gains available soil as plants expire.
 If every grass patch has gone, the implemented natural reseeding below can
-eventually restart the population once sufficient soil becomes available.
+restart the population at the next eligible scheduled check with even one free cell.
 
 The integration uses successful placement callbacks and event-driven removal,
 without a new animation loop or per-frame occupancy sweep. Placement, rarity,
@@ -682,27 +682,33 @@ continue to matter and equal-strength traffic should not cause constant churn.
 
 ## Fuller, greener wild grass (implemented)
 
-Canvas and Pixi share 12 finite recipes of irregular overlapping broad blades,
-low groundcover and two or three taller tufts. Four restrained shades and a
-healthier green tint replace thin highlighted Pixi fans and Canvas's round blobs.
-Growth/shrink/opacity deadlines, yellow-to-brown aging, visible soil, specimen
+Canvas and Pixi share 12 finite recipes with a substantial overlapping leafy mat
+and taller irregular rosettes. Four restrained shades, irregular edges and small
+soil gaps give 91–96% mature tile coverage in the reviewed atlas samples.
+Growth/shrink/fading deadlines, yellow-to-brown aging, specimen
 silhouettes, picking, puddles and local-time lighting retain their behavior.
 Pixi bakes once at startup, keeps one Sprite per grass cell and releases its
 construction contexts and owned atlas resources. Canvas paints the same recipes
-only when its cached base needs an update; there is no grass animation loop.
+only when its cached base needs an update, reusing 48 native shade paths instead
+of rebuilding geometry. There is no grass animation loop or new texture source.
 
 One shared helper starts both gardens with 12 seeds, one random empty cell in
-each distributed region. Natural spreading remains every four seconds, 50% per
-attempt, with 1–4 attempts according to suitable mature population. Parents are
-never refreshed by spreading. Fixed-seed ten-minute fixtures reached 245–258
-patches from 12, so no probability or attempt increase was needed.
+each distributed region. Natural spreading runs every four seconds, 70% per
+attempt, with 1–6 attempts according to reachable mature population. Parents are
+never refreshed by spreading. Eight traffic-free seeds reached 78–89% coverage
+at ten minutes; the previous policy reached 38–41%.
 
-Zero living grass now permits occasional natural recovery: at most one check
-per minute, at least eight unoccupied specimen cells, one 25% roll, at most one
-new patch on random empty soil through `influenceGrassCell`. Failures wait;
-surviving turf suppresses recovery. Hidden/resumed pages reset cadence and
-missed whole windows are skipped. Saturation can still eliminate all grass;
-gnomes or expiry merely release soil, allowing a later uncertain natural seed.
+One scheduled check per minute can plant up to three new patches on available
+soil through `influenceGrassCell`, rechecking occupancy. Extinction with even
+one free cell guarantees a new patch. One isolated survivor, old dry turf or a
+population trapped behind specimens no longer permanently disables recovery.
+Healthy spreading populations suppress maintenance. Hidden/resumed pages reset
+cadence; missed whole windows are skipped. Saturation still prevents planting;
+gnomes or expiry merely release soil for the next natural check.
+Fading patches keep their existing one-time 40% seed opportunity until soil is
+receptive, allowing successors to establish as old turf expires. Parents retain
+the original 20/27/32/35-minute aging schedule. Quiet, synchronized lawns can
+still have visible age waves; coverage counts are separate from healthy counts.
 No network events, growth statistics, provenance, rarity or Recent activity change.
 
 Comparable Chrome captures cover sparse/young, moderate/dense, mixed specimens,
@@ -710,7 +716,7 @@ fading/dying, day/night and rain/puddles in both renderers. They prompted more
 irregular clump positioning and transparent atlas-margin corrections. The result
 is fuller and greener with soil gaps and readable specimens. Finite variants
 can still repeat in artificial uniform fields; long live-traffic and other-GPU
-visual tuning remain. See [measurements and reproduction](PIXI-LIVE.md#fuller-wild-grass-and-natural-recovery-2026-10-20).
+visual tuning remain. See [current measurements and reproduction](PIXI-LIVE.md#lush-grass-and-reliable-recovery-2026-10-21).
 
 ## Visual variation
 

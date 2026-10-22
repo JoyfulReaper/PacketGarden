@@ -182,6 +182,8 @@ const updateEveryMs = 250;
 
 const gardenEcologyCore = window.PacketGardenEcology;
 const grassConfig = gardenEcologyCore.grassConfig;
+// Forty-eight finite native paths; base repaint only changes tint/scale/opacity.
+const grassPaths = window.PacketGardenGrassArt.createPaths?.(window.Path2D);
 let nextGrassSpreadAt = 0;
 // Browser-only development traffic: about 30 events per minute at these defaults.
 const fakeTrafficConfig = {
@@ -853,16 +855,17 @@ function drawGrass(grass, now) {
   context.beginPath();
   context.rect(3, 3, gardenWidth - 6, gardenHeight - 6);
   context.clip();
-  context.globalAlpha = opacity;
   const art = window.PacketGardenGrassArt;
+  context.globalAlpha = opacity / .6 * (art.baseOpacity ?? .6);
   context.translate(x, y);
   const scale = growth * (1 - decline * .65);
   context.scale(scale, scale);
   context.translate(-32, -32);
-  const blades = art.variants[art.variantFor(grass)];
+  const variant=art.variantFor(grass),blades = art.variants[variant];
   for (let shade = 0; shade < art.shades.length; shade++) {
     const tint = art.shades[shade];
     context.fillStyle = `rgb(${Math.round(color[0] * (tint >> 16) / 255)}, ${Math.round(color[1] * (tint >> 8 & 255) / 255)}, ${Math.round(color[2] * (tint & 255) / 255)})`;
+    if(grassPaths){context.fill(grassPaths[variant][shade]);continue;}
     context.beginPath();
     for (const blade of blades) {
       if (blade.shade !== shade) continue;

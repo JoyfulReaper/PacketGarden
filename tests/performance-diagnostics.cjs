@@ -154,6 +154,8 @@ data=snapshot(bounded);assert.equal(data.samples.base,120);assert.equal(data.sam
 assert.equal(data.counts.baseRebuilds,500);assert.equal(data.counts.overlayPaints,500);
 assert.equal(data.counts.panelUpdates,1);assert.equal(state(bounded),boundedState);
 bounded.run('gardenState.grassCells[0].lastInfluencedAt=Date.now()-grassConfig.fadingAfterMs;drawGarden()');
+// Fill the deadline-only ring independently of natural additions/spread.
+bounded.run('gardenEcology.tickGrass=at=>gardenEcology.removeExpiredGrass(at)');
 for(let i=0;i<130;i++)tick(bounded,1000);assert.equal(snapshot(bounded).samples.deadlineOnly,120);
 assert(!JSON.stringify(data).includes('garden-test'),'diagnostics contain no safe provenance either');
 const source=fs.readFileSync('wwwroot/garden-perf.js','utf8');

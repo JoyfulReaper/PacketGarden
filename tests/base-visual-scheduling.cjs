@@ -1,6 +1,10 @@
 // Aggregate visual deadlines using actual renderers and fake clocks. No sleeps.
 const assert=require('node:assert/strict'),fs=require('node:fs');
-const createGarden=require('./browser-garden.cjs');
+const browserGarden=require('./browser-garden.cjs');
+// Isolate cached visual deadlines from population changes. Real grass aging and
+// expiry still run; natural spread/recovery are exercised by the ecology suites.
+const createGarden=options=>{const garden=browserGarden(options);
+  garden.run('gardenEcology.tickGrass=at=>gardenEcology.removeExpiredGrass(at)');return garden;};
 function instrument(garden){
   const work={base:0,lookup:0,neighbor:0,compute:0,layouts:0};
   for(const key of Object.keys(work))garden.sandbox['visualCount'+key]=()=>work[key]++;

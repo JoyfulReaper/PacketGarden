@@ -28,9 +28,9 @@ for (let i=0;i<12;i++) {
   assert.equal(tile.destroyArgument,undefined,'owned grass context released with destroy()');
   assert(!commands.some(c=>c[0]==='ellipse'),'no carpet blobs');
   const blades=commands.filter(c=>c[0]==='fill'); assert.equal(blades.length,4,'four batched shade groups per patch');
-  assert(blades.every(c=>c[1].alpha===.6),'existing base opacity retained');
+  assert(blades.every(c=>c[1].alpha===.94),'opaque leafy underlayer, with shared lifecycle fading');
   assert(commands.filter(c=>c[0]==='quadraticCurveTo').length>=blades.length*2,'tapered curved blades');
-  assert(commands.filter(c=>c[0]==='quadraticCurveTo').length>=50,'broad curved blades, including low groundcover');
+  assert(commands.filter(c=>c[0]==='quadraticCurveTo').length>=120,'substantial leafy groundcover, separate from upright blades');
   assert.equal(commands.filter(c=>c[0]==='stroke').length,0,'shade variation uses surfaces, without needle-like highlight lines');
   for (const command of commands) for (const arg of command.slice(1)) if (typeof arg==='number') assert(Number.isFinite(arg));
   shapes.add(JSON.stringify(commands));

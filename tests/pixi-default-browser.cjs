@@ -305,9 +305,12 @@ async function run() {
         await page.getByRole('heading',{name:'Flower',exact:true}).waitFor();
         assert.equal(await page.locator('#specimen-sensor').textContent(),'browser-fixture');
         await page.getByRole('button',{name:'Close specimen information'}).click();
-        // This fixture now has 639 fuller grass patches. Keep visible-soil
-        // checks without requiring the former sparse artwork's bare area.
-        const resizedSoil=soilPixels(png(await page.locator('#view canvas').screenshot()));
+        // Verify the resized soil underneath the deliberately seeded 639-patch
+        // lawn. Dense grass coverage is checked separately by the lawn fixture.
+        let resizedSoil;
+        await page.evaluate(()=>{__gardenTestApp.stage.children[0].children[3].visible=false;__gardenTestApp.render();});
+        try{resizedSoil=soilPixels(png(await page.locator('#view canvas').screenshot()));}
+        finally{await page.evaluate(()=>{__gardenTestApp.stage.children[0].children[3].visible=true;__gardenTestApp.render();});}
         assert(resizedSoil.coverage > .35,JSON.stringify(resizedSoil));
         assert(await page.locator('.network-activity').isVisible());
         assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow from activity section');

@@ -21,46 +21,46 @@ for(const roll of [0,.5,.999999]) {
   const before=positions(m);m.seedInitialGrass();assert.equal(m.grassCells.length,22,'existing seeds are never refreshed');
   assert.deepEqual(positions(m).slice(0,11),before);
 }
-for(const free of [0,7,8,640])for(const roll of [0,.249999999,.25,1]) {
+for(const free of [0,1,7,8,640])for(const roll of [0,.25,.999999999]) {
   let calls=0;const changes=[];
-  const m=E.createEcologyModel({now:()=>0,random:()=>++calls%2?roll:.999999,isCellOccupied:(x,y)=>y*32+x>=free,onChange:e=>changes.push(e)});
+  const m=E.createEcologyModel({now:()=>0,random:()=>{calls++;return roll;},isCellOccupied:(x,y)=>y*32+x>=free,onChange:e=>changes.push(e)});
   m.tickGrass(59999);assert.equal(calls,0);m.tickGrass(60000);
-  const success=free>=8&&roll<.25;
-  assert.equal(calls,free<8?0:success?2:1,'one eligibility roll, one target draw only on success');
-  assert.equal(m.grassCells.length,success?1:0);assert.equal(changes.length,success?1:0);
-  if(success){assert.equal(changes[0].kind,'grass-added');assert.equal(m.grassCells[0].row*32+m.grassCells[0].column,free-1);assert.equal(m.grassCells[0].createdAt,60000);}
-  const count=calls;m.tickGrass(60000);m.tickGrass(60001);assert.equal(calls,count,'no retry at the same deadline');
-  if(!success){m.tickGrass(119999);assert.equal(calls,count);m.tickGrass(120000);assert.equal(calls,count+(free>=8?1:0));}
+  const count=Math.min(free,3);
+  assert.equal(calls,count,'no chance gate; at most three target draws');
+  assert.equal(m.grassCells.length,count);assert.equal(changes.length,count);
+  assert.equal(new Set(m.grassCells.map(c=>c.row*32+c.column)).size,count);
+  for(const cell of m.grassCells){assert(cell.row*32+cell.column<free);assert.equal(cell.createdAt,60000);}
+  const draws=calls;m.tickGrass(60000);m.tickGrass(60001);assert.equal(calls,draws,'no retry at the same deadline');
 }
 {
   let calls=0;const m=E.createEcologyModel({now:()=>0,random:()=>{calls++;return .99;}});
   m.influenceGrassCell(10,10,50000);m.nextGrassSpreadAt=1e9;m.tickGrass(60000);
-  assert.equal(calls,0,'surviving young turf suppresses reseeding');
+  assert.equal(m.grassCells.length,4,'one isolated young survivor does not suppress maintenance');assert.equal(calls,3);
   m.grassCells[0].lastInfluencedAt=60000-E.grassConfig.deadAfterMs;m.tickGrass(120000);
-  assert.equal(calls,0,'dry but unexpired turf is still living');
-  m.clearGrass();m.tickGrass(180000);assert.equal(calls,1);
+  assert.equal(m.grassCells.length,7,'dry unexpired turf does not count as healthy');
+  m.clearGrass();m.tickGrass(180000);assert.equal(calls,9);
 }
 {
   let calls=0;const m=E.createEcologyModel({now:()=>0,random:()=>{calls++;return 0;}});
   m.tickGrass(600000);assert.equal(calls,0,'missed minutes are discarded');
-  m.tickGrass(659999);assert.equal(calls,0);m.tickGrass(660000);assert.equal(m.grassCells.length,1);
-  m.clearGrass();m.tickGrass(720000,true);assert.equal(calls,2);
-  m.resetCadence(3600000);m.tickGrass(3600000);m.tickGrass(3659999);assert.equal(calls,2);
-  m.tickGrass(3660000);assert.equal(calls,4);assert.equal(m.grassCells.length,1);
+  m.tickGrass(659999);assert.equal(calls,0);m.tickGrass(660000);assert.equal(m.grassCells.length,3);
+  m.clearGrass();m.tickGrass(720000,true);assert.equal(calls,3);
+  m.resetCadence(3600000);m.tickGrass(3600000);m.tickGrass(3659999);assert.equal(calls,3);
+  m.tickGrass(3660000);assert.equal(calls,6);assert.equal(m.grassCells.length,3);
 }
 {
   let occupancyChecks=0;
   const m=E.createEcologyModel({now:()=>0,random:()=>0,isCellOccupied:()=>++occupancyChecks>640});
   for(let at=250;at<60000;at+=250)m.tickGrass(at);
   assert.equal(occupancyChecks,0,'empty populations do not scan occupancy on every logical tick');
-  m.tickGrass(60000);assert.equal(occupancyChecks,641);
+  m.tickGrass(60000);assert.equal(occupancyChecks,643);
   assert.equal(m.grassCells.length,0,'authoritative creation rechecks the selected cell, with no retry');
 }
 // Entire population expires, then the authoritative addition path creates one new generation.
 {
   const m=E.createEcologyModel({now:()=>0,random:()=>0});m.influenceGrassCell(3,3,0);
   m.resetCadence(E.grassConfig.expiredAfterMs-60000);m.tickGrass(E.grassConfig.expiredAfterMs);
-  assert.equal(m.grassCells.length,1);assert.equal(m.grassCells[0].createdAt,E.grassConfig.expiredAfterMs);
+  assert.equal(m.grassCells.length,3);assert(m.grassCells.every(c=>c.createdAt===E.grassConfig.expiredAfterMs));
 }
 // Saturation clears every initial patch; actual expiry or gnome removals release soil.
 for(const relief of ['expiry','gnomes']) {
@@ -76,19 +76,19 @@ for(const relief of ['expiry','gnomes']) {
     for(let i=0;i<200&&crew.incident;i++){at+=250;crew.tick(at,()=>.99);ecology.tickGrass(at);}
     assert.equal(crew.incident,null);assert.equal(garden.specimens.length,608);
   }
-  ecology.resetCadence(at);at+=60000;ecology.tickGrass(at);assert.equal(ecology.grassCells.length,1);
+  ecology.resetCadence(at);at+=60000;ecology.tickGrass(at);assert.equal(ecology.grassCells.length,3);
   const parent=ecology.grassCells[0],birth=parent.createdAt;
   if(relief==='gnomes'){at=G.timings.broadleaf.expiredAfterMs;garden.tick(at);}
   for(let i=0;i<8;i++){at+=4000;ecology.tickGrass(at);}
   assert(ecology.grassCells.length>1,'normal spreading resumes');assert.equal(parent.lastInfluencedAt,birth,'no parent refresh');
   assert(ecology.grassCells.every(c=>!garden.byCell.has(c.row*32+c.column)));
 }
-// Fixed-seed coverage experiment, preserving the 4s/.50/1–4 spread policy.
+// Fixed-seed quiet coverage, preserving the 4s cadence and natural parent aging.
 const coverage=[];
 for(const seed of [11,82,193]){
   const m=E.createEcologyModel({now:()=>0,random:seeded(seed)});m.seedInitialGrass();const counts=[];
   for(let at=250;at<=600000;at+=250){m.tickGrass(at);if(at%120000===0)counts.push(m.grassCells.length);}
-  assert(counts[0]>12&&counts[4]>200,'coverage develops without raising chance/cadence/attempt limits');coverage.push(counts);
+  assert(counts[0]>12&&counts[4]>=480,'75% open-soil coverage by ten minutes');coverage.push(counts);
 }
 console.log('Grass coverage at 2/4/6/8/10 minutes (three fixed seeds):',JSON.stringify(coverage));
 (async()=>{
@@ -106,7 +106,9 @@ console.log('Grass coverage at 2/4/6/8/10 minutes (three fixed seeds):',JSON.str
     for(let i=0;i<240;i++){canvas.clock.now+=250;canvas.tick();pixi.frame(250);}
     const relative=(m,origin)=>positions(m).map(([x,y,birth,influence])=>[x,y,birth-origin,influence-origin]);
     assert.deepEqual(relative(canvasModel,offsets[0]),relative(pixi.ecology,offsets[1]));
-    for(const g of [canvasModel,pixi.ecology])assert(g.grassCells.length<=1);
+    for(const g of [canvasModel,pixi.ecology])assert(g.grassCells.length<=3);
+    assert.equal(pixi.model.counts.acceptedLive,0);assert.equal(pixi.model.recentEvents.length,0);
+    assert.equal(canvas.run('gardenState.recentEvents.length'),0,'natural grass never fabricates activity');
     canvas.setHidden(true);pixi.doc.hidden=true;pixi.docHandlers.get('visibilitychange')();
     canvas.clock.now+=600000;pixi.advance(600000);
     canvas.setHidden(false);pixi.doc.hidden=false;pixi.docHandlers.get('visibilitychange')();
@@ -120,5 +122,5 @@ console.log('Grass coverage at 2/4/6/8/10 minutes (three fixed seeds):',JSON.str
   // Shared recipes and rendering are synchronous/still, unaffected by motion preferences.
   for(const reduced of [true,false]){const g=await start(false,{captureModel:true,reduced});assert.equal(g.ecology.grassCells.length,12);g.winHandlers.get('pagehide')({persisted:false});}
   assert.doesNotMatch(fs.readFileSync('wwwroot/garden-grass.js','utf8'),/setInterval|setTimeout|requestAnimationFrame|Math.random/);
-  console.log('PASS: shared distributed seeds, exact reseed/free-space/probability/cadence boundaries, expiry/gnome recovery, unchanged spread/aging, Canvas/Pixi parity/hidden resume, finite recipes and repeated cleanup.');
+  console.log('PASS: distributed seeds, guaranteed bounded recovery/free-space/cadence boundaries, expiry/gnome recovery, tuned spreading with original aging, Canvas/Pixi parity/hidden resume, finite recipes and repeated cleanup.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

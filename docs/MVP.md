@@ -56,7 +56,7 @@ sensor/service inputs remain goals.
   water/two-visit trigger appears only on `/pixi-live.html`.
 - ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
 - Default PixiJS/WebGL garden at `/` and `/index.html`, original Canvas at `/canvas.html`, and a separate Pixi diagnostic/live-soak page at `/pixi-live.html`; all retain the 32×20 logical garden, bounded capacity, and shared model rules.
-- Pixi has cached, larger and revised plant artwork (including vines, broadleaf, blackthorn and ordinary weed), collection/inspection, and bounded rendering resources; no logical cell-size or lifecycle change from visual polish. Both renderers now draw fuller, greener wild grass using 12 shared finite broad-blade/groundcover recipes, with open soil and preserved aging, inspection, water layering and lighting. Pixi retains one Sprite per grass cell and startup-only atlas generation.
+- Pixi has cached, larger and revised plant artwork (including vines, broadleaf, blackthorn and ordinary weed), collection/inspection, and bounded rendering resources; no logical cell-size or lifecycle change from visual polish. Both renderers now draw dense leafy wild grass with taller rosettes using 12 shared finite recipes, about 91–96% mature tile coverage in atlas samples, and preserved aging, inspection, water layering and lighting. Pixi retains one Sprite per grass cell and the unchanged ecology atlas; Canvas reuses 48 cached native shade paths.
 - Local-time atmospheric lighting in Pixi and Canvas: smooth dawn/day/golden-hour/dusk/night transitions at fixed local-time anchors, with readable cool nights and preserved specimen colors. Existing cyan/white luminous art stands out without added bloom. One shared, quantized surface color transform leaves cached geometry/textures untouched and is disabled at day. The existing logical tick samples every 30 seconds, skips identical values and hidden work, handles clock/timezone changes and refreshes once on resume. Existing weather/rain/lightning/sound/reduced-motion controls compose unchanged, with a restrained night-storm compensation. Diagnostic presets and a 0–24 hour slider appear only on `/pixi-live.html`; public pages use actual local time. No ecology, growth, rarity, provenance, activity, backend or network changes. Directional shadows, seasonal sun times, long GPU/compositor profiling and other-browser verification remain outside this slice.
 - Five development mappings: DNS flowers, HTTP broad-leaf plants, SSH thorny vines, Gopher mushrooms, and port-22-probe red blooms.
 - Simple procedural art, including visual connections between neighboring vine cells.
@@ -147,21 +147,28 @@ only; reloading clears it.
 
 Grass cells separately hold `column`, `row`, `createdAt`, and `lastInfluencedAt`.
 Both renderers begin with 12 random seeds distributed across the garden by a
-shared helper, excluding occupied cells. With zero living patches, at most one
-check per 60 seconds may naturally reseed: at least eight free specimen cells,
-one 25% roll, and one random empty-cell patch through authoritative creation.
-No retry on failure or multiple seeds; hidden/resumed pages reset cadence and
-missed whole windows are skipped. This permits uncertain recovery after complete
-grass loss and later specimen expiry/gnome relief, without synthetic traffic,
-activity rows or growth statistics. Surviving turf disables reseeding.
+shared helper, excluding occupied cells. A scheduled 60-second maintenance check
+guarantees recovery from extinction with even one free specimen cell, creating
+at most three patches through authoritative creation and rechecking occupancy.
+It also helps critically sparse healthy turf (below 10% of available soil,
+capped at 12 healthy patches), or populations below 75% healthy coverage with no
+reachable empty neighbour. Healthy spreading turf suppresses maintenance.
+Hidden/resumed pages reset cadence; missed whole windows are skipped. No synthetic
+traffic, activity rows, provenance or growth statistics are created.
 They expand automatically from sparse seeds to mature turf over 30 seconds. Healthy
-mature coverage receives 1–4 spread attempts every 4 seconds depending on
-population, with a 50% success chance per attempt. On entering fading, turf gets one
-40% final seed opportunity per influence cycle; at most six newly-fading cells are
-checked per spread tick to smooth synchronized aging. Natural spread creates a new
+mature coverage receives 1–6 spread attempts every 4 seconds depending on
+reachable mature population, with a 70% success chance per attempt. Eight seeded
+quiet runs reach 78–89% open-soil coverage at ten minutes. Fading turf retains one
+40% final seed opportunity until an empty neighbour exists; at most six are
+checked per spread tick. Natural spread creates a new
 generation without refreshing the parent. Without refresh, turf fades after 20
 minutes and expires after 35. Re-influence revives the cell and restarts that aging
 cycle.
+
+The original 20/27/32/35-minute aging stages remain; total turf coverage includes
+yellow/brown aging patches. Young generations replace expired turf without
+refreshing parents. Longer quiet sessions can still show age waves; see
+[coverage, captures and limits](PIXI-LIVE.md#lush-grass-and-reliable-recovery-2026-10-21).
 
 ## Remaining MVP work
 

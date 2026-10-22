@@ -37,7 +37,7 @@ for(const type of ['dns','http']) {
   assert.equal(m.influenceGrassCell(0,0,200),null);m.seed({grassCells:[{column:0,row:0,createdAt:0,lastInfluencedAt:0}]});assert.equal(m.grassCells.length,0);
 }
 let rolls=0;const fading=E.createEcologyModel({random:()=>{rolls++;return 0;},isCellOccupied:(x,y)=>x!==1||y!==1});
-fading.influenceGrassCell(1,1,0);fading.spreadGrass(1200000);assert.equal(fading.grassCells.length,1);assert.equal(rolls,1,'one final-seed roll, no occupied-child retry');
+fading.influenceGrassCell(1,1,0);fading.spreadGrass(1200000);assert.equal(fading.grassCells.length,1);assert.equal(rolls,0,'blocked soil retains the final opportunity without a roll');
 // Actual Canvas path: notification dirties the base, and first presentation sees cleared soil.
 const c=canvas();c.sandbox.Math.random=()=>0;
 c.run('gardenModel.clear();gardenEcology.clear();influenceGrassCell(0,0,Date.now());influenceGrassCell(1,0,Date.now());const neighborGrass=gardenState.grassCells[1];const originalDraw=drawGarden;let paintCount=0;drawGarden=function(...args){paintCount++;if(gardenState.grassCells.some(g=>g.column===0&&g.row===0))throw Error("grass remained at first plant paint");return originalDraw(...args)}');

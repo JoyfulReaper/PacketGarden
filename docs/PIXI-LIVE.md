@@ -1,3 +1,159 @@
+# Lush grass and reliable recovery (2026-10-21)
+
+The shared grass population previously recovered only at exactly zero patches,
+with eight free cells and a 25% minute roll. One isolated survivor disabled that
+path. Ordinary spreading also established only about 40% of open soil in ten
+minutes. The artwork left most of each mature tile brown.
+
+## Shared population policy
+
+The existing 250ms logical tick retains a **60-second** maintenance deadline.
+On a due check, one census considers at most 640 cells, available specimen-free
+soil, and healthy grass (idle less than 20 minutes, including young turf).
+Maintenance applies when healthy count is below `min(12, ceil(available * .10))`,
+or when healthy coverage is below 75% and no healthy patch can reach empty soil.
+It plants at most **three** random distinct patches, sampled without replacement,
+through `influenceGrassCell`; each selected cell's authoritative occupancy is
+checked again at creation. No chance gate remains. Complete extinction with
+even one free cell therefore recovers at the next eligible check. A full
+specimen garden cannot create grass. Healthy spreading populations do not keep
+receiving maintenance, and dry survivors no longer suppress it.
+
+Normal spread still runs every **four seconds**. Reachable mature populations
+of 1 / 2–6 / 7–20 / 21–48 / 49+ receive **1 / 2 / 3 / 4 / 6** attempts, each
+with a strict **70%** chance. The existing one-time **40%** fading seed chance
+is retained until a genuinely empty neighbour exists; otherwise a full lawn
+would waste every opportunity before the first generation expires. Failed
+eligible rolls are still consumed once, at most six fading opportunities per
+spread tick. Children start at the current time; parents are never refreshed.
+
+Growth still matures at 30 seconds, fades at 20 minutes, becomes dying at 27,
+dry at 32 and expires at 35. Maintenance never removes/replaces a living grass
+patch. Hiding/resuming resets both deadlines; whole missed maintenance windows
+are discarded. There are no catch-up loops, new timers, network events,
+provenance, Recent activity rows or accepted-growth counts. Existing destination
+grass removal, inspection invalidation and specimen priority remain authoritative.
+
+## Reproducible coverage
+
+`tests/grass-coverage.cjs` runs eight LCG seeds (11, 82, 193, 421, 901, 1234,
+7301, 9983) at 250ms steps for 40 minutes with **no traffic**, comparing immutable
+checkpoint `f4d4e26` with the working implementation. Coverage is distinct
+unexpired grass cells / currently unoccupied specimen cells, not pixel coverage.
+
+| Quiet garden from 12 seeds | Before | After |
+| --- | --- | --- |
+| 2 minutes | 4.5–4.8% | 10.0–10.8% |
+| 5 minutes | 15.9–18.8% | 36.6–40.5% |
+| 10 minutes | 38.3–41.3% | 78.4–89.2% |
+| 15 minutes | 62.3–64.8% | 99.7–100% |
+| 20 minutes | 84.1–90.2% | 100% |
+| 40 minutes | 81.3–85.6% | 98.4–99.8% |
+
+From complete extinction, ten-minute coverage improves **6.3–21.9% ->
+50.9–73.4%**, fifteen-minute **17.7–41.1% -> 84.8–100%**, and forty-minute
+**93.4–99.8% -> 99.1–100%**. With 160 distributed specimen blockers, ten-minute
+coverage improves **50.4–53.8% -> 92.5–99.2%** of the remaining 480 cells.
+The largest additions in one sampled tick were eight (including fading seeds
+and maintenance); the hard independent budgets are six ordinary attempts, six
+fading checks and three minute-maintenance targets. No grid is filled instantly.
+
+**Coverage includes aging turf.** At forty minutes the quiet runs contain
+233–254 healthy patches (36–40% of open soil), with the remainder mostly aging
+first-generation turf. Extinction/recovery runs have 120–148 healthy patches.
+These are visible age waves, not a promise of permanently green mature turf:
+the original lifetimes and parent-aging rules are preserved. Both healthy counts
+and total coverage are retained in the raw JSON rather than presenting total
+population as all-green coverage.
+
+## Artwork and visual review
+
+Twelve deterministic shared recipes now place a substantial jittered leafy mat
+under four irregular taller rosettes. Overlapping small leaves, medium/dark/light
+greens and irregular edges extend toward neighbouring cells without rectangular
+fills, outlines or neon color. The mature interior of the twelve baked frames
+has **91.2–96.0%** coverage at alpha > .5, near the requested 85–95% target.
+The shared model's color, growth, decline and opacity curves are unchanged;
+presentation applies the lifecycle ratio over a .94 base fill instead of .6.
+Young turf remains small; old turf thins, yellows and browns.
+
+Canvas builds **48 finite Path2D shade paths once** and reuses them on cached-base
+repaints. Non-Path2D test contexts retain the equivalent command path. Pixi bakes
+the same recipes into the existing 12 grass frames in its unchanged ecology
+atlas. No recurring path construction, Graphics, runtime textures, shaders,
+new texture sources, animation loops or production controls were added.
+
+The matched Chrome review set includes native-size single tiles and 5×5 crops,
+sparse starts, natural five/ten-minute snapshots, extinction recovery at 15 and
+40 minutes, flowers/mushrooms, and puddles/two frogs/four gnomes in day/night.
+I visually reviewed the actual captures: the old tufts leave broad brown gaps;
+the new mat joins into a textured lawn, with irregular edges and readable
+specimens. Young edges and old yellow/brown patches remain distinguishable.
+Frogs remain small but visible beside the water. Artificial rectangular plantings
+still have a rectangular overall boundary; individual tiles have no outlines.
+
+Local ignored evidence: `artifacts/grass-lush/{before,after}/` contains matching
+`pixi-*.png`, `canvas-*.png`, native `*-normal.png` crops, `comparison.png`,
+`coverage.json` and `rendering.json`. These are real captures, not regenerated
+mockups. The 40-minute capture deliberately shows the retained aging wave.
+
+## Resource and validation results
+
+| Matched 608 grass + 32 specimens/wildlife fixture | Before | After |
+| --- | --- | --- |
+| Pixi mean / worst CPU render submission, 120 calls | .037 / .40ms | .030 / .20ms |
+| Canvas mean / worst forced base repaint, 12 calls | 7.56 / 10.8ms | 3.96 / 4.90ms |
+| Ecology atlas backing / RGBA accounting | 2048×128 / 1 MiB | unchanged |
+| Ecology frames / live atlas sources across garden | 16 / 4 | unchanged |
+| Ecology bake CPU submission | 3.40ms | 6.40ms |
+| Cached native Canvas paths | 0 | 48 |
+| Additional recurring textures / Pixi geometry / Canvas path commands | 0 | 0 |
+
+The five existing startup texture-generation calls include an intermediate
+source; four sources remain live. One Sprite per grass cell is retained, up to
+640 without specimen occupancy. Twenty matched Canvas/Pixi recovery cycles and
+twenty Pixi clear/refill cycles leave no grass views, all removed Sprites
+destroyed, and no new atlas bakes.
+Ecology construction contexts release after baking; page teardown destroys the
+stage and all owned sources. Native Path2D memory/driver-retained GPU memory are
+not measured. Short CPU submissions are noisy and are not GPU/compositor or
+sustained FPS guarantees; the Canvas repaint is state/deadline-driven, not per frame.
+
+All **64 Node entry points** pass. Focused tests cover extinction/one-cell/full-to-
+free recovery, stranded/aging/healthy populations, target revalidation, exact
+deadlines, probability boundaries, blocked fading opportunities, parent aging,
+expiry/gnome relief, hidden/resume/stalls, 640-cell limits, real Canvas/Pixi
+parity, repeated ownership cleanup and unchanged input influence. Cached visual
+deadline/ring-buffer tests isolate population additions while retaining actual
+grass aging/expiry; the ecology suites exercise the real population rules.
+
+The **full installed-Chrome suite** passes, including existing gnomes/all
+landscaping modes, underpants, weed buds, Amanita, Stillbloom, frogs, organic
+water, lighting, weather, clicks, audio, SSE and page-close ownership. Resize
+soil checks temporarily hide the seeded lawn layer to test the soil beneath;
+the lawn runner independently checks dense coverage and shared scene counts.
+Debug/Release .NET builds, backend checks and actual ASP.NET polling-to-SSE
+integration pass with no backend changes. The checks build retains NU1900
+warnings because NuGet vulnerability metadata was unavailable.
+
+```powershell
+node tests/grass-coverage.cjs --baseline
+node tests/grass-coverage.cjs
+node tests/grass-maintenance.cjs
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+node tests/grass-lush-browser.cjs --run --baseline
+node tests/grass-lush-browser.cjs --run
+node tests/pixi-default-browser.cjs --run
+```
+
+Remaining limits: other browsers/devices/GPUs and a long real-NATS soak remain
+unverified. Blocked/disconnected soil and ongoing specimen claims can slow
+establishment. Natural aging can temporarily reduce healthy green coverage even
+when unexpired population is high. Older dated grass records below retain their
+historical constants and measurements; this section describes current behavior.
+
+---
+
 # Pixi page lifecycle fix (2026-10-21)
 
 The page-close exception was an ownership race: `pagehide` destroyed Pixi's
@@ -638,6 +794,9 @@ NU1900 vulnerability-feed warnings when NuGet metadata is unavailable. No
 server persistence, classification thresholds, port mapping or NATS changes.
 
 # Fuller wild grass and natural recovery (2026-10-20)
+
+Historical checkpoint; population and artwork policy is superseded by the
+2026-10-21 lush-grass/recovery section above.
 
 Canvas and Pixi now share 12 finite grass recipes in `garden-grass.js`: broader
 curved blades, three low groundcover clumps and two or three irregular taller

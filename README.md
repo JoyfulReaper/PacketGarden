@@ -82,10 +82,11 @@ gnomes, and `?perf=1` diagnostics. Both Pixi pages now share the optional growth
 and collection audio, plus the same Gnome Incident rules. Subsequent Pixi-only
 art passes made plants larger and more distinctive and grass more tuft-like,
 without changing the 32×20 model, ecology, or specimen lifetimes.
-Both renderers now draw fuller, irregular wild grass with broad overlapping
-blades, low groundcover, taller tufts and restrained green shade variation.
-Pixi still uses 12 cached variants and one Sprite per grass cell; Canvas uses
-the same finite shape recipes. Soil gaps, young growth, yellow/brown aging,
+Both renderers now draw a dense leafy groundcover mat beneath irregular upright
+blades, with restrained green shade variation and small organic soil gaps.
+Mature tiles cover about 91–96% of their soil area in the reviewed atlas samples.
+Pixi still uses 12 cached variants and one Sprite per grass cell; Canvas caches
+48 native shade paths from the same finite recipes. Young growth, yellow/brown aging,
 puddle layering and local-time lighting remain visible. Clicking a
 grass-covered tile without a specimen or collectible hit opens a compact
 **Wild grass** card with its current state. This is background ecology, not a
@@ -413,24 +414,30 @@ cells. Removing/expiring a specimen creates no grass automatically; neighboring
 turf may reclaim the newly available soil on a later ordinary spread attempt.
 Both gardens start with **12 patches**, randomized within distributed regions
 through one shared helper, skipping occupied specimen cells. If no living grass
-survives, a separate bounded check on the existing logical tick runs at most
-once per **60 seconds**: with at least **eight free specimen cells**, a **25%**
-roll may create **one** patch on random available soil. Failed checks wait for
-the next minute. Hidden/resumed pages start a fresh cadence, with no catch-up
-seeds; missed whole check windows are discarded. This can recover turf after
-overcrowding and later gnome removals or expiry, but never guarantees help.
+survives, the next eligible **60-second** check guarantees recovery whenever
+even **one** specimen cell is free. Each check creates at most **three** patches,
+without refreshing existing turf. The same small maintenance budget also helps
+critically sparse healthy populations and stranded patches that cannot reach
+available soil; a healthy spreading population does not continually reseed.
+Hidden/resumed pages start a fresh cadence; missed whole windows are discarded.
+Expiry and gnome removals release soil for later natural recovery, not instant planting.
 It creates no network events, Recent activity, provenance or accepted-growth counts.
 
 Once seeded, sparse grass expands into ragged turf on available soil
-over 30 seconds without further traffic. Healthy mature grass now receives 1–4
+over 30 seconds without further traffic. Healthy mature grass receives 1–6
 bounded spread attempts every 4 seconds as active mature coverage grows; each
-attempt has a 50% chance to seed an immediate empty neighbor. When neglected turf
-first enters fading, it gets one 40% final seed opportunity per influence cycle,
-processed in small batches to avoid synchronized bursts. Natural spreading never
+attempt has a 70% chance to seed an immediate empty neighbor. Eight fixed-seed,
+traffic-free runs reached **78–89% open-soil coverage at ten minutes**, versus
+38–41% previously. Neglected turf retains one 40% final seed opportunity per
+influence cycle until a neighbour has receptive soil; at most six are checked
+per spread tick. Natural spreading never
 refreshes the parent, so old turf still ages out. Neglected turf begins fading
 after 20 minutes, becomes brown/dead-looking by 32 minutes, and disappears after
 35. Re-influence restores health, refreshes that timer, and allows a later fading
 cycle to earn another final seed opportunity.
+Coverage includes aging turf: quiet gardens can still pass through visible
+yellow/brown age waves before their younger generations take over. See
+[coverage, visual comparisons and resource limits](docs/PIXI-LIVE.md#lush-grass-and-reliable-recovery-2026-10-21).
 
 Weather supports Manual previews and Live aggregate weather from Noise
 Observatory through the backend and SSE. Both use the same renderer for quiet,

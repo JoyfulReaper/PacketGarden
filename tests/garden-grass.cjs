@@ -4,14 +4,14 @@ const E = require('../wwwroot/garden-ecology.js'), createCanvas = require('./bro
 assert.deepEqual(E.grassConfig, { influenceChances: { dns: .45, http: .65 }, secondCellChance: .35, sameCellChance: .5,
   influenceRadius: 1, growingAfterMs: 10000, matureAfterMs: 30000, fadingAfterMs: 1200000,
   dyingAfterMs: 1620000, deadAfterMs: 1920000, expiredAfterMs: 2100000,
-  spreadEveryMs: 4000, spreadChance: .5, fadingSeedChance: .4, maxSpreadAttempts: 4, maxFadingSeedChecksPerTick: 6,
-  initialSeeds:12, reseedEveryMs:60000, reseedChance:.25, reseedMinFreeCells:8 });
+  spreadEveryMs: 4000, spreadChance: .7, fadingSeedChance: .4, maxSpreadAttempts: 6, maxFadingSeedChecksPerTick: 6,
+  initialSeeds:12, reseedEveryMs:60000, maxMaintenanceSeeds:3, sparseHealthyRatio:.1, strandedHealthyRatio:.75 });
 for (const test of require('./fixtures/production-ecology.json').cases) {
   let i = 0;
   const model = E.createEcologyModel({ random: () => test.rolls[i++ % test.rolls.length] });
   for (let n = 0; n < 80; n++) model.influenceGrass(n % 3 === 0 ? 'http' : 'dns', { column: n % 32, row: Math.floor(n / 32) }, 1000 + n);
-  for (const at of [40000,44000,1202000,1206000,1210000]) model.spreadGrass(at);
-  assert.deepEqual(model.grassCells, test.cells, 'matches original production random order, coordinates, timestamps and fade bookkeeping');
+  const influence=cells=>cells.filter(c=>c.createdAt<40000).map(({fadeSeedAttemptedAt,...cell})=>cell);
+  assert.deepEqual(influence(model.grassCells),influence(test.cells),'network influence retains its historical random order, coordinates and timestamps');
 }
 const make = (rolls = [.99]) => { let i = 0; return E.createEcologyModel({ now: () => 0, random: () => rolls[Math.min(i++, rolls.length - 1)] }); };
 for (const [event, chance] of [['dns',.45],['http',.65]]) {
@@ -38,9 +38,9 @@ for (const age of [29999,30000]) {
   const m = make([0]); m.influenceGrassCell(10,10,0); m.tickGrass(age);
   assert.equal(m.grassCells.length,age===30000?2:1);
 }
-for (const roll of [.499999,.5]) {
+for (const roll of [.699999,.7]) {
   const m=make([roll,0,0]); m.influenceGrassCell(10,10,0);m.tickGrass(30000);
-  assert.equal(m.grassCells.length,roll<.5?2:1);
+  assert.equal(m.grassCells.length,roll<.7?2:1);
 }
 const cadence=make([0]);cadence.influenceGrassCell(10,10,0);cadence.tickGrass(30000);
 const count=cadence.grassCells.length;cadence.tickGrass(33999);assert.equal(cadence.grassCells.length,count);
@@ -71,4 +71,4 @@ assert.equal(canvas.run('gardenState.grassCells===gardenEcology.grassCells'),tru
 assert.equal(canvas.run('grassConfig===window.PacketGardenEcology.grassConfig'),true);
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-ecology.js','utf8'),/setTimeout|setInterval|PIXI|CanvasRenderingContext2D|document\.|localStorage|sessionStorage/);
 require('./grass-ecology.cjs');
-console.log('PASS: shared grass exact config/influence/placement/refresh/identity/grid/cadence/expiry/visual math; original production random oracle; Canvas ownership; no per-cell timers.');
+console.log('PASS: tuned grass config/influence/placement/refresh/identity/grid/cadence/expiry/visual math; historical influence oracle; Canvas ownership; no per-cell timers.');

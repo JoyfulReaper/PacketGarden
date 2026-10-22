@@ -15,14 +15,15 @@
     deadAfterMs: 32 * 60_000,
     expiredAfterMs: 35 * 60_000,
     spreadEveryMs: 4_000,
-    spreadChance: 0.5,
+    spreadChance: 0.7,
     fadingSeedChance: 0.4,
-    maxSpreadAttempts: 4,
+    maxSpreadAttempts: 6,
     maxFadingSeedChecksPerTick: 6,
     initialSeeds: 12,
     reseedEveryMs: 60_000,
-    reseedChance: 0.25,
-    reseedMinFreeCells: 8
+    maxMaintenanceSeeds: 3,
+    sparseHealthyRatio: 0.1,
+    strandedHealthyRatio: 0.75
   };
 
   const puddleConfig = {
@@ -186,22 +187,37 @@
       if (at < nextGrassReseedAt) return;
       const missedWindow = at >= nextGrassReseedAt + grassConfig.reseedEveryMs;
       nextGrassReseedAt = at + grassConfig.reseedEveryMs;
-      if (missedWindow || gardenState.grassCells.length) return;
-      // Only an empty population needs this bounded occupancy scan, once per minute.
-      const empty = [];
+      if (missedWindow) return;
+      // One bounded census per due minute, never per frame. Healthy young turf
+      // counts too; dry survivors must not suppress a new generation elsewhere.
+      const occupied=new Set(gardenState.grassCells.map(cell=>cell.row*columns+cell.column));
+      const healthy=gardenState.grassCells.filter(cell=>at-cell.lastInfluencedAt<grassConfig.fadingAfterMs);
+      const empty = [];let available=0;
       for (let cell = 0; cell < columns * rows; cell++) {
-        if (!isCellOccupied(cell % columns, Math.floor(cell / columns))) empty.push(cell);
+        if(isCellOccupied(cell%columns,Math.floor(cell/columns)))continue;
+        available++;if(!occupied.has(cell))empty.push(cell);
       }
-      if (empty.length < grassConfig.reseedMinFreeCells || random() >= grassConfig.reseedChance) return;
-      const cell = empty[Math.floor(random() * empty.length)];
-      influenceGrassCell(cell % columns, Math.floor(cell / columns), at);
+      if(!empty.length)return;
+      const sparse=healthy.length<Math.min(grassConfig.initialSeeds,Math.ceil(available*grassConfig.sparseHealthyRatio));
+      const stranded=healthy.length<available*grassConfig.strandedHealthyRatio
+        && !healthy.some(cell=>emptyGrassNeighbors(cell,occupied).length>0);
+      if(!sparse&&!stranded)return;
+      // Guaranteed extinction recovery, including one free cell. Sampling without
+      // replacement keeps work bounded; authoritative creation rechecks occupancy.
+      const count=Math.min(grassConfig.maxMaintenanceSeeds,empty.length);
+      for(let i=0;i<count;i++){
+        const index=Math.floor(random()*empty.length),cell=empty[index];
+        empty[index]=empty[empty.length-1];empty.pop();
+        influenceGrassCell(cell%columns,Math.floor(cell/columns),at);
+      }
     }
 
     function grassSpreadAttemptCount(activeCount) {
       if (activeCount <= 0) return 0;
-      if (activeCount <= 12) return 1;
-      if (activeCount <= 24) return 2;
-      if (activeCount <= 48) return 3;
+      if (activeCount <= 1) return 1;
+      if (activeCount <= 6) return 2;
+      if (activeCount <= 20) return 3;
+      if (activeCount <= 48) return 4;
       return grassConfig.maxSpreadAttempts;
     }
 
@@ -237,6 +253,10 @@
         const idleMs = now - grass.lastInfluencedAt;
         if (idleMs < grassConfig.fadingAfterMs) continue;
         if (grass.fadeSeedAttemptedAt === grass.lastInfluencedAt) continue;
+        // Keep the one final opportunity until soil is actually receptive.
+        // Otherwise a full lawn spends every chance at minute 20, then loses
+        // its entire first generation before successors can establish.
+        if(!emptyGrassNeighbors(grass,occupied).length)continue;
 
         grass.fadeSeedAttemptedAt = grass.lastInfluencedAt;
         fadingChecks++;
