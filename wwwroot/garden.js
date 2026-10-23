@@ -225,7 +225,7 @@ const speciesConfig = new Map([
 // Factories start empty; the ecology binding is installed before any growth/seed.
 let gardenEcology = null;
 const gardenModel = gardenCore.createGardenModel({ now: () => Date.now(), random: () => Math.random(), onChange(change) {
-  if (change.kind === 'added') gardenEcology?.removeGrassCell(change.specimen.column, change.specimen.row);
+  if (change.kind === 'added') gardenEcology?.specimenAdded(change.specimen.column, change.specimen.row);
   if (change.kind === 'removed') {
     gardenMutations.removed(change.specimen, change.reason);
     gardenAmbient.cancelSource(change.specimen);
@@ -1140,6 +1140,13 @@ function resizeGarden() {
 
 function seedInitialGrass(now = Date.now()) { gardenEcology.seedInitialGrass(now); }
 
+const grassUnderPlantsControl = document.querySelector('#allow-grass-under-plants');
+grassUnderPlantsControl.checked = false;
+function updateGrassUnderPlants() {
+  gardenEcology.setAllowGrassUnderPlants(grassUnderPlantsControl.checked);
+  drawGarden();
+}
+grassUnderPlantsControl.addEventListener('change', updateGrassUnderPlants);
 seedInitialGrass();
 new ResizeObserver(resizeGarden).observe(canvas);
 window.addEventListener("resize", resizeGarden);
@@ -1165,6 +1172,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", event => {
+  if (!event?.persisted) grassUnderPlantsControl.removeEventListener?.('change', updateGrassUnderPlants);
   gardenFrogs?.setHidden(true);
   gardenAmbient.setHidden(true);
   if (!event?.persisted) gardenAmbient.clear();

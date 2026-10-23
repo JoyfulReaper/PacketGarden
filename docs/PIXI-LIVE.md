@@ -1,3 +1,78 @@
+# Grass under plants (2026-10-22)
+
+The homepage, Canvas fallback and `/pixi-live.html` have **Allow grass under
+plants** beside the existing controls. Its native labeled checkbox supports
+keyboard input and the existing wrapping mobile layout. It starts OFF on every
+reload; no storage is used. Script versions advance together on all three pages.
+
+`garden-ecology.js` owns the boolean and all eligibility decisions. Initial seed,
+natural/fading spread, maintenance reseeding, direct influence/refresh, validated
+fixture import and the Canvas fixture setter share the same occupancy predicate.
+Both plant adapters call `specimenAdded`; the ecology model decides whether to
+remove destination grass. The legacy Canvas fixture setter now validates bounds,
+timestamps and uniqueness, filters occupied cells when OFF and emits ordinary
+ecology notifications. Invalid imports leave existing state intact.
+
+Enabling changes eligibility immediately without adding grass, consuming random
+rolls or resetting deadlines. Normal spread/reseeding establishes coverage.
+Disabling makes one bounded pass over the current lawn, removes only overlaps
+from authoritative state and sends ordinary `grass-removed` notifications. Open
+soil retains its exact grass objects/timestamps. Re-enabling permits normal
+regrowth. Plant placement, occupancy, competition, rarity and lifetimes never
+depend on this option. At most 640 distinct grass cells can coexist with 640
+specimens; normal growth/fading/expiry and hidden-page cadence remain unchanged.
+
+The two grass renderers were inspected and keep their existing presentation:
+Canvas draws grass before water/specimens in its cached base, and Pixi's grass
+container precedes water, links and plants. Picking retains the shared specimen
+priority. No renderer-specific overlap rule or per-Sprite input was added.
+Canvas repaints through its existing invalidation path; hidden pages defer paint.
+Pixi reuses existing add/remove notifications and its page-owned input listener,
+which is removed and guarded on teardown. Canvas removes its listener on final
+page closure and retains it with a retained page session.
+
+Validation and local artifacts (`artifacts/grass-under-plants/`, ignored):
+
+- `node tests/grass-under-plants.cjs`: deterministic OFF/ON ingress, occupied
+  spread/refresh, spawn/replacement, selective removal, natural regrowth,
+  natural establishment to 640 unique grass cells under 640 plants, atomic
+  duplicate rejection, aging/expiry, hidden/resume, Canvas/Pixi layering and
+  specimen inspection, input cleanup, late Pixi callbacks and atlas reuse.
+- All **61 Node suites** pass (68 entry files including seven optional browser
+  entry points/helpers), covering existing ecology, placement, maintenance/recovery,
+  parity, render scheduling, interaction and lifecycle. Dense performance
+  fixtures explicitly enable coexistence instead of bypassing fixture validation.
+- `node tests/grass-under-plants-browser.cjs --run --baseline` serves committed
+  HEAD (`f87d5440de1aa730053b2ef0bf6ab238260d2b09` for this review); `--run` serves
+  the edited sources. Chrome 155 captures the same 96-plant mixed and 640-plant
+  dense fixtures on all three pages, OFF/ON, plus 390px mobile controls. See
+  `before/` and `after/` PNGs and `review.json`. Coverage imports are explicit
+  screenshot fixtures; the deterministic suite independently proves natural
+  establishment. No real network specimen events are invented by the harness.
+  Wall time is frozen and render frames are stepped manually; diagnostic HUD
+  FPS/gap values in these captures are not performance measurements.
+- Chrome checks verify 544/0 grass cells in mixed/dense OFF fixtures versus
+  640 unique cells in both ON fixtures, unchanged specimens, no instant fill,
+  repeated selective removal, hidden maintenance, keyboard toggles and OFF after
+  reload. The existing `pixi-default-browser.cjs --run --lifecycle-only` suite
+  also passes late callbacks, hide/show, bfcache and initialization cleanup.
+- Debug/Release .NET builds, backend checks and real ASP.NET polling/SSE checks
+  pass. The backend-check build reports the existing NU1900 warning when NuGet
+  vulnerability metadata is unreachable; assertions complete successfully.
+
+Resource impact: one model boolean and one input listener per page. ON takes
+constant work; OFF scans at most 640 grass cells and issues at most 640 removals.
+No dependencies, storage, timers or render loops were added. Chrome repeated-toggle
+probes leave the five existing Pixi atlas bakes and geometry counts unchanged;
+Canvas retains 48 cached grass paths and its two existing timers. Coexistence can
+add up to 640 grass Sprites on Pixi (using the existing ecology atlas), or up to
+640 grass draws on an already-invalidated Canvas base, even when every plant cell
+is occupied. Mature grass retains its existing visual deadlines. Structural
+performance checks still show zero recurring base work for stable mature scenes.
+These checks establish bounded resources and visual order, not GPU/compositor
+smoothness or performance on other browsers/devices. No long live-traffic soak
+was performed for this change.
+
 # Frog clicks and gnome arrival (2026-10-22)
 
 Both garden pages now acknowledge the first click on each exact visible frog
@@ -93,7 +168,7 @@ It plants at most **three** random distinct patches, sampled without replacement
 through `influenceGrassCell`; each selected cell's authoritative occupancy is
 checked again at creation. No chance gate remains. Complete extinction with
 even one free cell therefore recovers at the next eligible check. A full
-specimen garden cannot create grass. Healthy spreading populations do not keep
+specimen garden cannot create grass with **Allow grass under plants** OFF. Healthy spreading populations do not keep
 receiving maintenance, and dry survivors no longer suppress it.
 
 Normal spread still runs every **four seconds**. Reachable mature populations

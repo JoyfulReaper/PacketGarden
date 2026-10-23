@@ -412,7 +412,7 @@
     own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
     let ui, ecology = null;
-    const model = core.createModel(view, { onAdded: source => ecology?.removeGrassCell(source.column, source.row), onLive: source => {
+    const model = core.createModel(view, { onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
@@ -480,6 +480,9 @@
         if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
     own(()=>ecology.clear());
+    const grassUnderPlantsControl = document.querySelector('#allow-grass-under-plants');
+    grassUnderPlantsControl.checked = false;
+    listen(grassUnderPlantsControl,'change',event=>ecology.setAllowGrassUnderPlants(event.target.checked));
     // Distributed local seeds; real TCPNoise never gains grass influence.
     ecology.seedInitialGrass();
     const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});

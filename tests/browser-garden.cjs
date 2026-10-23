@@ -35,6 +35,9 @@ function createGarden(options = {}) {
         if (!this.handlers.has(name)) this.handlers.set(name, []);
         this.handlers.get(name).push(handler);
       },
+      removeEventListener(name, handler) {
+        this.handlers.set(name, (this.handlers.get(name) ?? []).filter(value => value !== handler));
+      },
       setAttribute(name, value) { this.attributes[name] = value; },
       getContext: () => selector === '#garden-overlay' ? overlayContext : context, getBoundingClientRect: () => rect
     });

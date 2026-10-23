@@ -97,6 +97,8 @@
 
   function createEcologyModel({ now: clock = Date.now, random: defaultRandom = Math.random, onChange = () => {}, weather = 'quiet', isCellOccupied = () => false } = {}) {
     const gardenState = { grassCells: [], puddles: [] };
+    let allowGrassUnderPlants = false;
+    const grassBlocked = (column, row) => !allowGrassUnderPlants && isCellOccupied(column, row);
     const random = () => defaultRandom();
     let nextGrassSpreadAt = 0, weatherLevel = weather;
     let nextGrassReseedAt = clock() + grassConfig.reseedEveryMs;
@@ -145,7 +147,7 @@
 
     function influenceGrassCell(column, row, now = clock()) {
       if (!Number.isInteger(column) || !Number.isInteger(row) || column < 0 || column >= columns || row < 0 || row >= rows) return null;
-      if (isCellOccupied(column, row)) return null;
+      if (grassBlocked(column, row)) return null;
       const grass = gardenState.grassCells.find(cell => cell.column === column && cell.row === row);
       if (grass) {
         if (grass.lastInfluencedAt !== now) {
@@ -168,13 +170,32 @@
       notify('grass-removed', grass); return grass;
     }
 
+    function setAllowGrassUnderPlants(enabled) {
+      allowGrassUnderPlants = Boolean(enabled);
+      // Turning on changes eligibility only. Turning off reconciles the model
+      // synchronously through the same removal notifications as plant growth.
+      if (!allowGrassUnderPlants) {
+        const removed = [];
+        gardenState.grassCells = gardenState.grassCells.filter(grass => {
+          if (!isCellOccupied(grass.column, grass.row)) return true;
+          removed.push(grass); return false;
+        });
+        for (const grass of removed) notify('grass-removed', grass);
+      }
+    }
+
+    function specimenAdded(column, row) {
+      if (!allowGrassUnderPlants) return removeGrassCell(column, row);
+      return null;
+    }
+
     function seedInitialGrass(at = clock()) {
       const total = columns * rows, count = grassConfig.initialSeeds;
       for (let region = 0; region < count; region++) {
         const start = Math.floor(region * total / count), end = Math.floor((region + 1) * total / count);
         const empty = [];
         for (let cell = start; cell < end; cell++) {
-          if (!isCellOccupied(cell % columns, Math.floor(cell / columns))
+          if (!grassBlocked(cell % columns, Math.floor(cell / columns))
             && !gardenState.grassCells.some(grass => grass.row * columns + grass.column === cell)) empty.push(cell);
         }
         if (!empty.length) continue;
@@ -194,7 +215,7 @@
       const healthy=gardenState.grassCells.filter(cell=>at-cell.lastInfluencedAt<grassConfig.fadingAfterMs);
       const empty = [];let available=0;
       for (let cell = 0; cell < columns * rows; cell++) {
-        if(isCellOccupied(cell%columns,Math.floor(cell/columns)))continue;
+        if(grassBlocked(cell%columns,Math.floor(cell/columns)))continue;
         available++;if(!occupied.has(cell))empty.push(cell);
       }
       if(!empty.length)return;
@@ -223,7 +244,7 @@
 
     function emptyGrassNeighbors(grass, occupied) {
       return grassNeighbors(grass.column, grass.row).filter(
-        cell => !occupied.has(cell.row * columns + cell.column) && !isCellOccupied(cell.column, cell.row)
+        cell => !occupied.has(cell.row * columns + cell.column) && !grassBlocked(cell.column, cell.row)
       );
     }
 
@@ -382,8 +403,7 @@
     }
     function clearGrass() { const cells = gardenState.grassCells; gardenState.grassCells = []; for (const cell of cells) notify('grass-removed', cell); }
     function clearPuddles() { const puddles = gardenState.puddles; gardenState.puddles = []; for (const puddle of puddles) notify('puddle-removed', puddle); }
-    function seed({ grassCells = [], puddles = [] }) {
-      // Validated local fixture import. Live input always goes through the rules above.
+    function validateGrassCells(grassCells) {
       const cells = new Set();
       for (const cell of grassCells) {
         const { column, row, createdAt, lastInfluencedAt } = cell, key = row * columns + column;
@@ -391,6 +411,16 @@
           || !Number.isFinite(createdAt) || !Number.isFinite(lastInfluencedAt) || cells.has(key)) throw new Error('Invalid grass seed');
         cells.add(key);
       }
+    }
+    function addGrassCells(grassCells) {
+      for (const cell of grassCells) {
+        if (grassBlocked(cell.column, cell.row)) continue;
+        gardenState.grassCells.push(cell); notify('grass-added', cell);
+      }
+    }
+    function seed({ grassCells = [], puddles = [] }) {
+      // Validated local fixture import. Live input always goes through the rules above.
+      validateGrassCells(grassCells);
       if (puddles.length > puddleConfig.maxPuddles || new Set(puddles).size !== puddles.length) throw new Error('Invalid puddle seed');
       for (const puddle of puddles) {
         if (!['x', 'y', 'seed', 'size', 'maxSize', 'createdAt', 'lastRefreshedAt'].every(key => Number.isFinite(puddle[key]))
@@ -398,16 +428,14 @@
           || puddle.y < puddleConfig.edgePadding || puddle.y > gardenHeight - puddleConfig.edgePadding
           || puddle.size < 0 || puddle.maxSize < 0 || puddle.maxSize > puddleConfig.maxSize) throw new Error('Invalid puddle seed');
       }
-      clearGrass(); clearPuddles();
-      for (const cell of grassCells) {
-        if (isCellOccupied(cell.column, cell.row)) continue;
-        gardenState.grassCells.push(cell); notify('grass-added', cell);
-      }
+      clearGrass(); clearPuddles(); addGrassCells(grassCells);
       for (const puddle of puddles) { gardenState.puddles.push(puddle); notify('puddle-added', puddle); }
     }
     return {
       get grassCells() { return gardenState.grassCells; },
-      set grassCells(entries) { gardenState.grassCells = entries; }, // legacy Canvas fixture compatibility
+      set grassCells(entries) { validateGrassCells(entries); clearGrass(); addGrassCells(entries); }, // Canvas fixture compatibility
+      get allowGrassUnderPlants() { return allowGrassUnderPlants; },
+      setAllowGrassUnderPlants, specimenAdded,
       get puddles() { return gardenState.puddles; },
       set puddles(entries) { gardenState.puddles = entries; },
       get nextGrassSpreadAt() { return nextGrassSpreadAt; }, set nextGrassSpreadAt(at) { nextGrassSpreadAt = at; },

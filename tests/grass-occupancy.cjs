@@ -16,8 +16,11 @@ assert.deepEqual(notifications,['grass-removed','added']);assert.deepEqual(ecolo
 assert(!ecology.grassCells.includes(removed));assert.equal(ecology.removeGrassCell(0,0),null);
 const entries=Array.from({length:640},(_,i)=>({type:'flower',column:i%32,row:Math.floor(i/32),vigor:i===5?0:3,createdAt:at}));
 garden.seed(entries);assert.equal(ecology.grassCells.length,0,'seeded specimens clear grass too');
-// Deliberately import legacy overlapping grass to exercise saturation/replacement recovery.
+// Deliberately simulate stale occupancy during an old overlapping fixture import.
+// The supported fixture setter now enforces occupancy too.
+const savedCells=new Map(garden.byCell);garden.byCell.clear();
 ecology.grassCells=[{column:5,row:0,createdAt:0,lastInfluencedAt:0},{column:6,row:0,createdAt:0,lastInfluencedAt:0}];
+for(const [key,value] of savedCells)garden.byCell.set(key,value);
 const unchanged=JSON.stringify(ecology.grassCells);notifications=[];
 assert.equal(garden.addSpecimen('flower',0),null);assert.equal(garden.addEvent({}),null);assert.equal(garden.addSpecimen('bogus'),null);
 assert.equal(JSON.stringify(ecology.grassCells),unchanged);assert.deepEqual(notifications,['dropped']);
@@ -46,7 +49,7 @@ assert.equal(c.run('gardenState.grassCells[0]===neighborGrass'),true);assert.equ
 c.run('gardenModel.clear();gardenEcology.clear();nextGrassSpreadAt=Date.now()+100000');
 c.run('influenceGrassCell(0,0,Date.now());influenceGrassCell(1,0,Date.now())');
 c.run("spawnSpecimen('flower','dns')");assert.equal(c.run('gardenState.grassCells.some(g=>g.column===0&&g.row===0)'),false);
-c.fill(3);c.run('gardenState.specimens[0].vigor=0;gardenState.grassCells=[{column:0,row:0,createdAt:Date.now(),lastInfluencedAt:Date.now()},{column:1,row:0,createdAt:Date.now(),lastInfluencedAt:Date.now()}]');
+c.fill(3);c.run('gardenState.specimens[0].vigor=0;const savedCells=new Map(gardenModel.byCell);gardenModel.byCell.clear();gardenState.grassCells=[{column:0,row:0,createdAt:Date.now(),lastInfluencedAt:Date.now()},{column:1,row:0,createdAt:Date.now(),lastInfluencedAt:Date.now()}];for(const [key,value] of savedCells)gardenModel.byCell.set(key,value)');
 const legacy=c.run('JSON.stringify(gardenState.grassCells)');c.emit(53,'flower',0);
 assert.equal(c.run('JSON.stringify(gardenState.grassCells)'),legacy,'Canvas dropped growth leaves legacy grass untouched');
 c.emit(53,'flower',1);assert.equal(c.run('gardenState.grassCells.length'),1);assert.equal(c.run('gardenState.grassCells[0].column'),1);
@@ -59,12 +62,12 @@ c.emit(53,'flower',1);assert.equal(c.run('gardenState.grassCells.length'),1);ass
     g.app.canvas.handlers.get('click')({clientX:rect.left+(root.position.x+15*root.scale.x)*rect.width/screen.width,
       clientY:rect.top+(root.position.y+15*root.scale.y)*rect.height/screen.height});
     assert.equal(g.element('#specimen-card-title').textContent,'Wild grass');assert(!g.element('#specimen-card').hidden);
-    let beforeView=false;const remove=g.ecology.removeGrassCell;
-    g.ecology.removeGrassCell=(...args)=>{const result=remove(...args);assert.equal(root.children[6].children.length,0);beforeView=true;return result;};
+    let beforeView=false;const added=g.ecology.specimenAdded;
+    g.ecology.specimenAdded=(...args)=>{const result=added(...args);assert.equal(root.children[6].children.length,0);beforeView=true;return result;};
     const accepted=g.model.acceptEvent({specimenType:'flower',listenPort:53,vigor:0});assert.equal(accepted.specimen.cell,0);assert(beforeView);
     assert(g.element('#specimen-card').hidden,'grass-removed closes inspection synchronously, before a UI tick');
     assert(!h.live.has(target));assert(h.live.has(neighbor));assert.equal(g.ecology.grassCells.length,1);assert.equal(root.children[6].children.length,1);
-    g.ecology.removeGrassCell=remove;
+    g.ecology.specimenAdded=added;
     g.model.seed();assert.equal(g.ecology.grassCells.length,0);
     const victim=g.model.specimens[0];for(const p of g.model.specimens)p.vigor=3;victim.vigor=0;
     // Simulate an old overlapping fixture using the documented legacy import path.

@@ -194,7 +194,7 @@ assert.equal(actorWork.base, 0, 'actor cleanup never invalidates ecology');
 
 // Dense mature vines and grass: count actual production renderer calls, not elapsed wall time.
 const dense = createGarden();
-dense.run('gardenState.specimens=Array.from({length:640},(_,i)=>({type:"vine",column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-120000,vigor:i%4})); gardenState.grassCells=Array.from({length:640},(_,i)=>({column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()})); drawGarden()');
+dense.run('gardenEcology.setAllowGrassUnderPlants(true);gardenState.specimens=Array.from({length:640},(_,i)=>({type:"vine",column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-120000,vigor:i%4})); gardenState.grassCells=Array.from({length:640},(_,i)=>({column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()})); drawGarden()');
 weather(dense, 'botnet_hurricane');
 dense.run('for(let i=0;i<8;i++) createStormPuddle(Date.now(),()=>0.5); drawGarden()');
 dense.run('for(let i=0;i<3;i++) createFirstSeenCuriosity(gardenState.specimens[i],()=>0.5); startGnomeIncident(Date.now(),()=>0.5)');

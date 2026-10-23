@@ -26,6 +26,7 @@ function setup(garden,type='mixed'){
       const type='${type}'==='mixed'?stableTypes[i%stableTypes.length]:'${type}';
       return {type,column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-speciesConfig.get(type).timings.matureAfterMs-1000,vigor:i%4};
     });
+    gardenEcology.setAllowGrassUnderPlants(true);
     gardenState.grassCells=Array.from({length:640},(_,i)=>({column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()}));
     gardenState.puddles=[];drawGarden()`);
 }

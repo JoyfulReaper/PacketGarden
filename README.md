@@ -399,23 +399,36 @@ Only `/pixi-live.html` has a clearly simulated trigger and virtual quiet/health/
 probability controls; these do not certify organic weather. See [freshness
 contract](docs/REAL-DATA.md#upstream-health-and-stillbloom) and [visual/testing notes](docs/PIXI-LIVE.md#stillbloom-2026-10-21).
 
-Successful growth or stronger replacement clears wild grass from exactly the
+**Allow grass under plants** is an accessible checkbox beside the existing
+controls on `/`, `/canvas.html` and `/pixi-live.html`. It defaults unchecked on
+every reload and lasts only for the current page session. Checking it immediately
+allows ordinary spreading, seeding and refreshing beneath specimens; it does
+not fill cells or reset growth deadlines. New plants and stronger replacements
+then preserve existing grass. Unchecking it immediately removes only grass
+overlapping current specimen cells through the shared ecology model.
+Grass remains behind specimens and retains its normal growth, aging and expiry.
+There can be **640 distinct grass cells alongside 640 occupied plant cells**;
+plant occupancy, competition, rarity, lifetimes and inspection priority are unchanged.
+The same rules apply to diagnostic fixtures and Canvas fixture assignment.
+See [implementation, captures and validation](docs/PIXI-LIVE.md#grass-under-plants-2026-10-22).
+
+With the checkbox OFF, successful growth or stronger replacement clears wild grass from exactly the
 selected specimen cell, in both Canvas and Pixi, before presenting the new plant.
 Neighbors remain untouched, and invalid, paused or saturated/dropped events do
 not clear grass. An open Pixi Wild grass card closes immediately on removal.
 
 Successful fake DNS and HTTP spawns retain their 45% and 65% grass-influence
 chances and 35% chance of a second distinct nearby attempt. Occupied targets
-(including the new plant's own cell) are skipped without retrying or rerouting
+(including the new plant's own cell) are skipped with the checkbox OFF, without retrying or rerouting
 the roll, so only available neighboring soil can be seeded/refreshed. Real
 TCPNoise growth does not directly seed or refresh grass. Grass does not occupy
-specimen slots or affect specimen counts. Natural spread also skips specimen
+specimen slots or affect specimen counts. With the checkbox OFF, natural spread also skips specimen
 cells. Removing/expiring a specimen creates no grass automatically; neighboring
 turf may reclaim the newly available soil on a later ordinary spread attempt.
 Both gardens start with **12 patches**, randomized within distributed regions
-through one shared helper, skipping occupied specimen cells. If no living grass
+through one shared helper, skipping occupied specimen cells unless the checkbox is ON. If no living grass
 survives, the next eligible **60-second** check guarantees recovery whenever
-even **one** specimen cell is free. Each check creates at most **three** patches,
+even **one** specimen cell is free (or any grass cell is available with the checkbox ON). Each check creates at most **three** patches,
 without refreshing existing turf. The same small maintenance budget also helps
 critically sparse healthy populations and stranded patches that cannot reach
 available soil; a healthy spreading population does not continually reseed.
@@ -561,7 +574,7 @@ cell. Ghostbloom, crystal fungus, and blackthorn are protected from forced
 replacement but still expire normally. Weed and redbloom remain replaceable.
 Equal vigor cannot churn the garden, and incoming rare growth gets the same gate.
 Successful replacements use the normal growth sound/cooldowns; dropped events
-are silent. Real TCPNoise replacement clears destination grass but does not seed
+are silent. Real TCPNoise replacement clears destination grass when **Allow grass under plants** is OFF, but does not seed
 or refresh grass. The existing
 status adds a full-garden note at capacity and removes it after space opens.
 The browser-facing TCPNoise growth contract is `specimenType`, `listenPort`, and
@@ -749,6 +762,15 @@ covered by `node tests/render-performance.cjs`.
 Storm-water lifecycle, isolation, and cached rendering checks run with
 `node tests/garden-puddles.cjs`; weighted vine hue boundaries are covered by
 `node tests/species-color-variants.cjs`.
+
+`node tests/grass-under-plants.cjs` covers the optional shared occupancy policy,
+all grass entry paths, natural regrowth, full 640+640 capacity, uniqueness,
+Canvas/Pixi layering, inspection and cleanup. With Playwright and Chrome already
+available, `node tests/grass-under-plants-browser.cjs --run` exercises all three
+pages, reload defaults, keyboard/mobile controls and resource stability, and
+captures mixed/dense gardens under `artifacts/grass-under-plants/after/`.
+Add `--baseline` to capture the current committed HEAD with the checkbox OFF
+under `before/`; the baseline revision is recorded in `review.json`.
 
 Automatic traffic is off initially. It generates one event every 1.2–2.8 seconds
 with relative weights of DNS 55, HTTP 28, SSH 10, Gopher 5, and port 22 probe 2.

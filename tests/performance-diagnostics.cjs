@@ -64,6 +64,7 @@ assert.equal(state(enabled),state(normal));
 // Positive durations from an injected monotonic clock prove every timing bucket is exercised.
 let measuredTime=0;garden.sandbox.performance.now=()=>measuredTime+=1;
 garden.run(`gardenState.specimens=Array.from({length:640},(_,i)=>({type:i%3===0?'vine':i%3===1?'wirefern':'broadleaf',column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,vigor:i%4}));
+ gardenEcology.setAllowGrassUnderPlants(true);
  gardenState.grassCells=Array.from({length:640},(_,i)=>({column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()}));
  for(let i=0;i<8;i++)createStormPuddle(Date.now(),()=>.5);
  for(let i=0;i<3;i++){createFirstSeenCuriosity(gardenState.specimens[i],()=>.875);scheduleLooseDrop(gardenState.specimens[i],'amanita_muscaria',()=>.5,Date.now()-5000)}updateLooseDrops();
@@ -164,6 +165,7 @@ assert(!/setInterval|setTimeout|requestAnimationFrame|drawImage|localStorage|ses
 for(const type of ['vine','wirefern']){
   const dense=createGarden({search:'?perf=1'});
   dense.run(`gardenState.specimens=Array.from({length:640},(_,i)=>({type:'${type}',column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,vigor:i%4}));
+    gardenEcology.setAllowGrassUnderPlants(true);
     gardenState.grassCells=Array.from({length:640},(_,i)=>({column:i%columns,row:Math.floor(i/columns),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()}));
     for(let i=0;i<8;i++)createStormPuddle(Date.now(),()=>.5);drawGarden()`);
   weather(dense);
