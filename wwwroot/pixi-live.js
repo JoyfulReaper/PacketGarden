@@ -2,6 +2,7 @@
   'use strict';
   const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
   const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
+  const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -13,15 +14,17 @@
     const seed = specimen.row * 32 + specimen.column;
     return { x: (vineNoise(seed + 11) - .5) * 8, y: (vineNoise(seed + 47) - .5) * 7 };
   }
+  function vineShape(vigor,variant) {
+    const seed=vigor*19+variant*71;
+    return {seed,lean:(vineNoise(seed)-.5)*9,top:-20-vigor*1.5,side:variant%2?-1:1};
+  }
   function vineTile(P, vigor, variant, stage) {
-    const g = new P.Graphics(), color = vineColors[variant], seed = vigor * 19 + variant * 71;
-    const lean = (vineNoise(seed) - .5) * 9, top = -20 - vigor * 1.5;
+    const g = new P.Graphics(), color = vineColors[variant], {seed,lean,top,side}=vineShape(vigor,variant);
     g.moveTo(0, -1).bezierCurveTo(-9, -9, 9 + lean, -13, lean, top)
       .stroke({ color: 0x657851, width: 1.7 });
     g.moveTo(0, -1).bezierCurveTo(-9, -9, 9 + lean, -13, lean, top)
       .stroke({ color, width: .9 });
     // One lateral branch and one open curl, baked once into the existing tile.
-    const side = variant % 2 ? -1 : 1;
     g.moveTo(-1, -9).bezierCurveTo(side * 6, -8, side * 15, -18, side * 10, -20)
       .bezierCurveTo(side * 6, -23, side * 4, -17, side * 8, -17)
       .stroke({ color, width: .8, alpha: .8 });
@@ -188,6 +191,10 @@
     for (let arrangement=0; arrangement<3; arrangement++) for (let color=0; color<5; color++) {
       const g=blooms.tile(P,color,arrangement);artTiles.push(g);tile(`broadleaf-bloom:${color}:${arrangement}`,g);
     }
+    for(let vigor=0;vigor<4;vigor++)for(let variant=0;variant<5;variant++)for(let layout=0;layout<2;layout++){
+      const g=vineBlooms.group(P,vineShape(vigor,variant),layout);artTiles.push(g);tile(`vine-bloom:${vigor}:${variant}:${layout}`,g);
+    }
+    const vineFlower=vineBlooms.linkTile(P);artTiles.push(vineFlower);tile('vine-bloom-link',vineFlower);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -214,14 +221,27 @@
     const clip = new P.Graphics().rect(0, 0, width, height).fill(0xffffff);
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
     const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(), bloomViews = new Map(); let connectionHalves = 0;
+    const vineBloomViews=new Map(),vineBloomLinks=new Map();
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
     const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout';
+    function syncVineConnection(specimen,graphic,candidate) {
+      let record=vineBloomLinks.get(specimen.id);
+      if(!candidate){if(record){record.sprite.destroy();vineBloomLinks.delete(specimen.id);}return;}
+      if(record&&(record.key!==candidate.key||record.neighborId!==candidate.neighborId)){
+        record.sprite.destroy();vineBloomLinks.delete(specimen.id);record=null;
+      }
+      if(!record){
+        const sprite=new P.Sprite(frames.get('vine-bloom-link'));sprite.anchor.set(.5,28/32);sprite.eventMode='none';
+        graphic.addChild(sprite);record={sprite};vineBloomLinks.set(specimen.id,record);
+      }
+      Object.assign(record,candidate);record.sprite.position.set(candidate.x,candidate.y);vineBlooms.style(record.sprite,specimen,true);
+    }
     function refreshVine(specimen, byCell) {
       const graphic = vineLinks.get(specimen.id); if (!graphic) return;
       connectionHalves -= halfCurvesById.get(specimen.id) ?? 0;
-      halfCurvesById.set(specimen.id, 0); graphic.clear(); if (!eligible(specimen)) return;
-      let halves = 0;
+      halfCurvesById.set(specimen.id, 0); graphic.clear(); if (!eligible(specimen)) {syncVineConnection(specimen,graphic,null);return;}
+      let halves = 0,flower=null;
       const color = vineColors[specimen.colorVariant], own = vineOffset(specimen);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dy) continue;
@@ -239,14 +259,24 @@
         const bend = (vineNoise(seed + 701) - .5) * 12 * (first ? 1 : -1);
         const midX = x / 2 + nx * bend, midY = y / 2 + ny * bend;
         const curl = (vineNoise(seed + 1409) - .5) * 13;
+        const c1x=x*.18+nx*curl,c1y=y*.18+ny*curl,c2x=midX-x*.18,c2y=midY-y*.18;
         // Canonical pair seed gives both halves the same midpoint and tangent.
-        graphic.moveTo(0, 0).bezierCurveTo(x * .18 + nx * curl, y * .18 + ny * curl,
-          midX - x * .18, midY - y * .18, midX, midY)
+        graphic.moveTo(0, 0).bezierCurveTo(c1x,c1y,c2x,c2y,midX,midY)
           .stroke({ color, width: (specimen.stage === 'mature' ? 1.05 : .8) + specimen.vigor * .12,
             alpha: specimen.stage === 'fading' ? .24 : .65 });
         halves++;
+        // Only the lower-cell half owns decoration. Select one real, thinned
+        // curve deterministically; no opposite-half duplicates or new RNG rolls.
+        if(first&&vineBlooms.active(specimen)&&vineNoise(seed+3299)<.35){
+          const rank=vineNoise(seed+4099);
+          if(!flower||rank<flower.rank){
+            const t=.56+vineNoise(seed+4513)*.22,curve=[0,0,c1x,c1y,c2x,c2y,midX,midY];
+            flower={...vineBlooms.point(curve,t),rank,t,curve,key:seed,neighborId:neighbor.id};
+          }
+        }
       }
       halfCurvesById.set(specimen.id, halves); connectionHalves += halves;
+      syncVineConnection(specimen,graphic,flower);
     }
     function refreshNeighborhood(specimen, byCell) {
       refreshVine(specimen, byCell);
@@ -291,7 +321,15 @@
       sprite.scale.set(fading ? .66 : 1);sprite.alpha=fading ? .55 : 1;
       sprite.tint=fading ? 0xb7aa99 : 0xffffff;sprite.rotation=fading ? .07 : 0;
     }
-    return { root, byId, vineLinks, mutationViews, bloomViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+    function syncVineBloom(specimen,parent) {
+      let sprite=vineBloomViews.get(specimen.id);
+      if(!vineBlooms.active(specimen)){if(sprite){sprite.destroy();vineBloomViews.delete(specimen.id);}return;}
+      const texture=frames.get(`vine-bloom:${specimen.vigor}:${specimen.colorVariant}:${specimen.vineBloom.layout}`);
+      if(!sprite){sprite=new P.Sprite(texture);sprite.anchor.set(.5,.9);sprite.eventMode='none';parent.addChild(sprite);vineBloomViews.set(specimen.id,sprite);}
+      else sprite.texture=texture;
+      vineBlooms.style(sprite,specimen);
+    }
+    return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
@@ -304,6 +342,7 @@
           sprite.position.set(sprite.position.x + offset.x, sprite.position.y + offset.y);
           sprite.rotation = (vineNoise(seed + 83) - .5) * .5;
           sprite.scale.set(vineNoise(seed + 127) < .5 ? -1 : 1, 1);
+          syncVineBloom(specimen,sprite);
           const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize + offset.x, (specimen.row + .5) * cellSize + offset.y);
           links.addChild(graphic); vineLinks.set(specimen.id, graphic); refreshNeighborhood(specimen, byCell);
         }
@@ -311,16 +350,18 @@
       update(specimen, byCell) { byId.get(specimen.id).texture = texture(specimen); counters.stageUpdates++;
         sizeSpecimen(specimen, byId.get(specimen.id));
         syncBloom(specimen,byId.get(specimen.id));
+        syncVineBloom(specimen,byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
         if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell); },
       remove(specimen, byCell) {
         const sprite = byId.get(specimen.id); sprite.destroy({children:true}); byId.delete(specimen.id); counters.destroyed++;
         bloomViews.delete(specimen.id);
+        vineBloomViews.delete(specimen.id);
         mutationViews.delete(specimen.id);
         const graphic = vineLinks.get(specimen.id);
         if (graphic) {
           connectionHalves -= halfCurvesById.get(specimen.id) ?? 0; halfCurvesById.delete(specimen.id);
-          graphic.destroy(); vineLinks.delete(specimen.id); refreshNeighborhood(specimen, byCell);
+          graphic.destroy({children:true,context:true}); vineLinks.delete(specimen.id);vineBloomLinks.delete(specimen.id); refreshNeighborhood(specimen, byCell);
         }
       },
       setWeather(state) {
@@ -348,10 +389,14 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, bloomViews: bloomViews.size, mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + bloomViews.size + vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
-      destroy() { root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
+      destroy() {
+        // Each link owns a Graphics context and may own a blossom child.
+        for(const graphic of vineLinks.values())graphic.destroy({children:true,context:true});
+        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
+      }
     };
   }
   async function start() {
@@ -511,6 +556,11 @@
       const control=document.querySelector('#allow-grass-under-plants');control.checked=true;ecology.setAllowGrassUnderPlants(true);
       model.seedBroadleafBlooms(dense);ecologyPresentation.seedDenseEcology(ecology,Date.now(),false);
     });
+    for(const [id,mode] of [['#seed-vine-bloom-stages','stages'],['#seed-vine-bloom-connections','connected'],['#seed-vine-bloom-dense','dense']])listen(document.querySelector(id),'click',()=>{
+      ambient.clear();frogs?.clear();gnomes.clear();ecology.clear();
+      document.querySelector('#allow-grass-under-plants').checked=true;ecology.setAllowGrassUnderPlants(true);
+      model.seedVineBlooms(mode);ecologyPresentation.seedDenseEcology(ecology,Date.now(),false);
+    });
     const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
     own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
@@ -614,6 +664,7 @@
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
+        `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,

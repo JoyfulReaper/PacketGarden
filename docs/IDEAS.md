@@ -731,6 +731,24 @@ visual tuning remain. See [current measurements and reproduction](PIXI-LIVE.md#l
 
 ## Visual variation
 
+### Vine maturity flowers (implemented in Pixi)
+
+Vines now have their own **15%** cosmetic bloom chance, independent of foliage,
+silvervine and broadleaf blooms. One stored draw chooses a stable success/failure
+and, on success, soft pink, lavender, pale yellow or white. Small pointed
+five-petal flowers sit on the actual stem/curl recipe, distinct from rounded
+broadleaf clusters. Isolated vines can bloom too.
+
+An occasional extra flower samples an existing connecting cubic, with one
+canonical owner per pair and at most one connection decoration per flowering
+vine. Neighbor refresh removes lost-edge flowers. The two/four parent blossoms
+plus optional connection flower keep the total between two and five. They open
+at one minute, fade from eight and disappear with the parent by ten minutes.
+Static cached artwork adds no timers, traffic, gameplay, collectibles or sounds.
+Existing connection geometry, foliage, broadleaf probabilities and Canvas are
+unchanged. Local stage, connected/mixed and full grass fixtures live only on the
+diagnostic page. See [captures, bounds and checks](PIXI-LIVE.md#vine-maturity-blossoms-2026-10-23).
+
 ### Broadleaf maturity blossoms (implemented in Pixi)
 
 Ordinary broadleaves now have one independent **20%** cosmetic chance to bloom

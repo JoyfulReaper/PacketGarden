@@ -31,7 +31,8 @@
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-lush-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
-  <script src="pixi-live-core.js?v=broadleaf-blooms-1" defer></script><script src="pixi-live.js?v=broadleaf-blooms-1" defer></script>
+  <script src="pixi-vine-blooms.js?v=vine-blooms-1" defer></script>
+  <script src="pixi-live-core.js?v=vine-blooms-1" defer></script><script src="pixi-live.js?v=vine-blooms-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -52,6 +53,10 @@
       <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
       <button id="seed-broadleaf-blooms" type="button">Seed broadleaf bloom stages (simulated)</button>
       <button id="seed-dense-broadleaf-blooms" type="button">Seed 640 blooming broadleaves (simulated)</button>
+      <button id="seed-vine-bloom-stages" type="button">Seed vine bloom stages (simulated)</button>
+      <button id="seed-vine-bloom-connections" type="button">Seed connected flowering vines (simulated)</button>
+      <button id="seed-vine-bloom-dense" type="button">Seed 640 flowering vines (simulated)</button>
+      <span>Vine fixtures enable dense grass. Stage rows: no bloom, sprout, growing, mature, fading; colors: pink, lavender, pale yellow, white. Connected vines include an isolated flowering vine.</span>
       <span>Bloom fixtures enable grass under plants. Rows: no bloom, sprout, growing, mature, fading; columns: pink, yellow, white, purple, blue. Foliage varies by row.</span>
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>
       <button id="seed-weed-buds" type="button">Seed weed buds (simulated)</button>

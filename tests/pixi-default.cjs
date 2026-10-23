@@ -19,6 +19,7 @@ assert.match(read('about.html'), /href="index.html"/);
 assert.match(read('canvas.html'), /src="garden\.js\?v=.+"/);
 assert(!scripts.includes('garden.js'));
 for (const id of ['seed-broadleaf-blooms','seed-dense-broadleaf-blooms','trigger-stillbloom','stillbloom-test-status','trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
+for(const id of ['seed-vine-bloom-stages','seed-vine-bloom-connections','seed-vine-bloom-dense'])assert(!html.includes(`id="${id}"`),'vine fixtures are diagnostic-only');
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 

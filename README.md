@@ -236,6 +236,20 @@ The diagnostic page has simulated stage/color and full 640-broadleaf fixtures
 with grass underneath; the homepage has no new development controls. See
 [bloom artwork, resources and validation](docs/PIXI-LIVE.md#broadleaf-maturity-blossoms-2026-10-22).
 
+Pixi vines have a separate **15% chance to flower at maturity**. One independent
+cosmetic draw per vine stores its stable color and layout, including failed rolls.
+Two to four delicate five-petal flowers follow the existing stems and curls in
+soft pink, lavender, pale yellow or white. A flowering vine may also carry one
+tiny blossom on an actual connecting tendril, for at most five flowers total.
+Connection decorations have one owner and disappear when that connection is lost.
+Flowers open at 60 seconds, fade with the vine from eight minutes and leave with
+their exact parent by ten minutes, replacement or clear. Silvervine, foliage,
+placement, connection geometry and the broadleaf's separate 20% bloom rule are
+unchanged. This is static Pixi artwork with no network, score, collection, sound
+or ecology effect; Canvas is unchanged. Only `/pixi-live.html` has stage,
+connected/mixed and full 640-vine grass fixtures. See
+[vine captures and resource measurements](docs/PIXI-LIVE.md#vine-maturity-blossoms-2026-10-23).
+
 Vine hue is a cosmetic exception for both live and fake growth: after the unchanged
 1% silvervine roll, ordinary hues are 70% aqua, 15% lime, 10% chartreuse, and 5%
 olive. Aqua is the dominant/default ordinary coloring; olive is uncommon. Vigor
@@ -774,6 +788,12 @@ day/night, mobile, maturity and ownership captures under
 `artifacts/broadleaf-blooms/after/`. Add `--baseline` to serve the current committed
 HEAD for matching pre-change captures under `before/`; the revision is recorded
 in each `review.json`. Fixture outcomes are forced locally, never TCPNoise input.
+`node tests/pixi-vine-blooms.cjs` checks vine probability/random isolation,
+unchanged connection curves, unique on-curve decorations, neighbors and cleanup.
+`node tests/pixi-vine-blooms-browser.cjs --run` captures colors, isolated/connected,
+mixed/dense, fading, grass, day/night, maturity and mobile views and measures
+rendering and connection-refresh costs in `artifacts/vine-blooms/after/`.
+Add `--baseline` for matching captures from committed HEAD under `before/`.
 First-seen trigger, bounded visitors, clicking, and overlay performance checks run
 with `node tests/garden-curiosities.cjs`.
 Loose-drop timing, collection, independence, hidden tabs, and overlay isolation

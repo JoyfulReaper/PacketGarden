@@ -1,3 +1,135 @@
+# Vine maturity blossoms (2026-10-23)
+
+The homepage and `/pixi-live.html` now give each ordinary vine a separate **15%**
+cosmetic chance to flower. `pixi-vine-blooms.js` owns its own crypto-seeded PRNG
+(a distinct clock/performance seed fallback), without calling gameplay or
+broadleaf randomness. A single uniform draw handles the `< .15` boundary and
+eight equally likely color/layout pairs on success. An immutable, non-enumerable
+`vineBloom` trait (or stable failed `null`) stays on the exact specimen. Rendering,
+stage updates and recreated views never roll again. Explicit simulated fixtures
+alone supply forced outcomes. Flower colors are soft pink, lavender, pale yellow
+and white, independent of all existing foliage variants including silvervine.
+
+## Artwork, connections and lifecycle
+
+Two or four slender, pointed five-petal flowers use short fine stalks at sampled
+points on the original main-stem, branch and curl recipe. Their contrasting eyes
+and restrained color distinguish them from the broadleaf's rounded clusters.
+The parent group inherits the original vine's offset, mirroring and rotation.
+The shared `vineShape` only names the existing seed/lean/top/side values; the
+underlying artwork commands and placement remain identical.
+
+The existing neighbor loop still performs exactly the same bounds, eligibility,
+symmetrical thinning, curve-control and stroke calculations. After an actual
+curve is drawn, a deterministic pair hash occasionally qualifies it for a blossom.
+Only the lower-cell half can own the decoration. Each flowering owner picks at
+most one qualifying real half-curve by stable hash rank and samples its cubic
+between t=.56 and .78. There is no extra chance roll or new connection geometry.
+The link Sprite belongs to that vine's existing Graphics object and its anchor
+places the flower's center on the sampled curve. Opposite halves cannot duplicate
+it, and disconnected cells cannot produce it.
+
+Existing local neighbor refreshes update decorations when vines appear, reach
+an eligible stage, change presentation or disappear. A lost or reselected edge
+destroys its old Sprite before any replacement decoration is created on another
+real tendril. At most one connection decoration belongs to each flowering vine.
+The two/four parent flowers plus that optional flower never exceed five. Isolated
+vines retain their parent flowers without needing a neighbor.
+
+Sprouts and growing vines have no open flowers. The existing **60-second** mature
+update creates the parent group; from **eight minutes**, the same group shrinks
+to .66, mutes its tint and fades to .55 alpha. Connecting flowers also shrink and
+fade. The existing **ten-minute** expiry, replacement, remove, clear and page
+ownership recursively destroy parent and link children and empty both view maps.
+Vine link Graphics explicitly release their privately owned contexts on removal
+and direct view teardown; child-cleanup options alone do not release those
+contexts in the bundled Pixi version. Chrome probes retain the exact context
+references and verify their destruction along with blossom and atlas ownership.
+Normal/reduced-motion poses are static. Hidden pages reconcile expiry on resume.
+No per-frame blossom scans, Graphics builds, timers, loops, shaders, texture
+generation or dependencies are added. Shared specimen lifecycle and Canvas
+sources are unchanged, as are broadleaf trait probabilities/artwork, grass,
+gnomes/frogs/weather, placement/capacity, rarity, network/provenance, picking,
+growth counts, drops, sounds and scores.
+
+## Diagnostic review and reproduction
+
+Only `/pixi-live.html` adds **Seed vine bloom stages (simulated)**, **Seed connected
+flowering vines (simulated)** and **Seed 640 flowering vines (simulated)**. They
+replace local fixture state and enable mature grass under plants, without water
+or network input. The 20-plant stage grid has four color columns and rows for
+non-flowering mature, sprout, growing, mature and fading plants. The connected
+33-plant fixture mixes bloom outcomes, varied foliage including silvervine, and
+an isolated flowering vine. The full fixture forces 640 blooms as a stress case;
+normal vines retain their exact 15% rule. The HUD reports body/link overlay counts.
+No development controls were added to the homepage.
+
+With already available Playwright/Chrome, run
+`node tests/pixi-vine-blooms-browser.cjs --run --baseline` and then `--run`.
+The reviewed baseline is committed broadleaf checkpoint
+`4f7b35912843e347481faf723749704b9327a1a9`. Local ignored artifacts live in
+`artifacts/vine-blooms/before/` and `after/`, with matching PNGs and `review.json`:
+
+- `*-four-colors-day.png`, `*-isolated.png`: all four colors and one isolated vine.
+- `*-connected-mixed-grass.png`, `*-connected-night.png`: real connected tendrils,
+  mixed outcomes and mature grass in day/night lighting.
+- `*-all-stages.png`, `*-fading-grass.png`: young, mature and fading presentation.
+- `*-before-maturity.png` / `*-after-maturity.png`: the same four plants crossing
+  59,999→60,000ms through the shared lifecycle.
+- `*-full-grass-day.png`, `*-full-grass-night.png`, `*-full-mobile.png`: full
+  640-vine scenes at ordinary garden scale and a 390px viewport.
+
+Both Pixi pages are covered. Screenshots freeze wall time and manually step the
+existing ticker, so diagnostic HUD FPS/gaps are not performance measurements.
+Separate 90-frame RAF samples measure CPU submission. Three deliberately forced
+whole-garden refresh passes measure event-driven neighbor work, not normal
+per-frame work or a proposed periodic refresh.
+
+## Resource bounds and validation
+
+The specimen atlas grows from **782 to 823 frames**, logical **1024×800→1024×832**
+at resolution 2: **0.5 MiB** more uncompressed RGBA backing, excluding driver
+overhead. Forty neutral group frames cover four vigors × five unchanged foliage
+geometries × two flower layouts; one neutral single-flower frame decorates links.
+Four Sprite tints provide color without multiplying those combinations. All
+construction Graphics/context resources are released after baking. Startup still
+uses the same five bake calls and retained sources; there are no new sources.
+
+At most **640 parent group Sprites + 640 connection Sprites** can exist. The
+reviewed forced field had **640 groups + 264 connections**, raising the scene
+count from **1,934 to 2,838** with 640 grass cells. Original connection halves
+stayed at **1,590**; the connected/mixed fixture retained **88** halves and had
+**28 groups + 13 connection flowers**. The ordinary 15% chance is much sparser
+than this forced stress case. Repeated seeding/clearing and rendering preserve
+atlas/bake counts and release all children/sources on teardown.
+
+Chrome 155 short full-field CPU submission means were **0.157→0.159ms** for the
+homepage and **0.153→0.230ms** for the diagnostic page, with roughly **16.68ms**
+RAF intervals. A forced pass updating all 640 vines (including their ordinary
+neighbor refreshes) averaged **36.53→36.37ms** and **40.47→34.87ms**, respectively,
+across three passes. Both versions performed exactly **130,848 neighbor checks**
+and **139,728 Graphics commands** over those passes. These noisy short samples
+show no extra recurring geometry or new neighbor work; the lower refresh times
+do not establish a speedup. Per-vine event refreshes remain local; no full-field
+refresh pass was added to the application. `review.json` records raw results.
+
+`node tests/pixi-vine-blooms.cjs` checks the exact .15 boundary, a 40,000-roll
+partition, one stable success/failure/color/layout per vine, separate gameplay
+and broadleaf random streams, silvervine, maturity/fade/expiry/replacement,
+recreated views, actual on-curve positions, canonical ownership, lost neighbors,
+new growing neighbors, 640-vine bounds and repeated cleanup. It compares every
+existing full-field connection command/style byte-for-byte with the committed
+broadleaf renderer. Existing broadleaf and Canvas checks also pass. All **63 Node
+suites** pass (72 entry files including nine optional browser/helper entries).
+
+Chrome feature/capture and lifecycle checks, Debug/Release .NET builds, backend
+assertions and actual ASP.NET polling/SSE integration pass. Backend-check builds
+retain the existing NU1900 warning when NuGet vulnerability metadata is
+unavailable; assertions complete. Short CPU submission/refresh samples are local
+regression observations, not GPU completion or long-session smoothness evidence.
+Other browsers/devices and a long live-traffic/GPU soak remain unverified; tiny
+details are less distinct when the whole garden is fitted into a mobile viewport.
+
 # Broadleaf maturity blossoms (2026-10-22)
 
 The homepage and `/pixi-live.html` now decorate 20% of ordinary broadleaves with

@@ -14,6 +14,16 @@ sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
+- Pixi vine maturity blossoms: a separate one-time 15% cosmetic roll per vine,
+  four soft colors, two/four small pointed-petal flowers along the existing stem
+  and curls, plus at most one decoration on an actual connecting half-curve.
+  Canonical ownership prevents duplicates; neighbor refresh removes lost-edge
+  flowers. Mature at 60 seconds, faded at eight minutes, gone with the parent
+  by ten minutes or removal. Forty neutral group frames plus one link frame
+  share the specimen atlas; at most two extra Sprites per flowering vine.
+  Silvervine/foliage, original curves/eligibility, shared lifecycle, broadleaf
+  blooms, ecology, network, picking, sound and score remain unchanged. Fixtures
+  appear only on `/pixi-live.html`; Canvas remains unchanged.
 - Pixi broadleaf maturity blossoms: one independent 20% cosmetic draw per ordinary
   broadleaf, with a stable pink/yellow/white/purple/blue color and one to three
   small flowers among the existing leaves. Hidden before maturity, faded with
