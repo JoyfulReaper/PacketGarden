@@ -4,6 +4,7 @@
   const garden = typeof module !== 'undefined' && module.exports ? require('./garden-core.js') : window.PacketGardenCore;
   const mutationCore = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
   const uiCore = typeof module !== 'undefined' && module.exports ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
+  const blooms = typeof module !== 'undefined' && module.exports ? require('./pixi-broadleaf-blooms.js') : window.PacketGardenBroadleafBlooms;
   const { dimensions, timings, species, eventSpecies, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
@@ -56,7 +57,7 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
@@ -65,6 +66,7 @@
       if (kind === 'added') {
         onAdded(specimen); // Placement succeeded; clear its soil before presenting the plant.
         specimen.colorVariant = specimen.type === 'stillbloom' ? 0 : colorVariant(specimen.type, specimen.vigor, random());
+        blooms.assign(specimen, bloomRandom);
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
@@ -92,6 +94,13 @@
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedBroadleafBlooms(dense = false) {
+        const entries = blooms.fixtureEntries(now(), dense), foliage = entries.map(p => p.colorVariant);
+        model.seed(entries);
+        for (let i = 0; i < model.specimens.length; i++) {
+          model.specimens[i].colorVariant = foliage[i]; view.update(model.specimens[i], model.byCell);
+        }
+      },
       seedWeedBuds() {
         const at = now();
         model.seed(['weed','weed','mushroom'].map((type,i) => ({ type, vigor:1, column:12+i*5,

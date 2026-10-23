@@ -16,6 +16,7 @@ const P = { ...h.P, Graphics }, keys = [];
 for (const type of core.eventSpecies) for (let vigor=0; vigor<4; vigor++) for (let variant=0; variant<5; variant++)
   for (const stage of type==='redbloom'?['mature','fading']:['sprout','growing','mature','fading']) keys.push(`${type}:${stage}:${vigor}:${variant}`);
 keys.push('rain','probe','collectible_weed',...['sprout','growing','mature','fading'].map(stage=>'stillbloom:'+stage));
+for(let arrangement=0;arrangement<3;arrangement++)for(let color=0;color<5;color++)keys.push(`broadleaf-bloom:${color}:${arrangement}`);
 function capture(make,legacy=false) {
   let tiles; const dimensions = [];
   const cache = make(P, { generateTexture(options) {
@@ -25,18 +26,26 @@ function capture(make,legacy=false) {
       position:[object.position.x,object.position.y], anchor:object.anchor?[object.anchor.x,object.anchor.y]:undefined, tint:object.tint, alpha:object.alpha }));
     return { source:{}, destroy(){} };
   } }, shared,legacy?{...core,species:core.eventSpecies}:core);
-  assert.equal(cache.frames.size,legacy?763:767); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
+  assert.equal(cache.frames.size,legacy?763:782); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
   for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true);
   return { tiles, dimensions };
 }
 const before = capture(previous.exports.makeLiveAtlas,true), after = capture(current.makeLiveAtlas);
-assert.deepEqual(after.dimensions, before.dimensions);
-assert.deepEqual(after.dimensions, [[512,448,2],[1024,768,2]]);
+assert.deepEqual(before.dimensions, [[512,448,2],[1024,768,2]]);
+assert.deepEqual(after.dimensions, [[512,448,2],[1024,800,2]]);
 const redesigned = new Set(['broadleaf','blackthorn','weed']);
 const enlargement = { flower:1.12, mushroom:1.16, wirefern:1.16, crystalfungus:1.12, ghostbloom:1.10 };
 const protectedTypes = new Set(['vine','redbloom','rain','probe','collectible_weed']);
 for (let i=0; i<keys.length; i++) {
   const a=after.tiles[i], b=before.tiles[i], [type,stage,vigor]=a.key.split(':');
+  if(type==='broadleaf-bloom'){
+    assert(a.graphic);assert.equal(a.object.destroyArgument,undefined);
+    assert.equal(a.commands.filter(c=>c[0]==='circle').length,(Number(vigor)+1)*17,'bounded petals, highlights and centers');
+    for(const [kind,x,y,radius] of a.commands)if(kind==='circle'){
+      assert(x-radius>=-15&&x+radius<=15&&y-radius>=-28&&y+radius<=2,'blossoms remain inside the cached tile');
+    }
+    continue;
+  }
   if(type==='stillbloom'){
     assert(a.graphic);assert.equal(a.object.destroyArgument,undefined);
     for(const [kind,...args] of a.commands){
@@ -66,6 +75,6 @@ for (let i=0; i<keys.length; i++) {
     assert.deepEqual(a.anchor,type==='mushroom'?[.5,.94]:b.anchor,'mushroom bake origin preserves bottom margin');
   }
 }
-assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,324);
+assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,339);
 assert.equal(h.textureCount(),countBefore); assert.equal(h.live.size,objectsBefore,'construction display objects released');
 console.log('PASS: bounded Phase 2B artwork/leaflets/thorns, exact scale factors and stage differences, unchanged vine/redbloom/collectible commands, atlas cardinality/dimensions/ownership.');

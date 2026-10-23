@@ -20,7 +20,7 @@ const a=m.createStormPuddle(now),b=m.createStormPuddle(now+1),av=ev.puddleViews.
 now+=100000;m.refreshStormPuddle(a,now);assert.equal(ev.puddleViews.get(a),av);
 now=b.lastRefreshedAt+510000;m.removeExpiredPuddles(now);assert(!live.has(bv));assert.equal(ev.puddleViews.get(a),av);
 m.clear();assert.equal(ev.grassViews.size,0);assert.equal(ev.puddleViews.size,0);
-const model=liveCore.createModel(view,{now:()=>now,random:()=>.5});model.seed();
+const model=liveCore.createModel(view,{now:()=>now,random:()=>.5,bloomRandom:()=>0});model.seed();
 for(let cycle=0;cycle<10;cycle++){
   presentation.seedDenseEcology(m,now);assert.equal(m.grassCells.length,640);assert.equal(ev.grassViews.size,640);assert.equal(ev.puddleViews.size,8);
   const grassViews=new Map([...ev.grassViews].map(([k,r])=>[k,r.sprite])),specimenViews=new Map(view.byId),puddleViews=new Map(ev.puddleViews);
@@ -31,7 +31,8 @@ for(let cycle=0;cycle<10;cycle++){
   for(const p of m.puddles)m.refreshStormPuddle(p,now);
   for(const [k,s] of puddleViews)assert.equal(ev.puddleViews.get(k),s);
   assert.equal(harness.textureCount(),startTextures+16);assert.equal(harness.generated(),startGenerated+1);
-  assert.equal(view.snapshot().displayObjects,1366);
+  assert.equal(view.bloomViews.size,64);
+  assert.equal(view.snapshot().displayObjects,1366+64);
   m.clear();assert.equal(ev.grassViews.size,0);assert.equal(ev.puddleViews.size,0);
 }
 // Healthy mature grass has no visual transform work until its first fading boundary.

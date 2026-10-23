@@ -731,6 +731,25 @@ visual tuning remain. See [current measurements and reproduction](PIXI-LIVE.md#l
 
 ## Visual variation
 
+### Broadleaf maturity blossoms (implemented in Pixi)
+
+Ordinary broadleaves now have one independent **20%** cosmetic chance to bloom
+when mature. A stable pink, yellow, white, purple or blue flower color is separate
+from foliage color and the unchanged rare rainbow roll. One to three small,
+rounded blossoms sit among the existing leaves; these remain leafy plants,
+without becoming standalone flower specimens or producing collectibles.
+
+Sprouts and growing plants have no open blossoms. Maturity reveals the decoration,
+fading mutes/shrinks/droops it with the leaves, and expiry or replacement removes
+the exact parent's presentation. Fifteen finite atlas frames and one optional
+child Sprite keep it static and bounded. No traffic reinforcement, new events,
+statistics, scores, drops, sound or ecology effect is attached. Canvas keeps its
+existing artwork. The diagnostic page provides deterministic local stage/color
+and 640-broadleaf grass fixtures; the homepage has no added development controls.
+See [implementation and reviewed captures](PIXI-LIVE.md#broadleaf-maturity-blossoms-2026-10-22).
+
+### Other variation
+
 Color variants are implemented, including rare cosmetic schemes and rainbow
 broadleaf growth. Possible later variation can use safe traits such as:
 

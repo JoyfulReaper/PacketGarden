@@ -1,3 +1,108 @@
+# Broadleaf maturity blossoms (2026-10-22)
+
+The homepage and `/pixi-live.html` now decorate 20% of ordinary broadleaves with
+small flowers at maturity. This is Pixi presentation only: `garden-core.js`,
+Canvas sources/artwork, all lifecycle thresholds and the normalized network
+contract remain unchanged. The existing foliage artwork and palette/rare-color
+selection are preserved, including compatibility with the rare broadleaf variant.
+
+## Cosmetic decision and lifecycle
+
+`pixi-broadleaf-blooms.js` owns a separate PRNG, initially seeded from browser
+crypto (clock/performance fallback when unavailable), without calling gameplay
+`Math.random`. The Pixi adapter assigns a trait only when a broadleaf is first
+added. Exactly one uniform draw selects success below **0.20**; the successful
+interval is evenly partitioned into 15 color/arrangement pairs. Thus flower color
+is uniform among pink/yellow/white/purple/blue, independent of foliage/vigor, and
+each plant has one to three flowers. Both the immutable successful trait and the
+failed `null` decision remain on the exact specimen. Ordinary traits are
+non-enumerable and do not enter serialized provenance or activity. Reusing the
+specimen or recreating its view/artwork cannot reroll it. No persistence is added.
+
+Sprouts (<20 seconds) and growing plants (<60 seconds) have no blossom Sprite.
+The existing mature-stage update creates one child Sprite; the five-minute fade
+reuses it, shrinking to .66, reducing alpha to .55, warming/muting its tint and
+slightly drooping its arrangement to follow the fading leaves. At six minutes,
+replacement, removal, clear or page teardown, recursive parent destruction removes
+the child and its map entry. Hidden pages reconcile the same lifecycle on resume,
+without catching up animations. Normal and reduced motion use identical static
+poses. No per-frame bloom code, timer, scheduler, audio or interaction is added.
+
+Petals have rounded silhouettes, soft shadow/highlight accents and small gold
+centers. Three uneven arrangements place them within the broadleaf canopy, not
+on a separate tall flower stem. Existing rooted Sprite scaling, edge insets,
+grass/plant layer order and shared picking remain intact. Blooms have no input
+handlers and do not alter counts, occupancy, vigor, competition, lifespan, rarity,
+network provenance, Recent activity, score, drops, collection or sounds.
+
+## Diagnostic fixtures and captures
+
+Only `/pixi-live.html` adds **Seed broadleaf bloom stages (simulated)** and
+**Seed 640 blooming broadleaves (simulated)**. These replace local fixture state,
+enable the existing grass-under-plants option and seed dense grass without water.
+The 25-plant grid has five color columns and five rows: non-blooming mature,
+sprout, growing, mature bloom and fading bloom. Foliage varies by row, including
+the existing rare variant; flower arrangement varies independently. The full
+fixture forces all 640 ordinary broadleaves to bloom for a worst-case resource
+check. These explicit forced outcomes are diagnostic fixtures, not a second
+network path or a change to the ordinary 20% chance. Clear retains its normal
+behavior. The HUD includes blossom-overlay count; the homepage has no new controls.
+
+`node tests/pixi-broadleaf-blooms-browser.cjs --run --baseline` serves committed
+HEAD (reviewed baseline **0d98e46863de09f6e028f5545861440820f2d121**); `--run`
+serves edited sources. Already available Playwright and Chrome are used without
+installing dependencies. Local artifacts live in `artifacts/broadleaf-blooms/`
+(ignored), with matching `before/` and `after/` PNGs plus `review.json`:
+
+- `*-five-colors-grass-day.png`: all five flower colors and all three arrangements
+  over dense grass at ordinary garden scale, across foliage/vigor variants.
+- `*-all-stages-grass-day.png`: failed, young, mature and fading decorations.
+- `*-before-maturity.png` / `*-after-maturity.png`: the same 15 plants at 59,999ms
+  and 60,000ms, through the real shared lifecycle boundary.
+- `*-sparse-night.png`, `*-full-grass-day.png`, `*-full-grass-night.png` and
+  `*-full-mobile.png`: sparse/full gardens, night lighting and a 390px viewport.
+
+Both homepage and diagnostic page are covered. Screenshot fixtures freeze wall
+time and step the existing ticker manually; any HUD FPS/gap values are therefore
+not performance measurements. Separate 90-frame RAF samples measure CPU render
+submission, without claiming GPU/compositor completion or long-session smoothness.
+
+## Resources, checks and limits
+
+The existing specimen atlas grows from **767 to 782 frames**, with **15** added
+32px logical tiles (five colors × three arrangements). Its logical sheet grows
+from **1024×768 to 1024×800** at resolution 2: roughly **0.5 MiB** additional
+uncompressed RGBA backing, excluding driver overhead. No source, shader or bake
+pass is added; five existing startup bakes remain five. The 15 temporary Graphics
+and their owned contexts are released after the normal atlas bake. No foliage ×
+flower texture combinations or per-specimen textures are generated.
+
+Each successful mature/fading broadleaf adds one child Sprite: around 128 expected
+in an all-broadleaf garden, at most **640** in the forced fixture. Failed/young
+plants have none. Repeated seed/clear cycles, visual updates, weather and normal
+render frames do not create new geometry/textures; all source/child ownership
+releases on final teardown. The same-source overlays can use the existing Pixi
+batching. The short Chrome 155 full-640/grass samples recorded mean CPU submission
+of **0.192→0.249ms** on the homepage and **0.197→0.299ms** on the diagnostic page;
+mean RAF intervals stayed around **16.68ms**. These noisy local samples are
+regression observations, not a guarantee for other GPUs, devices or browsers.
+
+`node tests/pixi-broadleaf-blooms.cjs` covers the exact .20 boundary, one draw per
+specimen, a complete 10,000-roll partition, stable failed/successful decisions,
+foliage-independent color and untouched gameplay random sequences, lifecycle
+boundaries, expiry/replacement, 640-parent stress, rare foliage compatibility,
+atlas/Sprite ownership, simulated-only fixtures, hidden reconciliation, reduced
+motion and unchanged network/provenance/counts/score. Existing artwork checks
+retain leaf/vine/mutation contracts and include the new finite tile bounds and
+counts. Existing ecology/interaction/Canvas/lifecycle checks remain applicable.
+
+Chrome feature/capture and existing lifecycle regressions, Debug/Release .NET
+builds, backend assertions and real-host polling/SSE integration pass. Backend
+checks retain the existing NU1900 warning when NuGet vulnerability metadata is
+unavailable; assertions complete. Other browsers/devices, subjective appearance
+on very small screens and a long live-traffic/GPU soak remain unverified. Canvas
+has intentionally not received blossom artwork in this slice.
+
 # Grass under plants (2026-10-22)
 
 The homepage, Canvas fallback and `/pixi-live.html` have **Allow grass under

@@ -374,6 +374,7 @@ async function run() {
     await fs.writeFile(path.join(output,'audio-timing.json'),JSON.stringify(timing,null,2)); console.log(JSON.stringify(timing));
     assert.equal(await diagnostic.evaluate(() => __gardenAudioContexts.length),1);
     await diagnostic.getByRole('button',{name:'Seed overlap fixture (local simulated)',exact:true}).click();
+    await diagnostic.locator('#view canvas').scrollIntoViewIfNeeded();
     for(const [layer,message] of [[8,'You caught a ladybug. +0 points'],[7,'You found Amanita muscaria. +0 points'],[6,'You collected some weed. +0 points']]) {
       const point=await diagnostic.evaluate(index=>{
         const app=__gardenTestApp,root=app.stage.children[0],sprite=root.children[index].children[0],r=app.canvas.getBoundingClientRect();
@@ -1089,7 +1090,7 @@ async function run() {
     const saved=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>p.origin)));
     assert(!saved.includes('tcpnoise'));assert(saved.includes('simulated'));
     const buildCounts=await page.evaluate(()=>({objects:__gardenTestApp.stage.children[0].children[6].children.length,frames:document.querySelector('#hud').textContent.match(/atlas frames (\d+)/)?.[1]}));
-    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'767');
+    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'782');
     const metrics={resources:buildCounts,day:await sample(page)};
     // Fixed fixtures use the real model, existing cached artwork and surface light.
     const fixture=async(age,mixed=false)=>page.evaluate(({age,mixed})=>{

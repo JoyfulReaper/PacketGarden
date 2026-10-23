@@ -14,6 +14,15 @@ sensor/service inputs remain goals.
 
 ## Completed prototype capabilities
 
+- Pixi broadleaf maturity blossoms: one independent 20% cosmetic draw per ordinary
+  broadleaf, with a stable pink/yellow/white/purple/blue color and one to three
+  small flowers among the existing leaves. Hidden before maturity, faded with
+  the parent, removed on expiry/replacement. Fifteen cached frames share the
+  specimen atlas; at most one child Sprite per blooming parent, no new source,
+  timers or loops. Foliage variants, rare rainbow probability, occupancy, vigor,
+  lifespan, picking, provenance, counts, sounds and scores remain unchanged.
+  Stage/color and 640-parent grass fixtures are diagnostic-only; Canvas artwork
+  and shared specimen lifecycle rules are unchanged.
 - Pixi page lifetime ownership: idempotent teardown invalidates callbacks before
   stopping/releasing resources, removes owned input/media/visibility/resize/SSE
   listeners and the ticker callback, and cleans up late/failed initialization.

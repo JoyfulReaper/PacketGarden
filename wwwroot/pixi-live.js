@@ -1,6 +1,7 @@
 (function () {
   'use strict';
   const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
+  const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -184,6 +185,9 @@
       }
       artTiles.push(g);tile(`stillbloom:${stage}`,g);
     }
+    for (let arrangement=0; arrangement<3; arrangement++) for (let color=0; color<5; color++) {
+      const g=blooms.tile(P,color,arrangement);artTiles.push(g);tile(`broadleaf-bloom:${color}:${arrangement}`,g);
+    }
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -209,7 +213,7 @@
     const probe = new P.Sprite(frames.get('probe')); probe.anchor.set(.5); probe.position.set(12, 10);
     const clip = new P.Graphics().rect(0, 0, width, height).fill(0xffffff);
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
-    const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(); let connectionHalves = 0;
+    const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(), bloomViews = new Map(); let connectionHalves = 0;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
     const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout';
@@ -273,12 +277,27 @@
       sprite.position.set(Math.max(w * .5 + .5, Math.min(width - w * .5 - .5, x)),
         Math.max(h * .9 + .5, Math.min(height - h * .1 - .5, y)));
     }
-    return { root, byId, vineLinks, mutationViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+    function syncBloom(specimen, parent) {
+      const trait=specimen.broadleafBloom;
+      const visible=specimen.type==='broadleaf' && !specimen.mutation && trait
+        && (specimen.stage==='mature' || specimen.stage==='fading');
+      let sprite=bloomViews.get(specimen.id);
+      if (!visible) { if(sprite){sprite.destroy();bloomViews.delete(specimen.id);} return; }
+      if (!sprite) {
+        sprite=new P.Sprite(frames.get(`broadleaf-bloom:${trait.color}:${trait.arrangement}`));
+        sprite.anchor.set(.5,.9);sprite.eventMode='none';parent.addChild(sprite);bloomViews.set(specimen.id,sprite);
+      }
+      const fading=specimen.stage==='fading';
+      sprite.scale.set(fading ? .66 : 1);sprite.alpha=fading ? .55 : 1;
+      sprite.tint=fading ? 0xb7aa99 : 0xffffff;sprite.rotation=fading ? .07 : 0;
+    }
+    return { root, byId, vineLinks, mutationViews, bloomViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
         sizeSpecimen(specimen, sprite);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
+        syncBloom(specimen,sprite);
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
           const offset = vineOffset(specimen), seed = specimen.row * columns + specimen.column;
@@ -291,10 +310,12 @@
       },
       update(specimen, byCell) { byId.get(specimen.id).texture = texture(specimen); counters.stageUpdates++;
         sizeSpecimen(specimen, byId.get(specimen.id));
+        syncBloom(specimen,byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
         if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell); },
       remove(specimen, byCell) {
-        const sprite = byId.get(specimen.id); sprite.destroy(); byId.delete(specimen.id); counters.destroyed++;
+        const sprite = byId.get(specimen.id); sprite.destroy({children:true}); byId.delete(specimen.id); counters.destroyed++;
+        bloomViews.delete(specimen.id);
         mutationViews.delete(specimen.id);
         const graphic = vineLinks.get(specimen.id);
         if (graphic) {
@@ -327,10 +348,10 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, bloomViews: bloomViews.size, mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + bloomViews.size + vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
-      destroy() { root.destroy({ children: true }); byId.clear(); mutationViews.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
+      destroy() { root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
     };
   }
   async function start() {
@@ -485,6 +506,11 @@
     listen(grassUnderPlantsControl,'change',event=>ecology.setAllowGrassUnderPlants(event.target.checked));
     // Distributed local seeds; real TCPNoise never gains grass influence.
     ecology.seedInitialGrass();
+    for(const [id,dense] of [['#seed-broadleaf-blooms',false],['#seed-dense-broadleaf-blooms',true]])listen(document.querySelector(id),'click',()=>{
+      ambient.clear();frogs?.clear();gnomes.clear();ecology.clear();
+      const control=document.querySelector('#allow-grass-under-plants');control.checked=true;ecology.setAllowGrassUnderPlants(true);
+      model.seedBroadleafBlooms(dense);ecologyPresentation.seedDenseEcology(ecology,Date.now(),false);
+    });
     const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
     own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
@@ -587,6 +613,7 @@
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,

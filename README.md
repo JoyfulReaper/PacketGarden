@@ -223,6 +223,19 @@ has a small 1% browser-only rare-color chance; broadleaf can become rainbow, whi
 other species have their own rare cosmetic schemes. These colors are decoration,
 not extra TCPNoise rarity or security meaning.
 
+On the Pixi homepage and `/pixi-live.html`, each ordinary broadleaf also has a
+**20% chance to bloom at maturity**. One independent cosmetic draw per specimen
+chooses a lifetime-stable outcome and, on success, one pink, yellow, white, purple
+or blue color with one to three tiny blossoms nestled among the existing leaves.
+Sprouts and growing plants have no open blossoms; flowers appear at 60 seconds,
+fade with the leaves from five minutes, and disappear with the parent at six
+minutes or replacement. Foliage variants and the existing rare-color/rainbow
+probabilities are unchanged. This adds no specimens, drops, scores, sounds,
+network events or gameplay effects. Canvas keeps its existing artwork.
+The diagnostic page has simulated stage/color and full 640-broadleaf fixtures
+with grass underneath; the homepage has no new development controls. See
+[bloom artwork, resources and validation](docs/PIXI-LIVE.md#broadleaf-maturity-blossoms-2026-10-22).
+
 Vine hue is a cosmetic exception for both live and fake growth: after the unchanged
 1% silvervine roll, ordinary hues are 70% aqua, 15% lime, 10% chartreuse, and 5%
 olive. Aqua is the dominant/default ordinary coloring; olive is uncommon. Vigor
@@ -754,6 +767,13 @@ broadleaf/color checks with `node tests/broadleaf-variants.cjs` and
 performance checks run with `node tests/render-performance.cjs`.
 Local vine-neighbor work and connection/lifecycle correctness checks run with
 `node tests/vine-rendering.cjs`.
+Pixi broadleaf cosmetics are checked with `node tests/pixi-broadleaf-blooms.cjs`.
+With existing Playwright/Chrome available, run
+`node tests/pixi-broadleaf-blooms-browser.cjs --run` for stage/color, dense grass,
+day/night, mobile, maturity and ownership captures under
+`artifacts/broadleaf-blooms/after/`. Add `--baseline` to serve the current committed
+HEAD for matching pre-change captures under `before/`; the revision is recorded
+in each `review.json`. Fixture outcomes are forced locally, never TCPNoise input.
 First-seen trigger, bounded visitors, clicking, and overlay performance checks run
 with `node tests/garden-curiosities.cjs`.
 Loose-drop timing, collection, independence, hidden tabs, and overlay isolation
