@@ -16,11 +16,12 @@ const originalRandom = Math.random; let atlas;
 try {
   Math.random = () => { throw new Error('Artwork must not consume ecology randomness'); };
   atlas = presentation.makeEcologyAtlas({ ...h.P, Graphics, Texture }, { generateTexture(options) {
-    generated++; assert.deepEqual([options.frame.width,options.frame.height,options.resolution],[1024,64,2]);
+    generated++; assert.deepEqual([options.frame.width,options.frame.height,options.resolution],[1024,128,2]);
     tiles = options.target.children.slice(); return { source:{}, destroy(source) { sourceDestroyed=source; } };
   } });
 } finally { Math.random = originalRandom; }
-assert.equal(atlas.frames.size,16); assert.equal(new Set([...atlas.frames.values()].map(frame=>frame.source)).size,1);
+assert.equal(atlas.frames.size,29); assert.equal(new Set([...atlas.frames.values()].map(frame=>frame.source)).size,1);
+assert.deepEqual([atlas.frames.get('plant-contact').frame.width,atlas.frames.get('plant-contact').frame.height],[22,8],'small shadow quad, without whole-cell transparent overdraw');
 assert.equal(h.live.size,startObjects,'all construction display objects released');
 const shapes = new Set();
 for (let i=0;i<12;i++) {
@@ -36,6 +37,15 @@ for (let i=0;i<12;i++) {
   shapes.add(JSON.stringify(commands));
 }
 assert.equal(shapes.size,12,'finite distinct grass variants');
+for(let i=0;i<12;i++) {
+  const open=tiles[i].commands, sheltered=tiles[16+i].commands;
+  const paths=commands=>commands.filter(c=>c[0]!=='fill');
+  assert.deepEqual(paths(sheltered),paths(open),'shelter retains every existing leaf coordinate and shade order');
+  assert(sheltered.filter(c=>c[0]==='fill').every(c=>c[1].alpha===.94),'shelter never reveals more soil through alpha');
+  assert.equal(tiles[16+i].destroyArgument,undefined,'owned sheltered context released');
+  const colors=sheltered.filter(c=>c[0]==='fill').map(c=>c[1].color);
+  assert(new Set(colors).size>30,'feathering follows individual leaves, not a uniform rectangular tint');
+}
 const grassLayer=new h.P.Container(), puddleLayer=new h.P.Container();
 const view=presentation.createEcologyView(h.P,grassLayer,puddleLayer,atlas.frames), at=5000000;
 const cells=Array.from({length:640},(_,cell)=>Object.freeze({column:cell%32,row:Math.floor(cell/32),createdAt:at-60000,lastInfluencedAt:at}));
@@ -63,11 +73,11 @@ for (const age of [0,1000,10000,20000,30000,60000,1200000,1400000,1620000,192000
   view.change({kind:'grass-refreshed',item:sample},at);
   assert.equal(view.grassViews.get(0).sprite,sprite); assert.equal(sprite.texture,textures[0]);
   assert.equal(sprite.scale.x,state.growth*(1-state.decline*.65));
-  assert.equal(sprite.tint,(state.color[0]<<16)|(state.color[1]<<8)|state.color[2]); assert.equal(sprite.alpha,state.opacity/.6);
+  assert.equal(sprite.tint,presentation.grassTint(state.color)); assert.equal(sprite.alpha,state.opacity/.6);
   assert.equal(view.grassViews.get(0).nextAt,ecology.nextGrassVisualChangeAt(sample,at));
 }
-assert.equal(geometry,commandsAfterBaking);assert.equal(generated,1);assert.equal(h.textureCount(),startTextures+16);
+assert.equal(geometry,commandsAfterBaking);assert.equal(generated,1);assert.equal(h.textureCount(),startTextures+29);
 view.destroy();grassLayer.destroy();puddleLayer.destroy();atlas.destroy();
 assert.equal(h.textureCount(),startTextures);assert.equal(h.live.size,startObjects);
-assert.deepEqual(releasedFrames,Array(16).fill(false));assert.equal(sourceDestroyed,true);
+assert.deepEqual(releasedFrames,Array(29).fill(false));assert.equal(sourceDestroyed,true);
 console.log('PASS: 12 finite curved tuft variants, no blobs/model RNG, stable non-diagonal selection, exact lifecycle transforms/deadlines, zero recurring geometry/textures, view/frame/source cleanup.');

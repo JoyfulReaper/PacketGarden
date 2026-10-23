@@ -1,3 +1,116 @@
+# Grass and plant visual separation (2026-10-23)
+
+The homepage and `/pixi-live.html` now separate foreground plants from the dense
+leafy groundcover through Pixi presentation alone. Shared ecology, grass recipes,
+specimen placement/occupancy/lifetimes, all random streams, network/SSE, scoring,
+inspection and Canvas sources are unchanged. No dependency, setting, timer,
+render loop, filter or shader is added. The existing whole-surface day/night
+transform still composes over the scene; plant, blossom, vine/tendril, water,
+frog and gnome artwork/palettes are preserved.
+
+## Groundcover treatment and ownership
+
+Open grass keeps its exact 12 recipes and lifecycle scale/alpha. Its shared age
+RGB palette is brought 18% toward luminance and darkened 9%, preserving variation,
+yellowing and browning. Actual occupied grass selects a matching cached shaded
+recipe: the same leaf paths, order and .94 baked alpha, with a smooth oval falloff
+across individual leaves. At the center the additional darkening approaches 30%
+and desaturation 20%; it tapers toward unchanged outer leaves. This deliberately
+avoids a uniform 30% reduction across an entire square tile. It retains dense
+coverage and leaf detail instead of revealing soil or adding cell outlines.
+
+Each overlapping specimen also gets one small contact-shadow Sprite in the
+existing links layer, before vine Graphics and plants. Eight low-opacity cached
+ellipses form a shallow soft footprint (about 18×5 logical pixels before specimen
+scaling), without blur. Its frame is trimmed to 22×8 to avoid whole-cell
+transparent overdraw. The shadow follows the actual inset/jittered plant base,
+absolute scale and lifecycle size, including mirrored vines; fading grass and
+plants attenuate it. It has no input handlers. There are no shadows on bare soil.
+
+The ecology view reads the authoritative specimen map but never writes it.
+Plant add/update/remove notifications refresh only that grass record; ordinary
+grass add/refresh/age/remove events select the matching texture and create,
+reuse or destroy its shadow. Each record retains the exact specimen reference,
+so replacement cannot inherit the removed parent's shadow. Removing a plant
+restores the existing grass Sprite's open texture. Removing grass destroys its
+shadow. ON still fills nothing; OFF still removes overlapping grass through the
+unchanged model notifications. Mature grass incurs no extra frame-time scans.
+Page ownership detaches the view binding before destroying ecology views once;
+direct standalone view destruction also releases its groundcover presentation.
+
+## Deterministic visual review
+
+Run `node tests/pixi-grass-separation-browser.cjs --run --baseline`, then `--run`
+with installed Playwright/Chrome. The reviewed baseline is committed vine-bloom
+checkpoint `af7293d4ce3d6e68ac50f9127ca19d03949ca18c`. The harness serves either
+committed or edited Pixi files and supplies the same simulated fixture entries,
+foliage/bloom traits, age, grass, local time and camera on both versions. It never
+injects TCPNoise events. SHA-256 fixture hashes and existing bloom/connection
+counts match across the before/after reports.
+
+Ignored local artifacts live in `artifacts/grass-separation/`, with normal-scale
+PNGs in `before/` and `after/`, a comparison gallery and raw `review.json` reports:
+
+- `*-mixed-off-day.png`, `*-mixed-on-day.png`, `*-mixed-on-night.png`: the main
+  target, 260 mixed plants with 380 open grass cells OFF or 640 total grass ON.
+- `*-dense-broadleaf.png`, `*-dense-vines.png`: 168 plants, varied/rare foliage,
+  both bloom outcomes/colors and dense grass. Vines retain 380 connection halves.
+- `*-sparse.png`, `*-aging-grass.png`: sparse foreground and green/yellow/brown
+  grass ages, without replacing the age colors with a fixed green tint.
+- `*-full-off-day.png`, `*-full-on-day.png`, `*-full-on-night.png`: identical full
+  640-plant mixed gardens, with zero grass OFF or 640 grass ON.
+- Additional after captures show a 390px mobile view and night/hurricane/water.
+
+Both Pixi pages were reviewed at ordinary viewing size. Feathering avoids new
+square borders in the reviewed layouts; the original finite leaf pattern remains
+visible. The OFF setting still exposes soil in occupied cells, necessarily, and
+a fully occupied OFF garden still contains no grass. The presentation pass
+softens the open grass/soil contrast without changing that rule. ON remains
+denser and more coherent. Very full gardens still overlap/crowd visually; tiny
+flowers remain less distinct when the entire garden is fitted to a mobile screen.
+
+## Performance and validation
+
+The existing ecology source grows from logical **1024×64 to 1024×128** at resolution
+2 (2048×256 backing): **1 MiB** additional uncompressed RGBA memory, excluding
+driver overhead. Its **16→29 frames** are 12 open grass + 12 sheltered grass +
+four unchanged puddles + one contact shadow. The specimen atlas remains **823
+frames, 1024×832**. Startup still has five bake calls and the same retained GPU
+sources. No per-specimen/per-frame textures or recurring Graphics are created.
+Grass still uses at most 640 Sprites. Shadows add **0–640 Sprites** and no new
+container: the reviewed full mixed scene grows **1,439→2,079 display objects**;
+OFF adds none. Repeated full reset/clear, hidden expiry and direct page closure
+release all shadows, frame wrappers, construction/link contexts and atlas sources.
+
+Chrome 155's 120-frame full-field samples recorded mean CPU render submission
+**0.213→0.172ms** on the homepage and **0.197→0.204ms** on the diagnostic page,
+with mean RAF intervals about **16.6–16.7ms**. These small noisy samples do not
+establish a speedup or GPU cost; the diagnostic difference is roughly .007ms.
+A forced 640-cell occupancy refresh averaged **0.33ms / 0.67ms** on the homepage
+and diagnostic page over three passes;
+normal plant events touch one cell, and no periodic whole-field pass was added.
+The ecology startup bake measured roughly **3.7–4.3ms before / 8.1–8.8ms after**.
+The raw reports retain timings; hardware/browser variability and long live/GPU
+soaks remain unverified.
+
+`tests/pixi-grass-separation.cjs` exercises actual model/view notifications:
+default OFF, enable without fill, planting over grass, exact replacement,
+same-Sprite refresh, age colors/alpha/deadlines, plant/grass expiry, selective
+OFF removal, tint restoration, 640 overlapping plants, repeated resets, hidden
+expiry, reduced motion and standalone teardown. The grass artwork test compares
+every open/sheltered path coordinate and coverage alpha and checks finite
+per-leaf feathering, tiny shadow frames, zero recurring art work and cleanup.
+Existing Canvas parity, placement, weather, inspection, broadleaf/vine bloom and
+random-stream tests remain applicable. All **64 Node suites** pass (74 entry
+files including ten optional browser/helper entries).
+
+Chrome feature/capture, lifecycle, broadleaf/vine bloom and puddle artwork checks,
+Debug/Release .NET builds, backend assertions and real ASP.NET polling/SSE
+integration pass. The existing backend
+check project reports NU1900 when NuGet vulnerability metadata is unavailable;
+its assertions complete. Other browsers/devices, long sessions and GPU memory
+profiling are not established by these local deterministic/CPU checks.
+
 # Vine maturity blossoms (2026-10-23)
 
 The homepage and `/pixi-live.html` now give each ordinary vine a separate **15%**

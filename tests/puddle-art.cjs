@@ -22,12 +22,12 @@ const originalRandom=Math.random;let atlas;
 try{
   Math.random=()=>{throw new Error('Water artwork must not consume placement/weather/rarity RNG');};
   atlas=presentation.makeEcologyAtlas({...h.P,Graphics},{generateTexture(options){
-    tiles=options.target.children.slice();assert.deepEqual([options.frame.width,options.frame.height,options.resolution],[1024,64,2]);
+    tiles=options.target.children.slice();assert.deepEqual([options.frame.width,options.frame.height,options.resolution],[1024,128,2]);
     return h.renderer.generateTexture(options);
   }});
 }finally{Math.random=originalRandom;}
-assert.equal(tiles.length,16);assert.equal(atlas.frames.size,16);assert.equal(h.live.size,objects);
-assert(tiles.every(t=>t.released&&t.releaseOptions===undefined),'all sixteen temporary Graphics contexts explicitly released');
+assert.equal(tiles.length,29);assert.equal(atlas.frames.size,29);assert.equal(h.live.size,objects);
+assert(tiles.every(t=>t.released&&t.releaseOptions===undefined),'all temporary Graphics contexts explicitly released');
 for(let i=0;i<4;i++){
   const commands=[],context={beginPath(){},closePath(){commands.push(['lineTo',...start]);},
     fill(){commands.push(['fill',{color:parseInt(this.fillStyle.slice(1),16),alpha:this.globalAlpha}]);}};
@@ -54,7 +54,7 @@ for(let cycle=0;cycle<30;cycle++){
   at=start+100000;for(const p of puddles)model.refreshStormPuddle(p,at);
   assert(puddles.every((p,i)=>view.puddleViews.get(p)===sprites[i]&&sprites[i].texture===frames[i]));
   at+=510000;model.removeExpiredPuddles(at);assert.equal(view.puddleViews.size,0);assert.equal(water.children.length,0);
-  assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),textures+16);assert.equal(h.generated(),generated+1);
+  assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),textures+29);assert.equal(h.generated(),generated+1);
 }
 assert.equal(geometry,baked,'zero geometry submissions after the startup bake');
 view.destroy();grass.destroy();water.destroy();atlas.destroy();assert.equal(h.live.size,objects);assert.equal(h.textureCount(),textures);

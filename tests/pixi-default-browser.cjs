@@ -834,7 +834,7 @@ async function run() {
       await page.close();assert.deepEqual(errors,[],'including page-close errors');
     }
     assert(report.resources.cycles.every(c=>c.stable&&c.remaining===0&&c.destroyed));assert.equal(report.resources.bakes,1);assert.equal(report.resources.sources,1);
-    assert.equal(report.resources.frames,puddleBaseline?13:16);assert.deepEqual(report.resources.backing,puddleBaseline?[1664,128]:[2048,128]);
+    assert.equal(report.resources.frames,puddleBaseline?13:29);assert.deepEqual(report.resources.backing,puddleBaseline?[1664,128]:[2048,256]);
     const sharp=require('sharp');
     if(!puddleBaseline){
       report.pixelParity=[];

@@ -222,6 +222,7 @@
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
     const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(), bloomViews = new Map(); let connectionHalves = 0;
     const vineBloomViews=new Map(),vineBloomLinks=new Map();
+    let groundCover = null;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
     const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout';
@@ -330,6 +331,8 @@
       vineBlooms.style(sprite,specimen);
     }
     return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+      setGroundCover(presentation) { groundCover = presentation; },
+      get contactLayer() { return links; },
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
@@ -346,13 +349,15 @@
           const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize + offset.x, (specimen.row + .5) * cellSize + offset.y);
           links.addChild(graphic); vineLinks.set(specimen.id, graphic); refreshNeighborhood(specimen, byCell);
         }
+        groundCover?.specimenChanged(specimen);
       },
       update(specimen, byCell) { byId.get(specimen.id).texture = texture(specimen); counters.stageUpdates++;
         sizeSpecimen(specimen, byId.get(specimen.id));
         syncBloom(specimen,byId.get(specimen.id));
         syncVineBloom(specimen,byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
-        if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell); },
+        if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell);
+        groundCover?.specimenChanged(specimen); },
       remove(specimen, byCell) {
         const sprite = byId.get(specimen.id); sprite.destroy({children:true}); byId.delete(specimen.id); counters.destroyed++;
         bloomViews.delete(specimen.id);
@@ -363,6 +368,7 @@
           connectionHalves -= halfCurvesById.get(specimen.id) ?? 0; halfCurvesById.delete(specimen.id);
           graphic.destroy({children:true,context:true}); vineLinks.delete(specimen.id);vineBloomLinks.delete(specimen.id); refreshNeighborhood(specimen, byCell);
         }
+        groundCover?.specimenChanged(specimen);
       },
       setWeather(state) {
         const key = `${state.level}:${state.eventsPerMinute}`; if (key === lastWeatherKey) return;
@@ -389,12 +395,13 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() {
         // Each link owns a Graphics context and may own a blossom child.
         for(const graphic of vineLinks.values())graphic.destroy({children:true,context:true});
+        groundCover?.destroy(); groundCover = null;
         root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
       }
     };
@@ -537,8 +544,12 @@
     listen(app.canvas,'click',clickGarden);
     const ecologyCache = ecologyPresentation.makeEcologyAtlas(P, app.renderer);
     own(()=>ecologyCache.destroy());
-    const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames);
-    own(()=>ecologyView.destroy());
+    const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames, {
+      getSpecimen: (column, row) => model.byCell.get(row * core.dimensions.columns + column),
+      getPlantSprite: specimen => view.byId.get(specimen.id), shadowLayer: view.contactLayer
+    });
+    view.setGroundCover(ecologyView);
+    own(()=>{ view.setGroundCover(null); ecologyView.destroy(); });
     ecology = ecologyCore.createEcologyModel({ isCellOccupied: (column, row) => model.byCell.has(row * core.dimensions.columns + column),
       onChange(change) {
         ecologyView.change(change, Date.now());
@@ -667,7 +678,7 @@
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
-        `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
+        `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Frogs ${frogs?.frogs.length??0}/2 · views ${frogView?.views.size??0} · independent wildlife · 6 cached frames`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,

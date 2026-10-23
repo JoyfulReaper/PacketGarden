@@ -59,6 +59,17 @@ last-hour count over the existing SSE feed. Exact TCPNoise listening ports
 mutation. These are implemented features, not wishlist tasks; see [MVP](MVP.md)
 and [Pixi live notes](PIXI-LIVE.md) for exact behavior and limitations.
 
+## Grass and plant separation (implemented)
+
+The Pixi background/foreground separation pass is implemented: slightly darker,
+less saturated leafy grass, feathered shading inside occupied grass cells, and
+small contact shadows only where a plant actually overlaps grass. Leaf contours,
+age colors, plant/bloom palettes and day/night behavior are retained. These are
+cached presentation choices, with no ecological or checkbox-rule changes and no
+Canvas artwork change. Future tuning should retain organic edges rather than
+rectangular occupied-cell tints; broader directional shadows remain a separate
+idea. See [captures, tradeoffs and bounds](PIXI-LIVE.md#grass-and-plant-visual-separation-2026-10-23).
+
 ## Ambient actors and incidents
 
 The browser now has a transient actor/event layer because of The Gnome Incident.

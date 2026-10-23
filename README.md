@@ -86,7 +86,14 @@ Both renderers now draw a dense leafy groundcover mat beneath irregular upright
 blades, with restrained green shade variation and small organic soil gaps.
 Mature tiles cover about 91–96% of their soil area in the reviewed atlas samples.
 Pixi still uses 12 cached variants and one Sprite per grass cell; Canvas caches
-48 native shade paths from the same finite recipes. Young growth, yellow/brown aging,
+48 native shade paths from the same finite recipes. Pixi gently darkens and mutes
+the grass palette; occupied grass uses feathered leaf shading and a small cached
+contact shadow beneath its exact plant. This keeps leafy coverage while making
+plants easier to distinguish, including both kinds of blossoms. Age colors and
+day/night lighting remain intact. The checkbox retains its existing rules; this
+presentation pass changes no ecology, plant artwork or Canvas behavior. See
+[comparisons and resource costs](docs/PIXI-LIVE.md#grass-and-plant-visual-separation-2026-10-23).
+Young growth, yellow/brown aging,
 puddle layering and local-time lighting remain visible. Clicking a
 grass-covered tile without a specimen or collectible hit opens a compact
 **Wild grass** card with its current state. This is background ecology, not a
