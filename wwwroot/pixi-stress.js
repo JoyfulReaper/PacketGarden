@@ -253,7 +253,7 @@
     const app = new P.Application();
     // One opaque surface avoids full-size alpha compositing. Cached art already has smooth
     // edges at 2x atlas resolution; MSAA is unnecessary. DPR cap bounds fill rate on HiDPI.
-    try {await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance',
+    try {await app.init({ width: 960, height: 600, preference: ['webgl'], powerPreference: 'high-performance',
       backgroundColor: 0x151c16, backgroundAlpha: 1, antialias: false, autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, config.maxResolution), autoStart: false });
     }catch(error){own(()=>app.stage.destroy({children:true}));throw error;}

@@ -125,5 +125,5 @@ a.clear();view.destroy();cl.destroy();dl.destroy();cache.destroy();assert.equal(
   }
   assert.equal(JSON.stringify(dev.model.counts),statistics);assert.equal(JSON.stringify(dev.model.recentEvents),history);
   dev.winHandlers.get('pagehide')({persisted:false});
-  console.log('PASS: bud 3% boundary/one roll/all live ports/maturity/exact parent/hidden/shared cap, overlay/collection/zero stats, Canvas-Pixi parity, 30 resource cycles, simulated diagnostics and teardown.');
+  console.log('PASS: bud 3% boundary/one roll/all live ports/maturity/exact parent/hidden/shared cap, overlay/collection/zero stats, Pixi integration, 30 resource cycles, simulated diagnostics and teardown.');
 })().catch(error=>{console.error(error);process.exitCode=1});

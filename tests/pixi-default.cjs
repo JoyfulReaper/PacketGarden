@@ -119,7 +119,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
 
 async function checkDefault() {
   const g = await start();
-  assert.deepEqual(g.errors, []); assert(g.app.active); assert.equal(g.app.options.preference, 'webgl');
+  assert.deepEqual(g.errors, []); assert(g.app.active); assert.deepEqual(Array.from(g.app.options.preference), ['webgl']);
   assert.equal(g.sources.length, 1); assert.equal(g.sources[0].url, '/api/garden/events');
   assert.equal(g.element('#view').children.length, 1);
   const source = g.sources[0], root = g.app.stage.children[0], plants = root.children[6];

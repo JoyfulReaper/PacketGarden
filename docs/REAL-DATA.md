@@ -234,7 +234,7 @@ wirefern; existing weed and true-rare overrides and vigor thresholds are unchang
 It has a six-minute ordinary lifecycle, normal one-cell clustering/competition,
 and bounded vigor fullness. Persistent phosphor/moss/cyan/amber palettes and 1%
 afterglow are browser cosmetics with no backend rarity or security meaning.
-It draws on the base canvas without neighbor connectivity or per-RAF work;
+Its cached Pixi artwork has no neighbor connectivity or recurring geometry;
 generic inspection, Recent activity, and exact-count-one curiosity behavior apply.
 
 TCPNoise port hits share placement, clustering, lifecycles, and occupancy with fake events, but

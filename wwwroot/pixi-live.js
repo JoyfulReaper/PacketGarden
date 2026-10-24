@@ -432,7 +432,7 @@
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
     try {
-      await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
+      await app.init({ width: 960, height: 600, preference: ['webgl'], powerPreference: 'high-performance', antialias: false,
         backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
     } catch(error) {
       // A rejected renderer init has no Application ticker/plugins to destroy.

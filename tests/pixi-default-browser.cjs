@@ -56,7 +56,9 @@ async function run() {
     const createGarden=PacketGardenCore.createGardenModel,createEcology=PacketGardenEcology.createEcologyModel;
     const createStillbloom=PacketGardenStillbloom.createModel;
     PacketGardenStillbloom.createModel=(...args)=>{const model=createStillbloom(...args);window.__gardenTestStillbloom??=model;return model;};
-    PacketGardenCore.createGardenModel=(...args)=>{const garden=createGarden(...args);window.__gardenTestGarden??=garden;return garden;};
+    PacketGardenCore.createGardenModel=(...args)=>{const garden=createGarden(...args),seed=garden.seed;
+      garden.seed=(entries,...rest)=>{for(const p of entries)p.origin??={kind:'simulated',eventType:'chrome-fixture'};return seed(entries,...rest);};
+      window.__gardenTestGarden??=garden;return garden;};
     PacketGardenEcology.createEcologyModel=(...args)=>(window.__gardenTestEcology=createEcology(...args));
     const makeEcologyAtlas=PacketGardenPixiEcology.makeEcologyAtlas,createEcologyView=PacketGardenPixiEcology.createEcologyView;
     window.__gardenEcologyBakes=0;

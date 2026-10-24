@@ -1,5 +1,9 @@
 # PacketGarden Ideas and Future Directions
 
+Supported renderer: **PixiJS/WebGL**. The legacy Canvas renderer is retired;
+`/canvas.html` is a script-free redirect. Current dependencies and test migration
+are documented in [the retirement audit](CANVAS-RETIREMENT.md).
+
 This document collects ideas that have come up while building and watching the
 prototype. They are possibilities, not commitments. The implemented state lives in
 [README](../README.md) and [MVP](MVP.md); the broader design is in
@@ -28,23 +32,22 @@ until four tiny idiots suddenly have a territorial dispute and then leave.
 
 ## Current presentation baseline (implemented)
 
-The production homepage now uses PixiJS/WebGL, with the original Canvas garden
-preserved at `/canvas.html` and development controls at `/pixi-live.html`.
+The production homepage now uses PixiJS/WebGL, with development controls at `/pixi-live.html`. The legacy Canvas renderer is retired; `/canvas.html` only redirects to the homepage.
 The Pixi presentation has revised vine, broadleaf, blackthorn, weed and other
 plant artwork, larger specimen sprites, and separated grass tufts. The logical
 32×20 grid, capacity, ecology and lifetimes have not been enlarged or changed
 by those visual passes.
 
-Existing Canvas/Pixi mechanics now share the collectible weed mutation (of a
+Existing Pixi mechanics now share the collectible weed mutation (of a
 live port-22 redbloom), the independent Amanita loose drop (from a live mushroom),
 all four first-seen curiosities, click priority and collection messages. The
-remaining differences are mostly controls, artwork and Pixi-only storm lightning:
-Canvas retains fake-event/manual intensity controls, while Pixi has diagnostic
+supported presentation includes cached artwork and optional storm lightning;
+Pixi has diagnostic
 fixtures and its own HUD. Old `PIXI-LIVE.md` reports listing missing systems are
 historical snapshots, not current missing-feature lists. Ordinary live weed buds
 are now implemented as a separate loose drop, alongside clicked-gnome underpants.
 
-Both renderers now share opt-in Web Audio (Off initially, 12% initial volume)
+The Pixi garden now shares opt-in Web Audio (Off initially, 12% initial volume)
 for successful growth, rare flourishes, pointless collections and gnome arrivals.
 Every successful dispute and landscaping-mode start has one short synthesized
 nasal “gnooo-mz!” motif, suggesting a musical voice without speech, recordings
@@ -66,7 +69,7 @@ less saturated leafy grass, feathered shading inside occupied grass cells, and
 small contact shadows only where a plant actually overlaps grass. Leaf contours,
 age colors, plant/bloom palettes and day/night behavior are retained. These are
 cached presentation choices, with no ecological or checkbox-rule changes and no
-Canvas artwork change. Future tuning should retain organic edges rather than
+gameplay change. Future tuning should retain organic edges rather than
 rectangular occupied-cell tints; broader directional shadows remain a separate
 idea. See [captures, tradeoffs and bounds](PIXI-LIVE.md#grass-and-plant-visual-separation-2026-10-23).
 
@@ -79,7 +82,7 @@ plant ecology.
 
 ### Frogs around storm puddles (implemented)
 
-Both renderers now have passive frogs around actual shared puddles. Every
+The Pixi garden now has passive frogs around actual shared puddles. Every
 45 seconds, sufficiently visible/wet water permits one strict `< 0.15` roll,
 at most one arrival, and no more than two active frogs. Eligibility uses
 `puddleVisualState`: size >=8 and opacity >=0.12. A storm without water is
@@ -102,7 +105,7 @@ fall-through. Shared picking follows its actual pose, after gnomes, curiosities
 and drops, before mutations/inspection. Hidden, departed, stale and fully faded
 frogs cannot be picked. This creates no collection or sound and consumes none
 of the existing curiosity/drop/gnome slots.
-Canvas uses its shared overlay; Pixi reuses six finite sit/hop frames across
+; Pixi reuses six finite sit/hop frames across
 three green/olive palettes in the ambient atlas, with at most two persistent
 Sprites and no runtime geometry/textures. Gnome click priority is unchanged.
 
@@ -156,7 +159,7 @@ mutations, protected species and all unrelated plants are excluded. Network
 events, acceptance statistics, rarity, competition, provenance and Recent
 activity keep their existing meanings.
 
-Canvas and Pixi share the rules and clipper poses. Reduced motion uses fixed
+Pixi share the rules and clipper poses. Reduced motion uses fixed
 poses and discrete positions; landscaping has no sound. Hiding the page cancels
 the crew immediately; a logical gap over 1.5 seconds also cancels instead of
 replaying snips. Actors and incident display objects are released on completion.
@@ -220,7 +223,7 @@ reduced motion uses discrete positions and static poses. No new scheduling loop.
 ### Clickable gnomes and underpants (implemented)
 
 All visible active gnomes take click priority before curiosities, loose drops,
-mutations and inspection. Both renderers record the exact logical pose used to
+mutations and inspection. The Pixi garden records the exact logical pose used to
 draw each actor, including movement, shove, bounce and rotation; centralized
 click handling tests that transform. Hidden, removed, expired and unpainted
 actors cannot be clicked. A click is consumed even after an actor's one attempt,
@@ -241,7 +244,7 @@ Existing two-second feedback and optional sound remain; Score stays 0.
 Development-only `/pixi-live.html` controls trigger a simulated weed-harvest
 fixture, seed five mixed Amanita/bud/underpants drops and force either message
 boundary. Actual gnome clicks still enforce one attempt and the cap. The public
-homepage exposes none of these controls. Both renderers share the same bounded
+homepage exposes none of these controls. The Pixi garden shares the same bounded
 model and finite artwork; Pixi keeps at most four actor and five drop Sprites.
 
 Ambient incidents should not claim to represent attacks, failures, threat levels,
@@ -301,7 +304,7 @@ implementation is retained in the historical Pixi notes.
 
 ### Ditch Weed Bud (implemented)
 
-The proposed ordinary-weed drop is now implemented in both Canvas and Pixi.
+The proposed ordinary-weed drop is now implemented in Pixi.
 Each successfully placed live TCPNoise canonical `weed`, regardless of port,
 gets exactly one 3% roll (`roll < 0.03`) at creation. No tick, refresh, maturity
 or collection rerolls it. A successful attempt waits for the exact parent's
@@ -325,9 +328,8 @@ activity, acceptance count, inventory or scoring is introduced. Score stays 0.
 The separate port-22 mutation still collects the specimen itself and says
 `You collected some weed. +0 points`.
 
-Both renderers use the same finite leaf shapes; buds stay still, including with
-reduced motion. Canvas uses the dynamic overlay without base invalidation.
-Pixi adds one startup atlas frame and uses one owned Sprite per active bud.
+The Pixi garden uses the same finite leaf shapes; buds stay still, including with
+reduced motion. Pixi adds one startup atlas frame and uses one owned Sprite per active bud.
 **Seed weed buds (simulated)** appears only on `/pixi-live.html`, seeding local
 simulated weeds, grass and a mixed three-drop overlap fixture. It changes no
 incoming statistics or activity. There are no new timers or backend contracts.
@@ -545,7 +547,7 @@ outer petals, distinct from ghostbloom's daisy and crystal fungi. Young growth
 and late fading update at bounded one-second visual deadlines; mature flowers
 are static. The lifecycle is sprout <30s, growing <90s, mature until minute 17,
 then gradual fading through expiry at minute 20. Four cached Pixi poses fit in
-the existing atlas allocation; Canvas draws the equivalent shape. Local-time
+the existing atlas allocation;  Local-time
 lighting makes the pale flower stand out at night without changing eligibility.
 Competition and both landscaping modes protect it. No synthetic network events,
 acceptance statistics, Recent activity, grass influence, drops or sound are added.
@@ -570,7 +572,7 @@ mouse interaction at all.
 
 ## Lighting and atmosphere
 
-Local-time lighting is implemented in both Pixi and Canvas. A fixed local schedule
+Local-time lighting is implemented in Pixi. A fixed local schedule
 holds night from 22:00–05:00, transitions to dawn by 06:00, warms into day by
 09:00, holds day until 16:00, warms toward golden hour at 18:00, cools into dusk
 at 20:00 and settles back into night by 22:00. Smooth interpolation joins these
@@ -585,7 +587,7 @@ existing toggle, reduced-motion and optional sound settings.
 
 The shared calculation samples on the existing tick at a 30-second cadence and
 quantizes visual changes below about half a color level. A single surface color
-pass preserves cached artwork in both renderers; full day is the original image
+pass preserves cached artwork in Pixi; full day is the original image
 with the pass disabled. Hidden tabs skip work and resume once using current
 browser-local time. There are no new timers, persistence, APIs or ecological
 effects. Only `/pixi-live.html` offers named phases and a simulated-hour slider.
@@ -627,7 +629,7 @@ or security interpretation changes accompany this atmospheric artwork.
 The original severe-weather slice deliberately omitted flashes. This guarded
 Pixi experiment revisits that presentation decision while retaining the earlier
 historical findings. Longer live evaluation and audible listening remain useful;
-Canvas lighting parity is a separate future decision. See [measurements and
+See [measurements and
 limits](PIXI-LIVE.md). Usability takes priority over spectacle.
 
 Possible later audio polish:
@@ -660,10 +662,10 @@ score or a resource economy just to make it a "game."
 ## Grass clearing when a specimen takes a cell (implemented)
 
 The original wishlist proposed clear soil around new plants so exposed blades
-would not compete with the specimen artwork. Canvas and Pixi now remove grass
+would not compete with the specimen artwork. Pixi now remove grass
 from exactly the selected destination on successful growth/replacement, before
 presenting the new specimen. This is real shared-ecology removal through the
-existing `grass-removed` notification, with Canvas invalidation/Pixi Sprite
+existing `grass-removed` notification, with Pixi Sprite
 cleanup and immediate closure of a removed Wild grass inspection card.
 
 Invalid, paused and saturated/dropped events leave grass untouched. Neighboring
@@ -704,17 +706,16 @@ continue to matter and equal-strength traffic should not cause constant churn.
 
 ## Fuller, greener wild grass (implemented)
 
-Canvas and Pixi share 12 finite recipes with a substantial overlapping leafy mat
+Pixi share 12 finite recipes with a substantial overlapping leafy mat
 and taller irregular rosettes. Four restrained shades, irregular edges and small
 soil gaps give 91–96% mature tile coverage in the reviewed atlas samples.
 Growth/shrink/fading deadlines, yellow-to-brown aging, specimen
 silhouettes, picking, puddles and local-time lighting retain their behavior.
 Pixi bakes once at startup, keeps one Sprite per grass cell and releases its
-construction contexts and owned atlas resources. Canvas paints the same recipes
-only when its cached base needs an update, reusing 48 native shade paths instead
-of rebuilding geometry. There is no grass animation loop or new texture source.
+construction contexts and owned atlas resources. There is no grass animation
+loop or new texture source.
 
-One shared helper starts both gardens with 12 seeds, one random empty cell in
+One shared helper starts the garden with 12 seeds, one random empty cell in
 each distributed region. Natural spreading runs every four seconds, 70% per
 attempt, with 1–6 attempts according to reachable mature population. Parents are
 never refreshed by spreading. Eight traffic-free seeds reached 78–89% coverage
@@ -734,7 +735,7 @@ still have visible age waves; coverage counts are separate from healthy counts.
 No network events, growth statistics, provenance, rarity or Recent activity change.
 
 Comparable Chrome captures cover sparse/young, moderate/dense, mixed specimens,
-fading/dying, day/night and rain/puddles in both renderers. They prompted more
+fading/dying, day/night and rain/puddles in Pixi. They prompted more
 irregular clump positioning and transparent atlas-margin corrections. The result
 is fuller and greener with soil gaps and readable specimens. Finite variants
 can still repeat in artificial uniform fields; long live-traffic and other-GPU
@@ -756,7 +757,7 @@ vine. Neighbor refresh removes lost-edge flowers. The two/four parent blossoms
 plus optional connection flower keep the total between two and five. They open
 at one minute, fade from eight and disappear with the parent by ten minutes.
 Static cached artwork adds no timers, traffic, gameplay, collectibles or sounds.
-Existing connection geometry, foliage, broadleaf probabilities and Canvas are
+Existing connection geometry, foliage and broadleaf probabilities are
 unchanged. Local stage, connected/mixed and full grass fixtures live only on the
 diagnostic page. See [captures, bounds and checks](PIXI-LIVE.md#vine-maturity-blossoms-2026-10-23).
 
@@ -772,8 +773,7 @@ Sprouts and growing plants have no open blossoms. Maturity reveals the decoratio
 fading mutes/shrinks/droops it with the leaves, and expiry or replacement removes
 the exact parent's presentation. Fifteen finite atlas frames and one optional
 child Sprite keep it static and bounded. No traffic reinforcement, new events,
-statistics, scores, drops, sound or ecology effect is attached. Canvas keeps its
-existing artwork. The diagnostic page provides deterministic local stage/color
+statistics, scores, drops, sound or ecology effect is attached.  The diagnostic page provides deterministic local stage/color
 and 640-broadleaf grass fixtures; the homepage has no added development controls.
 See [implementation and reviewed captures](PIXI-LIVE.md#broadleaf-maturity-blossoms-2026-10-22).
 
@@ -871,8 +871,7 @@ Implemented first slice:
 - four shared illustrated pool variants replace the three overlapping ellipses:
   irregular soft shores, blue-green/slate water, lighter shallows, broken sky
   reflections and restrained static glints. The existing seed selects a stable
-  silhouette/palette through growth, refresh and drainage. Canvas caches four
-  tiles; Pixi bakes four frames into the existing ecology atlas with one Sprite
+  silhouette/palette through growth, refresh and drainage. Pixi bakes four frames into the existing ecology atlas with one Sprite
   per puddle. Cached order remains grass -> water -> specimens, with unchanged
   visual deadlines and no extra animation, shader, particle or timer;
 - no collection, Recent activity entry, provenance, inventory, or persistence.
@@ -895,7 +894,7 @@ Removed, replaced, faint or drained water cannot inherit an entry or reaction.
 The gnome briefly stumbles, splashes and displays `!`, then continues after about
 one second. All work/fighting/departure schedules and underpants behavior remain
 unchanged; reduced motion uses a still reaction. Hidden/cleared incidents release
-reaction state/resources, with no missed-entry replay or new sounds. Canvas/Pixi
+reaction state/resources, with no missed-entry replay or new sounds. Pixi
 share state/art; Pixi adds one finite ripple tile in the existing gnome atlas.
 The deterministic local-water demonstration is development-only. See
 [validation and resource measurements](PIXI-LIVE.md#gnome-puddle-mishaps-2026-10-21).
@@ -917,7 +916,7 @@ That adds environmental history without pretending the rain is a damaging event.
 
 Lightning/flashing was intentionally omitted from the original severe-weather
 slice. The guarded Pixi experiment above now adds optional smooth illumination;
-Canvas retains the original presentation. Neither renderer uses strobing.
+Pixi does not use strobing.
 
 ## Keep the weirdness earned
 

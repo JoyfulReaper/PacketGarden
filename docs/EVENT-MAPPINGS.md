@@ -103,7 +103,7 @@ It occupies one cell, clusters normally, and has no vine neighbor connections.
 Growing starts at 18 seconds, maturity at 50 seconds, fading at five minutes,
 and removal at six minutes. Bounded vigor detail adds fronds, small side branches,
 terminal tips, and stem thickness; recurrence/fullness is not threat.
-The ordinary base-canvas renderer updates through slow ecology aging, with no
+The ordinary cached Pixi artwork follows shared lifecycle updates, with no
 wirefern RAF or overlay animation. Real growth never directly seeds grass.
 
 ## TCPNoise rarity
@@ -298,7 +298,7 @@ severe traffic.
 Wirefern common palettes are **phosphor**, **moss**, **cyan**, and **amber**, following
 live vigor 0–3 through the existing color system; phosphor green is the default.
 Direct simulated test spawns vary across the same palettes. The separate 1%
-**afterglow** cosmetic is pale mint/cyan with a subtle ordinary Canvas glow.
+**afterglow** cosmetic is pale mint/cyan with pale cached highlights.
 Colors persist and add no backend rarity, protection, or security meaning.
 
 ## Temporary storm water

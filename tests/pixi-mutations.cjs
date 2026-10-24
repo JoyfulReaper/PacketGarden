@@ -56,7 +56,7 @@ const beforeActivation=model.mutations.snapshot().activations;
 const due=model.accept({specimenType:'redbloom',vigor:0,listenPort:22});
 at+=3000;
 model.accept({specimenType:'flower',vigor:0,listenPort:80});
-assert(due.mutation,'incoming events reconcile due mutations before placement, as Canvas does');
+assert(due.mutation,'incoming events reconcile due mutations before placement');
 assert.equal(model.mutations.snapshot().activations,beforeActivation+1);
 model.clear();
 ambient.clear();ecology.clear();av.destroy();ev.destroy();v.destroy();ac.destroy();ec.destroy();

@@ -1,3 +1,25 @@
+# Supported renderer and Canvas retirement (2026-10-24)
+
+PixiJS/WebGL is the supported renderer at `/`, `/index.html`, `/pixi-live.html`
+and the isolated `/pixi-stress.html` page. The legacy Canvas implementation is
+removed; `/canvas.html` is only a script-free bookmark redirect to the homepage.
+Unsupported WebGL or failed initialization displays a friendly message in the
+garden area, with normal partial-startup cleanup and no fallback engine.
+
+Shared specimen, ecology, wildlife, collectible, interaction, lighting, sound and
+network models remain. The grass separation presentation, both bloom types and
+vine connections are preserved. The gnome arrival sound implementation is unchanged.
+Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds, backend checks
+and the real-host SSE command in README. [The retirement audit](CANVAS-RETIREMENT.md)
+lists file/test dispositions, resource checks and validation limits.
+
+## Historical implementation and validation archive
+
+**All sections below record earlier checkpoints.** References to the old Canvas
+page, renderer, profiler, parity tests and retired files are historical evidence,
+not current setup or fallback instructions. Use the supported pages and commands
+above. Existing screenshot links and section anchors are preserved for review.
+
 # Grass and plant visual separation (2026-10-23)
 
 The homepage and `/pixi-live.html` now separate foreground plants from the dense

@@ -87,9 +87,9 @@ async function run() {
         const surface=page.locator('#view canvas');
         await surface.screenshot({path:path.join(output,`${name}-${scene}-on-garden.png`)});
         report.scenes.push({page:name,scene,enabled:true,...on});
-        const resources=await page.evaluate(()=>({bakes:__under.bakes,geometry:__under.geometry,paths:__underPaths,timers:__underTimers}));
+        const resources=await page.evaluate(()=>({bakes:__under.bakes,geometry:__under.geometry,timers:__underTimers}));
         for(let i=0;i<5;i++){await checkbox.uncheck();assert.deepEqual(await counts(),off);await checkbox.check();}
-        assert.deepEqual(await page.evaluate(()=>({bakes:__under.bakes,geometry:__under.geometry,paths:__underPaths,timers:__underTimers})),resources);
+        assert.deepEqual(await page.evaluate(()=>({bakes:__under.bakes,geometry:__under.geometry,timers:__underTimers})),resources);
         report.resources.push({page:name,scene,...resources,maxGrassSprites:pixi?640:0});
         // Empty the lawn: hidden ticks do not reseed, visible maintenance resumes normally.
         await page.evaluate(()=>{__under.ecology.clearGrass();__under.ecology.tick(Date.now()+60000,{hidden:true});});

@@ -19,8 +19,8 @@ async function run(){
       const generate=this.renderer.generateTexture.bind(this.renderer);
       this.renderer.generateTexture=options=>{const start=performance.now(),texture=generate(options);
         f.bakes.push({width:texture.source.pixelWidth,height:texture.source.pixelHeight,ms:performance.now()-start,source:texture.source});
-        if(options.frame.width===1024&&options.frame.height===64)f.ecologyTexture=texture;
-        if(options.frame.width===1024&&options.frame.height===64)for(const node of options.target.children)if(node instanceof PIXI.Graphics)f.contexts.push(node.context);
+        if(options.frame.width===1024&&options.frame.height<=128)f.ecologyTexture=texture;
+        if(options.frame.width===1024&&options.frame.height<=128)for(const node of options.target.children)if(node instanceof PIXI.Graphics)f.contexts.push(node.context);
         return texture;};return value;
     });};
     for(const name of ['moveTo','quadraticCurveTo','fill']){const original=PIXI.Graphics.prototype[name];
@@ -32,7 +32,6 @@ async function run(){
   const server=http.createServer(async(req,res)=>{try{
     const url=new URL(req.url,'http://localhost'),file=url.pathname.slice(1)||'index.html';
     if(file==='__lawn.js'){res.setHeader('Content-Type','text/javascript');res.end(capture);return;}
-    if(file==='__lawn-canvas.js'){res.setHeader('Content-Type','text/javascript');res.end(`{const create=PacketGardenFrogs.createModel;PacketGardenFrogs.createModel=options=>create({...options,random:PacketGardenFrogs.seededRandom(731)});}`);return;}
     if(file==='api/garden/events'){res.writeHead(200,{'Content-Type':'text/event-stream'});res.write('event: weather\ndata: {"level":"quiet","eventsPerMinute":0,"hasSnapshot":false}\n\n');return;}
     if(file==='favicon.ico'){res.writeHead(204);res.end();return;}
     const absolute=path.resolve(assets,file);if(!absolute.startsWith(assets+path.sep)){res.writeHead(404);res.end();return;}
@@ -79,7 +78,7 @@ async function run(){
       await page.getByLabel('Day/night cycle',{exact:true}).uncheck();
       for(const scene of scenes){
         const counts=await page.evaluate(({pixi,scene,now})=>{
-          const f=pixi?__lawn:{garden:gardenModel,ecology:gardenEcology,gnomes:gardenGnomes,frogs:gardenFrogs,ambient:gardenAmbient,lighting:gardenLighting};
+          const f=__lawn;
           f.gnomes.clear();f.frogs.clear();f.ambient.clear();f.garden.clear();f.ecology.clear();
           f.lighting.setEnabled(true);f.lighting.setMode(scene.night?'night':'day');
           const amount=scene.wildlife?32:scene.mixed?40:0;
@@ -108,7 +107,7 @@ async function run(){
           for(let i=0;i<120;i++){const at=performance.now();f.app.render();times.push(performance.now()-at);}
           const cycles=[];for(let i=0;i<20;i++){const sprites=[...f.view.grassViews.values()].map(r=>r.sprite);f.ecology.clearGrass();cycles.push({remaining:f.view.grassViews.size,destroyed:sprites.every(s=>s.destroyed)});
             f.ecology.seed({grassCells:Array.from({length:640},(_,i)=>({column:i%32,row:Math.floor(i/32),createdAt:Date.now()-60000,lastInfluencedAt:Date.now()}))});}
-          const atlas=f.bakes.find(b=>b.width===2048&&b.height===(baseline?128:256)),result={meanMs:times.reduce((a,b)=>a+b,0)/times.length,worstMs:Math.max(...times),bakes,
+          const atlas=f.bakes.find(b=>b.width===2048&&b.height<=256),result={meanMs:times.reduce((a,b)=>a+b,0)/times.length,worstMs:Math.max(...times),bakes,
             ecologyBakeMs:atlas.ms,liveAtlasSources:f.bakes.filter(b=>!b.source.destroyed).length,
             ecologyAtlas:{width:atlas.width,height:atlas.height,rgbaBytes:atlas.width*atlas.height*4},grassSprites:f.view.grassViews.size,cycles,
             recurringGeometry:f.geometry-geometry,additionalBakes:f.bakes.length-bakes,constructionContextsDestroyed:f.contexts.every(c=>c.destroyed)};

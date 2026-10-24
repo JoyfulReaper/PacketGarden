@@ -14,7 +14,7 @@ assert.match(read('wwwroot/vendor/pixi/THIRD-PARTY-NOTICES.txt'), /Vlad Shilov/)
 assert.equal(JSON.parse(read('package.json')).devDependencies['pixi.js'], '8.22.0');
 for (const file of ['Program.cs', 'GardenEvents.cs', 'TcpNoiseAdapter.cs', 'WeatherAdapter.cs']) assert.doesNotMatch(read(file), /pixi/i);
 assert.doesNotMatch(script, /EventSource|fetch\(|localStorage|sessionStorage|setTimeout|setInterval|OffscreenCanvas/);
-assert.match(script, /backgroundAlpha: 1/); assert.match(script, /preference: 'webgl'/);
+assert.match(script, /backgroundAlpha: 1/); assert.match(script, /preference: \['webgl'\]/);
 assert.match(script, /ticker\.lastTime/); assert.match(script, /new ResizeObserver/);
 assert.deepEqual([config.width, config.height, config.capacity], [960, 600, 640]);
 assert.deepEqual(sceneModel('mixed'), sceneModel('mixed'));

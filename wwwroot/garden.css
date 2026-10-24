@@ -100,18 +100,6 @@ button:focus-visible, select:focus-visible, input:focus-visible {
   outline-offset: 3px;
 }
 
-.sound-controls {
-  flex: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  padding-top: 8px;
-  color: #a9b5a2;
-  font-size: 13px;
-}
-
 #sound-volume {
   width: 110px;
   padding: 0;

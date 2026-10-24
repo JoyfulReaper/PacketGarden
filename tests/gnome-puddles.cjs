@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const W=require('../wwwroot/garden-gnome-puddles.js'),G=require('../wwwroot/garden-gnomes.js');
 const E=require('../wwwroot/garden-ecology.js'),A=require('../wwwroot/garden-puddle-art.js'),Core=require('../wwwroot/garden-core.js');
-const GV=require('../wwwroot/pixi-live-gnomes.js'),h=require('./pixi-live.cjs'),;
+const GV=require('../wwwroot/pixi-live-gnomes.js'),h=require('./pixi-live.cjs');
 const puddle=(seed=0)=>({x:480,y:300,seed,size:18,maxSize:18,createdAt:0,lastRefreshedAt:0});
 const world=(x,y,p)=>{const a=p.seed*2*Math.PI,s=p.size/18;return {x:p.x+(x*Math.cos(a)-y*Math.sin(a))*s,y:p.y+(x*Math.sin(a)+y*Math.cos(a))*s};};
 // Every sampled collision shore is safely inside the actual illustrated body,

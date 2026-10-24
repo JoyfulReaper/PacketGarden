@@ -160,11 +160,9 @@ and snapshot access to the intended services.
   close it; EventSource reconnects and receives current weather, but missed growth
   is intentionally lost. Queue overflow and stalled-write timeouts also end a
   stream. Check idle proxy behavior and avoid a reconnect storm.
-  The Pixi page closes its stream on pagehide; the Canvas fallback relies more on
-  browser document teardown. Hidden pages can retain subscriptions.
+  The Pixi page closes its stream on pagehide. Hidden pages can retain subscriptions.
 - **Client scope:** WebGL availability, mobile sizing, audio opt-in, and live
-  long-session performance still need deployment smoke coverage. Canvas remains
-  a manual fallback. Garden state is browser-local and not persistent.
+  long-session performance still need deployment smoke coverage. WebGL is required; unsupported browsers receive a friendly message. Garden state is browser-local and not persistent.
 
 ## Short post-deployment smoke test
 
@@ -174,7 +172,7 @@ and snapshot access to the intended services.
 2. Confirm a single SSE connection receives immediate weather, correct aggregate
    labels, and real growth when NATS events arrive. Inspect frame keys and actual
    sensor labels for the privacy boundary above. Sound must remain opt-in.
-3. Check `/canvas.html` and the chosen public/restricted behavior of both Pixi
+3. Check that `/canvas.html` redirects to `/`, and the chosen public/restricted behavior of both Pixi
    diagnostic pages. Confirm private/source paths return 404 through ingress.
 4. Briefly interrupt the browser connection, then reconnect. Verify current
    weather and subsequent growth resume without duplicate subscriptions. In a

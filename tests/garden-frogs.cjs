@@ -75,8 +75,8 @@ const state={specimens:[],curiosities:[],drops:[],frogs:null};assert.equal(I.res
     p.ecology.seed({puddles:[water]});
     const beforeStats=JSON.stringify(p.model.counts),recent=JSON.stringify(p.model.recentEvents),waterJson=JSON.stringify(p.ecology.puddles);
     // The same renderer-neutral path data is consumed by both actual presentation adapters.
-    const canvasEquivalent=F.createModel({now:()=>100000,random:F.seededRandom(313),getPuddles:()=>[water]});
-    const pf=p.frogs.spawnSimulated(),cf=canvasEquivalent.spawnSimulated();assert.deepEqual(JSON.parse(JSON.stringify(pf.points)),cf.points);
+    const referenceModel=F.createModel({now:()=>100000,random:F.seededRandom(313),getPuddles:()=>[water]});
+    const pf=p.frogs.spawnSimulated(),cf=referenceModel.spawnSimulated();assert.deepEqual(JSON.parse(JSON.stringify(pf.points)),cf.points);
     p.frogs.spawnSimulated();assert.equal(p.frogs.frogs.length,2);
     const root=p.app.stage.children[0],sprites=root.children[7].children.slice();assert.equal(sprites.length,2);
     for(let n=0;n<45;n++){p.frame(250);}
@@ -93,7 +93,7 @@ const state={specimens:[],curiosities:[],drops:[],frogs:null};assert.equal(I.res
   assert.equal(atlas.frames.size,13);
   for(let cycle=0;cycle<30;cycle++){
     f.puddles[0].lastRefreshedAt=f.at;const frogs=[model.spawnSimulated(),model.spawnSimulated()];assert(frogs.every(Boolean));
-    const sprites=[...view.views.values()];assert.equal(view.views.size,2);assert.deepEqual(layer.children,sprites,'same frog draw order as Canvas');
+    const sprites=[...view.views.values()];assert.equal(view.views.size,2);assert.deepEqual(layer.children,sprites,'stable frog draw order');
     for(let age=0;age<60000;age+=250){f.at+=250;model.tick(f.at);view.animate(f.at);assert.equal(h.generated(),bakes+1);}
     assert.equal(view.views.size,0);assert.equal(layer.children.length,0);assert(sprites.every(s=>!h.live.has(s)));
     assert.equal(h.textureCount(),baseline+13);

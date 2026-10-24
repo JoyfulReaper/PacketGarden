@@ -110,5 +110,5 @@ assert.equal(h.textureCount(),textures);assert.equal(h.generated(),bakes);view.d
     }
     g.winHandlers.get('pagehide')({persisted:false});assert.equal(g.view.vineBloomViews.size,0);assert.equal(g.view.vineBloomLinks.size,0);assert.deepEqual(g.errors,[]);
   }
-  console.log('PASS: exact 15% stable/independent vine traits, silvervine, maturity/fade/expiry/replacement, unchanged canonical curves, bounded unique on-curve decorations, neighbor refresh, 640-parent ownership, no per-frame work, broadleaf/Canvas/network/score isolation and hidden/reduced-motion cleanup.');
+  console.log('PASS: exact 15% stable/independent vine traits, silvervine, maturity/fade/expiry/replacement, unchanged canonical curves, bounded unique on-curve decorations, neighbor refresh, 640-parent ownership, no per-frame work, broadleaf/network/score isolation and hidden/reduced-motion cleanup.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
