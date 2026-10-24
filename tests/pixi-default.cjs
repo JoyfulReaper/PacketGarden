@@ -20,6 +20,7 @@ assert.match(read('canvas.html'), /http-equiv="refresh" content="0; url=\/"/);
 assert(!scripts.includes('garden.js'));
 for (const id of ['seed-broadleaf-blooms','seed-dense-broadleaf-blooms','trigger-stillbloom','stillbloom-test-status','trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
 for(const id of ['seed-vine-bloom-stages','seed-vine-bloom-connections','seed-vine-bloom-dense'])assert(!html.includes(`id="${id}"`),'vine fixtures are diagnostic-only');
+for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includes(`id="${id}"`),'audio preview is diagnostic-only');
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
@@ -64,7 +65,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   const context = {document:doc, Date:class extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => random()}),
     EventSource:Source, console:{error:error => errors.push(error)},
     ResizeObserver:class {constructor(fn){observer=this;this.callback=fn;} observe(){} disconnect(){this.disconnected=true;}},
-    window:{PIXI:{...h.P,Application},AudioContext,matchMedia:()=>media,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
+    window:{document:doc,PIXI:{...h.P,Application},AudioContext,matchMedia:()=>media,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
       addEventListener:(name,fn) => winHandlers.set(name,fn), removeEventListener:name => winHandlers.delete(name)}};
   vm.createContext(context);
   for (const script of pageScripts.filter(name => !name.startsWith('vendor/'))) {

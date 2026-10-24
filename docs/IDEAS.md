@@ -53,7 +53,12 @@ Every successful dispute and landscaping-mode start has one short synthesized
 nasal “gnooo-mz!” motif, suggesting a musical voice without speech, recordings
 or network access. Existing battle/victory cues remain. Failed attempts, ticks
 and resume are silent; two bounded voices use the existing volume and output
-chain and disconnect after completion or muting. The original incident's shared
+chain and disconnect after completion, muting, hiding or page disposal. The
+roughly 550ms cue now preserves its fundamental and holds a vowel-like body
+before a gentle buzzing tail; the old filter/envelope made it hard to hear at
+12%. A diagnostic-only **Preview gnome sound** shares the production synthesis
+without spawning actors, enabling Sound or resuming audio. See
+[audio diagnosis and native signal checks](GNOME-AUDIO.md). The original incident's shared
 model retains the 30-specimen threshold, 2% check
 every 45 seconds, four actors and 12-second cleanup. The homepage also shows
 Noise Observatory's five-minute-average events/minute and actual reported
@@ -160,7 +165,7 @@ events, acceptance statistics, rarity, competition, provenance and Recent
 activity keep their existing meanings.
 
 Pixi share the rules and clipper poses. Reduced motion uses fixed
-poses and discrete positions; landscaping has no sound. Hiding the page cancels
+poses and discrete positions; landscaping shares the optional arrival cue. Hiding the page cancels
 the crew immediately; a logical gap over 1.5 seconds also cancels instead of
 replaying snips. Actors and incident display objects are released on completion.
 No extra timers, per-frame population scans, persistence, scores or chores.

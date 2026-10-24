@@ -171,7 +171,12 @@ independent underpants drops retain their existing behavior. Collection awards
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,
 gnome sounds and optional thunder share the same output controls and cleanup.
-The Canvas retirement does not change or redesign the gnome arrival sound.
+Successful gnome arrivals use a short synthesized nasal “gnooo-mz!” motif, tuned
+to remain audible at 12% without raising the shared output gain. On
+`/pixi-live.html`, enable Sound, then use **Preview gnome sound** to hear the exact
+production cue without spawning anything. The preview reports disabled, muted
+or unavailable audio and never enables or resumes it. See
+[audio diagnosis and validation](docs/GNOME-AUDIO.md).
 
 Stillbloom is a separate protected quiet-weather flower: verified healthy Live
 quiet must be observed continuously for ten minutes before a 10% roll, then
@@ -237,8 +242,11 @@ new project dependencies. Make that existing runtime available through Node's
 module search path (`NODE_PATH`) when needed. `test:chrome` runs every remaining
 Chrome entry point, including full page interactions, lifecycle/resource
 ownership, grass, both bloom types, full fields, weather and WebGL-disabled
-startup. Logs and screenshots are ignored under `artifacts/retire-canvas/`;
-the Node runner explicitly reports optional browser/SSE entries as skipped,
+startup. Native gnome audio checks render the production mix, exercise all four
+incident routes and preview gating, and compare against the pre-fix signal.
+Logs and screenshots are ignored under `artifacts/retire-canvas/`; audio reports
+and locally rendered WAV evidence are under `artifacts/gnome-arrival/`.
+The Node runner explicitly reports optional browser/SSE entries as skipped,
 and the commands above run those integration checks separately.
 
 The diagnostic Pixi HUD and isolated stress page are the supported performance

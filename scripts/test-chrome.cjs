@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),{spawnSync}=require('node:child_process');
 try{require.resolve('playwright');}catch{throw Error('Make the already installed Playwright runtime available through NODE_PATH before running test:chrome.');}
 const root=path.resolve(__dirname,'..'),out=path.join(root,'artifacts/retire-canvas/chrome');fs.mkdirSync(out,{recursive:true});
-const jobs=[['pixi-default-browser.cjs'],['grass-lush-browser.cjs'],['grass-under-plants-browser.cjs'],['pixi-broadleaf-blooms-browser.cjs'],['pixi-vine-blooms-browser.cjs'],['pixi-grass-separation-browser.cjs','--baseline'],['pixi-grass-separation-browser.cjs'],['pixi-vine-art-browser.cjs'],['canvas-retirement-browser.cjs']];
+const jobs=[['pixi-default-browser.cjs'],['grass-lush-browser.cjs'],['grass-under-plants-browser.cjs'],['pixi-broadleaf-blooms-browser.cjs'],['pixi-vine-blooms-browser.cjs'],['pixi-grass-separation-browser.cjs','--baseline'],['pixi-grass-separation-browser.cjs'],['pixi-vine-art-browser.cjs'],['canvas-retirement-browser.cjs'],['gnome-arrival-signal-browser.cjs','--baseline'],['gnome-arrival-signal-browser.cjs']];
 const only=process.argv.find(a=>a.startsWith('--only='))?.slice(7),file=path.join(out,'results.json');
 const results=only&&fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):[];
 for(const [name,...args] of jobs){const id=name+(args.length?'-baseline':'');if(only&&!id.includes(only))continue;

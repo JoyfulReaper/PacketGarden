@@ -23,6 +23,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   let master = null;
   let thunderBuffer = null;
   let enabled = false;
+  let unavailable = false;
   let volume = Number(volumeControl?.value ?? 12) / 100;
   let activation = 0;
   let lastOrdinaryAt = -Infinity;
@@ -47,6 +48,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
     stopThunder();
     arrival?.cancel();
     enabled = false;
+    unavailable = true;
     activation++;
     try { applyVolume(); } catch { /* Device may have become unavailable. */ }
     updateToggle(true);
@@ -78,6 +80,7 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
 
   async function setSoundEnabled(value) {
     enabled = Boolean(value);
+    unavailable = false;
     if (!enabled) { stopThunder(); arrival?.cancel(); }
     const request = ++activation;
     updateToggle();
@@ -136,19 +139,26 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   }
 
   function maybePlayGnomeSound(stage) {
-    if (!enabled || volume === 0 || audio?.state !== "running") return;
-    if (stage === 'arrival') { playGnomeArrival(); return; }
-    if (stage !== "battle" && stage !== "victory") return;
+    // Preview and incident dispatch share this gate. Neither can initialize or
+    // resume a context, and hidden pages never schedule a gnome cue.
+    if (!enabled) return unavailable ? 'unavailable' : 'disabled';
+    if (window.document?.hidden) return 'hidden';
+    if (volume === 0) return 'muted';
+    if (!audio || audio.state === 'closed') return 'unavailable';
+    if (audio?.state !== 'running') return 'suspended';
+    if (stage === 'arrival') return playGnomeArrival();
+    if (stage !== "battle" && stage !== "victory") return 'ignored';
     try {
       // A couple of tiny cues, substantially below the tuned growth envelopes.
       const notes = stage === "battle" ? [880] : [523, 659, 784];
       notes.forEach((frequency, index) =>
         playTone(frequency, "sine", 0.12, audio.currentTime + index * 0.07, 0.045));
-    } catch { reportUnavailable(); }
+      return 'played';
+    } catch { reportUnavailable(); return 'unavailable'; }
   }
 
   function playGnomeArrival() {
-    if (arrival) return; // A second diagnostic start cannot pile up scheduled voices.
+    if (arrival) return 'busy'; // A second diagnostic start cannot pile up scheduled voices.
     const nodes=[];
     const release=node=>{
       if(node.done)return;node.done=true;
@@ -166,25 +176,35 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
     arrival=sequence;
     try {
       const start=audio.currentTime;
-      // A rounded nasal "gnooo" slides into a short softer buzz: musical, never speech.
+      // Keep the fundamental audible. The former bandpass removed its body;
+      // a modest formant peak brings out nasal harmonics without cutting it.
+      // A held vowel and softer buzzing tail make a musical "gnooo-mz", not speech.
       for(let index=0;index<2;index++) {
         const node={done:false,started:false};nodes.push(node);
         node.oscillator=audio.createOscillator();node.filter=audio.createBiquadFilter();node.envelope=audio.createGain();
-        const at=start+(index?.32:0),duration=index?.23:.37;
+        const at=start+(index?.30:0),duration=index?.24:.40;
         node.oscillator.type=index?'sawtooth':'triangle';
-        node.oscillator.frequency.setValueAtTime(index?148:196,at);
-        node.oscillator.frequency.exponentialRampToValueAtTime(index?112:148,at+duration);
-        node.filter.type=index?'lowpass':'bandpass';node.filter.Q.setValueAtTime(index?.8:1.8,at);
-        node.filter.frequency.setValueAtTime(index?640:620,at);
-        node.filter.frequency.exponentialRampToValueAtTime(index?240:420,at+duration);
+        node.oscillator.frequency.setValueAtTime(index?164:196,at);
+        if(!index) {
+          node.oscillator.frequency.exponentialRampToValueAtTime(246,at+.055);
+          node.oscillator.frequency.exponentialRampToValueAtTime(210,at+.14);
+        }
+        node.oscillator.frequency.exponentialRampToValueAtTime(index?108:164,at+duration);
+        node.filter.type=index?'lowpass':'peaking';node.filter.Q.setValueAtTime(index?.65:1.3,at);
+        node.filter.frequency.setValueAtTime(index?950:710,at);
+        node.filter.frequency.exponentialRampToValueAtTime(index?390:500,at+duration);
+        if(!index)node.filter.gain.setValueAtTime(9,at);
         node.envelope.gain.setValueAtTime(0,at);
-        node.envelope.gain.linearRampToValueAtTime(index?.026:.075,at+.025);
+        node.envelope.gain.linearRampToValueAtTime(index?.045:.13,at+.012);
+        node.envelope.gain.linearRampToValueAtTime(index?.035:.115,at+(index?.10:.12));
+        node.envelope.gain.linearRampToValueAtTime(index?.018:.075,at+(index?.17:.26));
         node.envelope.gain.exponentialRampToValueAtTime(.0001,at+duration);
         node.oscillator.connect(node.filter);node.filter.connect(node.envelope);node.envelope.connect(master);
         node.oscillator.onended=()=>release(node);
         node.oscillator.start(at);node.started=true;node.oscillator.stop(at+duration+.01);
       }
-    } catch { sequence.cancel();reportUnavailable(); }
+      return 'played';
+    } catch { sequence.cancel();reportUnavailable(); return 'unavailable'; }
   }
 
   function maybePlayCollectionSound() {
@@ -256,7 +276,8 @@ function createGardenSound({ window, toggle = null, volumeControl = null }) {
   toggle?.addEventListener("click", () => setSoundEnabled(!enabled));
   volumeControl?.addEventListener("input", () => setSoundVolume(volumeControl.value));
   updateToggle();
-  return { maybePlayGrowthSound, maybePlayGnomeSound, maybePlayCollectionSound, maybePlayThunderSound };
+  return { maybePlayGrowthSound, maybePlayGnomeSound, maybePlayCollectionSound, maybePlayThunderSound,
+    cancelGnomeArrival() { arrival?.cancel(); } };
 }
 
 // Both page types bind the same controls to one local controller. Context creation

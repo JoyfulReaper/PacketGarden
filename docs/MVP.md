@@ -82,13 +82,18 @@ sensor/service inputs remain goals.
   gnomes/curiosities/drops and before mutations/inspection. Removed, stale, hidden
   and fully faded frogs cannot be clicked. No collection, sound, inventory or activity.
 - Every successful gnome dispute or vine/overcrowding/weed-harvest start emits one
-  shared arrival cue: a quiet 560ms nasal two-tone “gnooo-mz!” musical illusion,
+  shared arrival cue: a roughly 550ms nasal two-tone “gnooo-mz!” musical illusion,
   synthesized locally without speech or recordings. Sound Off/12% default, explicit
   activation, volume/master/compressor and existing battle/victory cues remain.
   At most two arrival oscillators, filters and envelope gains exist briefly; cleanup
-  includes completion, mute, Off and partial failure. Failed starts, ticks, phase
+  includes completion, mute, Off, hiding, page disposal and partial failure. Failed starts, ticks, phase
   updates and resume do not replay it. Existing diagnostic triggers demonstrate both
-  additions; there are no new production controls, timers, artwork or dependencies.
+  additions; a diagnostic-only **Preview gnome sound** uses the identical cue and
+  reports audio availability without enabling/resuming a context or changing the
+  garden. A held vowel, preserved fundamental and gentle buzz correct the old
+  cue's low level at 12%; native Chrome PCM checks guard signal and cleanup.
+  There are no new production controls, timers, artwork or dependencies.
+  See [audio diagnosis](GNOME-AUDIO.md).
 - ASP.NET Core / .NET host serving HTML, CSS, and vanilla JavaScript.
 - Default PixiJS/WebGL garden at `/` and `/index.html`, a script-free legacy bookmark redirect at `/canvas.html`, and a separate Pixi diagnostic/live-soak page at `/pixi-live.html`; all retain the 32×20 logical garden, bounded capacity, and shared model rules.
 - Session-only **Allow grass under plants** checkbox on both live Pixi pages, OFF on reload. The shared ecology model allows natural spread, seed/refresh and retained grass beneath new/replacement plants when ON; OFF immediately removes only overlaps. No instant fill on enable. At most 640 distinct grass cells, including beneath a full 640-plant garden; normal aging/expiry, grass-first layering, specimen inspection and all plant rules remain unchanged.

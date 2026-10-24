@@ -1,3 +1,20 @@
+# Gnome arrival audio diagnosis and audibility (2026-10-24)
+
+All four production incident routes already dispatched the arrival cue correctly.
+Native Chrome rendering confirmed that the old bandpass and rapidly decaying
+envelope made the scheduled signal too quiet at 12%. The revised roughly 550ms
+two-voice motif preserves its fundamental, holds its nasal vowel and ends in a
+gentle buzz. The master volume curve, compressor and other sounds are unchanged.
+
+`/pixi-live.html` has a **Preview gnome sound** button with accessible status.
+Enable Sound explicitly first; preview never creates/resumes audio or changes
+garden state. It uses the production method and reports disabled, muted,
+suspended, hidden, busy or unavailable audio. No production preview control is
+added. Hiding/disposal cancel active arrival nodes; resume never replays them.
+Both supported garden pages request fresh versioned audio/bootstrap assets.
+
+See [diagnosis, signal measurements, test commands and limits](GNOME-AUDIO.md).
+
 # Supported renderer and Canvas retirement (2026-10-24)
 
 PixiJS/WebGL is the supported renderer at `/`, `/index.html`, `/pixi-live.html`
@@ -8,7 +25,8 @@ garden area, with normal partial-startup cleanup and no fallback engine.
 
 Shared specimen, ecology, wildlife, collectible, interaction, lighting, sound and
 network models remain. The grass separation presentation, both bloom types and
-vine connections are preserved. The gnome arrival sound implementation is unchanged.
+vine connections are preserved. The retirement itself left gnome audio unchanged;
+the subsequent audibility fix is described above.
 Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds, backend checks
 and the real-host SSE command in README. [The retirement audit](CANVAS-RETIREMENT.md)
 lists file/test dispositions, resource checks and validation limits.

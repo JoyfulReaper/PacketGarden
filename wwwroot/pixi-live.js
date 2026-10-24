@@ -429,6 +429,15 @@
     const frogCore=window.PacketGardenFrogs;
     const interaction = window.PacketGardenInteraction;
     const sound = typeof gardenSound === 'undefined' ? null : gardenSound;
+    own(()=>sound?.cancelGnomeArrival());
+    listen(document.querySelector('#preview-gnome-sound'),'click',()=>{
+      const result=sound?.maybePlayGnomeSound('arrival')??'unavailable';
+      const messages={played:'Playing the production gnome arrival sound.',disabled:'Sound is disabled. Turn Sound On first.',
+        muted:'Volume is 0. Increase it to preview.',suspended:'Sound is suspended. Turn Sound Off and On to enable it again.',
+        hidden:'Sound preview is unavailable while the page is hidden.',busy:'The gnome arrival sound is already playing.',
+        unavailable:'Sound is unavailable. Try enabling Sound again.'};
+      document.querySelector('#gnome-sound-status').textContent=messages[result]??messages.unavailable;
+    });
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
     try {
@@ -723,7 +732,7 @@
       const at = Date.now(); ecology.resetCadence(at);
       stillbloom.configure({hidden:document.hidden},at);
       gnomes.resetCadence(at);
-      if (document.hidden) gnomes.suspend(at);
+      if (document.hidden) { gnomes.suspend(at); sound?.cancelGnomeArrival(); }
       storm.configure({hidden:document.hidden},at);
       if (document.hidden) app.stop(); else {
         updateLighting(at,true);
