@@ -1,7 +1,7 @@
-// Deterministic shared rules plus actual Canvas/Pixi wiring, ownership and order.
+// Deterministic shared rules plus actual shared/Pixi wiring, ownership and order.
 const assert = require('node:assert/strict'), fs = require('node:fs');
 const E = require('../wwwroot/garden-ecology.js'), G = require('../wwwroot/garden-core.js');
-const canvas = require('./browser-garden.cjs'), {start} = require('./pixi-default.cjs'), h = require('./pixi-live.cjs');
+const  {start} = require('./pixi-default.cjs'), h = require('./pixi-live.cjs');
 const cell = (column, row, at = 0) => ({column, row, createdAt: at - 60000, lastInfluencedAt: at});
 const lawn = at => Array.from({length:640}, (_, i) => cell(i % 32, Math.floor(i / 32), at));
 function fixture(occupied = () => true) {
@@ -20,7 +20,7 @@ for (const enabled of [false, true]) {
   m.clearGrass(); m.influenceGrass('dns', {column:0,row:0}, 100);
   assert.equal(m.grassCells.length, enabled ? 2 : 0, 'direct influence');
   m.seed({grassCells:[cell(0,0)]}); assert.equal(m.grassCells.length, enabled ? 1 : 0, 'fixture import');
-  m.grassCells = lawn(0); assert.equal(m.grassCells.length, enabled ? 640 : 0, 'Canvas fixture assignment');
+  m.grassCells = lawn(0); assert.equal(m.grassCells.length, enabled ? 640 : 0, 'validated fixture assignment');
   const before = JSON.stringify(m.grassCells);
   assert.throws(()=>m.seed({grassCells:[cell(0,0),cell(0,0)]}), /Invalid grass seed/);
   assert.throws(()=>{m.grassCells=[cell(0,0),cell(0,0)];}, /Invalid grass seed/);
@@ -67,26 +67,6 @@ hidden.tick(2100000,{hidden:true}); assert.equal(hidden.grassCells.length,0,'hid
 hidden.clear(); assert.equal(hidden.grassCells.length,0);
 assert.equal(fixture().ecology.allowGrassUnderPlants,false,'new sessions default OFF');
 
-const c=canvas(), toggle=c.element('#allow-grass-under-plants'), timers=c.intervals.length;
-const setCanvas=checked=>{toggle.checked=checked;for(const fn of toggle.handlers.get('change'))fn();};
-assert.equal(toggle.checked,false); assert.equal(c.run('gardenEcology.allowGrassUnderPlants'),false);
-c.run('gardenModel.clear();gardenEcology.clear();gardenModel.seed([{type:"flower",column:0,row:0,createdAt:Date.now()-60000}])');
-setCanvas(true); c.run('gardenEcology.seed({grassCells:[{column:0,row:0,createdAt:Date.now()-60000,lastInfluencedAt:Date.now()},{column:1,row:0,createdAt:Date.now()-60000,lastInfluencedAt:Date.now()}]})');
-c.click(15,15); assert.equal(c.element('#specimen-card-title').textContent,'Flower','Canvas inspects the specimen over its grass');
-c.run('const order=[];drawGrass=()=>order.push("grass");speciesConfig.get("flower").render=()=>order.push("plant");drawGarden()');
-assert.deepEqual(Array.from(c.run('order')),['grass','grass','plant']);
-setCanvas(false); assert.equal(c.run('gardenEcology.grassCells.length'),1);
-assert.equal(c.run('gardenEcology.grassCells[0].column'),1);
-setCanvas(true); c.run('gardenModel.clear();gardenEcology.clear();influenceGrassCell(0,0,Date.now())');
-c.sandbox.Math.random=()=>0;c.emit(53,'flower');assert.equal(c.run('gardenEcology.grassCells.length'),1);
-assert.equal(c.intervals.length,timers,'reuse the existing timers');
-c.setHidden(true); const work=c.drawing.length; setCanvas(false); assert.equal(c.drawing.length,work,'hidden toggle does not paint');
-c.setHidden(false);assert.equal(c.run('gardenEcology.allowGrassUnderPlants'),false);
-for(const fn of c.windowHandlers.get('pagehide'))fn({persisted:true});
-assert.equal(toggle.handlers.get('change').length,1,'retained Canvas session keeps its listener');
-for(const fn of c.windowHandlers.get('pagehide'))fn({persisted:false});
-assert.equal(toggle.handlers.get('change').length,0,'Canvas final teardown removes input');
-
 (async()=>{
   for(const page of ['index.html','pixi-live.html']) {
     const html=fs.readFileSync(`wwwroot/${page}`,'utf8');
@@ -119,5 +99,5 @@ assert.equal(toggle.handlers.get('change').length,0,'Canvas final teardown remov
     assert.equal(checkbox.handlers.size,0);late({target:{checked:false}});assert.equal(g.ecology.allowGrassUnderPlants,true,'late input is guarded');
     assert.equal(grass.children.length,0);assert.deepEqual(g.errors,[]);
   }
-  console.log('PASS: grass under plants OFF/ON ingress, spread/regrowth, spawn/replacement, 640+640 capacity/uniqueness, atomic fixtures, aging/hidden expiry, Canvas/Pixi layering, inspection, session defaults and teardown/atlas reuse.');
+  console.log('PASS: grass under plants OFF/ON ingress, spread/regrowth, spawn/replacement, 640+640 capacity/uniqueness, atomic fixtures, aging/hidden expiry, shared/Pixi layering, inspection, session defaults and teardown/atlas reuse.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

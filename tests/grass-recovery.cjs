@@ -1,7 +1,7 @@
 // Grass population policy on the real shared model and both application entry points.
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const E=require('../wwwroot/garden-ecology.js'),G=require('../wwwroot/garden-core.js'),N=require('../wwwroot/garden-gnomes.js');
-const createCanvas=require('./browser-garden.cjs'),{start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
+const {start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
 const seeded=(seed=17)=>()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
 const positions=m=>Array.from(m.grassCells,c=>[c.column,c.row,c.createdAt,c.lastInfluencedAt]);
 for(const roll of [0,.5,.999999]) {
@@ -92,35 +92,25 @@ for(const seed of [11,82,193]){
 }
 console.log('Grass coverage at 2/4/6/8/10 minutes (three fixed seeds):',JSON.stringify(coverage));
 (async()=>{
-  let pixiRoll=()=>0;
-  const beforeTextures=h.textureCount(),canvas=createCanvas(),pixi=await start(false,{captureModel:true,random:()=>pixiRoll()});
-  assert.equal(canvas.run('gardenState.grassCells.length'),12);assert.equal(pixi.ecology.grassCells.length,12);
-  const generated=h.generated(),textures=h.textureCount(),live=h.live.size,intervals=canvas.intervals.length;
-  const canvasModel=canvas.run('gardenEcology'),canvasGarden=canvas.run('gardenModel');
-  const offsets=[canvas.clock.now,pixi.context.Date.now()];
-  const reset=[()=>{canvasGarden.clear();canvasModel.clear();},()=>{pixi.model.clear();pixi.ecology.clear();}];
+  let pixiRoll=()=>0,referenceRoll=()=>0,referenceAt=100000;
+  const beforeTextures=h.textureCount(),pixi=await start(false,{captureModel:true,random:()=>pixiRoll()});
+  const reference=E.createEcologyModel({now:()=>referenceAt,random:()=>referenceRoll()});
+  assert.equal(pixi.ecology.grassCells.length,12);
+  const generated=h.generated(),textures=h.textureCount(),live=h.live.size;
+  const reset=()=>{reference.clear();pixi.model.clear();pixi.ecology.clear();};
   for(let cycle=0;cycle<20;cycle++){
-    reset.forEach(f=>f());const a=seeded(cycle),b=seeded(cycle);canvas.sandbox.Math.random=a;pixiRoll=b;
-    canvasModel.resetCadence(canvas.clock.now);pixi.ecology.resetCadence(pixi.context.Date.now());
-    // Every logical tick, including an empty population; no separate scheduler.
-    for(let i=0;i<240;i++){canvas.clock.now+=250;canvas.tick();pixi.frame(250);}
-    const relative=(m,origin)=>positions(m).map(([x,y,birth,influence])=>[x,y,birth-origin,influence-origin]);
-    assert.deepEqual(relative(canvasModel,offsets[0]),relative(pixi.ecology,offsets[1]));
-    for(const g of [canvasModel,pixi.ecology])assert(g.grassCells.length<=3);
+    reset();referenceRoll=seeded(cycle);pixiRoll=seeded(cycle);reference.resetCadence(referenceAt);pixi.ecology.resetCadence(pixi.context.Date.now());
+    for(let i=0;i<240;i++){referenceAt+=250;reference.tick(referenceAt);pixi.frame(250);}
+    assert.deepEqual(positions(reference),positions(pixi.ecology));assert(pixi.ecology.grassCells.length<=3);
     assert.equal(pixi.model.counts.acceptedLive,0);assert.equal(pixi.model.recentEvents.length,0);
-    assert.equal(canvas.run('gardenState.recentEvents.length'),0,'natural grass never fabricates activity');
-    canvas.setHidden(true);pixi.doc.hidden=true;pixi.docHandlers.get('visibilitychange')();
-    canvas.clock.now+=600000;pixi.advance(600000);
-    canvas.setHidden(false);pixi.doc.hidden=false;pixi.docHandlers.get('visibilitychange')();
-    const count=pixi.ecology.grassCells.length;assert.equal(canvasModel.grassCells.length,count,'resume creates no seed');
-    assert.equal(canvasModel.nextGrassReseedAt-canvas.clock.now,60000);assert.equal(pixi.ecology.nextGrassReseedAt-pixi.context.Date.now(),60000);
-    reset.forEach(f=>f());assert.equal(pixi.app.stage.children[0].children[3].children.length,0);
+    pixi.doc.hidden=true;pixi.docHandlers.get('visibilitychange')();referenceAt+=600000;reference.tick(referenceAt,{hidden:true});pixi.advance(600000);
+    pixi.doc.hidden=false;pixi.docHandlers.get('visibilitychange')();assert.equal(reference.grassCells.length,pixi.ecology.grassCells.length);
+    assert.equal(pixi.ecology.nextGrassReseedAt-pixi.context.Date.now(),60000);
+    reset();assert.equal(pixi.app.stage.children[0].children[3].children.length,0);
     assert.equal(h.generated(),generated);assert.equal(h.textureCount(),textures);assert.equal(h.live.size,live-12);
   }
-  assert.equal(canvas.intervals.length,intervals);assert.deepEqual(pixi.errors,[]);
-  pixi.winHandlers.get('pagehide')({persisted:false});assert.equal(h.textureCount(),beforeTextures);
-  // Shared recipes and rendering are synchronous/still, unaffected by motion preferences.
+  assert.deepEqual(pixi.errors,[]);pixi.winHandlers.get('pagehide')({persisted:false});assert.equal(h.textureCount(),beforeTextures);
   for(const reduced of [true,false]){const g=await start(false,{captureModel:true,reduced});assert.equal(g.ecology.grassCells.length,12);g.winHandlers.get('pagehide')({persisted:false});}
   assert.doesNotMatch(fs.readFileSync('wwwroot/garden-grass.js','utf8'),/setInterval|setTimeout|requestAnimationFrame|Math.random/);
-  console.log('PASS: distributed seeds, guaranteed bounded recovery/free-space/cadence boundaries, expiry/gnome recovery, tuned spreading with original aging, Canvas/Pixi parity/hidden resume, finite recipes and repeated cleanup.');
+  console.log('PASS: distributed seeds, bounded recovery/free-space/cadence, expiry/gnome recovery, original aging, shared-model/Pixi parity, hidden resume, finite recipes and repeated cleanup.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

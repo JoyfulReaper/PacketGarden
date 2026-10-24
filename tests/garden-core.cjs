@@ -1,6 +1,6 @@
 // Production parity oracle: numeric timings and placement traces captured before extraction (c92ed92).
 const assert = require('node:assert/strict'), fs = require('node:fs');
-const core = require('../wwwroot/garden-core.js'), createCanvas = require('./browser-garden.cjs');
+const core = require('../wwwroot/garden-core.js');
 const fixture = require('./fixtures/production-placement.json');
 const event = (specimenType = 'flower', vigor = 0) => ({ specimenType, vigor, listenPort: 53, sensor: 'test', seenCount: '18446744073709551615' });
 const expected = {
@@ -45,16 +45,12 @@ for (const [type, boundaries] of Object.entries(expected)) {
 // Compare both consumers with frozen pre-refactor outcomes, not each other alone.
 const order = ['flower','mushroom','vine','broadleaf','wirefern','redbloom','weed','ghostbloom','crystalfungus','blackthorn'];
 for (const {rolls,cells} of fixture.cases) {
-  const canvas = createCanvas();
-  canvas.run(`Math.random=(()=>{const rolls=${JSON.stringify(rolls)};let i=0;return ()=>rolls[i++%rolls.length]})()`);
   let r = 0; const random = () => rolls[r++ % rolls.length];
   // Production consumes one palette roll after each successful spawn; it remains presentation-owned.
-  const model = core.createGardenModel({now:()=>canvas.clock.now,random,onChange:c=>{if(c.kind==='added')random();}});
+  const model = core.createGardenModel({now:()=>10000,random,onChange:c=>{if(c.kind==='added')random();}});
   for (let i=0;i<cells.length;i++) {
     const type=order[i%order.length];
     assert.equal(model.addEvent(event(type,i%4)).specimen.cell,cells[i]);
-    const specimen=canvas.run(`spawnSpecimen('${type}',null,${i%4})`);
-    assert.equal(specimen.row*32+specimen.column,cells[i]);
   }
 }
 let now = 100000; const changes = [];
@@ -128,9 +124,7 @@ for(const invalid of [null,{},event('unknown'),event('flower',1.1),{...event(),l
 const read=p=>fs.readFileSync(p,'utf8'), source=read('wwwroot/garden-core.js'), live=read('wwwroot/pixi-live-core.js');
 assert.doesNotMatch(source,/setTimeout|setInterval|requestAnimationFrame|document\.|PIXI|CanvasRenderingContext2D|localStorage|sessionStorage/);
 assert.doesNotMatch(live,/function stageAt|const timings\s*=|candidate\.vigor|victimIndex|preferAdjacent|protectedTypes/);
-assert.match(live,/garden\.createGardenModel/);assert.match(read('wwwroot/garden.js'),/gardenCore\.createGardenModel/);
+assert.match(live,/garden\.createGardenModel/);
 for(const page of ['index','pixi-live']) assert.match(read(`wwwroot/${page}.html`),/src="garden-core\.js(?:\?[^"]*)?"/);
-assert.doesNotMatch(read('wwwroot/canvas.html'),/pixi/i);
 assert.match(live,/new Source\('\/api\/garden\/events'\)/);
-assert.match(read('wwwroot/garden.js'),/new EventSource\("\/api\/garden\/events"\)/);
 console.log('PASS: frozen production placement oracle; exact ten-species lifecycle boundaries/identity; 640 bounded unique cells; strict vigor/minimum/oldest/protected/weed/redbloom/reused-cell/drop parity; expiry first; mutations; clear/refill; local neighbors; safe fields; shared imports; no timers or duplicated Pixi rules.');

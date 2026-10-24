@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const W=require('../wwwroot/garden-gnome-puddles.js'),G=require('../wwwroot/garden-gnomes.js');
 const E=require('../wwwroot/garden-ecology.js'),A=require('../wwwroot/garden-puddle-art.js'),Core=require('../wwwroot/garden-core.js');
-const GV=require('../wwwroot/pixi-live-gnomes.js'),h=require('./pixi-live.cjs'),createCanvas=require('./browser-garden.cjs');
+const GV=require('../wwwroot/pixi-live-gnomes.js'),h=require('./pixi-live.cjs'),;
 const puddle=(seed=0)=>({x:480,y:300,seed,size:18,maxSize:18,createdAt:0,lastRefreshedAt:0});
 const world=(x,y,p)=>{const a=p.seed*2*Math.PI,s=p.size/18;return {x:p.x+(x*Math.cos(a)-y*Math.sin(a))*s,y:p.y+(x*Math.sin(a)+y*Math.cos(a))*s};};
 // Every sampled collision shore is safely inside the actual illustrated body,
@@ -101,14 +101,6 @@ for(const mode of ['fight','vine','overcrowding','weed_harvest']){
   assert.deepEqual(wet.trace,dry.trace);assert.deepEqual(wet.removed,dry.removed);assert.equal(wet.underpants,dry.underpants);
   incident(mode,true,true);
 }
-// Real Canvas adapter is a pure presentation, preserves click routing and draws
-// the exact shared splash line recipe without touching any model state.
-const canvas=createCanvas();canvas.fill();canvas.run('startGnomeIncident(Date.now(),()=>.5)');
-canvas.run('gardenState.actors[0].puddleMishap={startedAt:Date.now(),until:Date.now()+1000};drawGardenActors(Date.now())');
-assert(canvas.drawing.some(c=>c[0]==='strokeStyle'&&c[1]==='#b8d2cd'));
-const actor=canvas.run('gardenState.actors[0]');canvas.click(actor.x,actor.y);canvas.click(actor.x,actor.y);
-assert.equal(canvas.run('gardenAmbient.drops.length'),1);assert.equal(canvas.run('gardenState.actors[0].underpantsAttempted'),true);
-canvas.setHidden(true);assert.equal(actor.puddleMishap,undefined);canvas.clock.now+=10000;canvas.setHidden(false);assert.equal(actor.puddleMishap,undefined);
 // One extra atlas tile/source unchanged; at most four temporary ripple Sprites.
 const objects=h.live.size,textures=h.textureCount(),bakes=h.generated(),layer=new h.P.Container();
 let released=0;
@@ -136,4 +128,4 @@ for(let cycle=0;cycle<30;cycle++){
 view.destroy();cache.destroy();layer.destroy();assert.equal(h.live.size,objects);assert.equal(h.textureCount(),textures);
 assert(!fs.readFileSync('wwwroot/index.html','utf8').includes('trigger-gnome-puddle'));
 for(const name of ['garden-gnome-puddles','garden-gnomes','pixi-live-gnomes'])assert.doesNotMatch(fs.readFileSync(`wwwroot/${name}.js`,'utf8'),/setTimeout|setInterval|requestAnimationFrame|EventSource|fetch\(/);
-console.log('PASS: organic interior/segment/union entries, exact wetness and 20% boundaries, debouncing/one success/identity/RNG isolation, no hidden replay, all incident/action/click traces, Canvas parity and 30 bounded Pixi resource cycles.');
+console.log('PASS: organic interior/segment/union entries, exact wetness and 20% boundaries, debouncing/one success/identity/RNG isolation, no hidden replay, all incident/action/click traces, shared state and 30 bounded Pixi resource cycles.');

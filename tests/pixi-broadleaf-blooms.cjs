@@ -66,7 +66,6 @@ assert.equal(h.textureCount(),textures);assert.equal(h.generated(),bakes);
 model.clear();assert.equal(view.bloomViews.size,0);assert.equal(view.byId.size,0);
 for(let i=0;i<10;i++){model.seedBroadleafBlooms(true);model.clear();}
 view.destroy();stage.destroy();assert.equal(h.live.size,before);assert.equal(h.textureCount(),textures);
-assert(!fs.readFileSync('wwwroot/canvas.html','utf8').includes('pixi-broadleaf-blooms'),'Canvas does not load bloom code');
 (async()=>{
   for(const page of ['index.html','pixi-live.html'])for(const reduced of [false,true]){
     const g=await start(false,{pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8'),captureModel:true,reduced});

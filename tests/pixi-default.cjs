@@ -14,9 +14,9 @@ assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather norm
 for (const id of ['hud','seed','clear','seed-ambient','seed-mutations','seed-pending-mutations','seed-interaction','seed-puddles','pause','probes','probe-track','reset','weather-source','weather-level','automatic-traffic']) {
   assert(!html.includes(`id="${id}"`), `default page has no ${id} development control`);
 }
-assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/);
+assert.match(html, /href="about.html"/); assert.doesNotMatch(html, /href="canvas.html"/);
 assert.match(read('about.html'), /href="index.html"/);
-assert.match(read('canvas.html'), /src="garden\.js\?v=.+"/);
+assert.match(read('canvas.html'), /http-equiv="refresh" content="0; url=\/"/);
 assert(!scripts.includes('garden.js'));
 for (const id of ['seed-broadleaf-blooms','seed-dense-broadleaf-blooms','trigger-stillbloom','stillbloom-test-status','trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
 for(const id of ['seed-vine-bloom-stages','seed-vine-bloom-connections','seed-vine-bloom-dense'])assert(!html.includes(`id="${id}"`),'vine fixtures are diagnostic-only');
@@ -26,7 +26,7 @@ for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['gar
 async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99 } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
+  let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -71,6 +71,10 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
     doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && assetPath(script) === 'pixi-stress.js'};
     vm.runInContext(read(assetPath(script)), context, {filename:script});
     if (assetPath(script) === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+    if (assetPath(script) === 'garden-core.js' && captureModel) {
+      const create = context.window.PacketGardenCore.createGardenModel;
+      context.window.PacketGardenCore.createGardenModel = (...args) => { const value=create(...args); garden ??= value; return value; };
+    }
     if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
       context.window.PacketGardenPixiLiveCore.createModel = (...args) => { gardenView=args[0];model = create(...args); return model; };
@@ -110,7 +114,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get garden(){return garden;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {
@@ -192,6 +196,8 @@ async function checkDefault() {
   const failed = await start(true);
   assert.match(failed.element('#connection').textContent,/Garden initialization failed: WebGL unavailable/);
   assert.equal(failed.sources.length,0); assert.equal(failed.errors.length,1);
+  assert.match(failed.element('#view').textContent,/PacketGarden requires WebGL/);
+  assert.equal(failed.element('#view').attributes.role,'alert');
   console.log('PASS: default Pixi strict DOM/load order, no dev controls/metrics/fake traffic/probe, one SSE, weather/reconnect, inspection/collections, resize/DPR, visibility/expiry, teardown and visible WebGL failure.');
 }
 module.exports = { start };

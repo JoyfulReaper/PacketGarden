@@ -1,4 +1,4 @@
-// Finite water artwork shared by Canvas tiles and the Pixi ecology atlas.
+// Finite water artwork for the Pixi ecology atlas and shared wetness contours.
 // Coordinates use a 64px tile, centered at (32,32), with logical size 18.
 (function () {
   'use strict';
@@ -51,15 +51,7 @@
   // Artwork normalizes the existing .38 maximum to wetness; the model contract
   // remains untouched. Its exact sqrt radius / linear fade still drive both views.
   const opacityFor = opacity => Math.max(0,Math.min(1,opacity/.38));
-  function paintCanvas(context, variant) {
-    for (const layer of variants[variant]) {
-      context.beginPath();
-      for (const [method,...args] of layer.path) context[method](...args);
-      context.closePath();context.fillStyle=`#${layer.color.toString(16).padStart(6,'0')}`;
-      context.globalAlpha=layer.alpha;context.fill();
-    }
-  }
-  const api = {tileSize,resolution,referenceSize,variants,variantFor,opacityFor,paintCanvas};
+  const api = {tileSize,resolution,referenceSize,variants,variantFor,opacityFor};
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else (typeof window === 'undefined' ? globalThis : window).PacketGardenPuddleArt = api;
 })();

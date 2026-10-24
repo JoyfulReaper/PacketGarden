@@ -103,10 +103,6 @@ async function run() {
       window.__resetVineRandom=()=>{random=1234;};Math.random=()=>{random=(Math.imul(random,1664525)+1013904223)>>>0;return random/4294967296;};});
     await page.goto(`http://127.0.0.1:${server.address().port}/`);
     await page.waitForFunction(()=>window.__vineFixture?.app?.ticker?.started);
-    let canvas;
-    if(greenGrass){canvas=await browser.newPage({viewport:{width:1280,height:900},deviceScaleFactor:1});
-      await canvas.addInitScript(()=>{Date.now=()=>1800000000000;let seed=1234;Math.random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};});
-      canvas.on('pageerror',error=>errors.push(String(error.stack)));await canvas.goto(`http://127.0.0.1:${server.address().port}/canvas.html`);}
     const atlas=await page.evaluate(()=>({png:window.__vineFixture.atlasPng,bounds:window.__vineFixture.tileBounds}));
     await fs.writeFile(path.join(output,'atlas.png'),Buffer.from(atlas.png.split(',')[1],'base64'));
     await fs.writeFile(path.join(output,'tile-bounds.json'),JSON.stringify(atlas.bounds,null,2));

@@ -2,7 +2,9 @@
   "name": "packetgarden-rendering-spike",
   "private": true,
   "scripts": {
-    "vendor:pixi": "node scripts/vendor-pixi.cjs"
+    "vendor:pixi": "node scripts/vendor-pixi.cjs",
+    "test": "node scripts/test-node.cjs",
+    "test:chrome": "node scripts/test-chrome.cjs"
   },
   "devDependencies": {
     "pixi.js": "8.22.0"

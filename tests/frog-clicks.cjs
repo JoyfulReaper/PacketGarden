@@ -1,6 +1,6 @@
 // Exact visitor ownership and both real page input adapters, with deterministic time.
 const assert=require('node:assert/strict'),F=require('../wwwroot/garden-frogs.js'),I=require('../wwwroot/garden-interaction.js');
-const T=require('../wwwroot/garden-ui-core.js'),canvas=require('./browser-garden.cjs'),{start}=require('./pixi-default.cjs');
+const T=require('../wwwroot/garden-ui-core.js'),{start}=require('./pixi-default.cjs');
 assert.equal(T.frogMessage,'The frog ignores you +0 points');assert(!Object.hasOwn(T.messages,'frog'));
 function fixture(){
   let at=100000;const water={x:480,y:300,size:18,maxSize:24,seed:.3,createdAt:at,lastRefreshedAt:at};
@@ -36,30 +36,27 @@ for(const hidden of [false,true]){
 }
 (async()=>{
   for(const reduced of [false,true]){
-    const c=canvas({reduced}),p=await start(false,{captureModel:true,reduced});
-    c.clock.now=100000;c.run('gardenFrogs.clear()');
+    const p=await start(false,{captureModel:true,reduced});
     const water={x:480,y:300,size:18,maxSize:24,createdAt:100000,lastRefreshedAt:100000,seed:.3};
-    p.ecology.seed({puddles:[water]});c.run(`gardenEcology.seed({puddles:[${JSON.stringify(water)}]});gardenFrogs.spawnSimulated()`);
-    const frog=p.frogs.spawnSimulated();c.sandbox.parity=JSON.parse(JSON.stringify(frog));
-    c.run('Object.assign(gardenFrogs.frogs[0],parity,{puddle:gardenEcology.puddles[0]})');
+    p.ecology.seed({puddles:[water]});
+    const frog=p.frogs.spawnSimulated();
     const pClick=point=>{const root=p.app.stage.children[0],r=p.app.canvas.getBoundingClientRect(),s=p.app.renderer.screen;
       p.app.canvas.handlers.get('click')({clientX:r.left+(root.position.x+point.x*root.scale.x)*r.width/s.width,
         clientY:r.top+(root.position.y+point.y*root.scale.y)*r.height/s.height});};
     const baseline=JSON.stringify([p.model.counts,p.model.recentEvents,p.ambient.drops,p.frogs.counts]);
     // Exercise actual scaled central listeners while hopping, without stopping normal presentation.
-    for(let n=0;n<42;n++){p.frame(250);c.clock.now+=250;c.tick();c.frame(c.clock.now);}
+    for(let n=0;n<42;n++){p.frame(250);}
     const before=JSON.stringify(frog),pose=F.visualState(frog,p.context.Date.now(),reduced);
-    pClick(pose);c.click(pose.x,pose.y);
-    for(const g of [p,c])assert.equal(g.element('#collection-message').textContent,T.frogMessage);
+    pClick(pose);
+    for(const g of [p])assert.equal(g.element('#collection-message').textContent,T.frogMessage);
     assert.equal(JSON.stringify(frog),before);assert(p.frogs.frogs.includes(frog));
-    for(let n=0;n<6;n++){p.frame(250);c.clock.now+=250;c.tick();}
-    const later=F.visualState(frog,p.context.Date.now(),reduced);pClick(later);c.click(later.x,later.y);
-    for(let n=0;n<2;n++){p.frame(250);c.clock.now+=250;c.tick();}
-    for(const g of [p,c]){assert.equal(g.element('#collection-message').hidden,true,'repeat did not renew deadline');assert.equal(g.element('#garden-score').textContent,'Score: 0');assert.equal(g.element('#specimen-card').hidden,true);}
+    for(let n=0;n<6;n++){p.frame(250);}
+    const later=F.visualState(frog,p.context.Date.now(),reduced);pClick(later);
+    for(let n=0;n<2;n++){p.frame(250);}
+    for(const g of [p]){assert.equal(g.element('#collection-message').hidden,true,'repeat did not renew deadline');assert.equal(g.element('#garden-score').textContent,'Score: 0');assert.equal(g.element('#specimen-card').hidden,true);}
     assert.equal(JSON.stringify([p.model.counts,p.model.recentEvents,p.ambient.drops,p.frogs.counts]),baseline);
-    assert.equal(c.audioContexts(),0);
-    p.doc.hidden=true;p.docHandlers.get('visibilitychange')();c.setHidden(true);assert.equal(p.frogs.frogs.length,0);
+    p.doc.hidden=true;p.docHandlers.get('visibilitychange')();assert.equal(p.frogs.frogs.length,0);
     p.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(p.errors,[]);
   }
-  console.log('PASS: exact once-only frog acknowledgment, unchanged paths/model, hop/reduced/departure/stale/hidden hit safety, priority and actual Canvas/Pixi scaled clicks, unchanged message deadline/score/activity/resources.');
+  console.log('PASS: exact once-only frog acknowledgment, unchanged paths/model, hop/reduced/departure/stale/hidden hit safety, priority and actual Pixi scaled clicks, unchanged message deadline/score/activity/resources.');
 })().catch(e=>{console.error(e);process.exitCode=1});

@@ -1,9 +1,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
-const A=require('../wwwroot/garden-ambient.js'),G=require('../wwwroot/garden-core.js'),createCanvas=require('./browser-garden.cjs');
+const A=require('../wwwroot/garden-ambient.js'),G=require('../wwwroot/garden-core.js');
 assert.deepEqual(A.curiosityConfig,{maxActive:3,lifetimeMs:20000,hitRadius:9,placementPadding:14});
 assert.deepEqual(A.curiosityTypes,['ladybug','snail','moth','shiny_pebble']);
 assert.deepEqual(A.dropConfig,{amanitaDropChance:.01,delayMs:5000,maxActiveDrops:5,lifetimeMs:20000,hitRadius:9,placementPadding:14});
-const canvas=createCanvas();
 for(const test of require('./fixtures/production-ambient.json').cases){
   const source={...test.source},living=[source];let i=0;
   const ambient=A.createAmbientModel({now:()=>100000,random:()=>test.rolls[i++],getSpecimens:()=>living});
@@ -19,10 +18,6 @@ for(const test of require('./fixtures/production-ambient.json').cases){
   for(const sample of test.samples){
     assert.deepEqual((test.kind==='curiosity'?A.curiosityPosition:A.looseDropPosition)(item,sample.at),sample.position);
     assert.equal(ambient.idFor(item),identity);
-    canvas.sandbox.fixtureItem={...test.item};canvas.drawing.length=0;
-    if(test.kind==='curiosity')canvas.run(`gardenState.curiosities=[fixtureItem];drawFirstSeenCuriosities(${sample.at})`);
-    else canvas.run(`gardenState.drops=[fixtureItem];drawLooseDrops(${sample.at})`);
-    assert.deepEqual(JSON.parse(JSON.stringify(canvas.drawing)),sample.commands,'exact frozen Canvas artwork, flutter, rotation, glint and bobbing');
   }
 }
 let now=100000,rolls=[],calls=0;
@@ -86,6 +81,5 @@ for(const source of specimens.specimens)assert.equal(a.maybeScheduleAmanita(sour
 assert.equal(a.pendingDrops.size,640);specimens.clear();a.tick(now,{hidden:true});assert.equal(a.pendingDrops.size,0);
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-ambient.js','utf8'),/document\.|CanvasRenderingContext2D|PIXI|setTimeout|setInterval|localStorage|sessionStorage/);
 for(const page of ['index','pixi-live'])assert.match(fs.readFileSync(`wwwroot/${page}.html`,'utf8'),/src="garden-ambient.js\?v=gnome-harvest-1"/);
-assert.match(fs.readFileSync('wwwroot/garden.js','utf8'),/gardenAmbient.acceptLiveSpecimen/);
 assert.match(fs.readFileSync('wwwroot/pixi-live.js','utf8'),/ambient.acceptLiveSpecimen/);
-console.log('PASS: shared ambient exact production state/art/position oracle; eligible live success/caps/probabilities/RNG order; stable ids; five-second exact-source pending, hidden/cap/no retry, expiry/clear/replacement; independent bounded objects; shared consumers/no timers.');
+console.log('PASS: shared ambient exact production state/position oracle; eligible live success/caps/probabilities/RNG order; stable ids; five-second exact-source pending, hidden/cap/no retry, expiry/clear/replacement; independent bounded objects; shared consumers/no timers.');

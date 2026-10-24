@@ -1,6 +1,6 @@
 // Shared rules: exact constants, frozen pre-extraction results and boundary behavior.
 const assert = require('node:assert/strict'), fs = require('node:fs');
-const E = require('../wwwroot/garden-ecology.js'), createCanvas = require('./browser-garden.cjs');
+const E = require('../wwwroot/garden-ecology.js');
 assert.deepEqual(E.grassConfig, { influenceChances: { dns: .45, http: .65 }, secondCellChance: .35, sameCellChance: .5,
   influenceRadius: 1, growingAfterMs: 10000, matureAfterMs: 30000, fadingAfterMs: 1200000,
   dyingAfterMs: 1620000, deadAfterMs: 1920000, expiredAfterMs: 2100000,
@@ -66,9 +66,6 @@ for(const roll of [.399999,.4]) {
   assert.equal(m.grassCells.length,roll<.4?2:1,'fading cells have one final seed roll and no normal spread attempt');
   assert.equal(m.grassCells[0].fadeSeedAttemptedAt,0);
 }
-const canvas=createCanvas();canvas.run('gardenState.grassCells=[];influenceGrassCell(0,0,100)');
-assert.equal(canvas.run('gardenState.grassCells===gardenEcology.grassCells'),true);
-assert.equal(canvas.run('grassConfig===window.PacketGardenEcology.grassConfig'),true);
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-ecology.js','utf8'),/setTimeout|setInterval|PIXI|CanvasRenderingContext2D|document\.|localStorage|sessionStorage/);
 require('./grass-ecology.cjs');
-console.log('PASS: tuned grass config/influence/placement/refresh/identity/grid/cadence/expiry/visual math; historical influence oracle; Canvas ownership; no per-cell timers.');
+console.log('PASS: tuned grass config/influence/placement/refresh/identity/grid/cadence/expiry/visual math; historical influence oracle; shared ownership; no per-cell timers.');

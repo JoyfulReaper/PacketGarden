@@ -8,7 +8,7 @@ async function run() {
   const baseline=process.argv.includes('--baseline'), root=path.resolve(__dirname,'..'), assets=path.join(root,'wwwroot');
   const output=path.join(root,'artifacts/grass-under-plants',baseline?'before':'after');await fs.mkdir(output,{recursive:true});
   const checkpoint=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(), old=new Map();
-  if(baseline)for(const name of ['index.html','canvas.html','pixi-live.html','garden-ecology.js','garden.js','pixi-live.js'])
+  if(baseline)for(const name of ['index.html','pixi-live.html','garden-ecology.js','pixi-live.js'])
     old.set(name,execFileSync('git',['show',`${checkpoint}:wwwroot/${name}`],{cwd:root}));
   const capture=`{
     const f=window.__under={bakes:0,geometry:0};
@@ -39,27 +39,27 @@ async function run() {
   try {
     browser=await chromium.launch({channel:process.env.PACKETGARDEN_BROWSER_CHANNEL||'chrome',headless:true});
     report.browser=browser.version();
-    for(const [name,url,pixi] of [['homepage','/',true],['canvas','/canvas.html',false],['diagnostic','/pixi-live.html',true]]){
+    for(const [name,url,pixi] of [['homepage','/',true],['diagnostic','/pixi-live.html',true]]){
       const page=await browser.newPage({viewport:{width:1280,height:960},deviceScaleFactor:1});
       page.on('pageerror',error=>errors.push(error.stack));
       await page.addInitScript(()=>{
         window.__underNow=1800000000000;Date.now=()=>__underNow;let seed=19;
         Math.random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
         window.__underTimers=0;const interval=window.setInterval;window.setInterval=(...args)=>{__underTimers++;return interval(...args);};
-        window.__underPaths=0;const Path=Path2D;window.Path2D=class extends Path {constructor(...args){super(...args);__underPaths++;}};
+
       });
       await page.goto(`http://127.0.0.1:${server.address().port}${url}`);
       await page.waitForFunction(pixi=>window.__under?.ecology && (!pixi || __under.app?.ticker?.started),pixi);
-      if(pixi)await page.evaluate(()=>__under.app.stop());
+      await page.evaluate(()=>__under.app.stop());
       if(name==='diagnostic')await page.locator('#probes').uncheck();
       await page.getByLabel('Day/night cycle',{exact:true}).uncheck();
       const checkbox=page.getByRole('checkbox',{name:'Allow grass under plants',exact:true});
       if(!baseline){assert.equal(await checkbox.isChecked(),false);assert.equal(await page.evaluate(()=>__under.ecology.allowGrassUnderPlants),false);}
       const paint=()=>page.evaluate(pixi=>{
-        if(pixi){
+        {
           window.__underFrame=(window.__underFrame??performance.now())+1000;
           __under.app.ticker.update(__underFrame);__under.app.render();
-        }else{updateGardenStatus();drawGarden();}
+        }
       },pixi);
       const counts=()=>page.evaluate(()=>({plants:__under.garden.byCell.size,grass:__under.ecology.grassCells.length,
         unique:new Set(__under.ecology.grassCells.map(g=>g.row*32+g.column)).size}));
@@ -84,7 +84,7 @@ async function run() {
         await paint();const on=await counts();assert.equal(on.grass,640);assert.equal(on.unique,640);
         assert.equal(await page.evaluate(()=>JSON.stringify(__under.garden.specimens)),state);
         await page.screenshot({path:path.join(output,`${name}-${scene}-on.png`),fullPage:true});
-        const surface=page.locator(pixi?'#view canvas':'#garden-canvas');
+        const surface=page.locator('#view canvas');
         await surface.screenshot({path:path.join(output,`${name}-${scene}-on-garden.png`)});
         report.scenes.push({page:name,scene,enabled:true,...on});
         const resources=await page.evaluate(()=>({bakes:__under.bakes,geometry:__under.geometry,paths:__underPaths,timers:__underTimers}));

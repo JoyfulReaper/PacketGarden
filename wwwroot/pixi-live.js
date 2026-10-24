@@ -742,6 +742,9 @@
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { makeLiveAtlas, createView };
   else start().catch(error => {
+    const view = document.querySelector('#view');
+    view.textContent = 'PacketGarden requires WebGL to display the garden. Try a browser with WebGL enabled.';
+    view.setAttribute('data-initialization-failed', ''); view.setAttribute('role', 'alert');
     const status = document.querySelector('#hud') ?? document.querySelector('#connection');
     status.textContent = `Garden initialization failed: ${error.message}`;
     console.error(error);

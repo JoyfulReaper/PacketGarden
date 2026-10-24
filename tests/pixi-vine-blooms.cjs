@@ -94,7 +94,6 @@ const replace=model.acceptEvent(event('broadleaf',3));assert.equal(replace.outco
 model.clear();assert.equal(view.vineBloomViews.size,0);assert.equal(view.vineBloomLinks.size,0);
 for(let i=0;i<5;i++){model.seedVineBlooms('dense');model.clear();}
 assert.equal(h.textureCount(),textures);assert.equal(h.generated(),bakes);view.destroy();stage.destroy();assert.equal(h.live.size,objects);
-assert(!fs.readFileSync('wwwroot/canvas.html','utf8').includes('pixi-vine-blooms'));
 (async()=>{
   for(const page of ['index.html','pixi-live.html'])for(const reduced of [false,true]){
     const g=await start(false,{pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8'),captureModel:true,reduced});assert.deepEqual(g.errors,[]);

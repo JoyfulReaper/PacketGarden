@@ -323,6 +323,9 @@
   else {
     window.PacketGardenPixi = { config, contain, seededRandom, frameWindow, makeAtlas, pageLifetime };
     if (!document.currentScript?.hasAttribute('data-pixi-library')) start().catch(error => {
+      const view = document.querySelector('#view');
+      view.textContent = 'PacketGarden requires WebGL to display the garden. Try a browser with WebGL enabled.';
+      view.setAttribute('role', 'alert');
       document.querySelector('#hud').textContent = `Pixi initialization failed: ${error.message}. Production garden is unchanged.`; console.error(error);
     });
   }

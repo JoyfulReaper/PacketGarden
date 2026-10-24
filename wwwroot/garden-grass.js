@@ -35,17 +35,7 @@
     const seed = Math.imul((cell.row * 32 + cell.column) ^ 0x45d9f3b, 0x45d9f3b);
     return ((seed ^ seed >>> 16) >>> 0) % variants.length;
   }
-  function createPaths(Path) {
-    if(typeof Path!=='function')return null;
-    return variants.map(blades=>shades.map((_,shade)=>{
-      const path=new Path();
-      for(const blade of blades){if(blade.shade!==shade)continue;const p=blade.path;
-        path.moveTo(p[0],p[1]);path.quadraticCurveTo(p[2],p[3],p[4],p[5]);
-        path.quadraticCurveTo(p[6],p[7],p[8],p[9]);path.closePath();}
-      return path;
-    }));
-  }
-  const api = { shades, variants, variantFor, baseOpacity, createPaths };
+  const api = { shades, variants, variantFor, baseOpacity };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else (typeof window === 'undefined' ? globalThis : window).PacketGardenGrassArt = api;
 })();

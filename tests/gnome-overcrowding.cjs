@@ -132,7 +132,7 @@ for(const invalidate of [p=>p.id++,p=>p.cell++,p=>p.column++,p=>p.row++,p=>p.cre
 
 async function adapters() {
   const h=require('./pixi-live.cjs'),V=require('../wwwroot/pixi-live-gnomes.js');
-  const {start}=require('./pixi-default.cjs'),canvasFactory=require('./browser-garden.cjs');
+  const {start}=require('./pixi-default.cjs');
   const layer=new h.P.Container(),baseline=h.textureCount(),cache=V.makeGnomeAtlas(h.P,h.renderer);
   const view=V.createGnomeView(h.P,layer,cache.frames),built=h.generated();
   const f=fixture(),m=G.createModel({garden:f.garden,now:()=>f.at,getSpecimens:()=>f.garden.specimens,onChange:view.change});
@@ -147,26 +147,22 @@ async function adapters() {
   for(const page of ['index.html','pixi-live.html'])for(const reduced of [false,true]) {
     const liveBefore=h.live.size,texturesBefore=h.textureCount();
     const pixi=await start(false,{captureModel:true,reduced,pageHtml:fs.readFileSync('wwwroot/'+page,'utf8')});
-    const canvas=canvasFactory({reduced});canvas.clock.now=100000;pixi.model.seedLandscaping('overcrowding');
-    canvas.run(`gardenModel.seed(${JSON.stringify(pixi.model.specimens)},Date.now())`);
+    pixi.model.seedLandscaping('overcrowding');
     const counts=JSON.stringify(pixi.model.counts),recent=JSON.stringify(pixi.model.recentEvents);
     assert(pixi.gnomes.startLandscaping(100000,()=>.5,'overcrowding'));
-    assert(canvas.run("gardenGnomes.startLandscaping(Date.now(),()=>.5,'overcrowding')"));
     const target=pixi.gnomes.incident.targets[0].specimen;
-    canvas.run(`renderSpecimenCard(gardenModel.byCell.get(${target.cell}),100,100)`);
     const root=pixi.app.stage.children[0],sprite=root.children[6].children[pixi.model.specimens.indexOf(target)];
     const rect=pixi.app.canvas.getBoundingClientRect();
     pixi.app.canvas.handlers.get('click')({clientX:rect.left+root.position.x+sprite.position.x*root.scale.x,
       clientY:rect.top+root.position.y+(sprite.position.y-12)*root.scale.y});
     assert.equal(pixi.element('#specimen-card').hidden,false);
     for(let i=0;i<164;i++) {
-      pixi.frame(250);canvas.clock.now+=250;canvas.tick();canvas.frame(canvas.clock.now);
-      assert.deepEqual(JSON.parse(JSON.stringify(pixi.model.specimens.map(p=>p.cell))),JSON.parse(canvas.run('JSON.stringify(gardenModel.specimens.map(p=>p.cell))')));
-      if(i===2) {assert.equal(pixi.element('#specimen-card').hidden,true);assert.equal(canvas.element('#specimen-card').hidden,true);}
+      pixi.frame(250);
+      if(i===2) {assert.equal(pixi.element('#specimen-card').hidden,true);}
     }
     assert.equal(pixi.model.specimens.length,608);assert.equal(root.children[6].children.length,608);
     assert.equal(root.children[5].children.length,pixi.model.specimens.filter(p=>p.type==='vine').length);
-    assert.equal(pixi.gnomes.incident,null);assert.equal(root.children[8].children.length,0);assert.equal(canvas.frames.size,0);
+    assert.equal(pixi.gnomes.incident,null);assert.equal(root.children[8].children.length,0);
     assert.equal(JSON.stringify(pixi.model.counts),counts);assert.equal(JSON.stringify(pixi.model.recentEvents),recent);
     pixi.advance(L.cooldownMs);pixi.model.clear();
     if(page==='pixi-live.html') {
@@ -179,15 +175,9 @@ async function adapters() {
     pixi.doc.hidden=true;pixi.docHandlers.get('visibilitychange')();assert.equal(pixi.gnomes.actors.length,0);
     assert.equal(root.children[8].children.length,0);pixi.advance(60000);pixi.doc.hidden=false;pixi.docHandlers.get('visibilitychange')();
     assert.equal(pixi.gnomes.incident,null);assert.equal(pixi.model.specimens.length,640);
-    canvas.clock.now=pixi.context.Date.now();
-    canvas.run(`gardenModel.seed(${JSON.stringify(pixi.model.specimens)},Date.now());gardenGnomes.startLandscaping(Date.now(),()=>.5,'overcrowding')`);
-    assert.equal(canvas.run('gardenGnomes.actors.length'),2);canvas.setHidden(true);
-    assert.equal(canvas.run('gardenGnomes.actors.length'),0);assert.equal(canvas.frames.size,0);
-    canvas.clock.now+=60000;canvas.setHidden(false);
-    assert.equal(canvas.run('gardenModel.byCell.size'),640);assert.equal(canvas.run('gardenGnomes.incident'),null);
     pixi.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(pixi.errors,[]);
     assert.equal(h.textureCount(),texturesBefore);assert.equal(h.live.size,liveBefore,'page teardown restores object baseline');
   }
 }
-adapters().then(()=>console.log('PASS: overcrowding exact capacity/probability/cadence/priority/shared cooldown, random ordinary exclusions, free-space/removal/duration limits and refill, stale identities, hidden/mutual exclusion, Canvas/Pixi parity/inspection/cleanup, diagnostics and 20 resource-stable incidents.'))
+adapters().then(()=>console.log('PASS: overcrowding exact capacity/probability/cadence/priority/shared cooldown, random ordinary exclusions, free-space/removal/duration limits and refill, stale identities, hidden/mutual exclusion, Pixi inspection/cleanup, diagnostics and 20 resource-stable incidents.'))
   .catch(error=>{console.error(error);process.exitCode=1;});

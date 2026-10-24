@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const Core=require('../wwwroot/garden-core.js'),G=require('../wwwroot/garden-gnomes.js');
 const A=require('../wwwroot/garden-ambient.js'),I=require('../wwwroot/garden-interaction.js'),T=require('../wwwroot/garden-ui-core.js');
-const createCanvas=require('./browser-garden.cjs'),{start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
+const {start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
 const GV=require('../wwwroot/pixi-live-gnomes.js'),AV=require('../wwwroot/pixi-live-ambient.js');
 const ordinaryMessage="You stole a gnome's underpants. +0 points",rareMessage='Collected underpants +1, annoyed gnome -1';
 function fixture(n=5,types=()=> 'weed',age=65000){
@@ -112,24 +112,24 @@ assert.equal(T.collectionMessage('ditch_weed_bud',()=>{throw Error('unexpected r
 
 (async()=>{
   for(const reduced of [false,true]){
-    const p=await start(false,{captureModel:true,reduced,random:()=>.5}),c=createCanvas({reduced});c.clock.now=100000;
-    p.model.seedLandscaping('weed_harvest');c.run(`gardenModel.seed(${JSON.stringify(p.model.specimens)});`);
+    const p=await start(false,{captureModel:true,reduced,random:()=>.5});
+    p.model.seedLandscaping('weed_harvest');
     const stats=JSON.stringify(p.model.counts),recent=JSON.stringify(p.model.recentEvents);
-    p.gnomes.startLandscaping(100000,()=>.5,'weed_harvest');c.run("gardenGnomes.startLandscaping(Date.now(),()=>.5,'weed_harvest');syncGnomeState();drawGardenOverlay(true)");
-    p.frame(250);c.clock.now+=250;c.tick();c.frame(c.clock.now);
+    p.gnomes.startLandscaping(100000,()=>.5,'weed_harvest');
+    p.frame(250);
     const actor=p.gnomes.actors[0],pose=G.presentation(actor,p.context.Date.now(),reduced),root=p.app.stage.children[0],r=p.app.canvas.getBoundingClientRect();
     const hit=(x,y)=>p.app.canvas.handlers.get('click')({clientX:r.left+root.position.x+x*root.scale.x,clientY:r.top+root.position.y+y*root.scale.y});
-    hit(pose.x,pose.y);const canvasPose=c.run('window.PacketGardenGnomes.presentation(gardenGnomes.actors[0],Date.now(),gnomeReducedMotion.matches)');c.click(canvasPose.x,canvasPose.y);
-    assert.equal(p.ambient.drops.length,1);assert.equal(c.run('gardenAmbient.drops.length'),1);assert.equal(p.model.specimens.length,5);
-    hit(pose.x,pose.y);c.click(canvasPose.x,canvasPose.y);assert.equal(p.ambient.drops.length,1);assert.equal(c.run('gardenAmbient.drops.length'),1);
-    for(let n=0;n<20;n++){p.frame(250);c.clock.now+=250;c.tick();c.frame(c.clock.now);}
-    assert.equal(p.gnomes.incident,null);assert.equal(c.run('gardenGnomes.incident'),null);assert.equal(p.model.specimens.length,3);
-    assert.equal(p.ambient.drops.length,1);assert.equal(c.run('gardenAmbient.drops.length'),1);
+    hit(pose.x,pose.y);
+    assert.equal(p.ambient.drops.length,1);assert.equal(p.model.specimens.length,5);
+    hit(pose.x,pose.y);assert.equal(p.ambient.drops.length,1);
+    for(let n=0;n<20;n++){p.frame(250);}
+    assert.equal(p.gnomes.incident,null);assert.equal(p.model.specimens.length,3);
+    assert.equal(p.ambient.drops.length,1);
     assert.equal(JSON.stringify(p.model.counts),stats);assert.equal(JSON.stringify(p.model.recentEvents),recent);
-    const drop=p.ambient.drops[0];hit(drop.x,drop.y);const cd=c.run('gardenAmbient.drops[0]');c.sandbox.Math.random=()=>.8;c.click(cd.x,cd.y);
-    assert.equal(p.element('#collection-message').textContent,ordinaryMessage);assert.equal(c.element('#collection-message').textContent,rareMessage);
-    assert.equal(p.element('#garden-score').textContent,'Score: 0');assert.equal(c.element('#garden-score').textContent,'Score: 0');
-    assert.equal(p.ambient.drops.length,0);assert.equal(c.run('gardenAmbient.drops.length'),0);
+    const drop=p.ambient.drops[0];hit(drop.x,drop.y);
+    assert.equal(p.element('#collection-message').textContent,ordinaryMessage);
+    assert.equal(p.element('#garden-score').textContent,'Score: 0');
+    assert.equal(p.ambient.drops.length,0);
     p.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(p.errors,[]);
   }
   for(const id of ['trigger-weed-harvest','seed-gnome-drops','underpants-message-roll']){
@@ -153,5 +153,5 @@ assert.equal(T.collectionMessage('ditch_weed_bud',()=>{throw Error('unexpected r
   dev.element('#seed-gnome-drops').handlers.get('click')();assert.equal(dev.ambient.drops.length,5);
   assert(dev.model.specimens.every(p=>p.origin.kind==='simulated'));assert.equal(dev.model.recentEvents.length,0);assert.equal(dev.model.counts.acceptedLive,0);
   dev.winHandlers.get('pagehide')({persisted:false});
-  console.log('PASS: harvest maturity/5%/priority/cooldown/1–3 cuts/pending-bud and identity safety, all gnome clicks/last-painted transforms/one cap-consumed attempt, 80/20 messages, Canvas-Pixi parity and 25 resource cycles.');
+  console.log('PASS: harvest maturity/5%/priority/cooldown/1–3 cuts/pending-bud and identity safety, all gnome clicks/last-painted transforms/one cap-consumed attempt, 80/20 messages, Pixi integration and 25 resource cycles.');
 })().catch(e=>{console.error(e);process.exitCode=1});

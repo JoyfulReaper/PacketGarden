@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const F=require('../wwwroot/garden-frogs.js'),E=require('../wwwroot/garden-ecology.js'),I=require('../wwwroot/garden-interaction.js');
-const createCanvas=require('./browser-garden.cjs'),{start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs'),V=require('../wwwroot/pixi-live-ambient.js');
+const {start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs'),V=require('../wwwroot/pixi-live-ambient.js');
 function fixture(random=()=>.5){
   let at=100000;const changes=[],puddles=[{x:480,y:300,size:18,maxSize:24,createdAt:at-20000,lastRefreshedAt:at-20000,seed:.3}];
   const model=F.createModel({now:()=>at,random,getPuddles:()=>puddles,onChange:c=>changes.push(c)});
@@ -70,30 +70,21 @@ const state={specimens:[],curiosities:[],drops:[],frogs:null};assert.equal(I.res
 
 (async()=>{
   for(const reduced of [false,true]){
-    const p=await start(false,{captureModel:true,reduced,frogRandom:F.seededRandom(313)}),c=createCanvas({reduced});c.clock.now=100000;c.run('gardenFrogs.clear()');
+    const p=await start(false,{captureModel:true,reduced,frogRandom:F.seededRandom(313)});
     const water={x:480,y:300,size:18,maxSize:24,createdAt:80000,lastRefreshedAt:80000,seed:.3};
-    p.ecology.seed({puddles:[water]});c.run(`gardenEcology.seed({puddles:[${JSON.stringify(water)}]})`);
+    p.ecology.seed({puddles:[water]});
     const beforeStats=JSON.stringify(p.model.counts),recent=JSON.stringify(p.model.recentEvents),waterJson=JSON.stringify(p.ecology.puddles);
     // The same renderer-neutral path data is consumed by both actual presentation adapters.
     const canvasEquivalent=F.createModel({now:()=>100000,random:F.seededRandom(313),getPuddles:()=>[water]});
     const pf=p.frogs.spawnSimulated(),cf=canvasEquivalent.spawnSimulated();assert.deepEqual(JSON.parse(JSON.stringify(pf.points)),cf.points);
-    c.run('gardenFrogs.spawnSimulated();gardenFrogs.spawnSimulated();drawGardenOverlay(true);syncWeatherAnimation()');
-    c.sandbox.frogParity=JSON.parse(JSON.stringify(pf));c.run('Object.assign(gardenFrogs.frogs[0],frogParity,{puddle:gardenEcology.puddles[0]})');
-    assert.equal(c.run('gardenFrogs.frogs.length'),2);assert.equal(c.run('gardenState.actors.length'),0);
-    assert.equal(c.run('gardenState.drops.length'),0);assert.equal(c.run('gardenState.curiosities.length'),0);
     p.frogs.spawnSimulated();assert.equal(p.frogs.frogs.length,2);
     const root=p.app.stage.children[0],sprites=root.children[7].children.slice();assert.equal(sprites.length,2);
-    for(let n=0;n<45;n++){p.frame(250);c.clock.now+=250;c.tick();c.frame(c.clock.now);}
-    assert.deepEqual(JSON.parse(c.run('JSON.stringify(window.PacketGardenFrogs.visualState(gardenFrogs.frogs[0],Date.now(),frogReducedMotion.matches))')),
-      F.visualState(pf,p.context.Date.now(),reduced));
+    for(let n=0;n<45;n++){p.frame(250);}
     assert(sprites.every(s=>root.children[7].children.includes(s)));assert.equal(p.frogs.frogs[0],pf);
     assert.equal(JSON.stringify(p.model.counts),beforeStats);assert.equal(JSON.stringify(p.model.recentEvents),recent);assert.equal(JSON.stringify(p.ecology.puddles),waterJson);
     assert.equal(p.ambient.drops.length,0);assert.equal(p.ambient.curiosities.length,0);assert.equal(p.gnomes.actors.length,0);
-    c.run('drawGarden()');c.drawing.length=0;c.run('drawGardenOverlay(true)');assert(c.drawing.every(cmd=>cmd.surface==='overlay'));assert.equal(c.run('gardenBaseDirty'),false);
-    const intervals=c.intervals.length;p.doc.hidden=true;p.docHandlers.get('visibilitychange')();c.setHidden(true);
-    assert.equal(p.frogs.frogs.length,0);assert.equal(root.children[7].children.length,0);assert.equal(c.run('gardenFrogs.frogs.length'),0);assert.equal(c.frames.size,0);
-    p.advance(100000);c.clock.now+=100000;p.doc.hidden=false;p.docHandlers.get('visibilitychange')();c.setHidden(false);
-    assert.equal(p.frogs.frogs.length,0);assert.equal(c.run('gardenFrogs.frogs.length'),0);assert.equal(c.intervals.length,intervals);
+    p.doc.hidden=true;p.docHandlers.get('visibilitychange')();
+    p.advance(100000);p.doc.hidden=false;p.docHandlers.get('visibilitychange')();
     p.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(p.errors,[]);assert.equal(p.element('#trigger-frog'),null);
   }
   const baseline=h.textureCount(),live=h.live.size,bakes=h.generated(),atlas=V.makeAmbientAtlas(h.P,h.renderer),layer=new h.P.Container();
@@ -113,5 +104,5 @@ const state={specimens:[],curiosities:[],drops:[],frogs:null};assert.equal(I.res
   button.handlers.get('click')();button.handlers.get('click')();button.handlers.get('click')();assert.equal(dev.frogs.frogs.length,2);assert.equal(dev.ecology.puddles.length,1);
   assert.equal(JSON.stringify(dev.model.counts),stats);assert.equal(JSON.stringify(dev.model.recentEvents),activity);
   dev.winHandlers.get('pagehide')({persisted:false});
-  console.log('PASS: frog .15 boundaries/wet visual water/exact puddle/2 cap/60s paths/no hidden catch-up/bounds/quiet-weather independence, Canvas-Pixi integration, independent RNG and 30 atlas/Sprite cleanup cycles.');
+  console.log('PASS: frog .15 boundaries/wet visual water/exact puddle/2 cap/60s paths/no hidden catch-up/bounds/quiet-weather independence, shared-model/Pixi integration, independent RNG and 30 atlas/Sprite cleanup cycles.');
 })().catch(e=>{console.error(e);process.exitCode=1});

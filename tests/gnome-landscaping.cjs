@@ -113,7 +113,7 @@ for(const invalidate of [
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-gnomes.js','utf8'),/setInterval|setTimeout|requestAnimationFrame|EventSource|document\./);
 
 async function adapters() {
-  const canvasFactory=require('./browser-garden.cjs'),{start}=require('./pixi-default.cjs');
+  const {start}=require('./pixi-default.cjs');
   const h=require('./pixi-live.cjs'),V=require('../wwwroot/pixi-live-gnomes.js');
   const layer=new h.P.Container(),baseline=h.textureCount(),cache=V.makeGnomeAtlas(h.P,h.renderer);
   const view=V.createGnomeView(h.P,layer,cache.frames),allocated=h.generated();
@@ -132,31 +132,23 @@ async function adapters() {
   view.destroy();cache.destroy();layer.destroy();assert.equal(h.textureCount(),baseline);
   for(const page of ['index.html','pixi-live.html'])for(const reduced of [false,true]) {
     const pixi=await start(false,{captureModel:true,reduced,pageHtml:fs.readFileSync('wwwroot/'+page,'utf8')});
-    const canvas=canvasFactory({reduced});canvas.clock.now=100000;
     pixi.model.seedLandscaping();
-    canvas.run(`gardenModel.seed(${JSON.stringify(pixi.model.specimens)},Date.now());`);
     const recent=JSON.stringify(pixi.model.recentEvents),counts=JSON.stringify(pixi.model.counts);
     assert(pixi.gnomes.startLandscaping(100000,()=>.5));
-    assert(canvas.run('gardenGnomes.startLandscaping(Date.now(),()=>.5)'));
     const target=pixi.gnomes.incident.targets[0].specimen;
-    // Inspection must close synchronously with the exact removal in both renderers.
-    canvas.run(`renderSpecimenCard(gardenModel.byCell.get(${target.cell}),100,100)`);
+    // Inspection must close synchronously with the exact removal in Pixi.
     const root=pixi.app.stage.children[0],sprite=root.children[6].children[pixi.model.specimens.indexOf(target)];
     const r=pixi.app.canvas.getBoundingClientRect();
     pixi.app.canvas.handlers.get('click')({clientX:r.left+root.position.x+sprite.position.x*root.scale.x,
       clientY:r.top+root.position.y+(sprite.position.y-12)*root.scale.y});
     assert.equal(pixi.element('#specimen-card').hidden,false);
     for(let i=0;i<44;i++) {
-      pixi.frame(250);canvas.clock.now+=250;canvas.tick();canvas.frame(canvas.clock.now);
-      assert.deepEqual(JSON.parse(JSON.stringify(pixi.model.specimens.map(p=>p.cell).sort((a,b)=>a-b))),
-        JSON.parse(canvas.run('JSON.stringify(gardenModel.specimens.map(p=>p.cell).sort((a,b)=>a-b))')));
+      pixi.frame(250);
       if(i===2) {
-        assert.equal(canvas.element('#specimen-card').hidden,true);
         assert.equal(pixi.element('#specimen-card').hidden,true);
       }
     }
     assert.equal(pixi.model.specimens.length,42);assert.equal(pixi.gnomes.incident,null);
-    assert.equal(canvas.run('gardenState.actors.length'),0);assert.equal(canvas.frames.size,0);
     assert.equal(root.children[8].children.length,0);assert.equal(root.children[6].children.length,42);
     assert.equal(root.children[5].children.length,24,'vine rendering links track removals');
     assert.equal(JSON.stringify(pixi.model.counts),counts);assert.equal(JSON.stringify(pixi.model.recentEvents),recent);
@@ -164,8 +156,6 @@ async function adapters() {
     pixi.doc.hidden=true;pixi.docHandlers.get('visibilitychange')();assert.equal(pixi.gnomes.actors.length,0);
     assert.equal(root.children[8].children.length,0);pixi.advance(60000);pixi.doc.hidden=false;pixi.docHandlers.get('visibilitychange')();
     assert.equal(pixi.model.specimens.length,50);assert.equal(pixi.gnomes.incident,null);
-    canvas.clock.now+=C.cooldownMs;canvas.run('gardenGnomes.startLandscaping(Date.now())');canvas.setHidden(true);
-    assert.equal(canvas.run('gardenGnomes.actors.length'),0);assert.equal(canvas.frames.size,0);
     if(page==='pixi-live.html') {
       pixi.advance(C.cooldownMs);pixi.model.clear();const button=pixi.element('#trigger-landscaping');
       button.handlers.get('click')();assert.equal(pixi.gnomes.incident.type,'gnome_landscaping');
@@ -177,5 +167,5 @@ async function adapters() {
     pixi.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(pixi.errors,[]);
   }
 }
-adapters().then(()=>console.log('PASS: landscaping thresholds/cooldown/chance, capped fixed route, safe sequential removals, exclusions, mutual exclusion, hidden/reduced motion, Canvas/Pixi lifecycle parity, diagnostic trigger and 25 incidents without leaked objects/textures.'))
+adapters().then(()=>console.log('PASS: landscaping thresholds/cooldown/chance, capped fixed route, safe sequential removals, exclusions, mutual exclusion, hidden/reduced motion, Pixi lifecycle coverage, diagnostic trigger and 25 incidents without leaked objects/textures.'))
   .catch(error=>{console.error(error);process.exitCode=1;});

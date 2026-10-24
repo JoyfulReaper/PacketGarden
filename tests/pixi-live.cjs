@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict'), fs = require('node:fs');
 const core = require('../wwwroot/pixi-live-core.js'), shared = require('../wwwroot/pixi-stress.js');
 const { makeLiveAtlas, createView } = require('../wwwroot/pixi-live.js');
-const createGarden = require('./browser-garden.cjs');
+const garden = require('../wwwroot/garden-core.js');
 const read = file => fs.readFileSync(file, 'utf8');
-assert.doesNotMatch(read('wwwroot/canvas.html'), /pixi/i);
+assert.doesNotMatch(read('wwwroot/canvas.html'), /<script|<canvas/);
 assert.match(read('wwwroot/pixi-stress.html'), /pixi-stress\.js/);
 const html = read('wwwroot/pixi-live.html'), script = read('wwwroot/pixi-live.js'), modelScript = read('wwwroot/pixi-live-core.js');
 assert.match(html, /data-pixi-library/); assert.match(html, /pixi-live-core\.js/); assert.match(html, /pixi-live\.js/);
@@ -31,31 +31,18 @@ assert.equal(core.normalizeWeather({level:'quiet',eventsPerMinute:0,hasSnapshot:
 assert.equal(core.weatherSettings({level:'quiet',eventsPerMinute:10000}).count,0);
 assert.equal(core.weatherSettings({level:'botnet_hurricane',eventsPerMinute:1e6}).count,400);
 assert.equal(core.weatherSettings({level:'rain',eventsPerMinute:0}).darkening,0);
-// Actual production constants, placement and saturation are the parity oracle.
-const production = createGarden();
-for (const type of core.species) assert.deepEqual(core.timings[type], JSON.parse(production.run(`JSON.stringify(speciesConfig.get('${type}').timings)`)));
-for (const type of core.species) for (const at of Object.values(core.timings[type])) {
-  assert.notEqual(core.stageAt(type,0,at-1),'expired');
-  if (at === core.timings[type].expiredAfterMs) assert.equal(core.stageAt(type,0,at),'expired');
-  else assert.notEqual(core.stageAt(type,0,at-1),core.stageAt(type,0,at));
-}
+// Frozen pre-extraction placement traces are independent of the removed renderer.
+assert.equal(core.timings,garden.timings);
 const nullView = {add(){},update(){},remove(){}};
-const parity = core.createModel(nullView,{now:()=>production.clock.now,random:()=>.5});
-for (let i=0;i<130;i++) {
-  const type = core.species[i % 10]; const ours = parity.accept(event(type,i%4));
-  const theirs = JSON.parse(production.run(`JSON.stringify(spawnSpecimen('${type}',null,${i%4}))`));
-  assert.deepEqual([ours.column,ours.row],[theirs.column,theirs.row]);
+const order=['flower','mushroom','vine','broadleaf','wirefern','redbloom','weed','ghostbloom','crystalfungus','blackthorn'];
+for(const {rolls,cells} of require('./fixtures/production-placement.json').cases){
+  let index=0;const model=core.createModel(nullView,{now:()=>10000,random:()=>rolls[index++%rolls.length]});
+  for(let i=0;i<cells.length;i++)assert.equal(model.accept(event(order[i%10],i%4)).cell,cells[i]);
 }
-const cellSet = new Set(parity.specimens.map(p=>p.cell)); assert.equal(cellSet.size,130);
+const parity=core.createModel(nullView,{now:()=>10000,random:()=>.5});
+for(let i=0;i<130;i++)assert(parity.accept(event(core.eventSpecies[i%10],i%4)));
+assert.equal(new Set(parity.specimens.map(p=>p.cell)).size,130);
 assert(parity.specimens.every(p=>p.column>=0&&p.column<32&&p.row>=0&&p.row<20));
-// Random sequence also tests nearby preference and edge non-wrapping against production.
-const prodRandom = createGarden(); let index = 0;
-prodRandom.run(`Math.random = (() => { let i=0; return () => [0.95,0.01,0.5,0.02,0.8,0.5][i++ % 6]; })()`);
-const near = core.createModel(nullView,{now:()=>prodRandom.clock.now,random:()=>[.95,.01,.5,.02,.8,.5][index++%6]});
-for(let i=0;i<70;i++) {
-  const ours=near.accept(event()), theirs=JSON.parse(prodRandom.run(`JSON.stringify(spawnSpecimen('flower',null,0))`));
-  assert.deepEqual([ours.column,ours.row],[theirs.column,theirs.row]);
-}
 assert.deepEqual([.009,.01,.7029,.703,.8514,.852,.9504,.951].map(roll=>core.colorVariant('vine',3,roll)),[4,0,0,1,1,2,2,3]);
 let expiryNow=100000;
 const expiryFirst=core.createModel(nullView,{now:()=>expiryNow,random:()=>.5});expiryFirst.seed();expiryNow+=30000;

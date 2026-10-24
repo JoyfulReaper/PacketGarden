@@ -2,7 +2,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const G=require('../wwwroot/garden-core.js'),E=require('../wwwroot/garden-ecology.js');
 const P=require('../wwwroot/pixi-live-core.js'),{start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
-const canvas=require('./browser-garden.cjs');
 let at=0,ecology,notifications=[];
 const garden=G.createGardenModel({now:()=>at,random:()=>0,onChange:c=>{
   if(c.kind==='added')ecology.removeGrassCell(c.specimen.column,c.specimen.row);
@@ -41,18 +40,6 @@ for(const type of ['dns','http']) {
 }
 let rolls=0;const fading=E.createEcologyModel({random:()=>{rolls++;return 0;},isCellOccupied:(x,y)=>x!==1||y!==1});
 fading.influenceGrassCell(1,1,0);fading.spreadGrass(1200000);assert.equal(fading.grassCells.length,1);assert.equal(rolls,0,'blocked soil retains the final opportunity without a roll');
-// Actual Canvas path: notification dirties the base, and first presentation sees cleared soil.
-const c=canvas();c.sandbox.Math.random=()=>0;
-c.run('gardenModel.clear();gardenEcology.clear();influenceGrassCell(0,0,Date.now());influenceGrassCell(1,0,Date.now());const neighborGrass=gardenState.grassCells[1];const originalDraw=drawGarden;let paintCount=0;drawGarden=function(...args){paintCount++;if(gardenState.grassCells.some(g=>g.column===0&&g.row===0))throw Error("grass remained at first plant paint");return originalDraw(...args)}');
-c.emit(53,'flower',0);assert.equal(c.run('gardenState.specimens[0].cell'),0);assert.equal(c.run('gardenState.grassCells.length'),1);
-assert.equal(c.run('gardenState.grassCells[0]===neighborGrass'),true);assert.equal(c.run('paintCount'),2,'existing color adapter redraws both see cleared soil');
-c.run('gardenModel.clear();gardenEcology.clear();nextGrassSpreadAt=Date.now()+100000');
-c.run('influenceGrassCell(0,0,Date.now());influenceGrassCell(1,0,Date.now())');
-c.run("spawnSpecimen('flower','dns')");assert.equal(c.run('gardenState.grassCells.some(g=>g.column===0&&g.row===0)'),false);
-c.fill(3);c.run('gardenState.specimens[0].vigor=0;const savedCells=new Map(gardenModel.byCell);gardenModel.byCell.clear();gardenState.grassCells=[{column:0,row:0,createdAt:Date.now(),lastInfluencedAt:Date.now()},{column:1,row:0,createdAt:Date.now(),lastInfluencedAt:Date.now()}];for(const [key,value] of savedCells)gardenModel.byCell.set(key,value)');
-const legacy=c.run('JSON.stringify(gardenState.grassCells)');c.emit(53,'flower',0);
-assert.equal(c.run('JSON.stringify(gardenState.grassCells)'),legacy,'Canvas dropped growth leaves legacy grass untouched');
-c.emit(53,'flower',1);assert.equal(c.run('gardenState.grassCells.length'),1);assert.equal(c.run('gardenState.grassCells[0].column'),1);
 (async()=>{
   for(const page of ['index.html','pixi-live.html']) {
     const g=await start(false,{pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8'),captureModel:true});
@@ -86,5 +73,5 @@ c.emit(53,'flower',1);assert.equal(c.run('gardenState.grassCells.length'),1);ass
     if(page==='pixi-live.html'){g.element('#seed').handlers.get('click')();assert.equal(g.model.specimens.length,640);assert.equal(g.ecology.grassCells.length,0);assert.equal(root.children[3].children.length,0);}
     g.winHandlers.get('pagehide')({persisted:false});assert.deepEqual(g.errors,[]);
   }
-  console.log('PASS: selected-cell clearing before Canvas paint/Pixi add, neighbor identity, replacement, invalid/paused/dropped isolation, occupied influence/spread and unchanged rolls, natural reclaim after expiry, dense fixture policy and repeated Sprite/atlas cleanup.');
+  console.log('PASS: selected-cell clearing before Pixi add, neighbor identity, replacement, invalid/paused/dropped isolation, occupied influence/spread and unchanged rolls, natural reclaim after expiry, dense fixture policy and repeated Sprite/atlas cleanup.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

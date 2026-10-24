@@ -1,5 +1,6 @@
-/* Presentation integration only; the card/activity/message rules are shared with Canvas. */
+/* Pixi page presentation; shared card/activity/message rules live in garden-ui.css. */
 .pixi-garden-stage { position: relative; }
+#view[data-initialization-failed] { display: grid; place-content: center; padding: 24px; text-align: center; line-height: 1.6; color: #e1e6d7; }
 #view canvas { cursor: pointer; }
 .gnome-message-preview { flex-wrap: wrap; max-width: 100%; }
 #underpants-message-roll { min-width: 0; max-width: 100%; }

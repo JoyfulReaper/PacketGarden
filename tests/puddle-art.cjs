@@ -2,7 +2,7 @@
 // exact ecology radius/fade/identity and complete ownership under repeated churn.
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const art=require('../wwwroot/garden-puddle-art.js'),E=require('../wwwroot/garden-ecology.js');
-const h=require('./pixi-live.cjs'),presentation=require('../wwwroot/pixi-live-ecology.js'),createGarden=require('./browser-garden.cjs');
+const h=require('./pixi-live.cjs'),presentation=require('../wwwroot/pixi-live-ecology.js');
 assert.equal(art.variants.length,4);assert.equal(new Set(art.variants.map(JSON.stringify)).size,4);
 assert.deepEqual([0,.249999,.25,.499999,.5,.749999,.75,.999999].map(seed=>art.variantFor({seed})),[0,0,1,1,2,2,3,3]);
 for(const layers of art.variants){
@@ -33,7 +33,8 @@ for(let i=0;i<4;i++){
     fill(){commands.push(['fill',{color:parseInt(this.fillStyle.slice(1),16),alpha:this.globalAlpha}]);}};
   let start;
   for(const method of ['moveTo','lineTo','quadraticCurveTo'])context[method]=(...args)=>{if(method==='moveTo')start=args;commands.push([method,...args]);};
-  art.paintCanvas(context,i);assert.deepEqual(tiles[12+i].commands,commands,'Canvas and atlas submit identical closed paths, colors and alpha');
+  for(const layer of art.variants[i]) { for(const [method,...args] of layer.path)context[method](...args); context.closePath();context.fillStyle='#'+layer.color.toString(16);context.globalAlpha=layer.alpha;context.fill(); }
+  assert.deepEqual(tiles[12+i].commands,commands,'atlas submits the exact shared closed paths, colors and alpha');
 }
 const grass=new h.P.Container(),water=new h.P.Container(),view=presentation.createEcologyView(h.P,grass,water,atlas.frames);
 let at=1000000;const model=E.createEcologyModel({now:()=>at,random:()=>.99,onChange:e=>view.change(e,at)});
@@ -58,20 +59,9 @@ for(let cycle=0;cycle<30;cycle++){
 }
 assert.equal(geometry,baked,'zero geometry submissions after the startup bake');
 view.destroy();grass.destroy();water.destroy();atlas.destroy();assert.equal(h.live.size,objects);assert.equal(h.textureCount(),textures);
-const canvas=createGarden(),reduced=createGarden({reduced:true});
-for(const garden of [canvas,reduced]){
-  assert.equal(garden.run('puddleTiles.length'),4);assert(garden.run('puddleTiles.every(tile=>tile.width===128&&tile.height===128)'));
-  garden.run('gardenEcology.clear();gardenState.puddles=[0,.25,.5,.75].map(seed=>({x:480,y:300,seed,size:36,maxSize:36,createdAt:Date.now(),lastRefreshedAt:Date.now()}))');
-  garden.drawing.length=0;garden.run('drawGardenPuddles(Date.now())');const commands=garden.drawing.slice(),tiles=commands.filter(c=>c[0]==='drawImage').map(c=>c[1]);
-  assert.equal(new Set(tiles).size,4);assert(!commands.some(c=>c[0]==='quadraticCurveTo'),'Canvas only copies finite tiles on a base repaint');
-  for(let i=0;i<30;i++){garden.drawing.length=0;garden.run('drawGardenPuddles(Date.now())');assert.deepEqual(garden.drawing,commands);}
-  garden.setHidden(true);garden.clock.now+=600000;garden.setHidden(false);
-  assert.equal(garden.run('gardenState.puddles.length'),0);assert.equal(garden.run('puddleTiles.length'),4);
-  assert.equal(garden.intervals.length,2);
-}
 assert.equal(art.opacityFor(.38),1);assert.equal(art.opacityFor(.19),.5);assert.equal(art.opacityFor(0),0);
-for(const file of ['garden-puddle-art.js','garden-puddles.js','pixi-live-ecology.js']){
+for(const file of ['garden-puddle-art.js','pixi-live-ecology.js']){
   const source=fs.readFileSync('wwwroot/'+file,'utf8');assert.doesNotMatch(source,/setInterval|setTimeout|requestAnimationFrame|new Source|fetch\(|\.filters\s*=/);
   if(file==='garden-puddle-art.js')assert.doesNotMatch(source,/Math\.random/);
 }
-console.log('PASS: four shared organic water variants, no RNG, identical bake commands, bounded margins, stable exact puddle transforms/references, 30 refresh/expiry cycles, finite Canvas tiles, reduced/hidden behavior, zero runtime geometry/texture growth and full cleanup.');
+console.log('PASS: four shared organic water variants, no RNG, identical bake commands, bounded margins, stable exact puddle transforms/references, 30 refresh/expiry cycles,  zero runtime geometry/texture growth and full cleanup.');
