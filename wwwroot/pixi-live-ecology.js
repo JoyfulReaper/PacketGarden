@@ -2,71 +2,109 @@
 (function () {
   'use strict';
   const ecologyCore = typeof module !== 'undefined' && module.exports ? require('./garden-ecology.js') : window.PacketGardenEcology;
+  const grassArt = typeof module !== 'undefined' && module.exports ? require('./garden-grass.js') : window.PacketGardenGrassArt;
+  const puddleArt = typeof module !== 'undefined' && module.exports ? require('./garden-puddle-art.js') : window.PacketGardenPuddleArt;
   const grassKey = cell => cell.row * 32 + cell.column;
-  const grassVariants = 12;
-  function grassVariant(cell) {
-    const seed = Math.imul(grassKey(cell) ^ 0x45d9f3b, 0x45d9f3b);
-    return ((seed ^ seed >>> 16) >>> 0) % grassVariants;
+  const grassVariants = grassArt.variants.length;
+  const grassVariant = grassArt.variantFor;
+  // Presentation only. Retain the shared age palette, gently bringing it toward
+  // its luminance before dimming it; never change coverage or lifecycle alpha.
+  function grassTint(color) {
+    const luminance = color[0] * .2126 + color[1] * .7152 + color[2] * .0722;
+    const rgb = color.map(channel => Math.round((channel * .82 + luminance * .18) * .91));
+    return (rgb[0] << 16) | (rgb[1] << 8) | rgb[2];
+  }
+  function shelterShade(color, blade) {
+    const p = blade.path, x = (p[0] + p[4] + p[8]) / 3, y = (p[1] + p[5] + p[9]) / 3;
+    // A soft, slightly irregular oval across the leaves, with unchanged outer
+    // blades. Shading whole existing leaves preserves their ink and soil gaps.
+    const distance = Math.hypot((x - 32) / 21, (y - 34) / 23);
+    const t = Math.max(0, 1 - distance), weight = t * t * (3 - 2 * t);
+    const rgb = [color >> 16 & 255, color >> 8 & 255, color & 255];
+    const luminance = rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722;
+    const shaded = rgb.map(channel => Math.round((channel * (1 - .2 * weight) + luminance * .2 * weight) * (1 - .30 * weight)));
+    return (shaded[0] << 16) | (shaded[1] << 8) | shaded[2];
   }
   function makeEcologyAtlas(P, renderer) {
     const sheet = new P.Container(), keys = [], grassPatches = [];
-    for (let variant = 0; variant < grassVariants; variant++) {
-      const patch = new P.Graphics(), bases = []; let seed = variant + 173;
-      const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
-      // Separated little fans leave transparent soil gaps even at 640 cells.
-      // Neutral shades inherit the existing green -> straw -> brown tint.
-      for (let tuft = 0; tuft < 2 + variant % 2; tuft++) {
-        let x = 18 + random() * 28, y = 24 + random() * 26;
-        for (let attempt = 0; attempt < 4 && bases.some(base => Math.hypot(base.x - x, base.y - y) < 8); attempt++) {
-          x = 18 + random() * 28; y = 24 + random() * 26;
+    function tile(key, patch) {
+      const index = keys.length;
+      patch.position.set(index % 16 * 64, Math.floor(index / 16) * 64);
+      sheet.addChild(patch); grassPatches.push(patch); keys.push(key);
+    }
+    function grassPatch(variant, sheltered) {
+      const patch = new P.Graphics();
+      for (let shade = 0; shade < grassArt.shades.length; shade++) {
+        for (const blade of grassArt.variants[variant]) {
+          if (blade.shade !== shade) continue;
+          const p = blade.path;
+          patch.moveTo(p[0], p[1]).quadraticCurveTo(p[2], p[3], p[4], p[5])
+            .quadraticCurveTo(p[6], p[7], p[8], p[9]).lineTo(p[0], p[1]);
+          if (sheltered) patch.fill({ color: shelterShade(grassArt.shades[shade], blade), alpha: grassArt.baseOpacity ?? .6 });
         }
-        bases.push({ x, y });
-        patch.moveTo(x - 2, y + .3).quadraticCurveTo(x, y + 1, x + 2, y - .2)
-          .stroke({ color: 0x6c795b, alpha: .4, width: 1 });
-        const blades = 5 + (variant + tuft) % 3;
-        for (let blade = 0; blade < blades; blade++) {
-          const bx = x + (random() - .5) * 3, by = y + (random() - .5) * 2;
-          const lean = (blade / (blades - 1) - .5) * 10.5 + (random() - .5) * 5;
-          const height = 6 + random() * 8, width = .65 + random() * .65;
-          const tipX = bx + lean, tipY = by - height;
-          patch.moveTo(bx - width * .5, by).quadraticCurveTo(bx + lean * .12 - width, by - height * .58, tipX, tipY)
-            .quadraticCurveTo(bx + lean * .45 + width * .4, by - height * .42, bx + width * .5, by)
-            .fill({ color: [0xc6d0bd, 0xdce2c9, 0xb0bfa4][blade % 3], alpha: .6 });
-          if (blade % 2 === 0) patch.moveTo(tipX, tipY).quadraticCurveTo(bx + lean * .28, by - height * .62, bx + lean * .12, by - height * .3)
-            .stroke({ color: 0xffffff, alpha: .5, width: .45 });
-        }
+        if (!sheltered) patch.fill({ color: grassArt.shades[shade], alpha: grassArt.baseOpacity ?? .6 });
       }
-      patch.position.set(variant * 64, 0); sheet.addChild(patch); grassPatches.push(patch); keys.push(`grass:${variant}`);
+      return patch;
     }
-    // A unit-radius 36px pool, matching the three Canvas lobes and stable rotation.
-    const water = new P.Graphics();
-    for (const [x, y, rx, ry] of [[0, 0, 1, .65], [-.4, .16, .7, .5], [.38, -.18, .72, .48]]) {
-      water.ellipse(32 + x * 18, 32 + y * 18, rx * 18, ry * 18);
+    for (let variant = 0; variant < grassVariants; variant++) tile(`grass:${variant}`, grassPatch(variant, false));
+    // Same finite contours, colors and flattened alpha as the Canvas tiles.
+    for (let variant=0;variant<puddleArt.variants.length;variant++) {
+      const water = new P.Graphics();
+      for (const layer of puddleArt.variants[variant]) {
+        for (const [method,...args] of layer.path) water[method](...args);
+        const start=layer.path[0];water.lineTo(start[1],start[2]);
+        water.fill({color:layer.color,alpha:layer.alpha});
+      }
+      tile(`puddle:${variant}`, water);
     }
-    water.fill(0x497579).stroke({ color: 0x253f46, alpha: .6, width: .6 });
-    // Short highlight arc, baked once using a few points.
-    for (let i = 0; i <= 12; i++) {
-      const a = Math.PI * (1.1 + i / 12 * .6), x = 32 - 1.8 + Math.cos(a) * 11.7, y = 32 - 2.34 + Math.sin(a) * 5.94;
-      if (i === 0) water.moveTo(x, y); else water.lineTo(x, y);
-    }
-    water.stroke({ color: 0xb2c9c0, alpha: .5, width: .5 });
-    water.position.set(grassVariants * 64, 0); sheet.addChild(water); keys.push('puddle');
-    const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, keys.length * 64, 64), resolution: 2 });
+    for (let variant = 0; variant < grassVariants; variant++) tile(`grass-sheltered:${variant}`, grassPatch(variant, true));
+    // Restrained contact footprint, feathered with cached translucent contours.
+    // No filter, shader, extra source or recurring geometry is required.
+    const shadow = new P.Graphics();
+    for (let ring = 8; ring >= 1; ring--) shadow.ellipse(32, 32, 2 + ring * .85, .6 + ring * .25)
+      .fill({ color: 0x17271d, alpha: .025 });
+    tile('plant-contact', shadow);
+    const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 16) * 64), resolution: 2 });
     // Release owned construction contexts explicitly; shared atlas frames survive.
     for (const patch of grassPatches) patch.destroy();
     sheet.destroy({ children: true });
-    const frames = new Map(keys.map((key, i) => [key, new P.Texture({ source: atlas.source, frame: new P.Rectangle(i * 64, 0, 64, 64) })]));
+    const frames = new Map(keys.map((key, i) => {
+      const x = i % 16 * 64, y = Math.floor(i / 16) * 64;
+      // Trim the contact quad to its tiny footprint instead of submitting 64px
+      // of transparent padding for every overlapping plant.
+      const frame = key === 'plant-contact' ? new P.Rectangle(x + 21, y + 28, 22, 8) : new P.Rectangle(x, y, 64, 64);
+      return [key, new P.Texture({ source: atlas.source, frame })];
+    }));
     return { frames, atlas, destroy() { for (const frame of frames.values()) frame.destroy(false); atlas.destroy(true); } };
   }
-  function createEcologyView(P, grassLayer, puddleLayer, frames) {
-    const grassViews = new Map(), puddleViews = new Map();
+  function createEcologyView(P, grassLayer, puddleLayer, frames, { getSpecimen = () => null, getPlantSprite = () => null, shadowLayer = null } = {}) {
+    const grassViews = new Map(), puddleViews = new Map(), shadowViews = new Map();
     let nextGrassScanAt = Infinity;
     const counters = { grassAdded: 0, grassRemoved: 0, grassRefreshed: 0, grassVisualUpdates: 0, puddleAdded: 0, puddleRemoved: 0, puddleRefreshed: 0 };
+    function removeShadow(record) {
+      if (record.shadow) { record.shadow.destroy(); shadowViews.delete(record.specimen.id); record.shadow = null; }
+    }
+    function updateOccupancy(record) {
+      const specimen = getSpecimen(record.cell.column, record.cell.row), parent = specimen && getPlantSprite(specimen);
+      if (record.specimen !== specimen) { removeShadow(record); record.specimen = specimen; }
+      record.sprite.texture = frames.get(`${specimen ? 'grass-sheltered' : 'grass'}:${grassVariant(record.cell)}`);
+      if (!parent || !shadowLayer) { removeShadow(record); return; }
+      if (!record.shadow) {
+        const sprite = new P.Sprite(frames.get('plant-contact')); sprite.anchor.set(.5); sprite.eventMode = 'none';
+        // Before vine Graphics, after grass/water, and always before plants.
+        shadowLayer.addChildAt(sprite, 0); record.shadow = sprite; shadowViews.set(specimen.id, sprite);
+      }
+      const stageScale = specimen.mutation ? 1 : specimen.stage === 'sprout' ? .42 : specimen.stage === 'growing' ? .72 : specimen.stage === 'fading' ? .66 : 1;
+      record.shadow.position.set(parent.position.x, parent.position.y);
+      record.shadow.scale.set(Math.abs(parent.scale.x) * stageScale, Math.abs(parent.scale.y) * stageScale);
+      record.shadow.alpha = record.sprite.alpha * (specimen.stage === 'fading' ? .65 : 1);
+    }
     function updateGrass(cell, record, at) {
       const state = ecologyCore.grassVisualState(cell, at), sprite = record.sprite;
       sprite.scale.set(state.growth * (1 - state.decline * .65));
-      sprite.tint = (state.color[0] << 16) | (state.color[1] << 8) | state.color[2];
-      sprite.alpha = state.opacity / .6; // patch fill already contains the .6 base opacity
+      sprite.tint = grassTint(state.color);
+      sprite.alpha = state.opacity / .6; // shared lifecycle ratio over baked groundcover opacity
+      updateOccupancy(record);
       record.nextAt = ecologyCore.nextGrassVisualChangeAt(cell, at) ?? Infinity;
       nextGrassScanAt = Math.min(nextGrassScanAt, record.nextAt);
       counters.grassVisualUpdates++;
@@ -78,11 +116,13 @@
         grassLayer.addChild(sprite); const record = { sprite, cell: item, nextAt: 0 }; grassViews.set(key, record);
         updateGrass(item, record, at); counters.grassAdded++;
       } else if (kind === 'grass-refreshed') {
-        updateGrass(item, grassViews.get(grassKey(item)), at); counters.grassRefreshed++;
+        const record = grassViews.get(grassKey(item)); record.cell = item;
+        updateGrass(item, record, at); counters.grassRefreshed++;
       } else if (kind === 'grass-removed') {
-        grassViews.get(grassKey(item)).sprite.destroy(); grassViews.delete(grassKey(item)); counters.grassRemoved++;
+        const record = grassViews.get(grassKey(item)); removeShadow(record);
+        record.sprite.destroy(); grassViews.delete(grassKey(item)); counters.grassRemoved++;
       } else if (kind === 'puddle-added') {
-        const sprite = new P.Sprite(frames.get('puddle')); sprite.anchor.set(.5); sprite.position.set(item.x, item.y);
+        const sprite = new P.Sprite(frames.get(`puddle:${puddleArt.variantFor(item)}`)); sprite.anchor.set(.5); sprite.position.set(item.x, item.y);
         sprite.rotation = item.seed * Math.PI * 2; puddleLayer.addChild(sprite); puddleViews.set(item, sprite); counters.puddleAdded++;
         updatePuddle(item, sprite, at);
       } else if (kind === 'puddle-refreshed') {
@@ -93,9 +133,10 @@
     }
     function updatePuddle(puddle, sprite, at) {
       const state = ecologyCore.puddleVisualState(puddle, at);
-      sprite.scale.set(state.size / 18); sprite.alpha = state.opacity;
+      sprite.scale.set(state.size / puddleArt.referenceSize); sprite.alpha = puddleArt.opacityFor(state.opacity);
     }
-    return { grassViews, puddleViews, counters, change,
+    return { grassViews, puddleViews, shadowViews, counters, change,
+      specimenChanged(specimen) { const record = grassViews.get(grassKey(specimen)); if (record) updateOccupancy(record); },
       tick(at) {
         if (at < nextGrassScanAt) return;
         nextGrassScanAt = Infinity;
@@ -105,8 +146,8 @@
         }
       },
       animate(at) { for (const [puddle, sprite] of puddleViews) updatePuddle(puddle, sprite, at); },
-      snapshot() { return { grassViews: grassViews.size, puddleViews: puddleViews.size, grassTextures: grassVariants, puddleTextures: 1, ecologyCounters: { ...counters } }; },
-      destroy() { for (const { sprite } of grassViews.values()) sprite.destroy(); for (const sprite of puddleViews.values()) sprite.destroy(); grassViews.clear(); puddleViews.clear(); }
+      snapshot() { return { grassViews: grassViews.size, shadowViews: shadowViews.size, puddleViews: puddleViews.size, grassTextures: grassVariants * 2, shadowTextures: 1, puddleTextures: puddleArt.variants.length, ecologyCounters: { ...counters } }; },
+      destroy() { for (const record of grassViews.values()) { removeShadow(record); record.sprite.destroy(); } for (const sprite of puddleViews.values()) sprite.destroy(); grassViews.clear(); puddleViews.clear(); }
     };
   }
   // Local simulated fixture import; never called by the stream or production Canvas.
@@ -118,6 +159,6 @@
       seed: i / 8, size: 10, maxSize: 18, createdAt: at, lastRefreshedAt: at }));
     model.seed({ grassCells, puddles });
   }
-  const api = { makeEcologyAtlas, createEcologyView, seedDenseEcology };
+  const api = { makeEcologyAtlas, createEcologyView, seedDenseEcology, grassTint };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenPixiEcology = api;
 })();

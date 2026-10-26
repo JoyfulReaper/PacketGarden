@@ -5,41 +5,83 @@
   <title>PacketGarden · Pixi live soak</title>
   <link rel="stylesheet" href="pixi-stress.css">
   <link rel="stylesheet" href="garden-ui.css">
-  <link rel="stylesheet" href="pixi-live.css?v=audio-1">
-  <script src="garden-audio.js?v=storm-bolt-2" defer></script>
+  <link rel="stylesheet" href="pixi-live.css?v=gnome-arrival-2">
+  <script src="garden-audio.js?v=gnome-arrival-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
-  <script src="pixi-stress.js" defer data-pixi-library></script>
-  <script src="garden-core.js" defer></script>
-  <script src="garden-gnomes.js?v=gnomes-1" defer></script>
+  <script src="pixi-stress.js?v=canvas-retired-1" defer data-pixi-library></script>
+  <script src="garden-core.js?v=stillbloom-1" defer></script>
+  <script src="garden-stillbloom.js?v=stillbloom-1" defer></script>
+  <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
+  <script src="garden-lighting.js?v=light-toggle-1" defer></script>
+  <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
+  <script src="garden-gnomes.js?v=frog-gnome-ack-1" defer></script>
   <script src="garden-mutations.js" defer></script>
-  <script src="garden-ecology.js?v=grass-clear-1" defer></script>
-  <script src="garden-ambient.js" defer></script>
-  <script src="garden-interaction.js" defer></script>
-  <script src="garden-ui-core.js" defer></script>
-  <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
-  <script src="pixi-live-ambient.js" defer></script>
-  <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
+  <script src="garden-grass.js?v=grass-lush-1" defer></script>
+  <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
+  <script src="garden-puddle-art.js?v=puddle-art-1" defer></script>
+  <script src="garden-gnome-puddles.js?v=gnome-puddles-1" defer></script>
+  <script src="garden-gnome-puddles-dev.js?v=pixi-lifecycle-1" defer></script>
+  <script src="garden-frogs.js?v=frog-gnome-ack-1" defer></script>
+  <script src="garden-ambient.js?v=gnome-harvest-1" defer></script>
+  <script src="garden-interaction.js?v=frog-gnome-ack-1" defer></script>
+  <script src="garden-ui-core.js?v=frog-gnome-ack-1" defer></script>
+  <script src="pixi-live-ui.js?v=frog-gnome-ack-1" defer></script>
+  <script src="pixi-live-ambient.js?v=frogs-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=gnome-puddles-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
-  <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
-  <script src="pixi-live-core.js?v=grass-clear-1" defer></script><script src="pixi-live.js?v=grass-clear-1" defer></script>
+  <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
+  <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
+  <script src="pixi-vine-blooms.js?v=vine-blooms-1" defer></script>
+  <script src="pixi-live-core.js?v=vine-blooms-1" defer></script><script src="pixi-live.js?v=gnome-arrival-2" defer></script>
 </head>
 <body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <main>
     <header><a href="/">← Production garden</a><a href="pixi-stress.html">Synthetic stress test</a>
       <h1>Pixi live soak</h1><p id="connection" role="status">connecting</p></header>
     <section class="controls" aria-label="Live soak controls">
+      <label>Lighting <select id="lighting-mode" aria-label="Lighting"><option value="live">Live local time</option><option value="dawn">Dawn</option><option value="day">Day</option><option value="golden">Golden hour</option><option value="dusk">Dusk</option><option value="night">Night</option><option value="hour">Simulated hour</option></select></label>
+      <label>Local hour <input id="lighting-hour" type="range" min="0" max="24" step="0.05" value="12" aria-label="Simulated local hour"></label>
+      <span id="lighting-status" role="status"></span>
+      <button id="trigger-stillbloom" type="button">Trigger Stillbloom (simulated)</button>
+      <label>Stillbloom simulation <select id="stillbloom-scenario"><option value="quiet">Verified quiet</option><option value="rain">Quiet → rain</option><option value="stale">Stale telemetry</option><option value="disconnected">Disconnected</option><option value="recovery">Recovery to quiet</option></select></label>
+      <label>Simulated roll <select id="stillbloom-roll"><option value="0.099999">0.099999 · success</option><option value="0.1">0.10 · failure</option></select></label>
+      <button id="stillbloom-qualify" type="button">Simulate 10 quiet minutes</button>
+      <button id="stillbloom-check" type="button">Simulate next 3 minutes</button>
+      <span id="stillbloom-test-status" role="status"></span>
       <button id="clear" type="button">Clear garden</button>
       <button id="seed" type="button">Seed dense garden + ecology (local simulated)</button>
+      <button id="seed-broadleaf-blooms" type="button">Seed broadleaf bloom stages (simulated)</button>
+      <button id="seed-dense-broadleaf-blooms" type="button">Seed 640 blooming broadleaves (simulated)</button>
+      <button id="seed-vine-bloom-stages" type="button">Seed vine bloom stages (simulated)</button>
+      <button id="seed-vine-bloom-connections" type="button">Seed connected flowering vines (simulated)</button>
+      <button id="seed-vine-bloom-dense" type="button">Seed 640 flowering vines (simulated)</button>
+      <span>Vine fixtures enable dense grass. Stage rows: no bloom, sprout, growing, mature, fading; colors: pink, lavender, pale yellow, white. Connected vines include an isolated flowering vine.</span>
+      <span>Bloom fixtures enable grass under plants. Rows: no bloom, sprout, growing, mature, fading; columns: pink, yellow, white, purple, blue. Foliage varies by row.</span>
       <button id="seed-ambient" type="button">Seed 3 visitors + 3 Amanita (local simulated)</button>
+      <button id="seed-weed-buds" type="button">Seed weed buds (simulated)</button>
       <button id="seed-mutations" type="button">Seed 3 mutations (local simulated)</button>
       <button id="seed-pending-mutations" type="button">Seed 4 pending mutations (local simulated)</button>
       <button id="seed-interaction" type="button">Seed overlap fixture (local simulated)</button>
       <button id="trigger-gnomes" type="button">Trigger Gnome Incident (simulated)</button>
+      <button id="trigger-landscaping" type="button">Trigger landscaping (simulated)</button>
+      <button id="trigger-overcrowding" type="button">Trigger overcrowding relief (simulated)</button>
+      <button id="trigger-weed-harvest" type="button">Trigger weed harvest (simulated)</button>
+      <button id="trigger-frog" type="button">Trigger frog (simulated)</button>
+      <button id="trigger-gnome-puddle" type="button">Trigger gnome puddle mishap</button>
+      <span id="gnome-puddle-status" role="status">Local simulated water and gnomes; ordinary water entries retain their 20% chance.</span>
+      <span id="frog-test-status" role="status">Seeds simulated water if needed. Trigger twice for two frogs; both depart naturally after 60 seconds.</span>
+      <button id="seed-gnome-drops" type="button">Seed mixed gnome drops (simulated)</button>
+      <label class="gnome-message-preview">Underpants message <select id="underpants-message-roll"><option value="0.799999">80% · roll 0.799999</option><option value="0.8">20% · roll 0.8</option></select></label>
+      <span>Click an active gnome for one underpants attempt; repeated clicks never retry, including at the five-drop cap.</span>
+      <span id="landscaping-test-status" role="status">Vine, full 640-plant or mature-weed fixture seeded if needed. All three triggers share the seven-minute cooldown; Clear does not reset it.</span>
       <span id="gnome-test-status" role="status">Requires 30 living specimens; simulated winners alternate green/red.</span>
       <label><input id="seed-puddles" type="checkbox" checked> Include 8 simulated puddles</label>
       <label>Weather source <select id="weather-source" aria-label="Weather source"><option value="live" selected>Live</option><option value="manual">Manual</option></select></label>
       <label>Manual weather <select id="weather-level" aria-label="Manual weather"><option value="quiet">Quiet</option><option value="drizzle">Drizzle</option><option value="rain">Rain</option><option value="heavy_rain">Heavy rain</option><option value="botnet_thunderstorm">Thunderstorm</option><option value="botnet_hurricane">Hurricane</option></select></label>
       <label><input id="lightning-enabled" type="checkbox" checked> Lightning</label>
+      <label><input id="day-night-enabled" type="checkbox" checked> Day/night cycle</label>
+      <label><input id="allow-grass-under-plants" type="checkbox" autocomplete="off"> Allow grass under plants</label>
       <button id="trigger-lightning" type="button">Trigger Lightning (simulated)</button>
       <span id="lightning-test-status" role="status">Manual thunderstorm/hurricane only; lightning respects reduced motion.</span>
       <label><input id="pause" type="checkbox"> Pause live garden events</label>
@@ -50,6 +92,8 @@
         <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
         <label for="sound-volume">Volume</label>
         <input id="sound-volume" type="range" min="0" max="100" value="12" aria-label="Growth sound volume">
+        <button id="preview-gnome-sound" type="button">Preview gnome sound</button>
+        <span id="gnome-sound-status" role="status">Uses the arrival cue. Enable Sound to preview.</span>
       </div>
     </section>
     <p id="weather-status" role="status">Live weather connecting</p>
@@ -69,12 +113,14 @@
     </div>
     <pre id="hud" role="status">Initializing Pixi…</pre>
     <p class="note">Opt-in prototype. SSE growth and weather are real; dense seeding is local simulated state.
-      Grass, puddles, first-seen visitors and loose Amanita use shared production rules.
+      Grass, puddles, first-seen visitors, Amanita and weed buds use shared production rules.
       Ambient seeding cycles all four visitor types; visitors and drops expire after 20 seconds.
       Mutation appearance and lifetime use shared production rules. Pending seeds stay ordinary for 3 seconds;
       three activate and the fourth is consumed at the cap. Mutation seeds expire normally after 20 seconds.
       Overlap seeding replaces local garden state and cycles visitor types over one Amanita and mutation.
-      Click priority: visitors, Amanita, active mutation, then cell inspection. Score stays zero.
+      Weed bud seeding replaces local state with simulated plants, grass and three mixed drops; the nearby Amanita/bud pair overlaps.
+      Mixed gnome drops fill all five slots with simulated Amanita, buds and underpants; the selector previews both collection messages.
+      Click priority: active gnomes, visitors, topmost loose drop, active mutation, then cell inspection. Score stays zero.
       Sound is optional and starts Off. Gnome triggers are simulated; ordinary incidents keep their rare shared rules. Pixi artwork is approximate.
       Red probe: CSS transform. Green probe: Pixi ticker. Metrics stay in this browser.</p>
   </main>

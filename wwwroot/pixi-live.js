@@ -1,5 +1,8 @@
 (function () {
   'use strict';
+  const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
+  const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
+  const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -11,15 +14,17 @@
     const seed = specimen.row * 32 + specimen.column;
     return { x: (vineNoise(seed + 11) - .5) * 8, y: (vineNoise(seed + 47) - .5) * 7 };
   }
+  function vineShape(vigor,variant) {
+    const seed=vigor*19+variant*71;
+    return {seed,lean:(vineNoise(seed)-.5)*9,top:-20-vigor*1.5,side:variant%2?-1:1};
+  }
   function vineTile(P, vigor, variant, stage) {
-    const g = new P.Graphics(), color = vineColors[variant], seed = vigor * 19 + variant * 71;
-    const lean = (vineNoise(seed) - .5) * 9, top = -20 - vigor * 1.5;
+    const g = new P.Graphics(), color = vineColors[variant], {seed,lean,top,side}=vineShape(vigor,variant);
     g.moveTo(0, -1).bezierCurveTo(-9, -9, 9 + lean, -13, lean, top)
       .stroke({ color: 0x657851, width: 1.7 });
     g.moveTo(0, -1).bezierCurveTo(-9, -9, 9 + lean, -13, lean, top)
       .stroke({ color, width: .9 });
     // One lateral branch and one open curl, baked once into the existing tile.
-    const side = variant % 2 ? -1 : 1;
     g.moveTo(-1, -9).bezierCurveTo(side * 6, -8, side * 15, -18, side * 10, -20)
       .bezierCurveTo(side * 6, -23, side * 4, -17, side * 8, -17)
       .stroke({ color, width: .8, alpha: .8 });
@@ -134,7 +139,7 @@
       const index = keys.length; object.position.set(index % 32 * 32 + 16, Math.floor(index / 32) * 32 + 29);
       sheet.addChild(object); keys.push(key);
     }
-    for (const type of core.species) for (let vigor = 0; vigor <= 3; vigor++) for (let variant = 0; variant < 5; variant++) {
+    for (const type of core.eventSpecies) for (let vigor = 0; vigor <= 3; vigor++) for (let variant = 0; variant < 5; variant++) {
       for (const stage of type === 'redbloom' ? ['mature', 'fading'] : ['sprout', 'growing', 'mature', 'fading']) {
         if (type === 'vine') {
           const object = vineTile(P, vigor, variant, stage); artTiles.push(object);
@@ -167,6 +172,29 @@
     }
     mutation.circle(0, -21, 1.5).fill(0xd8c782).rect(2, -22, 1.5, 1.5).fill({ color: 0xf9efbb, alpha: .5 });
     tile('collectible_weed', mutation);
+    // Four poses share the existing sheet and source; at most two living flowers.
+    for(const stage of ['sprout','growing','mature','fading']) {
+      const g=new P.Graphics();
+      g.moveTo(0,0).bezierCurveTo(-3,-6,3,-13,0,-18).stroke({color:0x9eafa1,width:1.1});
+      for(const side of [-1,1])g.moveTo(0,-6).quadraticCurveTo(side*11,-15,side*9,-12).quadraticCurveTo(side*5,-5,0,-6).fill(side<0?0x9cafad:0xbcc9b4);
+      if(stage==='sprout')g.ellipse(0,-18,2.2,3.8).fill(0xdce2d2);
+      else {
+        g.circle(0,-19,9).fill({color:0xd5dcf5,alpha:.07});
+        for(const [angle,color] of [[-1.1,0xd8dbee],[1.1,0xdee6ed],[-.55,0xf2efdf],[.55,0xfff7e7],[0,0xfaf9eb]]) {
+          const p=(x,y)=>[x*Math.cos(angle)-y*Math.sin(angle),-17+x*Math.sin(angle)+y*Math.cos(angle)];
+          g.moveTo(0,-17).bezierCurveTo(...p(-5,-3),...p(-4,-9),...p(0,-11)).bezierCurveTo(...p(4,-9),...p(5,-3),0,-17).fill(stage==='fading'?0xd1cfc5:color);
+        }
+        g.ellipse(0,-18,2.4,1.5).fill(0xc1b6d9);
+      }
+      artTiles.push(g);tile(`stillbloom:${stage}`,g);
+    }
+    for (let arrangement=0; arrangement<3; arrangement++) for (let color=0; color<5; color++) {
+      const g=blooms.tile(P,color,arrangement);artTiles.push(g);tile(`broadleaf-bloom:${color}:${arrangement}`,g);
+    }
+    for(let vigor=0;vigor<4;vigor++)for(let variant=0;variant<5;variant++)for(let layout=0;layout<2;layout++){
+      const g=vineBlooms.group(P,vineShape(vigor,variant),layout);artTiles.push(g);tile(`vine-bloom:${vigor}:${variant}:${layout}`,g);
+    }
+    const vineFlower=vineBlooms.linkTile(P);artTiles.push(vineFlower);tile('vine-bloom-link',vineFlower);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -192,15 +220,29 @@
     const probe = new P.Sprite(frames.get('probe')); probe.anchor.set(.5); probe.position.set(12, 10);
     const clip = new P.Graphics().rect(0, 0, width, height).fill(0xffffff);
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
-    const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(); let connectionHalves = 0;
+    const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(), bloomViews = new Map(); let connectionHalves = 0;
+    const vineBloomViews=new Map(),vineBloomLinks=new Map();
+    let groundCover = null;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
     const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout';
+    function syncVineConnection(specimen,graphic,candidate) {
+      let record=vineBloomLinks.get(specimen.id);
+      if(!candidate){if(record){record.sprite.destroy();vineBloomLinks.delete(specimen.id);}return;}
+      if(record&&(record.key!==candidate.key||record.neighborId!==candidate.neighborId)){
+        record.sprite.destroy();vineBloomLinks.delete(specimen.id);record=null;
+      }
+      if(!record){
+        const sprite=new P.Sprite(frames.get('vine-bloom-link'));sprite.anchor.set(.5,28/32);sprite.eventMode='none';
+        graphic.addChild(sprite);record={sprite};vineBloomLinks.set(specimen.id,record);
+      }
+      Object.assign(record,candidate);record.sprite.position.set(candidate.x,candidate.y);vineBlooms.style(record.sprite,specimen,true);
+    }
     function refreshVine(specimen, byCell) {
       const graphic = vineLinks.get(specimen.id); if (!graphic) return;
       connectionHalves -= halfCurvesById.get(specimen.id) ?? 0;
-      halfCurvesById.set(specimen.id, 0); graphic.clear(); if (!eligible(specimen)) return;
-      let halves = 0;
+      halfCurvesById.set(specimen.id, 0); graphic.clear(); if (!eligible(specimen)) {syncVineConnection(specimen,graphic,null);return;}
+      let halves = 0,flower=null;
       const color = vineColors[specimen.colorVariant], own = vineOffset(specimen);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dy) continue;
@@ -218,14 +260,24 @@
         const bend = (vineNoise(seed + 701) - .5) * 12 * (first ? 1 : -1);
         const midX = x / 2 + nx * bend, midY = y / 2 + ny * bend;
         const curl = (vineNoise(seed + 1409) - .5) * 13;
+        const c1x=x*.18+nx*curl,c1y=y*.18+ny*curl,c2x=midX-x*.18,c2y=midY-y*.18;
         // Canonical pair seed gives both halves the same midpoint and tangent.
-        graphic.moveTo(0, 0).bezierCurveTo(x * .18 + nx * curl, y * .18 + ny * curl,
-          midX - x * .18, midY - y * .18, midX, midY)
+        graphic.moveTo(0, 0).bezierCurveTo(c1x,c1y,c2x,c2y,midX,midY)
           .stroke({ color, width: (specimen.stage === 'mature' ? 1.05 : .8) + specimen.vigor * .12,
             alpha: specimen.stage === 'fading' ? .24 : .65 });
         halves++;
+        // Only the lower-cell half owns decoration. Select one real, thinned
+        // curve deterministically; no opposite-half duplicates or new RNG rolls.
+        if(first&&vineBlooms.active(specimen)&&vineNoise(seed+3299)<.35){
+          const rank=vineNoise(seed+4099);
+          if(!flower||rank<flower.rank){
+            const t=.56+vineNoise(seed+4513)*.22,curve=[0,0,c1x,c1y,c2x,c2y,midX,midY];
+            flower={...vineBlooms.point(curve,t),rank,t,curve,key:seed,neighborId:neighbor.id};
+          }
+        }
       }
       halfCurvesById.set(specimen.id, halves); connectionHalves += halves;
+      syncVineConnection(specimen,graphic,flower);
     }
     function refreshNeighborhood(specimen, byCell) {
       refreshVine(specimen, byCell);
@@ -237,14 +289,16 @@
         if (neighbor?.type === 'vine') refreshVine(neighbor, byCell);
       }
     }
-    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : `${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
+    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : specimen.type==='stillbloom'?`stillbloom:${specimen.stage}`:`${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
     const specimenScale = { flower: 1.4, mushroom: 1.4, broadleaf: 1.35, wirefern: 1.4, weed: 1.4,
       redbloom: 1.25, ghostbloom: 1.3, crystalfungus: 1.3, blackthorn: 1.25 };
     function sizeSpecimen(specimen, sprite) {
       if (specimen.type === 'vine' && !specimen.mutation) return; // Preserve mirrored vines and their connection roots.
       // Scale the existing 2x cached tile, keeping its rooted anchor and stage
       // proportions. A top-row limit avoids crowding the second row to fit tall heads.
-      const scale = specimen.mutation ? 1 : Math.min(specimenScale[specimen.type] ?? 1, specimen.row === 0 ? 1.1 : Infinity);
+      const quietVisual=specimen.type==='stillbloom'?stillbloomCore.visual(specimen,Date.now()):null;
+      const scale = specimen.mutation ? 1 : Math.min(quietVisual?1.3*quietVisual.scale:specimenScale[specimen.type] ?? 1, specimen.row === 0 ? 1.1 : Infinity);
+      if(quietVisual)sprite.alpha=quietVisual.alpha;
       sprite.scale.set(scale);
       const x = (specimen.column + .5) * cellSize, y = (specimen.row + .5) * cellSize + 12;
       if (specimen.mutation) { sprite.position.set(x, y); return; }
@@ -254,34 +308,67 @@
       sprite.position.set(Math.max(w * .5 + .5, Math.min(width - w * .5 - .5, x)),
         Math.max(h * .9 + .5, Math.min(height - h * .1 - .5, y)));
     }
-    return { root, byId, vineLinks, mutationViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+    function syncBloom(specimen, parent) {
+      const trait=specimen.broadleafBloom;
+      const visible=specimen.type==='broadleaf' && !specimen.mutation && trait
+        && (specimen.stage==='mature' || specimen.stage==='fading');
+      let sprite=bloomViews.get(specimen.id);
+      if (!visible) { if(sprite){sprite.destroy();bloomViews.delete(specimen.id);} return; }
+      if (!sprite) {
+        sprite=new P.Sprite(frames.get(`broadleaf-bloom:${trait.color}:${trait.arrangement}`));
+        sprite.anchor.set(.5,.9);sprite.eventMode='none';parent.addChild(sprite);bloomViews.set(specimen.id,sprite);
+      }
+      const fading=specimen.stage==='fading';
+      sprite.scale.set(fading ? .66 : 1);sprite.alpha=fading ? .55 : 1;
+      sprite.tint=fading ? 0xb7aa99 : 0xffffff;sprite.rotation=fading ? .07 : 0;
+    }
+    function syncVineBloom(specimen,parent) {
+      let sprite=vineBloomViews.get(specimen.id);
+      if(!vineBlooms.active(specimen)){if(sprite){sprite.destroy();vineBloomViews.delete(specimen.id);}return;}
+      const texture=frames.get(`vine-bloom:${specimen.vigor}:${specimen.colorVariant}:${specimen.vineBloom.layout}`);
+      if(!sprite){sprite=new P.Sprite(texture);sprite.anchor.set(.5,.9);sprite.eventMode='none';parent.addChild(sprite);vineBloomViews.set(specimen.id,sprite);}
+      else sprite.texture=texture;
+      vineBlooms.style(sprite,specimen);
+    }
+    return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+      setGroundCover(presentation) { groundCover = presentation; },
+      get contactLayer() { return links; },
       add(specimen, byCell) {
         const sprite = new P.Sprite(texture(specimen)); sprite.anchor.set(.5, .9);
         sprite.position.set((specimen.column + .5) * cellSize, (specimen.row + .5) * cellSize + 12);
         sizeSpecimen(specimen, sprite);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
+        syncBloom(specimen,sprite);
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
           const offset = vineOffset(specimen), seed = specimen.row * columns + specimen.column;
           sprite.position.set(sprite.position.x + offset.x, sprite.position.y + offset.y);
           sprite.rotation = (vineNoise(seed + 83) - .5) * .5;
           sprite.scale.set(vineNoise(seed + 127) < .5 ? -1 : 1, 1);
+          syncVineBloom(specimen,sprite);
           const graphic = new P.Graphics(); graphic.position.set((specimen.column + .5) * cellSize + offset.x, (specimen.row + .5) * cellSize + offset.y);
           links.addChild(graphic); vineLinks.set(specimen.id, graphic); refreshNeighborhood(specimen, byCell);
         }
+        groundCover?.specimenChanged(specimen);
       },
       update(specimen, byCell) { byId.get(specimen.id).texture = texture(specimen); counters.stageUpdates++;
         sizeSpecimen(specimen, byId.get(specimen.id));
+        syncBloom(specimen,byId.get(specimen.id));
+        syncVineBloom(specimen,byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
-        if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell); },
+        if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell);
+        groundCover?.specimenChanged(specimen); },
       remove(specimen, byCell) {
-        const sprite = byId.get(specimen.id); sprite.destroy(); byId.delete(specimen.id); counters.destroyed++;
+        const sprite = byId.get(specimen.id); sprite.destroy({children:true}); byId.delete(specimen.id); counters.destroyed++;
+        bloomViews.delete(specimen.id);
+        vineBloomViews.delete(specimen.id);
         mutationViews.delete(specimen.id);
         const graphic = vineLinks.get(specimen.id);
         if (graphic) {
           connectionHalves -= halfCurvesById.get(specimen.id) ?? 0; halfCurvesById.delete(specimen.id);
-          graphic.destroy(); vineLinks.delete(specimen.id); refreshNeighborhood(specimen, byCell);
+          graphic.destroy({children:true,context:true}); vineLinks.delete(specimen.id);vineBloomLinks.delete(specimen.id); refreshNeighborhood(specimen, byCell);
         }
+        groundCover?.specimenChanged(specimen);
       },
       setWeather(state) {
         const key = `${state.level}:${state.eventsPerMinute}`; if (key === lastWeatherKey) return;
@@ -308,29 +395,82 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
-      destroy() { root.destroy({ children: true }); byId.clear(); mutationViews.clear(); vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = []; }
+      destroy() {
+        // Each link owns a Graphics context and may own a blossom child.
+        for(const graphic of vineLinks.values())graphic.destroy({children:true,context:true});
+        groundCover?.destroy(); groundCover = null;
+        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
+      }
     };
   }
   async function start() {
+    // One page owner invalidates callbacks BEFORE releasing their resources.
+    // Pixi.init is async: pagehide may arrive before it creates a ticker/renderer.
+    let stop=()=>{},reloadRequested=false;
+    const lifetime=window.PacketGardenPixi.pageLifetime(()=>stop()),{guard,own,listen,dispose}=lifetime;
+    listen(window,'pagehide',event=>{
+      try{dispose();}finally{if(event.persisted){
+        // Preserve the existing fresh-page policy on bfcache return. All GPU,
+        // stream and input ownership ends at pagehide; only this restore hook lives.
+        const restore=event=>{
+          if(!event.persisted||reloadRequested)return;
+          reloadRequested=true;window.removeEventListener('pageshow',restore);window.location.reload();
+        };
+        window.addEventListener('pageshow',restore);
+      }}
+    });
+    try {
     const P = window.PIXI, shared = window.PacketGardenPixi, core = window.PacketGardenPixiLiveCore;
     const ecologyCore = window.PacketGardenEcology, ecologyPresentation = window.PacketGardenPixiEcology;
     const ambientCore = window.PacketGardenAmbient, ambientPresentation = window.PacketGardenPixiAmbient;
+    const frogCore=window.PacketGardenFrogs;
     const interaction = window.PacketGardenInteraction;
     const sound = typeof gardenSound === 'undefined' ? null : gardenSound;
+    own(()=>sound?.cancelGnomeArrival());
+    listen(document.querySelector('#preview-gnome-sound'),'click',()=>{
+      const result=sound?.maybePlayGnomeSound('arrival')??'unavailable';
+      const messages={played:'Playing the production gnome arrival sound.',disabled:'Sound is disabled. Turn Sound On first.',
+        muted:'Volume is 0. Increase it to preview.',suspended:'Sound is suspended. Turn Sound Off and On to enable it again.',
+        hidden:'Sound preview is unavailable while the page is hidden.',busy:'The gnome arrival sound is already playing.',
+        unavailable:'Sound is unavailable. Try enabling Sound again.'};
+      document.querySelector('#gnome-sound-status').textContent=messages[result]??messages.unavailable;
+    });
     const viewElement = document.querySelector('#view'), hud = document.querySelector('#hud'), connection = document.querySelector('#connection');
     const app = new P.Application();
-    await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance', antialias: false,
-      backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
+    try {
+      await app.init({ width: 960, height: 600, preference: ['webgl'], powerPreference: 'high-performance', antialias: false,
+        backgroundColor: 0x151c16, backgroundAlpha: 1, autoDensity: true, resolution: Math.min(window.devicePixelRatio || 1, 2), autoStart: false });
+    } catch(error) {
+      // A rejected renderer init has no Application ticker/plugins to destroy.
+      own(()=>app.stage.destroy({children:true}));throw error;
+    }
+    own(()=>app.destroy(true));
+    if(lifetime.disposed)return; // A late init completion must not mount or start anything.
+    stop=()=>app.stop();
     viewElement.appendChild(app.canvas);
-    const cache = makeLiveAtlas(P, app.renderer, shared, core), view = createView(P, app, cache.frames, core, shared);
+    const cache = makeLiveAtlas(P, app.renderer, shared, core);
+    own(()=>{for(const frame of cache.frames.values())frame.destroy(false);cache.atlas.destroy(true);});
+    const view = createView(P, app, cache.frames, core, shared);own(()=>view.destroy());
+    const lightingSurface=window.PacketGardenLightingView.createSurface(document,app.canvas);
+    own(()=>lightingSurface.destroy());
+    const lighting=window.PacketGardenLighting.createModel();let lightingWeather=0,lightingControls=null;
+    own(()=>lighting.destroy());
+    const updateLighting=(at=Date.now(),force=false,weatherChanged=false)=>{
+      if(lifetime.disposed||document.hidden)return;
+      if(lighting.tick(at,{force})||force||weatherChanged) {
+        lightingSurface.apply(lighting.state,lightingWeather);lightingControls?.refresh();
+      }
+    };
     const stormPresentation = window.PacketGardenPixiStorm, stormView = stormPresentation.createView(P, app.renderer, view.root);
+    own(()=>stormView.destroy());
     // Separate random stream: effects never consume placement/ecology randomness.
     const stormSeed = window.crypto?.getRandomValues ? window.crypto.getRandomValues(new Uint32Array(1))[0] : Date.now();
     const storm = stormPresentation.createModel({random:shared.seededRandom(stormSeed),onChange:stormView.change,
       onThunder:level => sound?.maybePlayThunderSound(level)});
+    own(()=>storm.destroy());
     const lightningToggle = document.querySelector('#lightning-enabled');
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');let lightningEnabled = true;
     const updateLightning = () => {
@@ -339,31 +479,49 @@
         lightningToggle.title=reduced?'Suppressed by reduced-motion preference':'Rare atmospheric storm illumination';}
       storm.configure({enabled:lightningEnabled,reducedMotion:reduced,hidden:document.hidden});
     };
-    lightningToggle?.addEventListener('change',event=>{lightningEnabled=event.target.checked;updateLightning();});
-    reducedMotion?.addEventListener?.('change',updateLightning);updateLightning();
+    listen(lightningToggle,'change',event=>{lightningEnabled=event.target.checked;updateLightning();});
+    listen(reducedMotion,'change',updateLightning);updateLightning();
     const ambientCache = ambientPresentation.makeAmbientAtlas(P, app.renderer);
+    own(()=>ambientCache.destroy());
+    const frogView=frogCore?ambientPresentation.createFrogView(P,view.dropLayer,ambientCache.frames,()=>reducedMotion?.matches??false):null;
+    own(()=>frogView?.destroy());
+    const frogs=frogCore?.createModel({getPuddles:()=>ecology?.puddles??[],onChange(change){frogView.change(change,Date.now());}})??null;
+    own(()=>frogs?.clear());
     const ambientView = ambientPresentation.createAmbientView(P, view.curiosityLayer, view.dropLayer, ambientCache.frames);
+    own(()=>ambientView.destroy());
     const ambient = ambientCore.createAmbientModel({ getSpecimens: () => model.specimens,
       onChange(change) { ambientView.change(change, Date.now()); } });
+    own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
     let ui, ecology = null;
-    const model = core.createModel(view, { onAdded: source => ecology?.removeGrassCell(source.column, source.row), onLive: source => {
+    const model = core.createModel(view, { onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
+      getGnomes: () => gnomes,
+      getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
+      collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
       getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
+    own(()=>ui.destroy());
     const gnomePresentation = window.PacketGardenPixiGnomes;
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
+    own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
-    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames);
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
+    own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
-    const gnomes = window.PacketGardenGnomes.createModel({ getSpecimens: () => model.specimens,
+    const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
+      getPuddles: () => ecology?.puddles ?? [],
+      hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
+      onUnderpantsAttempt: (point,at) => ambient.dropGnomeUnderpants(point,at),
+      getReducedMotion: () => reducedMotion?.matches ?? false,
       random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
       onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
       onCue: stage => sound?.maybePlayGnomeSound(stage) });
-    document.querySelector('#trigger-gnomes')?.addEventListener('click', () => {
+    own(()=>gnomes.clear());
+    listen(document.querySelector('#trigger-gnomes'),'click', () => {
       const status = document.querySelector('#gnome-test-status');
       if (gnomes.incident) { if(status)status.textContent='An incident is already active.';return; }
       simulatedWinner = nextSimulatedWinner;
@@ -372,21 +530,59 @@
         nextSimulatedWinner = simulatedWinner === 'green' ? 'red' : 'green';gnomeView.animate(Date.now());
       } else { simulatedWinner=null;if(status)status.textContent='Requires at least 30 living specimens. Seed a garden or wait for live growth.'; }
     });
+    const triggerLandscaping = mode => {
+      const status = document.querySelector('#landscaping-test-status');
+      if (gnomes.incident) { status.textContent='An incident is already active.'; return; }
+      if (Date.now() < gnomes.lastLandscapingAt + window.PacketGardenGnomes.landscapingConfig.cooldownMs) {
+        status.textContent='Seven-minute landscaping cooldown is active.'; return;
+      }
+      // Explicit local fixture: no SSE events, fabricated provenance, activity or accepted-growth counts.
+      if (!gnomes.landscapingEligible(Date.now(), null, mode)) model.seedLandscaping(mode);
+      status.textContent = gnomes.startLandscaping(Date.now(), undefined, mode) ? `Simulated ${mode} landscaping · real local removals, no network event.`
+        : 'Landscaping could not start; eligibility and cooldown still apply.';
+      gnomeView.animate(Date.now());
+    };
+    listen(document.querySelector('#trigger-landscaping'),'click', () => triggerLandscaping('vine'));
+    listen(document.querySelector('#trigger-overcrowding'),'click', () => triggerLandscaping('overcrowding'));
+    listen(document.querySelector('#trigger-weed-harvest'),'click', () => triggerLandscaping('weed_harvest'));
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
       ui.click(point, { x: event.clientX, y: event.clientY });
     };
-    app.canvas.addEventListener('click', clickGarden);
+    listen(app.canvas,'click',clickGarden);
     const ecologyCache = ecologyPresentation.makeEcologyAtlas(P, app.renderer);
-    const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames);
+    own(()=>ecologyCache.destroy());
+    const ecologyView = ecologyPresentation.createEcologyView(P, view.grassLayer, view.puddleLayer, ecologyCache.frames, {
+      getSpecimen: (column, row) => model.byCell.get(row * core.dimensions.columns + column),
+      getPlantSprite: specimen => view.byId.get(specimen.id), shadowLayer: view.contactLayer
+    });
+    view.setGroundCover(ecologyView);
+    own(()=>{ view.setGroundCover(null); ecologyView.destroy(); });
     ecology = ecologyCore.createEcologyModel({ isCellOccupied: (column, row) => model.byCell.has(row * core.dimensions.columns + column),
       onChange(change) {
         ecologyView.change(change, Date.now());
         if (change.kind === 'grass-removed') ui.grassRemoved(change.item);
+        if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
-    // Production begins with five distributed grass seeds; real TCPNoise never gains grass influence.
-    for (let i = 0; i < 5; i++) { const cell = i * 128 + Math.floor(Math.random() * 128); ecology.influenceGrassCell(cell % 32, Math.floor(cell / 32)); }
+    own(()=>ecology.clear());
+    const grassUnderPlantsControl = document.querySelector('#allow-grass-under-plants');
+    grassUnderPlantsControl.checked = false;
+    listen(grassUnderPlantsControl,'change',event=>ecology.setAllowGrassUnderPlants(event.target.checked));
+    // Distributed local seeds; real TCPNoise never gains grass influence.
+    ecology.seedInitialGrass();
+    for(const [id,dense] of [['#seed-broadleaf-blooms',false],['#seed-dense-broadleaf-blooms',true]])listen(document.querySelector(id),'click',()=>{
+      ambient.clear();frogs?.clear();gnomes.clear();ecology.clear();
+      const control=document.querySelector('#allow-grass-under-plants');control.checked=true;ecology.setAllowGrassUnderPlants(true);
+      model.seedBroadleafBlooms(dense);ecologyPresentation.seedDenseEcology(ecology,Date.now(),false);
+    });
+    for(const [id,mode] of [['#seed-vine-bloom-stages','stages'],['#seed-vine-bloom-connections','connected'],['#seed-vine-bloom-dense','dense']])listen(document.querySelector(id),'click',()=>{
+      ambient.clear();frogs?.clear();gnomes.clear();ecology.clear();
+      document.querySelector('#allow-grass-under-plants').checked=true;ecology.setAllowGrassUnderPlants(true);
+      model.seedVineBlooms(mode);ecologyPresentation.seedDenseEcology(ecology,Date.now(),false);
+    });
+    const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
+    own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
     const measurements = hud ? shared.frameWindow() : null;
     const sourceControl = document.querySelector('#weather-source'), levelControl = document.querySelector('#weather-level');
@@ -401,20 +597,29 @@
     }
     updateNetworkActivity({ hasSnapshot: false });
     let currentWeather = { level: 'quiet', eventsPerMinute: 0 };
+    const stillbloom=stillbloomCore.createModel({garden:model});
+    own(()=>stillbloom.destroy());
+    const stillbloomDiagnostics=window.PacketGardenStillbloomDev?.bind({document,organic:stillbloom,garden:model});
+    own(()=>stillbloomDiagnostics?.destroy());
     function updateWeather() {
       const live = !sourceControl || sourceControl.value === 'live';
+      stillbloom.configure({live,hidden:document.hidden});
       if (levelControl) levelControl.disabled = live;
       currentWeather = live ? latestWeather ?? { level: 'quiet', eventsPerMinute: 0 } : { level: levelControl.value, eventsPerMinute: 10000 };
       view.setWeather(currentWeather);
+      lightingWeather=core.weatherSettings(currentWeather).darkening;updateLighting(Date.now(),false,true);
       storm.configure({level:currentWeather.level});
       ecology.updateWeatherEligibility(currentWeather.level);
       weatherStatus.textContent = live ? `Live weather ${latestWeather ? currentWeather.level : status}` : 'Manual weather · 10000 events/min test intensity';
     }
-    const stream = core.connectStream(EventSource, model, state => { latestWeather = state; updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }, value => {
-      status = value; connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
-    });
-    sourceControl?.addEventListener('change', updateWeather); levelControl?.addEventListener('change', updateWeather); updateWeather();
-    document.querySelector('#trigger-lightning')?.addEventListener('click',()=>{
+    const stream = core.connectStream(EventSource, {accept:guard(raw=>model.accept(raw))}, guard(state => { latestWeather = state;stillbloom.setWeather(state);updateNetworkActivity(state); if (!sourceControl || sourceControl.value === 'live') updateWeather(); }), guard(value => {
+      status = value;stillbloom.configure({connected:value==='connected'});connection.textContent = value; if (!sourceControl || sourceControl.value === 'live') updateWeather();
+    }),guard(()=>stillbloom.setWeather(null)));
+    own(()=>stream.close());
+    listen(sourceControl,'change',updateWeather); listen(levelControl,'change',updateWeather); updateWeather();
+    lightingControls=window.PacketGardenLightingView.bindControls(document,lighting,()=>updateLighting(Date.now(),false,true));
+    own(()=>lightingControls.destroy());
+    listen(document.querySelector('#trigger-lightning'),'click',()=>{
       const status=document.querySelector('#lightning-test-status');
       const started=sourceControl?.value==='manual' && storm.trigger();
       if(status)status.textContent=started?'Simulated atmospheric lightning; optional thunder follows.'
@@ -422,31 +627,52 @@
     });
     let ambientSeedVariant = 0;
     const seedAmbient = () => ambientPresentation.seedAmbient(ambient, Date.now(), ambientSeedVariant++ % 4);
-    document.querySelector('#seed-ambient')?.addEventListener('click', seedAmbient);
-    document.querySelector('#seed-mutations')?.addEventListener('click', () => model.seedMutations());
-    document.querySelector('#seed-pending-mutations')?.addEventListener('click', () => model.seedMutations(true));
+    listen(document.querySelector('#seed-ambient'),'click', seedAmbient);
+    listen(document.querySelector('#seed-weed-buds'),'click', () => {
+      const at = Date.now(); model.seedWeedBuds();
+      ecology.seed({grassCells:[13,14,18,19].map(column => ({column,row:10,createdAt:at-60000,lastInfluencedAt:at}))});
+      ambientPresentation.seedWeedBuds(ambient,at);
+    });
+    listen(document.querySelector('#seed-gnome-drops'),'click', () => {
+      const at=Date.now();
+      ambient.seed({drops:['amanita_muscaria','ditch_weed_bud','gnome_underpants','gnome_underpants','gnome_underpants'].map((type,i)=>({
+        type,x:315+i*65,y:385,phase:0,createdAt:at,expiresAt:at+ambientCore.dropConfig.lifetimeMs}))});
+    });
+    listen(document.querySelector('#seed-mutations'),'click', () => model.seedMutations());
+    listen(document.querySelector('#seed-pending-mutations'),'click', () => model.seedMutations(true));
     let interactionSeedVariant = 0;
-    document.querySelector('#seed-interaction')?.addEventListener('click', () => {
+    listen(document.querySelector('#seed-interaction'),'click', () => {
       const source = model.seedInteraction(), at = Date.now(); ecology.clear();
       const point = { x: (source.column + .5) * 30, y: (source.row + .5) * 30 };
       const item = { ...point, createdAt: at, expiresAt: at + ambientCore.curiosityConfig.lifetimeMs, phase: 0 };
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    document.querySelector('#clear')?.addEventListener('click', () => { model.clear(); ecology.clear(); ambient.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
-    document.querySelector('#seed')?.addEventListener('click', () => {
+    listen(document.querySelector('#clear'),'click', () => { model.clear(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    listen(document.querySelector('#trigger-frog'),'click',()=>{
+      const at=Date.now();
+      if(!frogs.eligiblePuddles(at).length){
+        ecology.seed({grassCells:ecology.grassCells,puddles:[...ecology.puddles.slice(0,7),
+          {x:480,y:300,seed:.7199,size:18,maxSize:24,createdAt:at,lastRefreshedAt:at,simulated:true}]});
+      }
+      const frog=frogs.spawnSimulated(at),status=document.querySelector('#frog-test-status');
+      status.textContent=frog?'Simulated frog: click once to be ignored; later clicks do nothing. Hops and leaves at 60s. Trigger again for two.':'Two frogs already visiting, or water not ready.';
+      frogView.animate(at);
+    });
+    listen(document.querySelector('#seed'),'click', () => {
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
     });
-    document.querySelector('#pause')?.addEventListener('change', event => model.setPaused(event.target.checked));
+    listen(document.querySelector('#pause'),'change', event => model.setPaused(event.target.checked));
     const updateProbes = () => { const value = document.querySelector('#probes')?.checked ?? false; view.setProbes(value); document.body.classList.toggle('probes-off', !value); };
-    document.querySelector('#probes')?.addEventListener('change', updateProbes); updateProbes();
-    const resize = () => { const box = viewElement.getBoundingClientRect(); app.renderer.resize(Math.max(1, Math.round(box.width)), Math.max(1, Math.round(box.height)), Math.min(window.devicePixelRatio || 1, 2));
-      const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); ui.position(); };
-    const observer = new ResizeObserver(resize); observer.observe(viewElement); window.addEventListener('resize', resize); resize();
+    listen(document.querySelector('#probes'),'change', updateProbes); updateProbes();
+    const resize = guard(() => { const box = viewElement.getBoundingClientRect(); app.renderer.resize(Math.max(1, Math.round(box.width)), Math.max(1, Math.round(box.height)), Math.min(window.devicePixelRatio || 1, 2));
+      const fit = shared.contain(app.renderer.screen.width, app.renderer.screen.height); view.root.scale.set(fit.scale); view.root.position.set(fit.x, fit.y); ui.position(); });
+    const observer = new ResizeObserver(resize);own(()=>observer.disconnect());observer.observe(viewElement);listen(window,'resize',resize);resize();
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
-    document.querySelector('#reset')?.addEventListener('click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
+    listen(document.querySelector('#reset'),'click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
+      stillbloomDiagnostics?.refresh();
       if (!hud) return;
       const data = measurements.snapshot(), counts = view.snapshot(), ec = ecologyView.snapshot(), ac = ambientView.snapshot(), mc = model.mutations.snapshot(), simulated = model.specimens.filter(p => p.origin.kind === 'simulated').length;
       hud.textContent = [`Pixi ${P.VERSION} · ${P.RendererType?.[app.renderer.type] || app.renderer.constructor.name} · native ticker`,
@@ -456,13 +682,17 @@
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
-        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.phase ?? 'idle'} · winner ${gnomes.incident?.winner ?? 'undecided'} · 12 cached frames / 1 GPU source`,
-        `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
+        `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
+        `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
+        `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
+        `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
+        `Frogs ${frogs?.frogs.length??0}/2 · views ${frogView?.views.size??0} · independent wildlife · 6 cached frames`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
-        `Amanita ${ambient.drops.length}/3 · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
+        `Loose drops ${ambient.drops.length}/${ambientCore.dropConfig.maxActiveDrops} · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · unified logical click priority`,
         `Mutations ${mc.active}/3 · pending ${mc.pending} · views ${counts.mutationViews} · activations ${mc.activations} · cap skips ${mc.capSkips} · cancellations ${mc.cancellations} · expiries ${mc.expiries} · 1 cached frame in specimen atlas`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
@@ -470,29 +700,42 @@
       ].join('\n');
     }
     app.ticker.maxFPS = 0;
-    app.ticker.add(ticker => {
+    const tick=guard(ticker => {
+      if(document.hidden)return;
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
       if (elapsed > 0) { measurements?.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
       if (Date.now() >= nextLogicalAt) {
-        const at = Date.now(); model.tick(); ecology.tick(at); ecologyView.tick(at);
+        const at = Date.now(); model.tick();stillbloom.tick(at);ecology.tick(at); ecologyView.tick(at);
+        updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
+        frogs?.tick(at,{hidden:document.hidden});
         gnomes.tick(at, undefined, document.hidden);
         storm.tick(at);
         ui.tick(at);
         nextLogicalAt = Date.now() + 250;
+      } else if (Date.now() < nextLogicalAt - 250 && lighting.needsSample(Date.now())) {
+        // Refresh light after a backwards clock jump without advancing ecology.
+        updateLighting();
       } // one scheduler, never replay missed ticks
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
+      frogView?.animate(Date.now());
       if (gnomes.incident) { gnomes.advance(Date.now());gnomeView.animate(Date.now()); }
       if (storm.active) stormView.animate(storm.active,Date.now());
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
-    document.addEventListener('visibilitychange', () => {
+    app.ticker.add(tick);own(()=>app.ticker.remove(tick));
+    listen(document,'visibilitychange', () => {
+      frogs?.setHidden(document.hidden);
+      ambient.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
+      stillbloom.configure({hidden:document.hidden},at);
       gnomes.resetCadence(at);
+      if (document.hidden) { gnomes.suspend(at); sound?.cancelGnomeArrival(); }
       storm.configure({hidden:document.hidden},at);
       if (document.hidden) app.stop(); else {
+        updateLighting(at,true);
         model.tick(); ecology.tick(at); ecologyView.tick(at); ecologyView.animate(at);
         ambient.tick(at, { hidden: false }); ambientView.animate(at);
         gnomes.advance(at);gnomeView.animate(at);
@@ -500,20 +743,17 @@
         nextLogicalAt = at + 250; lastTick = null; app.start();
       }
     });
-    window.addEventListener('pagehide', event => {
-      storm.configure({hidden:true});app.stop(); stream.close(); if (event.persisted) return;
-      observer.disconnect(); window.removeEventListener('resize', resize); ambient.clear(); ambientView.destroy(); ambientCache.destroy();
-      gnomes.clear();gnomeView.destroy();gnomeCache.destroy();
-      reducedMotion?.removeEventListener?.('change',updateLightning);storm.destroy();stormView.destroy();
-      app.canvas.removeEventListener('click', clickGarden); ui.destroy();
-      ecology.clear(); ecologyView.destroy(); view.destroy(); ecologyCache.destroy();
-      for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true); app.destroy(true);
-    });
-    window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
     updateHud(); if (!document.hidden) app.start();
+    } catch(error) {
+      try{dispose();}catch(cleanupError){throw new AggregateError([error,cleanupError],'Garden initialization and teardown failed');}
+      throw error;
+    }
   }
   if (typeof module !== 'undefined' && module.exports) module.exports = { makeLiveAtlas, createView };
   else start().catch(error => {
+    const view = document.querySelector('#view');
+    view.textContent = 'PacketGarden requires WebGL to display the garden. Try a browser with WebGL enabled.';
+    view.setAttribute('data-initialization-failed', ''); view.setAttribute('role', 'alert');
     const status = document.querySelector('#hud') ?? document.querySelector('#connection');
     status.textContent = `Garden initialization failed: ${error.message}`;
     console.error(error);

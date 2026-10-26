@@ -3,7 +3,35 @@ using System.Text.Json;
 
 namespace PacketGarden;
 
-public sealed record GardenWeather(string Level, double EventsPerMinute, long? EventsLastHour = null, bool HasSnapshot = true);
+public sealed record GardenWeather(string Level, double EventsPerMinute, long? EventsLastHour = null, bool HasSnapshot = true,
+    bool TelemetryHealthy = false, long? FreshUntil = null, long TelemetryGeneration = 0);
+
+// A conservative upstream lease, independent of how often weather values change.
+// Successful polls renew the published lease every 20s, rather than every 10s poll.
+public sealed class WeatherTelemetry
+{
+    public static readonly TimeSpan Freshness = TimeSpan.FromSeconds(30);
+    public static readonly TimeSpan RenewBefore = TimeSpan.FromSeconds(15);
+    public GardenWeather Current { get; private set; } = new("quiet", 0, HasSnapshot: false);
+    public DateTimeOffset? LastSuccess { get; private set; }
+    public GardenWeather Snapshot(DateTimeOffset at)
+    {
+        if (LastSuccess is null || at - LastSuccess >= Freshness) Failure();
+        return Current;
+    }
+    public GardenWeather Success(GardenWeather weather, DateTimeOffset at)
+    {
+        Snapshot(at); // A suspended poller cannot silently bridge an unverified gap.
+        var recovered = !Current.TelemetryHealthy;
+        var renew = recovered || Current.FreshUntil - at.ToUnixTimeMilliseconds() <= RenewBefore.TotalMilliseconds;
+        Current = weather with { TelemetryHealthy = true,
+            FreshUntil = renew ? at.Add(Freshness).ToUnixTimeMilliseconds() : Current.FreshUntil,
+            TelemetryGeneration = Current.TelemetryGeneration + (recovered ? 1 : 0) };
+        LastSuccess = at;
+        return Current;
+    }
+    public GardenWeather Failure() => Current = Current with { TelemetryHealthy = false, FreshUntil = null };
+}
 
 public sealed class WeatherAdapter(
     IHttpClientFactory clients,
@@ -13,6 +41,7 @@ public sealed class WeatherAdapter(
     private readonly object gate = new();
     // Quiet/0 is a rendering fallback, not an observed traffic measurement.
     private GardenWeather current = new("quiet", 0, HasSnapshot: false);
+    private readonly WeatherTelemetry telemetry = new();
     private TaskCompletionSource changed = NewSignal();
     private bool fetchFailing;
 
@@ -77,6 +106,7 @@ public sealed class WeatherAdapter(
 
     private async Task FetchWeather(CancellationToken stoppingToken)
     {
+        lock (gate) Publish(telemetry.Snapshot(DateTimeOffset.UtcNow));
         try
         {
             var url = configuration["Weather:SnapshotUrl"] ?? "https://noise.kgivler.com/api/snapshot";
@@ -88,23 +118,27 @@ public sealed class WeatherAdapter(
             var weather = Normalize(document.RootElement) ?? throw new JsonException("Missing or invalid weather fields/level.");
             lock (gate)
             {
-                if (weather != current)
-                {
-                    current = weather;
-                    var signal = changed;
-                    changed = NewSignal();
-                    signal.TrySetResult();
-                }
+                Publish(telemetry.Success(weather, DateTimeOffset.UtcNow));
             }
             if (fetchFailing) logger.LogInformation("Weather snapshot polling recovered.");
             fetchFailing = false;
         }
         catch (Exception ex) when (!stoppingToken.IsCancellationRequested &&
-            ex is HttpRequestException or JsonException or OperationCanceledException or UriFormatException or InvalidOperationException)
+            ex is HttpRequestException or JsonException or OperationCanceledException or UriFormatException or InvalidOperationException or IOException)
         {
+            lock (gate) Publish(telemetry.Failure());
             if (!fetchFailing)
                 logger.LogWarning("Weather snapshot unavailable; retaining last valid state. {Reason}", ex.Message);
             fetchFailing = true;
         }
+    }
+    // Called under gate; value or health transitions wake the existing SSE pump.
+    private void Publish(GardenWeather weather)
+    {
+        if (weather == current) return;
+        current = weather;
+        var signal = changed;
+        changed = NewSignal();
+        signal.TrySetResult();
     }
 }

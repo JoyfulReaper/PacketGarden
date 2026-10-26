@@ -46,11 +46,31 @@ foreach (var bad in new[] { "null", "[]", "{}", weatherJson.Replace("rain", "unk
 using (var document = JsonDocument.Parse(JsonSerializer.Serialize(weather, new JsonSerializerOptions(JsonSerializerDefaults.Web))))
 {
     Check(document.RootElement.EnumerateObject().Select(p => p.Name).Order()
-        .SequenceEqual(new[] { "eventsLastHour", "eventsPerMinute", "hasSnapshot", "level" }), "Only normalized weather/availability fields serialized to SSE");
+        .SequenceEqual(new[] { "eventsLastHour", "eventsPerMinute", "freshUntil", "hasSnapshot", "level", "telemetryGeneration", "telemetryHealthy" }), "Only normalized weather/availability/freshness fields serialized to SSE");
     Check(document.RootElement.GetProperty("eventsLastHour").GetInt64() == 4321, "SSE camel-case hour serialization");
     Check(document.RootElement.GetProperty("hasSnapshot").GetBoolean(), "Validated source is available");
 }
 Console.WriteLine("PASS: weather normalization, optional actual hour/zero, hourly-only equality, startup availability, compatible rendering clamp and minimal SSE serialization.");
+{
+    var telemetry = new WeatherTelemetry();
+    var at = DateTimeOffset.FromUnixTimeMilliseconds(1_800_000_000_000);
+    var quiet = new GardenWeather("quiet", 0);
+    Check(!telemetry.Snapshot(at).HasSnapshot && !telemetry.Current.TelemetryHealthy, "Startup quiet fallback cannot certify calm");
+    var certified = telemetry.Success(quiet, at);
+    Check(certified.TelemetryHealthy && certified.FreshUntil == at.AddSeconds(30).ToUnixTimeMilliseconds() && certified.TelemetryGeneration == 1, "First successful upstream poll issues a 30-second lease");
+    Check(telemetry.Success(quiet, at.AddSeconds(10)) == certified, "Unchanged successful polls do not broadcast every 10 seconds");
+    var renewed = telemetry.Success(quiet, at.AddSeconds(20));
+    Check(renewed.FreshUntil == at.AddSeconds(50).ToUnixTimeMilliseconds() && renewed.TelemetryGeneration == 1, "20-second renewal preserves quiet continuity");
+    var failure = telemetry.Failure();
+    Check(failure.HasSnapshot && failure.Level == "quiet" && !failure.TelemetryHealthy && failure.FreshUntil is null, "Polling failure retains weather but invalidates quiet immediately");
+    Check(telemetry.Failure() == failure, "Repeated failure does not spam state changes");
+    var recovered = telemetry.Success(quiet, at.AddSeconds(30));
+    Check(recovered.TelemetryHealthy && recovered.TelemetryGeneration == 2 && recovered.Level == failure.Level, "Same-value recovery is published with new continuity generation");
+    Check(telemetry.Snapshot(at.AddSeconds(59)).TelemetryHealthy, "Fresh just before timeout");
+    Check(!telemetry.Snapshot(at.AddSeconds(60)).TelemetryHealthy, "Exact 30-second upstream staleness boundary");
+    Check(telemetry.Success(quiet, at.AddSeconds(61)).TelemetryGeneration == 3, "Freshness timeout starts a new period on recovery");
+}
+Console.WriteLine("PASS: upstream success/failure, same-value recovery, bounded lease renewal, retained weather and exact freshness timeout.");
 var good = """{"EventType":"tcpnoise.connection","Source":"tcpnoise","SchemaVersion":1,"Payload":{"listenPort":443,"remoteAddress":"sensitive-test-marker","remotePort":12345,"banner":"private","payload":"secret"}}""";
 Check(Parse(good) == new GardenGrowth("broadleaf", 443), "Valid message normalization");
 var json = JsonSerializer.Serialize(Parse(good), new JsonSerializerOptions(JsonSerializerDefaults.Web));
@@ -251,8 +271,8 @@ foreach (var (roll, choice) in new[] { (-1, 0), (10_000, 0), (0, -1), (0, 3) })
 
 var events = new GardenEvents();
 events.Publish(Parse(WithPort(good, 22))!);
-var first = events.AddClient();
-var second = events.AddClient();
+var first = events.AddClient()!;
+var second = events.AddClient()!;
 Check(!first.Reader.TryRead(out _), "No replay");
 events.Publish(Parse(good)!);
 Check(first.Reader.TryRead(out var a) && second.Reader.TryRead(out var b) && a == b, "Each client gets the same event");
@@ -274,4 +294,51 @@ events.RemoveClient(first);
 events.Publish(Parse(WithPort(good, 70))!);
 Check(second.Reader.TryRead(out var c) && c.Data is GardenGrowth { SpecimenType: "mushroom", ListenPort: 70 }, "Remaining client unaffected by disconnect");
 events.RemoveClient(second);
+
+// A stalled reader retains at most one bounded queue; other clients stay live.
+var bounded = new GardenEvents();
+var stalled = bounded.AddClient()!;
+var responsive = bounded.AddClient()!;
+var sampleGrowth = new GardenGrowth("flower", 53);
+for (var i = 0; i < GardenEvents.ClientQueueCapacity; i++)
+{
+    bounded.Publish(sampleGrowth);
+    Check(responsive.Reader.TryRead(out var delivered) && delivered.Data is GardenGrowth,
+        "Responsive SSE subscriber continues receiving growth while another stalls");
+}
+Check(!stalled.Closed.IsCancellationRequested, "Full queue alone does not disconnect a subscriber");
+bounded.Publish(sampleGrowth);
+Check(stalled.Closed.IsCancellationRequested, "First overflow disconnects stalled subscriber");
+Check(responsive.Reader.TryRead(out _), "Healthy subscriber receives growth during another client's eviction");
+var retainedFrames = 0;
+while (stalled.Reader.TryRead(out _)) retainedFrames++;
+Check(retainedFrames == GardenEvents.ClientQueueCapacity, "Stalled client never buffers beyond the configured maximum");
+Check(!bounded.TryPublish(stalled, new GardenFrame("weather", weather!)), "Evicted subscriber cannot receive weather");
+Check(bounded.TryPublish(responsive, new GardenFrame("weather", weather!))
+    && responsive.Reader.TryRead(out var weatherFrame) && weatherFrame.Name == "weather",
+    "Weather and growth share the same live, nonblocking subscriber channel");
+bounded.RemoveClient(stalled);
+bounded.RemoveClient(responsive);
+Check(responsive.Closed.IsCancellationRequested, "Normal disconnection signals stream cancellation");
+
+// Weather updates must not block behind an unread subscriber or silently drop frames.
+var weatherOnly = bounded.AddClient()!;
+for (var i = 0; i < GardenEvents.ClientQueueCapacity; i++)
+    Check(bounded.TryPublish(weatherOnly, new GardenFrame("weather", weather!)), "Bounded weather enqueue succeeds while room remains");
+Check(!bounded.TryPublish(weatherOnly, new GardenFrame("weather", weather!))
+    && weatherOnly.Closed.IsCancellationRequested, "Weather queue overflow disconnects its slow subscriber");
+bounded.RemoveClient(weatherOnly);
+
+// Cap active public SSE subscriptions, recover capacity immediately after disconnect.
+var capped = new GardenEvents();
+var cappedClients = Enumerable.Range(0, GardenEvents.MaxClients).Select(_ => capped.AddClient()).ToArray();
+Check(cappedClients.All(client => client is not null), "Subscriber cap permits exactly the configured number");
+Check(capped.AddClient() is null, "Excess SSE subscribers are rejected instead of allocating channels");
+capped.RemoveClient(cappedClients[0]!);
+var slot = capped.AddClient();
+Check(slot is not null, "Subscriber slot is reusable immediately after disconnect");
+capped.RemoveClient(slot!);
+foreach (var client in cappedClients.Skip(1)) capped.RemoveClient(client!);
+Console.WriteLine("PASS: bounded SSE queues, overflow disconnect, healthy-client isolation, weather backpressure, subscriber limit and cleanup.");
+
 Console.WriteLine("PASS: TCPNoise validation/mapping, exact 420/42069 known weed bases and unaffected neighbors, bounded vigor and safe metadata, port-22 bypass, all 10000 rarity rolls/three rare choices/trait combinations, sensitive-field exclusion, fanout, no replay, disconnect cleanup.");

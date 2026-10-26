@@ -30,6 +30,13 @@
     </section>
 
     <section>
+      <h2>Browser support</h2>
+      <p>PacketGarden uses PixiJS/WebGL to display the garden. Use a browser with
+        WebGL enabled. The legacy Canvas 2D garden has been retired; old bookmarks
+        redirect to the homepage.</p>
+    </section>
+
+    <section>
       <h2>How does it work?</h2>
       <p>Two independent sources feed the garden. Your browser receives both over a single
         <strong>Server-Sent Events (SSE)</strong> connection to PacketGarden.</p>
@@ -151,14 +158,13 @@
       </p>
       <p>
         Grass has its own ecology state and uses no specimen slots. Successful
-        plant growth or replacement clears grass from its cell, leaving nearby
-        tufts alone. In the original <a href="canvas.html">Canvas
-        development garden</a>, successful fake DNS/HTTP events can seed or refresh
-        it on available soil. Mature grass can then spread by itself, age and
-        eventually disappear. Occupied cells stay clear; after a plant expires,
-        ordinary neighboring spread may reclaim its cell, without automatic reseeding.
-        Real TCPNoise growth does not directly seed or refresh grass.
-        In the default Pixi garden, wild grass has fuller blade tufts. Click or
+        plant growth or replacement clears grass from its cell by default, leaving
+        nearby tufts alone. <strong>Allow grass under plants</strong> lets grass
+        naturally establish and remain beneath plants. It starts off on reload;
+        turning it on does not instantly fill cells, and turning it off removes
+        only overlapping grass. Grass spreads, ages, expires and recovers through
+        its own ecology. Real TCPNoise growth does not directly seed or refresh it.
+        Wild grass has dense leafy tufts and quieter shading beneath plants. Click or
         tap a grass-covered empty tile to see its state. Grass is background
         ecology, not a collectible specimen; a plant in the tile takes priority.
       </p>
@@ -252,9 +258,9 @@
       </p>
       <p>
         Want the detailed rules? Read the
-        <a href="https://github.com/JoyfulReaper/PacketGarden/blob/fix/tcpnoise-growth-boundary/docs/EVENT-MAPPINGS.md">port and rarity mappings</a>
+        <a href="https://github.com/JoyfulReaper/PacketGarden/blob/dev/docs/EVENT-MAPPINGS.md">port and rarity mappings</a>
         or the
-        <a href="https://github.com/JoyfulReaper/PacketGarden/blob/fix/tcpnoise-growth-boundary/docs/REAL-DATA.md">real-data documentation</a>.
+        <a href="https://github.com/JoyfulReaper/PacketGarden/blob/dev/docs/REAL-DATA.md">real-data documentation</a>.
       </p>
     </section>
   </main>

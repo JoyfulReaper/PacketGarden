@@ -3,11 +3,15 @@
   'use strict';
   const mutations = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
   const fakeSourceNames = Object.freeze({ dns: 'Simulated DNS', gopher: 'Simulated Gopher', http: 'Simulated HTTP',
-    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe' });
+    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe', 'weed-bud-test': 'Simulated weed bud fixture', 'weed-harvest-test':'Simulated weed harvest fixture' });
   const vigorNames = Object.freeze(['one-off', 'repeated', 'frequent', 'persistent']);
   const messages = Object.freeze({ ladybug: 'You caught a ladybug. +0 points', snail: 'You collected a snail. It seems annoyed. +0 points',
     moth: 'You caught a moth. +0 points', shiny_pebble: 'You found a rock. +0 points',
-    amanita_muscaria: 'You found Amanita muscaria. +0 points', collectible_weed: 'You collected some weed. +0 points' });
+    amanita_muscaria: 'You found Amanita muscaria. +0 points', ditch_weed_bud: 'You smoked some ditch weed. +0 points',
+    gnome_underpants: "You stole a gnome's underpants. +0 points", collectible_weed: 'You collected some weed. +0 points' });
+  function collectionMessage(type, random = Math.random) {
+    return type === 'gnome_underpants' && random() >= .8 ? 'Collected underpants +1, annoyed gnome -1' : messages[type];
+  }
   const messageDurationMs = 2000;
   const capitalize = name => name.charAt(0).toUpperCase() + name.slice(1);
   function formatAge(ageMs) {
@@ -38,6 +42,7 @@
   }
   function inspection(specimen, at, { colorName, sourceNames = fakeSourceNames } = {}) {
     const origin = specimen.origin ?? {}, vigor = specimen.vigor ?? 0;
+    if(specimen.type==='stillbloom')return {title:'Stillbloom',source:origin.kind==='quiet'?'Sustained quiet':'Simulated Stillbloom',sensor:'—',port:'—',seenCount:'—',vigor:'—',color:'Ivory · silver-green',age:formatAge(at-specimen.createdAt),mutation:'None'};
     const singular = { broadleaf: 'broad-leaf plant', redbloom: 'red bloom', crystalfungus: 'crystal fungus' }[specimen.type] ?? specimen.type;
     return { title: capitalize(singular), source: origin.kind === 'tcpnoise' ? 'Live TCPNoise' : sourceNames[origin.eventType] ?? 'Garden event',
       sensor: origin.sensor ?? (origin.kind === 'tcpnoise' ? 'Not supplied' : 'Development controls'),
@@ -45,6 +50,7 @@
       vigor: `${vigor} — ${vigorNames[vigor] ?? 'unknown'}`, color: colorName ?? 'Default',
       age: formatAge(at - specimen.createdAt), mutation: mutations.mutationLabel(specimen, at) };
   }
-  const api = { fakeSourceNames, vigorNames, messages, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
+  const frogMessage = 'The frog ignores you +0 points';
+  const api = { fakeSourceNames, vigorNames, messages, collectionMessage, frogMessage, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenUiCore = api;
 })();

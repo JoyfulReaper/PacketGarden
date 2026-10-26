@@ -6,31 +6,41 @@
   <title>PacketGarden</title>
   <link rel="stylesheet" href="garden.css">
   <link rel="stylesheet" href="garden-ui.css">
-  <link rel="stylesheet" href="pixi-live.css?v=audio-1">
-  <script src="garden-audio.js?v=storm-bolt-2" defer></script>
+  <link rel="stylesheet" href="pixi-live.css?v=gnome-arrival-2">
+  <script src="garden-audio.js?v=gnome-arrival-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
-  <script src="pixi-stress.js" defer data-pixi-library></script>
-  <script src="garden-core.js" defer></script>
-  <script src="garden-gnomes.js?v=gnomes-1" defer></script>
+  <script src="pixi-stress.js?v=canvas-retired-1" defer data-pixi-library></script>
+  <script src="garden-core.js?v=stillbloom-1" defer></script>
+  <script src="garden-stillbloom.js?v=stillbloom-1" defer></script>
+  <script src="garden-lighting.js?v=light-toggle-1" defer></script>
+  <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
+  <script src="garden-gnomes.js?v=frog-gnome-ack-1" defer></script>
   <script src="garden-mutations.js" defer></script>
-  <script src="garden-ecology.js?v=grass-clear-1" defer></script>
-  <script src="garden-ambient.js" defer></script>
-  <script src="garden-interaction.js" defer></script>
-  <script src="garden-ui-core.js" defer></script>
-  <script src="pixi-live-ui.js?v=grass-clear-1" defer></script>
-  <script src="pixi-live-ambient.js" defer></script>
-  <script src="pixi-live-gnomes.js?v=gnomes-1" defer></script>
+  <script src="garden-grass.js?v=grass-lush-1" defer></script>
+  <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
+  <script src="garden-puddle-art.js?v=puddle-art-1" defer></script>
+  <script src="garden-gnome-puddles.js?v=gnome-puddles-1" defer></script>
+  <script src="garden-frogs.js?v=frog-gnome-ack-1" defer></script>
+  <script src="garden-ambient.js?v=gnome-harvest-1" defer></script>
+  <script src="garden-interaction.js?v=frog-gnome-ack-1" defer></script>
+  <script src="garden-ui-core.js?v=frog-gnome-ack-1" defer></script>
+  <script src="pixi-live-ui.js?v=frog-gnome-ack-1" defer></script>
+  <script src="pixi-live-ambient.js?v=frogs-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=gnome-puddles-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
-  <script src="pixi-live-ecology.js?v=grass-details-1" defer></script>
-  <script src="pixi-live-core.js?v=grass-clear-1" defer></script>
-  <script src="pixi-live.js?v=grass-clear-1" defer></script>
+  <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
+  <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
+  <script src="pixi-vine-blooms.js?v=vine-blooms-1" defer></script>
+  <script src="pixi-live-core.js?v=vine-blooms-1" defer></script>
+  <script src="pixi-live.js?v=gnome-arrival-2" defer></script>
 </head>
 <body class="pixi-default">
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <header>
     <h1>PacketGarden</h1>
     <p>Packet Garden: Composting the internet's shit into something pretty.</p>
     <nav class="site-nav" aria-label="Site navigation">
-      <a href="about.html">About</a> · <a href="https://noise.kgivler.com/" target="_blank" rel="noopener noreferrer" aria-label="Noise Observatory (opens in a new tab)">Noise Observatory</a> · <a href="canvas.html">Canvas garden</a>
+      <a href="about.html">About</a> · <a href="https://noise.kgivler.com/" target="_blank" rel="noopener noreferrer" aria-label="Noise Observatory (opens in a new tab)">Noise Observatory</a>
     </nav>
   </header>
   <main aria-label="Garden">
@@ -75,6 +85,8 @@
     <span>Live connection: <span id="connection" role="status">connecting</span></span>
     <span id="weather-status" role="status">Live weather connecting</span>
     <label><input id="lightning-enabled" type="checkbox" checked> Lightning</label>
+    <label><input id="day-night-enabled" type="checkbox" checked> Day/night cycle</label>
+    <label><input id="allow-grass-under-plants" type="checkbox" autocomplete="off"> Allow grass under plants</label>
     <div class="pixi-sound-controls" role="group" aria-label="Garden sound controls">
       <button id="sound-toggle" type="button" aria-pressed="false">Sound: Off</button>
       <label for="sound-volume">Volume</label>

@@ -5,7 +5,8 @@
   const interaction = common ? require('./garden-interaction.js') : window.PacketGardenInteraction;
   const text = common ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
   const ecology = common ? require('./garden-ecology.js') : window.PacketGardenEcology;
-  function createUi({ document, window, garden, ambient, colorName, getGrassCells = () => [], now = Date.now, onCollected = () => {} }) {
+  function createUi({ document, window, garden, ambient, colorName, getGnomes = () => null, collectionRandom = Math.random,
+    getGrassCells = () => [], getFrogs = () => null, getReducedMotion = () => false, now = Date.now, onCollected = () => {} }) {
     const element = id => document.querySelector(`#${id}`);
     const card = element('specimen-card'), title = element('specimen-card-title'), closeButton = element('specimen-card-close');
     const specimenDetails = element('specimen-details'), grassDetails = element('grass-details'), grassState = element('grass-state');
@@ -67,7 +68,12 @@
     }
     function click(point, client, at = now()) {
       if (!interaction.validPoint(point)) return null; // Letterbox/outside clicks have no action.
-      const hit = interaction.resolve(point, { specimens: garden.specimens, curiosities: ambient.curiosities, drops: ambient.drops }, at);
+      const gnomes=getGnomes();
+      const frogs=getFrogs();
+      const hit = interaction.resolve(point, { specimens: garden.specimens, curiosities: ambient.curiosities, drops: ambient.drops,gnomes,
+        frogs,reducedMotion:getReducedMotion() }, at);
+      if (hit?.kind === 'gnome') { gnomes.click(hit.object,at); return hit; }
+      if (hit?.kind === 'frog') { if(frogs.click(hit.object,at))showMessage(text.frogMessage,at);return hit; }
       if (!hit) {
         // Same logical tile lookup, after all existing specimen/collection priorities.
         const grass = interaction.specimenAt(point, getGrassCells());
@@ -81,7 +87,7 @@
         : hit.kind === 'drop' ? ambient.removeDrop(item, 'collected') : garden.remove(item, 'collected');
       if (removedItem) {
         if (hit.kind === 'mutation') removed(item);
-        showMessage(text.messages[hit.kind === 'mutation' ? item.mutation.type : item.type], at);
+        showMessage(text.collectionMessage(hit.kind === 'mutation' ? item.mutation.type : item.type,collectionRandom), at);
         onCollected();
       }
       return hit;

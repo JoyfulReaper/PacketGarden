@@ -5,15 +5,20 @@ Reviewed 2026-10-20 on `fix/tcpnoise-growth-boundary`, HEAD
 this review. No applicable `AGENTS.md` was found. This is a focused deployment
 review, not a comprehensive security audit or a new rendering benchmark.
 
-**Recommendation: Not ready for unrestricted public alpha exposure yet.** One
-availability gate remains: unbounded queues for public SSE clients. After that
-risk is contained and verified, the remaining findings are reasonable alpha
-caveats. No credential leak, unintended server-side write endpoint, or violation
-of the documented event-field allowlist was found in the reviewed paths.
+**Original audit recommendation: Not ready for unrestricted public alpha exposure.**
+The unbounded SSE queue finding described below has since received an in-code
+remediation on `dev`: bounded queues, slow-subscriber disconnects, a cap on
+active subscribers, and a stalled-write timeout. **This patch has not yet been
+verified by a .NET build or public proxy/slow-network soak**, so unrestricted
+public deployment still needs the validation and ingress checks below.
+No credential leak, unintended server-side write endpoint, or violation
+of the documented event-field allowlist was found in the original reviewed paths.
 
 ## Brief deployment checklist
 
-- [ ] Resolve or demonstrably contain the SSE buffering blocker below.
+- [x] Implement bounded SSE buffering and slow-client eviction on `dev`.
+- [ ] Run .NET/backend and slow-reader checks on the patched branch; verify actual
+  HTTP/proxy disconnect, memory and reconnect behavior before public ingress.
 - [ ] Publish a Release build; run the published app with a supported .NET 10
   hosting runtime and Production environment, under a supervised service.
 - [ ] Put HTTPS at the ingress, keep Kestrel private, and verify SSE streaming
@@ -28,9 +33,9 @@ of the documented event-field allowlist was found in the reviewed paths.
 - [ ] Complete the post-deployment smoke test and watch memory/connections during
   a modest live soak. Keep a rollback build and a way to stop public ingress.
 
-## Release blocker
+## SSE availability gate and remediation
 
-### High — unbounded buffering behind slow SSE clients
+### High — originally unbounded buffering behind slow SSE clients
 
 **Evidence:** [GardenEvents.cs](../GardenEvents.cs), lines 21–24, creates an
 unbounded channel for every client. Lines 37–41 enqueue every accepted growth
@@ -51,13 +56,25 @@ one unread client and subsequently read all 20,000. This confirms retention, not
 a demonstrated remote outage: no slow-network, HTTP/2, or memory-exhaustion test
 was performed, and time to failure depends on traffic and transport behavior.
 
-**Release gate:** establish a bounded queue/slow-consumer policy, or verify an
-ingress containment policy with global/per-client active-stream limits and an
-enforced end-to-end maximum stream lifetime. Size those limits against observed
-event rate and available memory, and test slow readers and disconnect cleanup.
-A request-rate limit or idle timeout alone does not cap an ongoing stream's
-backlog. A process memory limit/restart is a safety net, not proof of availability.
-No fix or ingress configuration was implemented in this review.
+**Remediation implemented on `dev` (not yet runtime-verified):** Each
+subscriber receives a 256-frame bounded channel. A full queue causes the
+subscriber to be removed and its cancellation token to be signaled; weather
+frames use the same nonblocking policy. The SSE endpoint gives writes/flushes
+15 seconds before ending a stalled stream and permits at most 128 concurrent
+subscribers; excess subscribers receive HTTP 503 with `Retry-After: 5`.
+All other subscribers keep receiving events. EventSource can reconnect, with
+no replay of missed growth. Deterministic backend assertions for growth
+overflow, weather overflow, healthy subscriber isolation, and subscriber-slot
+recovery were added.
+
+**Remaining gate:** run these tests with .NET 10 and exercise slow readers,
+disconnect/stream cleanup, and subscriber saturation through the actual HTTP
+and production proxy path. Size/tune initial limits against observed traffic and
+memory. Request-rate or idle timeouts alone would not contain an ongoing
+unbounded backlog; process memory limits are additional safety nets, not a
+replacement for this fix.
+
+The original 20,000-event probe above was performed **before** the change.
 
 ## Exposure, configuration, and privacy findings
 
@@ -141,12 +158,11 @@ and snapshot access to the intended services.
 - **Idle/reconnect behavior:** there is no SSE heartbeat or replay. With no
   growth or changed weather, the stream can be silent long enough for a proxy to
   close it; EventSource reconnects and receives current weather, but missed growth
-  is intentionally lost. Check idle proxy behavior and avoid a reconnect storm.
-  The Pixi page closes its stream on pagehide; the Canvas fallback relies more on
-  browser document teardown. Hidden pages can retain subscriptions.
+  is intentionally lost. Queue overflow and stalled-write timeouts also end a
+  stream. Check idle proxy behavior and avoid a reconnect storm.
+  The Pixi page closes its stream on pagehide. Hidden pages can retain subscriptions.
 - **Client scope:** WebGL availability, mobile sizing, audio opt-in, and live
-  long-session performance still need deployment smoke coverage. Canvas remains
-  a manual fallback. Garden state is browser-local and not persistent.
+  long-session performance still need deployment smoke coverage. WebGL is required; unsupported browsers receive a friendly message. Garden state is browser-local and not persistent.
 
 ## Short post-deployment smoke test
 
@@ -156,7 +172,7 @@ and snapshot access to the intended services.
 2. Confirm a single SSE connection receives immediate weather, correct aggregate
    labels, and real growth when NATS events arrive. Inspect frame keys and actual
    sensor labels for the privacy boundary above. Sound must remain opt-in.
-3. Check `/canvas.html` and the chosen public/restricted behavior of both Pixi
+3. Check that `/canvas.html` redirects to `/`, and the chosen public/restricted behavior of both Pixi
    diagnostic pages. Confirm private/source paths return 404 through ingress.
 4. Briefly interrupt the browser connection, then reconnect. Verify current
    weather and subsequent growth resume without duplicate subscriptions. In a
@@ -185,3 +201,12 @@ Local HTTP probes used a fake snapshot source and disabled NATS. No new Chrome
 rendering, real broker reconnect, public proxy/TLS/CDN, prolonged load, slow-reader
 network test, external vulnerability audit, or deployment was performed. Existing
 historical browser measurements were reviewed, not rerun. Runtime code is unchanged.
+
+## Follow-up after alpha SSE patch
+
+The code and deterministic assertions for bounded SSE queues were added on
+`dev` after this audit. The historical checks listed above apply only to the
+pre-fix review commit; they **do not** attest that the new implementation builds
+or passes on the local .NET SDK. Run `dotnet run --project tests/PacketGarden.Checks`
+and `node tests/weather-sse.cjs --run <built-assembly>` after building with
+.NET 10, then do the production-proxy slow-client smoke test before publishing.

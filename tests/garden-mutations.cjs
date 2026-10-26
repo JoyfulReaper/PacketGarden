@@ -67,12 +67,12 @@ cap.garden.remove(candidates[0],'collected');cap.tick();assert.equal(cap.mutatio
 const notices=cap.changes.length;cap.tick();assert.equal(cap.changes.length,notices,'no unchanged notifications/history');
 cap.mutations.clear();assert.equal(cap.mutations.snapshot().active,0);assert.equal(cap.mutations.snapshot().pending,0);assert.equal(cap.garden.byCell.size,0);
 
-// Canvas exact occupancy and the original radius boundary stay intact after collection.
-const canvas=require('./browser-garden.cjs')();canvas.forceRoll(0);canvas.emit();canvas.clock.now+=3000;canvas.tick();
-const cp=canvas.run('gardenState.specimens[0]');canvas.sandbox.cp=cp;
-assert(canvas.run('isCollectibleMutationHit(cp,{x:(cp.column+.5)*30+12,y:(cp.row+.5)*30})'));
-assert.equal(canvas.run('isCollectibleMutationHit(cp,{x:(cp.column+.5)*30+12.001,y:(cp.row+.5)*30})'),false);
-assert(canvas.run('collectSpecimenMutation(cp)'));assert.equal(canvas.run('gardenModel.byCell.has(cp.cell)'),false);
-assert.equal(canvas.run('gardenMutations.snapshot().active'),0);
+// Shared hit boundary and actual collection removal, without a renderer harness.
+const I=require('../wwwroot/garden-interaction.js'),hit=setup(),cp=hit.add();
+hit.mutations.maybeSchedulePort22Mutation(cp,0);hit.tick(3000);
+const point={x:(cp.column+.5)*30+12,y:(cp.row+.5)*30};
+assert.equal(I.mutationHit(cp,point,hit.at()),true);
+assert.equal(I.mutationHit(cp,{...point,x:point.x+.001},hit.at()),false);
+assert(hit.garden.remove(cp,'collected'));assert.equal(hit.garden.byCell.has(cp.cell),false);assert.equal(hit.mutations.snapshot().active,0);
 assert.doesNotMatch(fs.readFileSync('wwwroot/garden-mutations.js','utf8'),/document\.|CanvasRenderingContext2D|PIXI|setTimeout|setInterval|localStorage|sessionStorage|collection-message/);
-console.log('PASS: shared mutation qualification/RNG/boundaries/identity, one pending marker, exact removal/replacement/clear cancellation, no retry, saturation parity, absolute lifetime/occupancy, Canvas radius/collection; no timers or presentation.');
+console.log('PASS: shared mutation qualification/RNG/boundaries/identity, one pending marker, exact removal/replacement/clear cancellation, no retry, saturation parity, absolute lifetime/occupancy, shared radius/collection; no timers or presentation.');

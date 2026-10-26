@@ -51,6 +51,5 @@ assert.throws(()=>hidden.seed({puddles:Array(9).fill(p)}));
 assert.throws(()=>hidden.seed({puddles:[p,p]}));
 const source=fs.readFileSync('wwwroot/garden-ecology.js','utf8');assert.doesNotMatch(source,/setTimeout|setInterval|document\.|PIXI|CanvasRenderingContext2D/);
 for(const html of ['index','pixi-live'])assert.match(fs.readFileSync(`wwwroot/${html}.html`,'utf8'),/src="garden-ecology\.js\?v=.+"/);
-assert.match(fs.readFileSync('wwwroot/garden.js','utf8'),/gardenEcologyCore.createEcologyModel/);
 assert.match(fs.readFileSync('wwwroot/pixi-live.js','utf8'),/ecologyCore.createEcologyModel/);
 console.log('PASS: shared puddle constants/chances/cadence/transitions/no replay/spawn/refresh/drain/sqrt/identity/expiry/cap; atomic seed validation; shared renderer imports; no timers.');

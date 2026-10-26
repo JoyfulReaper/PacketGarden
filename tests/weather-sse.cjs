@@ -53,27 +53,42 @@ async function run() {
     let timer;
     try {
       return await Promise.race([read(), new Promise((_,reject) => {
-        timer = setTimeout(() => reject(new Error(`Weather update timed out: ${logs}`)),15000);
+        timer = setTimeout(() => reject(new Error(`Weather update timed out: ${logs}`)),25000);
       })]);
     } finally { clearTimeout(timer); }
+  }
+  function checkWeather(value,base,healthy,generation) {
+    const {telemetryHealthy,freshUntil,telemetryGeneration,...weather}=value;
+    assert.deepEqual(weather,base);assert.equal(telemetryHealthy,healthy);assert.equal(telemetryGeneration,generation);
+    if(healthy)assert(Number.isSafeInteger(freshUntil)&&freshUntil>Date.now()&&freshUntil<=Date.now()+30100,'freshness deadline comes from successful upstream polling');
+    else assert.equal(freshUntil,null);
+    return value;
   }
   try {
     await waitFor(() => logs.includes('Now listening on:') && firstRequest);
     const read = await openStream();
-    assert.deepEqual(await next(read),{level:'quiet',eventsPerMinute:0,eventsLastHour:null,hasSnapshot:false});
+    checkWeather(await next(read),{level:'quiet',eventsPerMinute:0,eventsLastHour:null,hasSnapshot:false},false,0);
     firstRequest.writeHead(200,{'Content-Type':'application/json'}); firstRequest.end(JSON.stringify(snapshot));
-    assert.deepEqual(await next(read),{level:'rain',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true});
+    checkWeather(await next(read),{level:'rain',eventsPerMinute:29.8,eventsLastHour:4321,hasSnapshot:true},true,1);
     snapshot = {...snapshot,eventsLastHour:4322};
-    assert.deepEqual(await next(read),{level:'rain',eventsPerMinute:29.8,eventsLastHour:4322,hasSnapshot:true},'hour alone wakes the actual SSE pump');
+    const retained={level:'rain',eventsPerMinute:29.8,eventsLastHour:4322,hasSnapshot:true};
+    checkWeather(await next(read),retained,true,1);
     unavailable = true;
+    checkWeather(await next(read),retained,false,1);
     await waitFor(() => logs.includes('Weather snapshot unavailable; retaining last valid state.'));
     const reconnected = await openStream();
-    assert.deepEqual(await next(reconnected),{level:'rain',eventsPerMinute:29.8,eventsLastHour:4322,hasSnapshot:true},'failure/reconnection retains entire valid state');
-    unavailable = false; snapshot = {level:'rain',eventsPerMinute:29.8};
-    assert.deepEqual(await next(read),{level:'rain',eventsPerMinute:29.8,eventsLastHour:null,hasSnapshot:true},'older snapshot recovers with unavailable hour');
-    assert.deepEqual(await next(reconnected),{level:'rain',eventsPerMinute:29.8,eventsLastHour:null,hasSnapshot:true});
+    checkWeather(await next(reconnected),retained,false,1);
+    unavailable = false;
+    checkWeather(await next(read),retained,true,2);
+    checkWeather(await next(reconnected),retained,true,2);
+    snapshot = {level:'rain',eventsPerMinute:29.8};
+    const older={level:'rain',eventsPerMinute:29.8,eventsLastHour:null,hasSnapshot:true};
+    const beforeRenewal=checkWeather(await next(read),older,true,2);
+    checkWeather(await next(reconnected),older,true,2);
+    const renewed=checkWeather(await next(read),older,true,2);
+    assert(renewed.freshUntil>beforeRenewal.freshUntil,'same-value upstream freshness renews independently of weather rendering');
     await waitFor(() => logs.includes('Weather snapshot polling recovered.'));
-    console.log('PASS: actual ASP.NET polling -> normalized SSE, startup unavailable, source hour, hourly-only update, outage retention, immediate reconnect and older-source recovery.');
+    console.log('PASS: actual ASP.NET polling -> SSE, startup, hourly-only values, outage retention with unhealthy transitions, reconnect, unchanged-value recovery, older sources and upstream lease renewal.');
   } finally {
     for (const controller of controllers) controller.abort();
     host.kill(); snapshotServer.closeAllConnections(); await new Promise(resolve => snapshotServer.close(resolve));

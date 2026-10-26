@@ -1,6 +1,9 @@
-/* Presentation integration only; the card/activity/message rules are shared with Canvas. */
+/* Pixi page presentation; shared card/activity/message rules live in garden-ui.css. */
 .pixi-garden-stage { position: relative; }
+#view[data-initialization-failed] { display: grid; place-content: center; padding: 24px; text-align: center; line-height: 1.6; color: #e1e6d7; }
 #view canvas { cursor: pointer; }
+.gnome-message-preview { flex-wrap: wrap; max-width: 100%; }
+#underpants-message-roll { min-width: 0; max-width: 100%; }
 .specimen-card { box-sizing: border-box; }
 .specimen-card-close { cursor: pointer; }
 .specimen-card-close:focus-visible { outline: 2px solid #e1e6d7; outline-offset: 3px; }
@@ -14,5 +17,6 @@
 #network-events-minute, #network-events-hour { color: #e1e6d7; font-variant-numeric: tabular-nums; }
 .pixi-sound-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .pixi-sound-controls button { padding: 4px 8px; }
+#gnome-sound-status { flex-basis: 100%; font-size: 12px; }
 .pixi-sound-controls #sound-volume { width: 90px; min-width: 0; padding: 0; }
 .pixi-sound-controls #sound-volume:focus-visible { outline: 2px solid #e1e6d7; outline-offset: 3px; }

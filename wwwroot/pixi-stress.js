@@ -216,17 +216,54 @@
       destroy() { root.destroy({ children: true }); rain = []; actors = []; }
     };
   }
+  // Page-level callbacks must become inert before any Pixi resource is released.
+  // Shared by the stress page and the live garden; no rendering/scheduling rules.
+  function pageLifetime(stop) {
+    let disposed=false;
+    const listeners=[],resources=[];
+    const guard=callback=>function(...args){if(!disposed)return callback.apply(this,args);};
+    const own=release=>{if(disposed)release();else resources.push(release);};
+    function listen(target,type,callback) {
+      if(disposed||!target?.addEventListener)return;
+      const handler=guard(callback);target.addEventListener(type,handler);
+      listeners.push(()=>target.removeEventListener?.(type,handler));
+    }
+    function dispose() {
+      if(disposed)return;
+      disposed=true;
+      const errors=[];
+      const release=callback=>{try{callback();}catch(error){errors.push(error);}};
+      while(listeners.length)release(listeners.pop());
+      release(stop);
+      while(resources.length)release(resources.pop());
+      if(errors.length)throw new AggregateError(errors,'Pixi teardown failed');
+    }
+    return {guard,own,listen,dispose,get disposed(){return disposed;}};
+  }
   async function start() {
+    let stop=()=>{},resume=()=>{},cached=false;
+    const lifetime=pageLifetime(()=>stop()),{guard,own,listen,dispose}=lifetime;
+    listen(window,'pagehide',event=>{
+      if(event.persisted){cached=true;stop();}else dispose();
+    });
+    // The synthetic stress scene retains its resources in bfcache, as before.
+    listen(window,'pageshow',event=>{if(event.persisted){cached=false;resume();}});
+    try {
     const P = window.PIXI, view = document.querySelector('#view'), hud = document.querySelector('#hud');
     const app = new P.Application();
     // One opaque surface avoids full-size alpha compositing. Cached art already has smooth
     // edges at 2x atlas resolution; MSAA is unnecessary. DPR cap bounds fill rate on HiDPI.
-    await app.init({ width: 960, height: 600, preference: 'webgl', powerPreference: 'high-performance',
+    try {await app.init({ width: 960, height: 600, preference: ['webgl'], powerPreference: 'high-performance',
       backgroundColor: 0x151c16, backgroundAlpha: 1, antialias: false, autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, config.maxResolution), autoStart: false });
+    }catch(error){own(()=>app.stage.destroy({children:true}));throw error;}
+    own(()=>app.destroy(true));if(lifetime.disposed)return;
+    stop=()=>app.stop();
     view.appendChild(app.canvas);
     const { frames: textures, atlas } = makeAtlas(P, app.renderer);
+    own(()=>{for(const texture of textures.values())texture.destroy(false);atlas.destroy(true);});
     const scene = createScene(P, app, textures), measurements = frameWindow();
+    own(()=>scene.destroy());
     const sceneControl = document.querySelector('#scene'), weatherControl = document.querySelector('#weather');
     let lastTick = null, lastHud = -Infinity, animationSeconds = 0;
     const reset = () => { measurements.reset(); lastTick = null; lastHud = -Infinity; };
@@ -237,17 +274,17 @@
       const visible = document.querySelector('#probes').checked;
       document.body.classList.toggle('probes-off', !visible); scene.setProbes(visible);
     };
-    sceneControl.addEventListener('change', updateMode); weatherControl.addEventListener('change', updateWeather);
-    document.querySelector('#target').addEventListener('change', updateTarget);
-    document.querySelector('#probes').addEventListener('change', updateProbes);
-    document.querySelector('#reset').addEventListener('click', reset);
+    listen(sceneControl,'change',updateMode);listen(weatherControl,'change',updateWeather);
+    listen(document.querySelector('#target'),'change',updateTarget);
+    listen(document.querySelector('#probes'),'change',updateProbes);
+    listen(document.querySelector('#reset'),'click',reset);
     updateMode(); updateWeather(); updateTarget(); updateProbes();
-    const resize = () => {
+    const resize = guard(() => {
       const box = view.getBoundingClientRect(), width = Math.max(1, Math.round(box.width)), height = Math.max(1, Math.round(box.height));
       app.renderer.resize(width, height, Math.min(window.devicePixelRatio || 1, config.maxResolution));
       scene.resize(width, height);
-    };
-    const observer = new ResizeObserver(resize); observer.observe(view); window.addEventListener('resize', resize); resize();
+    });
+    const observer = new ResizeObserver(resize);own(()=>observer.disconnect());observer.observe(view);listen(window,'resize',resize);resize();
     const rendererName = P.RendererType?.[app.renderer.type] || app.renderer.constructor.name;
     function updateHud() {
       const data = measurements.snapshot(), counts = scene.snapshot();
@@ -262,30 +299,33 @@
         'CPU/ticker intervals only; no GPU completion measurement. Local, transient metrics.'
       ].join('\n');
     }
-    app.ticker.add(ticker => {
+    const tick=guard(ticker => {
+      if(cached||document.hidden)return;
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
       if (elapsed > 0) { measurements.add(elapsed); animationSeconds += elapsed / 1000; }
       lastTick = now; scene.animate(animationSeconds, elapsed / 1000);
       if (now - lastHud >= 500) { lastHud = now; updateHud(); }
     });
-    document.addEventListener('visibilitychange', () => {
+    app.ticker.add(tick);own(()=>app.ticker.remove(tick));
+    resume=()=>{if(!document.hidden&&!cached){lastTick=null;app.start();}};
+    listen(document,'visibilitychange', () => {
+      if(cached)return;
       document.body.classList.toggle('page-hidden', document.hidden);
-      if (document.hidden) app.stop(); else { lastTick = null; app.start(); }
+      if(document.hidden)app.stop();else resume();
     });
-    window.addEventListener('pagehide', event => {
-      app.stop();
-      if (event.persisted) return; // A back/forward cache entry retains its GPU scene.
-      observer.disconnect(); window.removeEventListener('resize', resize); app.stop();
-      scene.destroy(); for (const texture of textures.values()) texture.destroy(false);
-      atlas.destroy(true); app.destroy(true);
-    });
-    window.addEventListener('pageshow', event => { if (event.persisted && !document.hidden) { lastTick = null; app.start(); } });
-    updateHud(); if (!document.hidden) app.start();
+    updateHud();resume();
+    }catch(error){
+      try{dispose();}catch(cleanupError){throw new AggregateError([error,cleanupError],'Pixi initialization and teardown failed');}
+      throw error;
+    }
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { config, weather, sceneModel, seededRandom, contain, frameWindow, makeAtlas, createScene };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { config, weather, sceneModel, seededRandom, contain, frameWindow, makeAtlas, createScene, pageLifetime };
   else {
-    window.PacketGardenPixi = { config, contain, seededRandom, frameWindow, makeAtlas };
+    window.PacketGardenPixi = { config, contain, seededRandom, frameWindow, makeAtlas, pageLifetime };
     if (!document.currentScript?.hasAttribute('data-pixi-library')) start().catch(error => {
+      const view = document.querySelector('#view');
+      view.textContent = 'PacketGarden requires WebGL to display the garden. Try a browser with WebGL enabled.';
+      view.setAttribute('role', 'alert');
       document.querySelector('#hud').textContent = `Pixi initialization failed: ${error.message}. Production garden is unchanged.`; console.error(error);
     });
   }

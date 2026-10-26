@@ -14,12 +14,12 @@ vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js', 'utf8'), sandbox);
 const run = code => vm.runInContext(code, sandbox);
 
 assert.equal(sandbox.grassConfig.spreadEveryMs, 4_000);
-assert.equal(sandbox.grassConfig.spreadChance, 0.5);
+assert.equal(sandbox.grassConfig.spreadChance, 0.7);
 assert.equal(sandbox.grassConfig.fadingSeedChance, 0.4);
-assert.equal(sandbox.grassConfig.maxSpreadAttempts, 4);
+assert.equal(sandbox.grassConfig.maxSpreadAttempts, 6);
 assert.equal(sandbox.grassConfig.maxFadingSeedChecksPerTick, 6);
 
-for (const [count, attempts] of [[0,0],[1,1],[12,1],[13,2],[24,2],[25,3],[48,3],[49,4],[640,4]]) {
+for (const [count, attempts] of [[0,0],[1,1],[2,2],[6,2],[7,3],[20,3],[21,4],[48,4],[49,6],[640,6]]) {
   assert.equal(run(`grassSpreadAttemptCount(${count})`), attempts, `spread attempts for ${count} active cells`);
 }
 
@@ -33,7 +33,7 @@ assert.equal(sandbox.gardenState.grassCells[0].createdAt, 0);
 assert.equal(sandbox.gardenState.grassCells[0].lastInfluencedAt, 35_000, 'spreading does not rejuvenate parent');
 assert.equal(sandbox.gardenState.grassCells[1].createdAt, 40_000, 'child starts a new generation');
 
-// Thirteen healthy mature cells earn two attempts; successful attempts do not queue beyond the tick.
+// Thirteen healthy mature cells earn three attempts; no queued catch-up.
 sandbox.gardenState.grassCells = Array.from({ length: 13 }, (_, column) => ({
   column,
   row: 10,
@@ -43,7 +43,7 @@ sandbox.gardenState.grassCells = Array.from({ length: 13 }, (_, column) => ({
 sandbox.nextGrassSpreadAt = 0;
 sandbox.Math.random = () => 0;
 sandbox.spreadGrass(40_000);
-assert.equal(sandbox.gardenState.grassCells.length, 15, 'population band grants two successful attempts');
+assert.equal(sandbox.gardenState.grassCells.length, 16, 'population band grants three successful attempts');
 const afterFirstTick = sandbox.gardenState.grassCells.length;
 sandbox.spreadGrass(40_000);
 assert.equal(sandbox.gardenState.grassCells.length, afterFirstTick, 'same tick does not catch up or burst');

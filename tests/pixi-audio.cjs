@@ -96,5 +96,5 @@ async function check(page) {
   for(const page of ['index.html','pixi-live.html'])await check(page);
   const noControls=html('index.html').replace(/<button id="sound-toggle"[^>]*>[^<]*<\/button>/,'').replace(/<input id="sound-volume"[^>]*>/,'');
   const g=await start(false,{pageHtml:noControls});assert(g.app.active);assert.deepEqual(g.errors,[]);g.winHandlers.get('pagehide')({persisted:false});
-  console.log('PASS: both Pixi entry points share Canvas sound identities/volume/cooldowns; one opt-in context, successful growth/replacement/collections only, silent fixtures/inspection/ticker/resize, failure/race/zero/missing-controls safety.');
+  console.log('PASS: both Pixi entry points retain existing sound identities/volume/cooldowns; one opt-in context, successful growth/replacement/collections only, silent fixtures/inspection/ticker/resize, failure/race/zero/missing-controls safety.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

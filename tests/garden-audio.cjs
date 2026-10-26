@@ -3,47 +3,22 @@ const fs = require('node:fs'), vm = require('node:vm'), assert = require('node:a
 const outputGain = value => 2 * value ** 1.25;
 
 function createGarden(options = {}) {
-  const {state, AudioContext} = require('./audio-context.cjs')(options);
-  const html=fs.readFileSync('wwwroot/canvas.html','utf8');
-  const volume=html.match(/id="sound-volume"[^>]*value="([^"]+)"/)[1];
-  const elements=new Map(), sources=[];
-  const canvas=new Proxy({}, {get:()=>()=>{},set:()=>true});
-  const element=selector => {
-    if (!elements.has(selector)) elements.set(selector, {
-      value:selector==='#sound-volume'?volume:selector==='#weather-source'?'live':selector==='#weather-level'?'quiet':'1200',
-      handlers:{}, attributes:{}, addEventListener(name,handler){this.handlers[name]=handler;},
-      setAttribute(name,value){this.attributes[name]=value;},
-      getContext:()=>canvas,getBoundingClientRect:()=>({width:960,height:600})
-    });
-    return elements.get(selector);
-  };
-  class Source {
-    constructor(){this.handlers={};sources.push(this);}
-    addEventListener(name,handler){this.handlers[name]=handler;}
-    emit(data){this.handlers.garden({data:typeof data==='string'?data:JSON.stringify(data)});}
-  }
-  const sandbox={Date:{now:()=>state.now}, performance:{now:()=>state.now}, Math:Object.create(Math),
-    EventSource:Source,document:{querySelector:element,createElement:()=>({getContext:()=>canvas}),addEventListener(){}},ResizeObserver:class{observe(){}},
-    window:{addEventListener(){},setInterval(){},setTimeout(){},clearTimeout(){},requestAnimationFrame(){},cancelAnimationFrame(){}}
-  };
-  if (options.supported!==false) sandbox.window.AudioContext=AudioContext;
-  sandbox.Math.random=()=>0.5;
-  vm.createContext(sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-core.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-gnomes.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-mutations.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-ui-core.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-ecology.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-ambient.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden.js','utf8'),sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-grass.js','utf8'),sandbox);
-  vm.runInContext(fs.readFileSync('wwwroot/garden-actors.js','utf8'),sandbox);
-  const run=code=>vm.runInContext(code,sandbox);
-  const grow=(type,time=state.now)=>{
-    state.now=time; sources[0].emit({specimenType:type,listenPort:type==='redbloom'?22:443,vigor:0});
-  };
-  return {state,element,run,grow,source:sources[0],toggle:()=>element('#sound-toggle').handlers.click()};
+  const {state,AudioContext}=require('./audio-context.cjs')(options),elements=new Map();
+  const volume=fs.readFileSync('wwwroot/index.html','utf8').match(/id="sound-volume"[^>]*value="([^"]+)"/)[1];
+  const element=selector=>{if(!elements.has(selector))elements.set(selector,{value:volume,handlers:{},attributes:{},
+    addEventListener(name,handler){this.handlers[name]=handler;},setAttribute(name,value){this.attributes[name]=value;}});return elements.get(selector);};
+  const sandbox={document:{querySelector:element},window:{},performance:{now:()=>state.now},Math:Object.create(Math)};
+  if(options.supported!==false)sandbox.window.AudioContext=AudioContext;sandbox.Math.random=()=>.5;
+  vm.createContext(sandbox);vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
+  const run=code=>vm.runInContext(code,sandbox),core=require('../wwwroot/garden-core.js'),pixi=require('../wwwroot/pixi-live-core.js');
+  const model=core.createGardenModel({now:()=>state.now,random:()=>.5});
+  sandbox.columns=32;sandbox.rows=20;sandbox.gardenState={};
+  Object.defineProperty(sandbox.gardenState,'specimens',{get:()=>model.specimens,set:entries=>model.seed(entries)});
+  class Source {constructor(){this.handlers={};}addEventListener(name,fn){this.handlers[name]=fn;}close(){}
+    emit(data){this.handlers.garden({data:typeof data==='string'?data:JSON.stringify(data)});}}
+  const source=pixi.connectStream(Source,{accept(raw){const result=model.addEvent(raw);if(result)run('gardenSound.maybePlayGrowthSound('+JSON.stringify(result.specimen.type)+')');}},()=>{},()=>{});
+  const grow=(type,time=state.now)=>{state.now=time;source.emit({specimenType:type,listenPort:type==='redbloom'?22:443,vigor:0});};
+  return {state,element,run,grow,source,toggle:()=>element('#sound-toggle').handlers.click()};
 }
 
 module.exports=async function checkAudio() {
@@ -116,8 +91,8 @@ module.exports=async function checkAudio() {
   for(let event=0;event<30;event++) burst.grow('flower',event*10);
   assert.equal(burst.run('gardenState.specimens.length'),30);
   assert.equal(burst.state.oscillators.length,1,'burst produces one immediate sound and no queue');
-  burst.state.now=400; burst.element('#fake-dns').handlers.click();
-  assert.equal(burst.state.oscillators.length,2,'fake controls use the shared sound path');
+  burst.grow('flower',400);
+  assert.equal(burst.state.oscillators.length,2,'subsequent growth uses the shared sound path');
   burst.run('gardenState.specimens=Array.from({length:columns*rows},(_,i)=>({type:"flower",column:i%columns,row:Math.floor(i/columns),createdAt:400,vigor:0}))');
   burst.grow('ghostbloom',1000); assert.equal(burst.state.oscillators.length,2,'vigor-0 growth at capacity cannot play a spawn sound');
   burst.source.emit({specimenType:'flower',listenPort:5432,vigor:3});
@@ -187,7 +162,7 @@ module.exports=async function checkAudio() {
   const gnomeFailure=createGarden({failPlayback:true}); await gnomeFailure.toggle();
   assert.doesNotThrow(()=>gnomeFailure.run("gardenSound.maybePlayGnomeSound('battle')"));
   gnomeFailure.grow('flower'); assert.equal(gnomeFailure.run('gardenState.specimens.length'),1);
-  console.log('PASS: stronger severe weather; Web Audio opt-in, volume, all species identities, rare/ordinary cooldowns, burst/fake/shared growth, bounded pitch, cleanup, failure/race isolation.');
+  console.log('PASS: stronger severe weather; Web Audio opt-in, volume, all species identities, rare/ordinary cooldowns, burst/shared growth, bounded pitch, cleanup, failure/race isolation.');
 };
 
 if (require.main === module) module.exports().catch(error => { console.error(error); process.exitCode=1; });

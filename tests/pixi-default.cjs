@@ -7,25 +7,27 @@ const html = read('index.html');
 const scripts = [...html.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const diagnosticScripts = [...read('pixi-live.html').matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const assetPath = url => url.split('?')[0];
-assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath), 'both pages use the same renderer, modules and load order');
+assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>!['garden-stillbloom-dev.js','garden-gnome-puddles-dev.js'].includes(name)), 'both pages use the same renderer and model order; simulations are diagnostic-only');
 assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
 assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
 assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather normalizer must bypass cached code that drops hourly data');
 for (const id of ['hud','seed','clear','seed-ambient','seed-mutations','seed-pending-mutations','seed-interaction','seed-puddles','pause','probes','probe-track','reset','weather-source','weather-level','automatic-traffic']) {
   assert(!html.includes(`id="${id}"`), `default page has no ${id} development control`);
 }
-assert.match(html, /href="about.html"/); assert.match(html, /href="canvas.html"/);
+assert.match(html, /href="about.html"/); assert.doesNotMatch(html, /href="canvas.html"/);
 assert.match(read('about.html'), /href="index.html"/);
-assert.match(read('canvas.html'), /src="garden\.js\?v=.+"/);
+assert.match(read('canvas.html'), /http-equiv="refresh" content="0; url=\/"/);
 assert(!scripts.includes('garden.js'));
-for (const id of ['trigger-gnomes','gnome-test-status','trigger-lightning','lightning-test-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
+for (const id of ['seed-broadleaf-blooms','seed-dense-broadleaf-blooms','trigger-stillbloom','stillbloom-test-status','trigger-gnomes','gnome-test-status','trigger-landscaping','trigger-overcrowding','landscaping-test-status','trigger-lightning','lightning-test-status','lighting-mode','lighting-hour','lighting-status']) assert(!html.includes(`id="${id}"`),'simulation is diagnostic-only');
+for(const id of ['seed-vine-bloom-stages','seed-vine-bloom-connections','seed-vine-bloom-dense'])assert(!html.includes(`id="${id}"`),'vine fixtures are diagnostic-only');
+for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includes(`id="${id}"`),'audio preview is diagnostic-only');
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false } = {}) {
-  let now = 100000, app, observer;
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99 } = {}) {
+  let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, gnomes, storm, ecology;
+  let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -48,7 +50,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       this.renderer = {...h.renderer, screen:{width:1218,height:650}, resize:(w,v,dpr) => {
         this.renderer.screen = {width:w,height:v}; this.canvas.width = w*dpr; this.canvas.height = v*dpr;
       }};
-      this.ticker = {add:fn => this.frame = fn};
+      this.ticker = {add:fn => this.frame = fn,remove:fn=>{if(this.frame===fn)this.frame=null;}};
     }
     async init(options) { this.options = options; if (failInit) throw new Error('WebGL unavailable'); }
     start() { this.active = true; } stop() { this.active = false; }
@@ -60,27 +62,51 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   const doc = {hidden:false, querySelector:element, currentScript:null,
     body:{classList:{toggle(){}}}, addEventListener:(name, fn) => docHandlers.set(name, fn)};
-  const context = {document:doc, Date:{now:() => now}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => 0}),
+  const context = {document:doc, Date:class extends Date {constructor(...args){super(...(args.length?args:[now]));}static now(){return now;}}, performance:{now:() => now}, Math:Object.assign(Object.create(Math), {random:() => random()}),
     EventSource:Source, console:{error:error => errors.push(error)},
     ResizeObserver:class {constructor(fn){observer=this;this.callback=fn;} observe(){} disconnect(){this.disconnected=true;}},
-    window:{PIXI:{...h.P,Application},AudioContext,matchMedia:()=>media,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
+    window:{document:doc,PIXI:{...h.P,Application},AudioContext,matchMedia:()=>media,devicePixelRatio:1,innerWidth:1280,innerHeight:900,
       addEventListener:(name,fn) => winHandlers.set(name,fn), removeEventListener:name => winHandlers.delete(name)}};
   vm.createContext(context);
   for (const script of pageScripts.filter(name => !name.startsWith('vendor/'))) {
-    doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && script === 'pixi-stress.js'};
+    doc.currentScript = {hasAttribute:name => name === 'data-pixi-library' && assetPath(script) === 'pixi-stress.js'};
     vm.runInContext(read(assetPath(script)), context, {filename:script});
-    if (script === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+    if (assetPath(script) === 'pixi-stress.js' && !element('#hud')) context.window.PacketGardenPixi.frameWindow = () => { throw new Error('No default-page timing collection'); };
+    if (assetPath(script) === 'garden-core.js' && captureModel) {
+      const create = context.window.PacketGardenCore.createGardenModel;
+      context.window.PacketGardenCore.createGardenModel = (...args) => { const value=create(...args); garden ??= value; return value; };
+    }
     if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
-      context.window.PacketGardenPixiLiveCore.createModel = (...args) => { model = create(...args); return model; };
+      context.window.PacketGardenPixiLiveCore.createModel = (...args) => { gardenView=args[0];model = create(...args); return model; };
     }
     if (assetPath(script) === 'garden-ecology.js' && captureModel) {
       const create = context.window.PacketGardenEcology.createEcologyModel;
       context.window.PacketGardenEcology.createEcologyModel = (...args) => { ecology = create(...args); return ecology; };
     }
+    if (assetPath(script) === 'garden-ambient.js' && captureModel) {
+      const create=context.window.PacketGardenAmbient.createAmbientModel;
+      context.window.PacketGardenAmbient.createAmbientModel=(...args)=>(ambient=create(...args));
+    }
+    if(assetPath(script)==='garden-frogs.js'){
+      const create=context.window.PacketGardenFrogs.createModel;
+      context.window.PacketGardenFrogs.createModel=options=>(frogs=create({...options,random:frogRandom}));
+    }
+    if(assetPath(script)==='garden-stillbloom.js'&&captureModel){
+      const create=context.window.PacketGardenStillbloom.createModel;
+      context.window.PacketGardenStillbloom.createModel=(...args)=>{const model=create(...args);stillbloom??=model;return model;};
+    }
     if (assetPath(script) === 'garden-gnomes.js' && captureModel) {
       const create = context.window.PacketGardenGnomes.createModel;
       context.window.PacketGardenGnomes.createModel = (...args) => { gnomes = create(...args); return gnomes; };
+    }
+    if (assetPath(script) === 'garden-lighting.js' && captureModel) {
+      const create=context.window.PacketGardenLighting.createModel;
+      context.window.PacketGardenLighting.createModel=(...args)=>(lighting=create(...args));
+    }
+    if (assetPath(script) === 'garden-lighting-view.js' && captureModel) {
+      const create=context.window.PacketGardenLightingView.createSurface;
+      context.window.PacketGardenLightingView.createSurface=(...args)=>(lightingSurface=create(...args));
     }
     if (assetPath(script) === 'pixi-live-storm.js' && captureModel) {
       const create = context.window.PacketGardenPixiStorm.createModel;
@@ -89,12 +115,12 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get garden(){return garden;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {
   const g = await start();
-  assert.deepEqual(g.errors, []); assert(g.app.active); assert.equal(g.app.options.preference, 'webgl');
+  assert.deepEqual(g.errors, []); assert(g.app.active); assert.deepEqual(Array.from(g.app.options.preference), ['webgl']);
   assert.equal(g.sources.length, 1); assert.equal(g.sources[0].url, '/api/garden/events');
   assert.equal(g.element('#view').children.length, 1);
   const source = g.sources[0], root = g.app.stage.children[0], plants = root.children[6];
@@ -124,7 +150,7 @@ async function checkDefault() {
   source.onerror(); assert.equal(g.element('#connection').textContent, 'disconnected/reconnecting');
   source.onopen();
   g.frame(5000); assert.equal(plants.children.length, 0, 'no automatic simulated specimens');
-  assert.equal(root.children[3].children.length, 5, 'same five initial grass seeds');
+  assert.equal(root.children[3].children.length, 12, 'shared twelve distributed initial grass seeds');
   assert.equal(root.children[10].visible, false, 'no green probe');
   for (const level of ['quiet','rain','botnet_hurricane']) {
     emit('weather', {level,eventsPerMinute:10000});
@@ -171,6 +197,8 @@ async function checkDefault() {
   const failed = await start(true);
   assert.match(failed.element('#connection').textContent,/Garden initialization failed: WebGL unavailable/);
   assert.equal(failed.sources.length,0); assert.equal(failed.errors.length,1);
+  assert.match(failed.element('#view').textContent,/PacketGarden requires WebGL/);
+  assert.equal(failed.element('#view').attributes.role,'alert');
   console.log('PASS: default Pixi strict DOM/load order, no dev controls/metrics/fake traffic/probe, one SSE, weather/reconnect, inspection/collections, resize/DPR, visibility/expiry, teardown and visible WebGL failure.');
 }
 module.exports = { start };

@@ -1,14 +1,16 @@
 # Isolated Pixi rendering spike
 
-Current routes (2026-10-20): `/` and `/index.html` use the shared live Pixi garden;
-`/canvas.html` retains Canvas, and `/pixi-live.html` retains diagnostic/live-soak
-controls. The stress page and implementation are unchanged. References to `/`
-as Canvas below describe the original spike and its historical measurements.
+Current routes: `/` and `/index.html` use the supported live Pixi garden;
+`/pixi-live.html` provides diagnostic/live-soak controls. The legacy Canvas
+renderer is retired, and `/canvas.html` only redirects to the homepage.
 
 Run `dotnet run`, then visit `/pixi-stress.html`. The default is dense mixed +
-hurricane at native refresh. `/` still uses the production Canvas renderer and
-never loads Pixi. This page has no SSE, network telemetry, audio, score,
-inspection, persistence, or outbound metrics.
+hurricane at native refresh. This isolated page has no SSE, network telemetry,
+audio, score, inspection, persistence or outbound metrics. WebGL is required;
+initialization failure shows a friendly message rather than a blank garden.
+
+The Canvas comparisons later in this document are historical spike measurements.
+See [the current retirement audit](CANVAS-RETIREMENT.md).
 
 ## Dependency
 

@@ -12,14 +12,16 @@
     weed: { growingAfterMs: 20000, matureAfterMs: 60000, fadingAfterMs: 300000, expiredAfterMs: 360000 },
     ghostbloom: { growingAfterMs: 15000, matureAfterMs: 45000, fadingAfterMs: 300000, expiredAfterMs: 360000 },
     crystalfungus: { growingAfterMs: 12000, matureAfterMs: 40000, fadingAfterMs: 360000, expiredAfterMs: 420000 },
-    blackthorn: { growingAfterMs: 20000, matureAfterMs: 60000, fadingAfterMs: 600000, expiredAfterMs: 720000 }
+    blackthorn: { growingAfterMs: 20000, matureAfterMs: 60000, fadingAfterMs: 600000, expiredAfterMs: 720000 },
+    stillbloom: { growingAfterMs: 30000, matureAfterMs: 90000, fadingAfterMs: 1020000, expiredAfterMs: 1200000 }
   });
-  const species = Object.keys(timings), protectedTypes = new Set(['ghostbloom', 'crystalfungus', 'blackthorn']);
+  const species = Object.keys(timings), eventSpecies = species.filter(type => type !== 'stillbloom'), protectedTypes = new Set(['ghostbloom', 'crystalfungus', 'blackthorn', 'stillbloom']);
 
   for (const timing of Object.values(timings)) Object.freeze(timing);
   Object.freeze(species);
+  Object.freeze(eventSpecies);
   function normalizeGarden(event) {
-    if (!event || !species.includes(event.specimenType) || !Number.isInteger(event.listenPort)
+    if (!event || !eventSpecies.includes(event.specimenType) || !Number.isInteger(event.listenPort)
       || event.listenPort < 1 || event.listenPort > 65535 || !Number.isInteger(event.vigor) || event.vigor < 0 || event.vigor > 3) return null;
     return { specimenType: event.specimenType, listenPort: event.listenPort, vigor: event.vigor,
       sensor: typeof event.sensor === 'string' && event.sensor.length > 0 ? event.sensor.slice(0, 128) : null,
@@ -43,6 +45,8 @@
     if (specimen.mutation) return specimen.mutation.expiresAt > at ? specimen.mutation.expiresAt : null;
     let next = Infinity;
     const timing = timings[specimen.type];
+    if(at>=specimen.createdAt+timing.expiredAfterMs)return null;
+    if (specimen.type === 'stillbloom' && (at < specimen.createdAt + timing.matureAfterMs || at >= specimen.createdAt + timing.fadingAfterMs)) next = at + 1000;
     for (const name in timing) {
       const boundary = specimen.createdAt + timing[name];
       if (boundary > at) next = Math.min(next, boundary);
@@ -51,10 +55,11 @@
   }
   function createGardenModel({ now = Date.now, random = Math.random, onChange = () => {} } = {}) {
     const specimens = [], byCell = new Map(); let nextId = 0;
-    const identities = new WeakMap();
+    const identities = new WeakMap(), visualTimes = new WeakMap();
     function identify(specimen) {
       if (!identities.has(specimen)) identities.set(specimen, ++nextId);
       specimen.id = identities.get(specimen);
+      if(specimen.type==='stillbloom')visualTimes.set(specimen, specimen.createdAt);
     }
     const notify = (kind, specimen, reason, previousStage) => onChange({ kind, specimen, reason, previousStage });
     function remove(specimen, reason = 'removed') {
@@ -68,9 +73,10 @@
       for (let i = specimens.length - 1; i >= 0; i--) {
         const specimen = specimens[i], stage = lifecycleStage(specimen, at);
         if (stage === 'expired') { remove(specimen, 'expired'); removed++; }
-        else if (stage !== specimen.stage) {
+        else if (stage !== specimen.stage || (specimen.type === 'stillbloom' && at >= (nextChangeAt(specimen, visualTimes.get(specimen)) ?? Infinity))) {
           const previous = specimen.stage; specimen.stage = stage;
-          notify('updated', specimen, 'stage', previous); updated++;
+          if(specimen.type==='stillbloom')visualTimes.set(specimen, at);
+          notify('updated', specimen, stage===previous?'visual':'stage', previous); updated++;
         }
       }
       return { removed, updated };
@@ -89,10 +95,12 @@
     function addSpecimen(type, vigor = 0, at = now(), origin = null) {
       if (!species.includes(type) || !Number.isInteger(vigor) || vigor < 0 || vigor > 3) return null;
       tick(at);
+      if (type === 'stillbloom' && specimens.filter(p => p.type === type).length >= 2) return null;
       const empty = [];
       for (let cell = 0; cell < dimensions.capacity; cell++) if (!byCell.has(cell)) empty.push(cell);
       let victimIndex = null, cell;
       if (!empty.length) {
+        if (type === 'stillbloom') return null; // Ambient quiet growth never competes or counts as dropped input.
         victimIndex = model.findReplacementCandidate(vigor);
         if (victimIndex === null) { notify('dropped', null, 'saturated'); return null; }
         cell = specimens[victimIndex].cell;
@@ -134,7 +142,7 @@
     }
     function seed(entries, at = now()) {
       // Explicit local fixture/dev import, never an SSE path. Validate atomically before clearing.
-      const cells = new Set();
+      const cells = new Set();let stillblooms=0;
       for (const entry of entries) {
         const { column, row, type, createdAt, vigor = 0 } = entry;
         const cell = row * dimensions.columns + column;
@@ -142,6 +150,7 @@
           || column < 0 || column >= dimensions.columns || row < 0 || row >= dimensions.rows
           || !Number.isFinite(createdAt) || !Number.isInteger(vigor) || vigor < 0 || vigor > 3 || cells.has(cell)) throw new Error('Invalid garden seed');
         cells.add(cell);
+        if(type==='stillbloom'&&at-createdAt<timings.stillbloom.expiredAfterMs&&++stillblooms>2)throw new Error('Stillbloom cap exceeded');
       }
       const entriesCopy = Array.from(entries);
       clear();
@@ -166,6 +175,6 @@
     const model = { specimens, byCell, addSpecimen, addEvent, tick, clear, seed, remove, getCell, getNeighbors, findReplacementCandidate };
     return model;
   }
-  const api = { dimensions, timings, species, isProtected: type => protectedTypes.has(type), normalizeGarden, stageAt, lifecycleStage, nextChangeAt, createGardenModel };
+  const api = { dimensions, timings, species, eventSpecies, isProtected: type => protectedTypes.has(type), normalizeGarden, stageAt, lifecycleStage, nextChangeAt, createGardenModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenCore = api;
 })();

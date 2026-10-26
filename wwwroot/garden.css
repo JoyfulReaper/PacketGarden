@@ -9,25 +9,6 @@
   box-sizing: border-box;
 }
 
-#garden-perf {
-  position: fixed;
-  top: 8px;
-  left: 8px;
-  z-index: 4;
-  width: 480px;
-  max-width: calc(100vw - 16px);
-  max-height: calc(100vh - 16px);
-  margin: 0;
-  padding: 8px;
-  overflow: hidden;
-  font: 10px/1.35 monospace;
-  white-space: pre-wrap;
-  background: rgba(12, 20, 16, 0.9);
-  color: #d3e7d0;
-  border: 1px solid #53604f;
-  pointer-events: none;
-}
-
 body {
   margin: 0;
   height: 100vh;
@@ -89,19 +70,6 @@ main[aria-label="Garden"] {
   position: relative;
 }
 
-.garden-stage {
-  position: relative;
-  width: 100%;
-  height: 100%;
-}
-
-#garden-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-
 footer {
   flex: none;
   display: flex;
@@ -130,22 +98,6 @@ button, select {
 button:focus-visible, select:focus-visible, input:focus-visible {
   outline: 2px solid #e1e6d7;
   outline-offset: 3px;
-}
-
-.weather-controls, .sound-controls {
-  flex: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  padding-top: 8px;
-  color: #a9b5a2;
-  font-size: 13px;
-}
-
-#weather-intensity {
-  width: 100px;
 }
 
 #sound-volume {

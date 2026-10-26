@@ -1,3 +1,1729 @@
+# Gnome arrival audio diagnosis and audibility (2026-10-24)
+
+All four production incident routes already dispatched the arrival cue correctly.
+Native Chrome rendering confirmed that the old bandpass and rapidly decaying
+envelope made the scheduled signal too quiet at 12%. The revised roughly 550ms
+two-voice motif preserves its fundamental, holds its nasal vowel and ends in a
+gentle buzz. The master volume curve, compressor and other sounds are unchanged.
+
+`/pixi-live.html` has a **Preview gnome sound** button with accessible status.
+Enable Sound explicitly first; preview never creates/resumes audio or changes
+garden state. It uses the production method and reports disabled, muted,
+suspended, hidden, busy or unavailable audio. No production preview control is
+added. Hiding/disposal cancel active arrival nodes; resume never replays them.
+Both supported garden pages request fresh versioned audio/bootstrap assets.
+
+See [diagnosis, signal measurements, test commands and limits](GNOME-AUDIO.md).
+
+# Supported renderer and Canvas retirement (2026-10-24)
+
+PixiJS/WebGL is the supported renderer at `/`, `/index.html`, `/pixi-live.html`
+and the isolated `/pixi-stress.html` page. The legacy Canvas implementation is
+removed; `/canvas.html` is only a script-free bookmark redirect to the homepage.
+Unsupported WebGL or failed initialization displays a friendly message in the
+garden area, with normal partial-startup cleanup and no fallback engine.
+
+Shared specimen, ecology, wildlife, collectible, interaction, lighting, sound and
+network models remain. The grass separation presentation, both bloom types and
+vine connections are preserved. The retirement itself left gnome audio unchanged;
+the subsequent audibility fix is described above.
+Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds, backend checks
+and the real-host SSE command in README. [The retirement audit](CANVAS-RETIREMENT.md)
+lists file/test dispositions, resource checks and validation limits.
+
+## Historical implementation and validation archive
+
+**All sections below record earlier checkpoints.** References to the old Canvas
+page, renderer, profiler, parity tests and retired files are historical evidence,
+not current setup or fallback instructions. Use the supported pages and commands
+above. Existing screenshot links and section anchors are preserved for review.
+
+# Grass and plant visual separation (2026-10-23)
+
+The homepage and `/pixi-live.html` now separate foreground plants from the dense
+leafy groundcover through Pixi presentation alone. Shared ecology, grass recipes,
+specimen placement/occupancy/lifetimes, all random streams, network/SSE, scoring,
+inspection and Canvas sources are unchanged. No dependency, setting, timer,
+render loop, filter or shader is added. The existing whole-surface day/night
+transform still composes over the scene; plant, blossom, vine/tendril, water,
+frog and gnome artwork/palettes are preserved.
+
+## Groundcover treatment and ownership
+
+Open grass keeps its exact 12 recipes and lifecycle scale/alpha. Its shared age
+RGB palette is brought 18% toward luminance and darkened 9%, preserving variation,
+yellowing and browning. Actual occupied grass selects a matching cached shaded
+recipe: the same leaf paths, order and .94 baked alpha, with a smooth oval falloff
+across individual leaves. At the center the additional darkening approaches 30%
+and desaturation 20%; it tapers toward unchanged outer leaves. This deliberately
+avoids a uniform 30% reduction across an entire square tile. It retains dense
+coverage and leaf detail instead of revealing soil or adding cell outlines.
+
+Each overlapping specimen also gets one small contact-shadow Sprite in the
+existing links layer, before vine Graphics and plants. Eight low-opacity cached
+ellipses form a shallow soft footprint (about 18×5 logical pixels before specimen
+scaling), without blur. Its frame is trimmed to 22×8 to avoid whole-cell
+transparent overdraw. The shadow follows the actual inset/jittered plant base,
+absolute scale and lifecycle size, including mirrored vines; fading grass and
+plants attenuate it. It has no input handlers. There are no shadows on bare soil.
+
+The ecology view reads the authoritative specimen map but never writes it.
+Plant add/update/remove notifications refresh only that grass record; ordinary
+grass add/refresh/age/remove events select the matching texture and create,
+reuse or destroy its shadow. Each record retains the exact specimen reference,
+so replacement cannot inherit the removed parent's shadow. Removing a plant
+restores the existing grass Sprite's open texture. Removing grass destroys its
+shadow. ON still fills nothing; OFF still removes overlapping grass through the
+unchanged model notifications. Mature grass incurs no extra frame-time scans.
+Page ownership detaches the view binding before destroying ecology views once;
+direct standalone view destruction also releases its groundcover presentation.
+
+## Deterministic visual review
+
+Run `node tests/pixi-grass-separation-browser.cjs --run --baseline`, then `--run`
+with installed Playwright/Chrome. The reviewed baseline is committed vine-bloom
+checkpoint `af7293d4ce3d6e68ac50f9127ca19d03949ca18c`. The harness serves either
+committed or edited Pixi files and supplies the same simulated fixture entries,
+foliage/bloom traits, age, grass, local time and camera on both versions. It never
+injects TCPNoise events. SHA-256 fixture hashes and existing bloom/connection
+counts match across the before/after reports.
+
+Ignored local artifacts live in `artifacts/grass-separation/`, with normal-scale
+PNGs in `before/` and `after/`, a comparison gallery and raw `review.json` reports:
+
+- `*-mixed-off-day.png`, `*-mixed-on-day.png`, `*-mixed-on-night.png`: the main
+  target, 260 mixed plants with 380 open grass cells OFF or 640 total grass ON.
+- `*-dense-broadleaf.png`, `*-dense-vines.png`: 168 plants, varied/rare foliage,
+  both bloom outcomes/colors and dense grass. Vines retain 380 connection halves.
+- `*-sparse.png`, `*-aging-grass.png`: sparse foreground and green/yellow/brown
+  grass ages, without replacing the age colors with a fixed green tint.
+- `*-full-off-day.png`, `*-full-on-day.png`, `*-full-on-night.png`: identical full
+  640-plant mixed gardens, with zero grass OFF or 640 grass ON.
+- Additional after captures show a 390px mobile view and night/hurricane/water.
+
+Both Pixi pages were reviewed at ordinary viewing size. Feathering avoids new
+square borders in the reviewed layouts; the original finite leaf pattern remains
+visible. The OFF setting still exposes soil in occupied cells, necessarily, and
+a fully occupied OFF garden still contains no grass. The presentation pass
+softens the open grass/soil contrast without changing that rule. ON remains
+denser and more coherent. Very full gardens still overlap/crowd visually; tiny
+flowers remain less distinct when the entire garden is fitted to a mobile screen.
+
+## Performance and validation
+
+The existing ecology source grows from logical **1024×64 to 1024×128** at resolution
+2 (2048×256 backing): **1 MiB** additional uncompressed RGBA memory, excluding
+driver overhead. Its **16→29 frames** are 12 open grass + 12 sheltered grass +
+four unchanged puddles + one contact shadow. The specimen atlas remains **823
+frames, 1024×832**. Startup still has five bake calls and the same retained GPU
+sources. No per-specimen/per-frame textures or recurring Graphics are created.
+Grass still uses at most 640 Sprites. Shadows add **0–640 Sprites** and no new
+container: the reviewed full mixed scene grows **1,439→2,079 display objects**;
+OFF adds none. Repeated full reset/clear, hidden expiry and direct page closure
+release all shadows, frame wrappers, construction/link contexts and atlas sources.
+
+Chrome 155's 120-frame full-field samples recorded mean CPU render submission
+**0.213→0.172ms** on the homepage and **0.197→0.204ms** on the diagnostic page,
+with mean RAF intervals about **16.6–16.7ms**. These small noisy samples do not
+establish a speedup or GPU cost; the diagnostic difference is roughly .007ms.
+A forced 640-cell occupancy refresh averaged **0.33ms / 0.67ms** on the homepage
+and diagnostic page over three passes;
+normal plant events touch one cell, and no periodic whole-field pass was added.
+The ecology startup bake measured roughly **3.7–4.3ms before / 8.1–8.8ms after**.
+The raw reports retain timings; hardware/browser variability and long live/GPU
+soaks remain unverified.
+
+`tests/pixi-grass-separation.cjs` exercises actual model/view notifications:
+default OFF, enable without fill, planting over grass, exact replacement,
+same-Sprite refresh, age colors/alpha/deadlines, plant/grass expiry, selective
+OFF removal, tint restoration, 640 overlapping plants, repeated resets, hidden
+expiry, reduced motion and standalone teardown. The grass artwork test compares
+every open/sheltered path coordinate and coverage alpha and checks finite
+per-leaf feathering, tiny shadow frames, zero recurring art work and cleanup.
+Existing Canvas parity, placement, weather, inspection, broadleaf/vine bloom and
+random-stream tests remain applicable. All **64 Node suites** pass (74 entry
+files including ten optional browser/helper entries).
+
+Chrome feature/capture, lifecycle, broadleaf/vine bloom and puddle artwork checks,
+Debug/Release .NET builds, backend assertions and real ASP.NET polling/SSE
+integration pass. The existing backend
+check project reports NU1900 when NuGet vulnerability metadata is unavailable;
+its assertions complete. Other browsers/devices, long sessions and GPU memory
+profiling are not established by these local deterministic/CPU checks.
+
+# Vine maturity blossoms (2026-10-23)
+
+The homepage and `/pixi-live.html` now give each ordinary vine a separate **15%**
+cosmetic chance to flower. `pixi-vine-blooms.js` owns its own crypto-seeded PRNG
+(a distinct clock/performance seed fallback), without calling gameplay or
+broadleaf randomness. A single uniform draw handles the `< .15` boundary and
+eight equally likely color/layout pairs on success. An immutable, non-enumerable
+`vineBloom` trait (or stable failed `null`) stays on the exact specimen. Rendering,
+stage updates and recreated views never roll again. Explicit simulated fixtures
+alone supply forced outcomes. Flower colors are soft pink, lavender, pale yellow
+and white, independent of all existing foliage variants including silvervine.
+
+## Artwork, connections and lifecycle
+
+Two or four slender, pointed five-petal flowers use short fine stalks at sampled
+points on the original main-stem, branch and curl recipe. Their contrasting eyes
+and restrained color distinguish them from the broadleaf's rounded clusters.
+The parent group inherits the original vine's offset, mirroring and rotation.
+The shared `vineShape` only names the existing seed/lean/top/side values; the
+underlying artwork commands and placement remain identical.
+
+The existing neighbor loop still performs exactly the same bounds, eligibility,
+symmetrical thinning, curve-control and stroke calculations. After an actual
+curve is drawn, a deterministic pair hash occasionally qualifies it for a blossom.
+Only the lower-cell half can own the decoration. Each flowering owner picks at
+most one qualifying real half-curve by stable hash rank and samples its cubic
+between t=.56 and .78. There is no extra chance roll or new connection geometry.
+The link Sprite belongs to that vine's existing Graphics object and its anchor
+places the flower's center on the sampled curve. Opposite halves cannot duplicate
+it, and disconnected cells cannot produce it.
+
+Existing local neighbor refreshes update decorations when vines appear, reach
+an eligible stage, change presentation or disappear. A lost or reselected edge
+destroys its old Sprite before any replacement decoration is created on another
+real tendril. At most one connection decoration belongs to each flowering vine.
+The two/four parent flowers plus that optional flower never exceed five. Isolated
+vines retain their parent flowers without needing a neighbor.
+
+Sprouts and growing vines have no open flowers. The existing **60-second** mature
+update creates the parent group; from **eight minutes**, the same group shrinks
+to .66, mutes its tint and fades to .55 alpha. Connecting flowers also shrink and
+fade. The existing **ten-minute** expiry, replacement, remove, clear and page
+ownership recursively destroy parent and link children and empty both view maps.
+Vine link Graphics explicitly release their privately owned contexts on removal
+and direct view teardown; child-cleanup options alone do not release those
+contexts in the bundled Pixi version. Chrome probes retain the exact context
+references and verify their destruction along with blossom and atlas ownership.
+Normal/reduced-motion poses are static. Hidden pages reconcile expiry on resume.
+No per-frame blossom scans, Graphics builds, timers, loops, shaders, texture
+generation or dependencies are added. Shared specimen lifecycle and Canvas
+sources are unchanged, as are broadleaf trait probabilities/artwork, grass,
+gnomes/frogs/weather, placement/capacity, rarity, network/provenance, picking,
+growth counts, drops, sounds and scores.
+
+## Diagnostic review and reproduction
+
+Only `/pixi-live.html` adds **Seed vine bloom stages (simulated)**, **Seed connected
+flowering vines (simulated)** and **Seed 640 flowering vines (simulated)**. They
+replace local fixture state and enable mature grass under plants, without water
+or network input. The 20-plant stage grid has four color columns and rows for
+non-flowering mature, sprout, growing, mature and fading plants. The connected
+33-plant fixture mixes bloom outcomes, varied foliage including silvervine, and
+an isolated flowering vine. The full fixture forces 640 blooms as a stress case;
+normal vines retain their exact 15% rule. The HUD reports body/link overlay counts.
+No development controls were added to the homepage.
+
+With already available Playwright/Chrome, run
+`node tests/pixi-vine-blooms-browser.cjs --run --baseline` and then `--run`.
+The reviewed baseline is committed broadleaf checkpoint
+`4f7b35912843e347481faf723749704b9327a1a9`. Local ignored artifacts live in
+`artifacts/vine-blooms/before/` and `after/`, with matching PNGs and `review.json`:
+
+- `*-four-colors-day.png`, `*-isolated.png`: all four colors and one isolated vine.
+- `*-connected-mixed-grass.png`, `*-connected-night.png`: real connected tendrils,
+  mixed outcomes and mature grass in day/night lighting.
+- `*-all-stages.png`, `*-fading-grass.png`: young, mature and fading presentation.
+- `*-before-maturity.png` / `*-after-maturity.png`: the same four plants crossing
+  59,999→60,000ms through the shared lifecycle.
+- `*-full-grass-day.png`, `*-full-grass-night.png`, `*-full-mobile.png`: full
+  640-vine scenes at ordinary garden scale and a 390px viewport.
+
+Both Pixi pages are covered. Screenshots freeze wall time and manually step the
+existing ticker, so diagnostic HUD FPS/gaps are not performance measurements.
+Separate 90-frame RAF samples measure CPU submission. Three deliberately forced
+whole-garden refresh passes measure event-driven neighbor work, not normal
+per-frame work or a proposed periodic refresh.
+
+## Resource bounds and validation
+
+The specimen atlas grows from **782 to 823 frames**, logical **1024×800→1024×832**
+at resolution 2: **0.5 MiB** more uncompressed RGBA backing, excluding driver
+overhead. Forty neutral group frames cover four vigors × five unchanged foliage
+geometries × two flower layouts; one neutral single-flower frame decorates links.
+Four Sprite tints provide color without multiplying those combinations. All
+construction Graphics/context resources are released after baking. Startup still
+uses the same five bake calls and retained sources; there are no new sources.
+
+At most **640 parent group Sprites + 640 connection Sprites** can exist. The
+reviewed forced field had **640 groups + 264 connections**, raising the scene
+count from **1,934 to 2,838** with 640 grass cells. Original connection halves
+stayed at **1,590**; the connected/mixed fixture retained **88** halves and had
+**28 groups + 13 connection flowers**. The ordinary 15% chance is much sparser
+than this forced stress case. Repeated seeding/clearing and rendering preserve
+atlas/bake counts and release all children/sources on teardown.
+
+Chrome 155 short full-field CPU submission means were **0.157→0.159ms** for the
+homepage and **0.153→0.230ms** for the diagnostic page, with roughly **16.68ms**
+RAF intervals. A forced pass updating all 640 vines (including their ordinary
+neighbor refreshes) averaged **36.53→36.37ms** and **40.47→34.87ms**, respectively,
+across three passes. Both versions performed exactly **130,848 neighbor checks**
+and **139,728 Graphics commands** over those passes. These noisy short samples
+show no extra recurring geometry or new neighbor work; the lower refresh times
+do not establish a speedup. Per-vine event refreshes remain local; no full-field
+refresh pass was added to the application. `review.json` records raw results.
+
+`node tests/pixi-vine-blooms.cjs` checks the exact .15 boundary, a 40,000-roll
+partition, one stable success/failure/color/layout per vine, separate gameplay
+and broadleaf random streams, silvervine, maturity/fade/expiry/replacement,
+recreated views, actual on-curve positions, canonical ownership, lost neighbors,
+new growing neighbors, 640-vine bounds and repeated cleanup. It compares every
+existing full-field connection command/style byte-for-byte with the committed
+broadleaf renderer. Existing broadleaf and Canvas checks also pass. All **63 Node
+suites** pass (72 entry files including nine optional browser/helper entries).
+
+Chrome feature/capture and lifecycle checks, Debug/Release .NET builds, backend
+assertions and actual ASP.NET polling/SSE integration pass. Backend-check builds
+retain the existing NU1900 warning when NuGet vulnerability metadata is
+unavailable; assertions complete. Short CPU submission/refresh samples are local
+regression observations, not GPU completion or long-session smoothness evidence.
+Other browsers/devices and a long live-traffic/GPU soak remain unverified; tiny
+details are less distinct when the whole garden is fitted into a mobile viewport.
+
+# Broadleaf maturity blossoms (2026-10-22)
+
+The homepage and `/pixi-live.html` now decorate 20% of ordinary broadleaves with
+small flowers at maturity. This is Pixi presentation only: `garden-core.js`,
+Canvas sources/artwork, all lifecycle thresholds and the normalized network
+contract remain unchanged. The existing foliage artwork and palette/rare-color
+selection are preserved, including compatibility with the rare broadleaf variant.
+
+## Cosmetic decision and lifecycle
+
+`pixi-broadleaf-blooms.js` owns a separate PRNG, initially seeded from browser
+crypto (clock/performance fallback when unavailable), without calling gameplay
+`Math.random`. The Pixi adapter assigns a trait only when a broadleaf is first
+added. Exactly one uniform draw selects success below **0.20**; the successful
+interval is evenly partitioned into 15 color/arrangement pairs. Thus flower color
+is uniform among pink/yellow/white/purple/blue, independent of foliage/vigor, and
+each plant has one to three flowers. Both the immutable successful trait and the
+failed `null` decision remain on the exact specimen. Ordinary traits are
+non-enumerable and do not enter serialized provenance or activity. Reusing the
+specimen or recreating its view/artwork cannot reroll it. No persistence is added.
+
+Sprouts (<20 seconds) and growing plants (<60 seconds) have no blossom Sprite.
+The existing mature-stage update creates one child Sprite; the five-minute fade
+reuses it, shrinking to .66, reducing alpha to .55, warming/muting its tint and
+slightly drooping its arrangement to follow the fading leaves. At six minutes,
+replacement, removal, clear or page teardown, recursive parent destruction removes
+the child and its map entry. Hidden pages reconcile the same lifecycle on resume,
+without catching up animations. Normal and reduced motion use identical static
+poses. No per-frame bloom code, timer, scheduler, audio or interaction is added.
+
+Petals have rounded silhouettes, soft shadow/highlight accents and small gold
+centers. Three uneven arrangements place them within the broadleaf canopy, not
+on a separate tall flower stem. Existing rooted Sprite scaling, edge insets,
+grass/plant layer order and shared picking remain intact. Blooms have no input
+handlers and do not alter counts, occupancy, vigor, competition, lifespan, rarity,
+network provenance, Recent activity, score, drops, collection or sounds.
+
+## Diagnostic fixtures and captures
+
+Only `/pixi-live.html` adds **Seed broadleaf bloom stages (simulated)** and
+**Seed 640 blooming broadleaves (simulated)**. These replace local fixture state,
+enable the existing grass-under-plants option and seed dense grass without water.
+The 25-plant grid has five color columns and five rows: non-blooming mature,
+sprout, growing, mature bloom and fading bloom. Foliage varies by row, including
+the existing rare variant; flower arrangement varies independently. The full
+fixture forces all 640 ordinary broadleaves to bloom for a worst-case resource
+check. These explicit forced outcomes are diagnostic fixtures, not a second
+network path or a change to the ordinary 20% chance. Clear retains its normal
+behavior. The HUD includes blossom-overlay count; the homepage has no new controls.
+
+`node tests/pixi-broadleaf-blooms-browser.cjs --run --baseline` serves committed
+HEAD (reviewed baseline **0d98e46863de09f6e028f5545861440820f2d121**); `--run`
+serves edited sources. Already available Playwright and Chrome are used without
+installing dependencies. Local artifacts live in `artifacts/broadleaf-blooms/`
+(ignored), with matching `before/` and `after/` PNGs plus `review.json`:
+
+- `*-five-colors-grass-day.png`: all five flower colors and all three arrangements
+  over dense grass at ordinary garden scale, across foliage/vigor variants.
+- `*-all-stages-grass-day.png`: failed, young, mature and fading decorations.
+- `*-before-maturity.png` / `*-after-maturity.png`: the same 15 plants at 59,999ms
+  and 60,000ms, through the real shared lifecycle boundary.
+- `*-sparse-night.png`, `*-full-grass-day.png`, `*-full-grass-night.png` and
+  `*-full-mobile.png`: sparse/full gardens, night lighting and a 390px viewport.
+
+Both homepage and diagnostic page are covered. Screenshot fixtures freeze wall
+time and step the existing ticker manually; any HUD FPS/gap values are therefore
+not performance measurements. Separate 90-frame RAF samples measure CPU render
+submission, without claiming GPU/compositor completion or long-session smoothness.
+
+## Resources, checks and limits
+
+The existing specimen atlas grows from **767 to 782 frames**, with **15** added
+32px logical tiles (five colors × three arrangements). Its logical sheet grows
+from **1024×768 to 1024×800** at resolution 2: roughly **0.5 MiB** additional
+uncompressed RGBA backing, excluding driver overhead. No source, shader or bake
+pass is added; five existing startup bakes remain five. The 15 temporary Graphics
+and their owned contexts are released after the normal atlas bake. No foliage ×
+flower texture combinations or per-specimen textures are generated.
+
+Each successful mature/fading broadleaf adds one child Sprite: around 128 expected
+in an all-broadleaf garden, at most **640** in the forced fixture. Failed/young
+plants have none. Repeated seed/clear cycles, visual updates, weather and normal
+render frames do not create new geometry/textures; all source/child ownership
+releases on final teardown. The same-source overlays can use the existing Pixi
+batching. The short Chrome 155 full-640/grass samples recorded mean CPU submission
+of **0.192→0.249ms** on the homepage and **0.197→0.299ms** on the diagnostic page;
+mean RAF intervals stayed around **16.68ms**. These noisy local samples are
+regression observations, not a guarantee for other GPUs, devices or browsers.
+
+`node tests/pixi-broadleaf-blooms.cjs` covers the exact .20 boundary, one draw per
+specimen, a complete 10,000-roll partition, stable failed/successful decisions,
+foliage-independent color and untouched gameplay random sequences, lifecycle
+boundaries, expiry/replacement, 640-parent stress, rare foliage compatibility,
+atlas/Sprite ownership, simulated-only fixtures, hidden reconciliation, reduced
+motion and unchanged network/provenance/counts/score. Existing artwork checks
+retain leaf/vine/mutation contracts and include the new finite tile bounds and
+counts. Existing ecology/interaction/Canvas/lifecycle checks remain applicable.
+
+Chrome feature/capture and existing lifecycle regressions, Debug/Release .NET
+builds, backend assertions and real-host polling/SSE integration pass. Backend
+checks retain the existing NU1900 warning when NuGet vulnerability metadata is
+unavailable; assertions complete. Other browsers/devices, subjective appearance
+on very small screens and a long live-traffic/GPU soak remain unverified. Canvas
+has intentionally not received blossom artwork in this slice.
+
+# Grass under plants (2026-10-22)
+
+The homepage, Canvas fallback and `/pixi-live.html` have **Allow grass under
+plants** beside the existing controls. Its native labeled checkbox supports
+keyboard input and the existing wrapping mobile layout. It starts OFF on every
+reload; no storage is used. Script versions advance together on all three pages.
+
+`garden-ecology.js` owns the boolean and all eligibility decisions. Initial seed,
+natural/fading spread, maintenance reseeding, direct influence/refresh, validated
+fixture import and the Canvas fixture setter share the same occupancy predicate.
+Both plant adapters call `specimenAdded`; the ecology model decides whether to
+remove destination grass. The legacy Canvas fixture setter now validates bounds,
+timestamps and uniqueness, filters occupied cells when OFF and emits ordinary
+ecology notifications. Invalid imports leave existing state intact.
+
+Enabling changes eligibility immediately without adding grass, consuming random
+rolls or resetting deadlines. Normal spread/reseeding establishes coverage.
+Disabling makes one bounded pass over the current lawn, removes only overlaps
+from authoritative state and sends ordinary `grass-removed` notifications. Open
+soil retains its exact grass objects/timestamps. Re-enabling permits normal
+regrowth. Plant placement, occupancy, competition, rarity and lifetimes never
+depend on this option. At most 640 distinct grass cells can coexist with 640
+specimens; normal growth/fading/expiry and hidden-page cadence remain unchanged.
+
+The two grass renderers were inspected and keep their existing presentation:
+Canvas draws grass before water/specimens in its cached base, and Pixi's grass
+container precedes water, links and plants. Picking retains the shared specimen
+priority. No renderer-specific overlap rule or per-Sprite input was added.
+Canvas repaints through its existing invalidation path; hidden pages defer paint.
+Pixi reuses existing add/remove notifications and its page-owned input listener,
+which is removed and guarded on teardown. Canvas removes its listener on final
+page closure and retains it with a retained page session.
+
+Validation and local artifacts (`artifacts/grass-under-plants/`, ignored):
+
+- `node tests/grass-under-plants.cjs`: deterministic OFF/ON ingress, occupied
+  spread/refresh, spawn/replacement, selective removal, natural regrowth,
+  natural establishment to 640 unique grass cells under 640 plants, atomic
+  duplicate rejection, aging/expiry, hidden/resume, Canvas/Pixi layering and
+  specimen inspection, input cleanup, late Pixi callbacks and atlas reuse.
+- All **61 Node suites** pass (68 entry files including seven optional browser
+  entry points/helpers), covering existing ecology, placement, maintenance/recovery,
+  parity, render scheduling, interaction and lifecycle. Dense performance
+  fixtures explicitly enable coexistence instead of bypassing fixture validation.
+- `node tests/grass-under-plants-browser.cjs --run --baseline` serves committed
+  HEAD (`f87d5440de1aa730053b2ef0bf6ab238260d2b09` for this review); `--run` serves
+  the edited sources. Chrome 155 captures the same 96-plant mixed and 640-plant
+  dense fixtures on all three pages, OFF/ON, plus 390px mobile controls. See
+  `before/` and `after/` PNGs and `review.json`. Coverage imports are explicit
+  screenshot fixtures; the deterministic suite independently proves natural
+  establishment. No real network specimen events are invented by the harness.
+  Wall time is frozen and render frames are stepped manually; diagnostic HUD
+  FPS/gap values in these captures are not performance measurements.
+- Chrome checks verify 544/0 grass cells in mixed/dense OFF fixtures versus
+  640 unique cells in both ON fixtures, unchanged specimens, no instant fill,
+  repeated selective removal, hidden maintenance, keyboard toggles and OFF after
+  reload. The existing `pixi-default-browser.cjs --run --lifecycle-only` suite
+  also passes late callbacks, hide/show, bfcache and initialization cleanup.
+- Debug/Release .NET builds, backend checks and real ASP.NET polling/SSE checks
+  pass. The backend-check build reports the existing NU1900 warning when NuGet
+  vulnerability metadata is unreachable; assertions complete successfully.
+
+Resource impact: one model boolean and one input listener per page. ON takes
+constant work; OFF scans at most 640 grass cells and issues at most 640 removals.
+No dependencies, storage, timers or render loops were added. Chrome repeated-toggle
+probes leave the five existing Pixi atlas bakes and geometry counts unchanged;
+Canvas retains 48 cached grass paths and its two existing timers. Coexistence can
+add up to 640 grass Sprites on Pixi (using the existing ecology atlas), or up to
+640 grass draws on an already-invalidated Canvas base, even when every plant cell
+is occupied. Mature grass retains its existing visual deadlines. Structural
+performance checks still show zero recurring base work for stable mature scenes.
+These checks establish bounded resources and visual order, not GPU/compositor
+smoothness or performance on other browsers/devices. No long live-traffic soak
+was performed for this change.
+
+# Frog clicks and gnome arrival (2026-10-22)
+
+Both garden pages now acknowledge the first click on each exact visible frog
+with **The frog ignores you +0 points** in the existing two-second message UI.
+The visitor stays put in the model and continues its planned visit. A model-owned
+WeakSet records acknowledgment without changing the frog's path/state or retaining
+departed visitors. Subsequent clicks are consumed without a message, deadline
+renewal, sound, collection, inspection, drop or score/activity change.
+
+Central shared picking prioritizes gnome → curiosity → loose drop → visible frog
+→ mutation → specimen/grass inspection. Frog picking uses `visualState` at the
+current logical coordinates, including hops, reduced-motion positions and fading
+departure. Exact membership, lifetime, positive opacity, hidden state and the
+existing 1.5-second suspension boundary reject stale clicks. Both adapters retain
+their existing scaled/letterboxed coordinate conversion and central listeners.
+There are no Sprite input handlers or new rendering resources.
+
+Successful starts of the original dispute and all three landscaping modes emit
+one `arrival` through the shared `onCue` callback. The local Web Audio controller
+synthesizes a **560ms** descending nasal two-part motif suggesting “gnooo-mz!”:
+a bandpassed triangle followed by a softer lowpassed sawtooth buzz. It uses no
+speech API, samples, downloads, random draws, timers or dependencies. Failed
+starts, repeated updates/ticks, phase changes and visibility resume never emit
+another arrival. The original battle/victory cues are unchanged.
+
+Sound remains Off initially at 12% volume. Only the existing explicit enable
+gesture can construct/resume a context. Off, zero volume, unavailable devices
+and suspended contexts do not start the cue. One active arrival guard prevents
+overlap; each sequence owns two oscillators, two filters and two envelope gains,
+disconnecting all six on completion, mute, Off or partial construction failure.
+The existing shared master, compressor and output gain remain unchanged.
+
+The diagnostic frog button now explains first/repeat clicks. Existing gnome
+triggers demonstrate the arrival when Sound is enabled. No production debug
+controls or additional preview listeners were added. Script versions on all
+three pages were advanced together to prevent mixed cached integrations.
+
+Validation and local artifacts (`artifacts/frog-gnome-ack/`, intentionally ignored):
+
+- All **66 Node check files** pass. New `frog-clicks.cjs` covers exact-instance
+  ownership, unchanged model/paths, shared priority, moving/reduced/departing hits,
+  expiry/hidden/suspension and both real page input adapters. New
+  `gnome-arrival-audio.cjs` covers all four starts, failed eligibility/probability,
+  shared cooldown, phase preservation, unavailable/suspended devices, mute/Off,
+  partial allocation failure and **100 sequences with zero connected transient nodes**.
+- Focused Chrome: `node tests/pixi-default-browser.cjs --run --whimsy-only`.
+  Both pages exercise first/repeat clicks during hops and reduced motion, unchanged
+  message deadlines and Score: 0, all four incident starts, updates/resume/mute,
+  and six real audio sequences each. Each page uses one context and no cue-driven
+  resume; connected tracked nodes peak at **8** (two existing output gains plus
+  six transient nodes) and return to **2** after every sequence. The existing
+  compressor is unaltered and not included in that tracked-node count.
+- Native Chrome PCM at 48kHz has peak **0.00358** at the default 12% and **0.05070**
+  at full volume; RMS approximately **0.000504 / 0.00713**, with **zero clipped
+  samples**. `gnomes-arrival-default-output.wav` and `gnomes-arrival-output.wav`
+  are test captures, not runtime assets. `frog-gnome-resources.json` records results.
+- `frog-click-canvas.png` and `frog-click-pixi.png` show the exact message and
+  retained visitor beside water. Existing full Chrome regressions also cover
+  gnomes/underpants, harvesting, both landscaping modes, frogs, puddles, grass,
+  Stillbloom, weather, audio/collection controls and lifecycle teardown.
+- No new artwork, atlas frames, Sprites, texture sources, per-frame work or loops.
+  Picking considers at most two frogs only on input. In this full Chrome run,
+  quiet gnome CPU submission averaged **0.143ms** active versus **0.169ms** idle;
+  hurricane active/idle averaged **0.168 / 0.190ms** at about 16.68ms/frame.
+  These short, noisy samples are regression observations, not a speedup claim.
+- Debug/Release .NET builds, backend validation and real host polling/SSE checks
+  pass. The backend-check build retains NU1900 because NuGet vulnerability
+  metadata was unavailable, including on retry; builds and assertions completed.
+
+Listening limitation: native output, pitch/envelope schedules, volume scaling
+and cleanup were verified, but this environment cannot audition audio. The
+nasal two-part design is intended as a musical “Gnomes!” illusion; reasonable
+word recognition still needs a human listening check. It is deliberately quiet,
+especially at the default volume. Other browsers/devices and long audio soaks
+remain unverified. Older reports below describing pass-through frog clicks or
+silent landscaping predate this slice.
+
+# Lush grass and reliable recovery (2026-10-21)
+
+The shared grass population previously recovered only at exactly zero patches,
+with eight free cells and a 25% minute roll. One isolated survivor disabled that
+path. Ordinary spreading also established only about 40% of open soil in ten
+minutes. The artwork left most of each mature tile brown.
+
+## Shared population policy
+
+The existing 250ms logical tick retains a **60-second** maintenance deadline.
+On a due check, one census considers at most 640 cells, available specimen-free
+soil, and healthy grass (idle less than 20 minutes, including young turf).
+Maintenance applies when healthy count is below `min(12, ceil(available * .10))`,
+or when healthy coverage is below 75% and no healthy patch can reach empty soil.
+It plants at most **three** random distinct patches, sampled without replacement,
+through `influenceGrassCell`; each selected cell's authoritative occupancy is
+checked again at creation. No chance gate remains. Complete extinction with
+even one free cell therefore recovers at the next eligible check. A full
+specimen garden cannot create grass with **Allow grass under plants** OFF. Healthy spreading populations do not keep
+receiving maintenance, and dry survivors no longer suppress it.
+
+Normal spread still runs every **four seconds**. Reachable mature populations
+of 1 / 2–6 / 7–20 / 21–48 / 49+ receive **1 / 2 / 3 / 4 / 6** attempts, each
+with a strict **70%** chance. The existing one-time **40%** fading seed chance
+is retained until a genuinely empty neighbour exists; otherwise a full lawn
+would waste every opportunity before the first generation expires. Failed
+eligible rolls are still consumed once, at most six fading opportunities per
+spread tick. Children start at the current time; parents are never refreshed.
+
+Growth still matures at 30 seconds, fades at 20 minutes, becomes dying at 27,
+dry at 32 and expires at 35. Maintenance never removes/replaces a living grass
+patch. Hiding/resuming resets both deadlines; whole missed maintenance windows
+are discarded. There are no catch-up loops, new timers, network events,
+provenance, Recent activity rows or accepted-growth counts. Existing destination
+grass removal, inspection invalidation and specimen priority remain authoritative.
+
+## Reproducible coverage
+
+`tests/grass-coverage.cjs` runs eight LCG seeds (11, 82, 193, 421, 901, 1234,
+7301, 9983) at 250ms steps for 40 minutes with **no traffic**, comparing immutable
+checkpoint `f4d4e26` with the working implementation. Coverage is distinct
+unexpired grass cells / currently unoccupied specimen cells, not pixel coverage.
+
+| Quiet garden from 12 seeds | Before | After |
+| --- | --- | --- |
+| 2 minutes | 4.5–4.8% | 10.0–10.8% |
+| 5 minutes | 15.9–18.8% | 36.6–40.5% |
+| 10 minutes | 38.3–41.3% | 78.4–89.2% |
+| 15 minutes | 62.3–64.8% | 99.7–100% |
+| 20 minutes | 84.1–90.2% | 100% |
+| 40 minutes | 81.3–85.6% | 98.4–99.8% |
+
+From complete extinction, ten-minute coverage improves **6.3–21.9% ->
+50.9–73.4%**, fifteen-minute **17.7–41.1% -> 84.8–100%**, and forty-minute
+**93.4–99.8% -> 99.1–100%**. With 160 distributed specimen blockers, ten-minute
+coverage improves **50.4–53.8% -> 92.5–99.2%** of the remaining 480 cells.
+The largest additions in one sampled tick were eight (including fading seeds
+and maintenance); the hard independent budgets are six ordinary attempts, six
+fading checks and three minute-maintenance targets. No grid is filled instantly.
+
+**Coverage includes aging turf.** At forty minutes the quiet runs contain
+233–254 healthy patches (36–40% of open soil), with the remainder mostly aging
+first-generation turf. Extinction/recovery runs have 120–148 healthy patches.
+These are visible age waves, not a promise of permanently green mature turf:
+the original lifetimes and parent-aging rules are preserved. Both healthy counts
+and total coverage are retained in the raw JSON rather than presenting total
+population as all-green coverage.
+
+## Artwork and visual review
+
+Twelve deterministic shared recipes now place a substantial jittered leafy mat
+under four irregular taller rosettes. Overlapping small leaves, medium/dark/light
+greens and irregular edges extend toward neighbouring cells without rectangular
+fills, outlines or neon color. The mature interior of the twelve baked frames
+has **91.2–96.0%** coverage at alpha > .5, near the requested 85–95% target.
+The shared model's color, growth, decline and opacity curves are unchanged;
+presentation applies the lifecycle ratio over a .94 base fill instead of .6.
+Young turf remains small; old turf thins, yellows and browns.
+
+Canvas builds **48 finite Path2D shade paths once** and reuses them on cached-base
+repaints. Non-Path2D test contexts retain the equivalent command path. Pixi bakes
+the same recipes into the existing 12 grass frames in its unchanged ecology
+atlas. No recurring path construction, Graphics, runtime textures, shaders,
+new texture sources, animation loops or production controls were added.
+
+The matched Chrome review set includes native-size single tiles and 5×5 crops,
+sparse starts, natural five/ten-minute snapshots, extinction recovery at 15 and
+40 minutes, flowers/mushrooms, and puddles/two frogs/four gnomes in day/night.
+I visually reviewed the actual captures: the old tufts leave broad brown gaps;
+the new mat joins into a textured lawn, with irregular edges and readable
+specimens. Young edges and old yellow/brown patches remain distinguishable.
+Frogs remain small but visible beside the water. Artificial rectangular plantings
+still have a rectangular overall boundary; individual tiles have no outlines.
+
+Local ignored evidence: `artifacts/grass-lush/{before,after}/` contains matching
+`pixi-*.png`, `canvas-*.png`, native `*-normal.png` crops, `comparison.png`,
+`coverage.json` and `rendering.json`. These are real captures, not regenerated
+mockups. The 40-minute capture deliberately shows the retained aging wave.
+
+## Resource and validation results
+
+| Matched 608 grass + 32 specimens/wildlife fixture | Before | After |
+| --- | --- | --- |
+| Pixi mean / worst CPU render submission, 120 calls | .037 / .40ms | .030 / .20ms |
+| Canvas mean / worst forced base repaint, 12 calls | 7.56 / 10.8ms | 3.96 / 4.90ms |
+| Ecology atlas backing / RGBA accounting | 2048×128 / 1 MiB | unchanged |
+| Ecology frames / live atlas sources across garden | 16 / 4 | unchanged |
+| Ecology bake CPU submission | 3.40ms | 6.40ms |
+| Cached native Canvas paths | 0 | 48 |
+| Additional recurring textures / Pixi geometry / Canvas path commands | 0 | 0 |
+
+The five existing startup texture-generation calls include an intermediate
+source; four sources remain live. One Sprite per grass cell is retained, up to
+640 without specimen occupancy. Twenty matched Canvas/Pixi recovery cycles and
+twenty Pixi clear/refill cycles leave no grass views, all removed Sprites
+destroyed, and no new atlas bakes.
+Ecology construction contexts release after baking; page teardown destroys the
+stage and all owned sources. Native Path2D memory/driver-retained GPU memory are
+not measured. Short CPU submissions are noisy and are not GPU/compositor or
+sustained FPS guarantees; the Canvas repaint is state/deadline-driven, not per frame.
+
+All **64 Node entry points** pass. Focused tests cover extinction/one-cell/full-to-
+free recovery, stranded/aging/healthy populations, target revalidation, exact
+deadlines, probability boundaries, blocked fading opportunities, parent aging,
+expiry/gnome relief, hidden/resume/stalls, 640-cell limits, real Canvas/Pixi
+parity, repeated ownership cleanup and unchanged input influence. Cached visual
+deadline/ring-buffer tests isolate population additions while retaining actual
+grass aging/expiry; the ecology suites exercise the real population rules.
+
+The **full installed-Chrome suite** passes, including existing gnomes/all
+landscaping modes, underpants, weed buds, Amanita, Stillbloom, frogs, organic
+water, lighting, weather, clicks, audio, SSE and page-close ownership. Resize
+soil checks temporarily hide the seeded lawn layer to test the soil beneath;
+the lawn runner independently checks dense coverage and shared scene counts.
+Debug/Release .NET builds, backend checks and actual ASP.NET polling-to-SSE
+integration pass with no backend changes. The checks build retains NU1900
+warnings because NuGet vulnerability metadata was unavailable.
+
+```powershell
+node tests/grass-coverage.cjs --baseline
+node tests/grass-coverage.cjs
+node tests/grass-maintenance.cjs
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+node tests/grass-lush-browser.cjs --run --baseline
+node tests/grass-lush-browser.cjs --run
+node tests/pixi-default-browser.cjs --run
+```
+
+Remaining limits: other browsers/devices/GPUs and a long real-NATS soak remain
+unverified. Blocked/disconnected soil and ongoing specimen claims can slow
+establishment. Natural aging can temporarily reduce healthy green coverage even
+when unexpired population is high. Older dated grass records below retain their
+historical constants and measurements; this section describes current behavior.
+
+---
+
+# Pixi page lifecycle fix (2026-10-21)
+
+The page-close exception was an ownership race: `pagehide` destroyed Pixi's
+ticker while the registered `visibilitychange` closure could still call
+`app.stop()` or `app.start()`. Repeated pagehide could destroy the same resources
+again. Listeners were installed only after asynchronous initialization, allowing
+a closed page's late startup to mount and start an application. The isolated
+stress page had the same visibility/ticker problem.
+
+Both entry points now use a small shared page lifetime owner in the existing
+Pixi helper library. Disposal first invalidates guarded callbacks, unregisters
+owned listeners, stops the ticker, then releases acquired resources in reverse
+order. The exact application ticker callback is removed; observers, controls,
+views, atlas frames/sources and the application release once. A resource acquired
+after disposal releases immediately, so late initialization never mounts a
+canvas, connects SSE or starts presentation. Failed WebGL initialization releases
+the preallocated stage without calling uninitialized Pixi plugin destructors;
+later startup failures release everything acquired so far.
+
+The SSE connection unregisters its named handlers, nulls status handlers and
+closes once; already queued delivery becomes inert. Diagnostic and lighting
+bindings likewise unregister their callbacks and reject stale delivery. There
+are no new garden rules, artwork, schedulers, dependencies or server changes.
+SSE/NATS payloads, input acceptance, ecology and normal rendering are unchanged.
+Cleanup continues after a release error, then reports an `AggregateError`;
+ordinary callback errors still propagate. No global error suppression was added.
+
+Ordinary hidden/visible transitions preserve the existing cadence reset and
+single current-state reconciliation, without missed ticks or incident replay.
+For live pages, persisted pagehide now releases the complete page just like
+final pagehide. Only one restore listener remains; persisted pageshow removes it
+and requests one fresh reload, preserving the established live-page policy.
+The synthetic stress page preserves its existing policy instead: persisted
+pagehide retains a stopped scene, late visibility cannot restart it while cached,
+and persisted pageshow resumes without a time jump. Final disposal removes both
+transition listeners, preventing stale restoration from restarting a dead app.
+
+Validation: all **61 Node entry points**, the full installed-Chrome suite,
+Debug/Release .NET builds, backend checks and real ASP.NET polling-to-SSE checks
+passed. `tests/pixi-lifecycle.cjs` checks invalidation/reverse release, repeated
+cleanup, late acquisition and surfaced release/callback failures. Chrome checks
+both live routes and the stress page: pagehide -> hidden -> visible, repeated
+teardown, captured queued input/media/SSE/resize/ticker callbacks, three normal
+ten-minute hide/show gaps with one reconciliation each, initialization resolving
+after close, WebGL/startup rejection, persisted transitions and actual back
+navigation. Three stress reload/disposal cycles retain no owned listeners and
+destroy the stage, renderer and ticker once. Each live view/cache destroy ran
+once, both observed ResizeObservers disconnected once, and SSE closed once.
+All browser page-error checks remain attached through navigation and closure;
+the older scene-only exemptions have been removed. The historical HTTP-cache
+fixture deliberately runs old unversioned code and now forces/asserts its exact
+null-ticker `stop` failure as a negative control. Every current page requires
+zero page errors.
+
+The immutable pre-fix checkpoint `f7e3471` **fails** the same Chrome regression
+with null-ticker `stop`/`start` errors. Local ignored evidence is in
+`artifacts/pixi-lifecycle/baseline.log`, `after/lifecycle.json` and `chrome.log`.
+
+```powershell
+node tests/pixi-lifecycle.cjs
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/pixi-lifecycle/after'
+node tests/pixi-default-browser.cjs --run --lifecycle-only
+# Expected failure against the immutable original code:
+node tests/pixi-default-browser.cjs --run --lifecycle-baseline
+```
+
+Limits: persisted transitions are exercised deterministically with browser
+PageTransitionEvents; actual back navigation also runs, but bfcache admission
+depends on Chrome policy. This Chrome run used fresh back navigation rather than
+an actual persisted cache entry; the persisted branch is therefore validated
+with synthetic transitions. Other browsers, mobile lifecycle
+policies, driver-retained memory and abrupt process termination remain untested.
+The checks-project build reported NU1900 because NuGet vulnerability metadata
+was unavailable; compilation and backend assertions succeeded.
+
+---
+
+# Gnome puddle mishaps (2026-10-21)
+
+Moving gnomes now occasionally object to wet boots in **both renderers**.
+`garden-gnome-puddles.js` supplies one bounded renderer-neutral entry/reaction
+controller per existing gnome model. Only the existing **250ms logical tick**
+checks crossings; RAF presentation never rolls. At most **four actors × eight
+puddles** are examined. Segments are limited to the garden diagonal (1140px);
+backward time or gaps over **1500ms** establish a fresh baseline without replay.
+
+Water must be a current exact object in the authoritative ecology collection,
+with `puddleVisualState` size **>=8** and original model opacity **>=0.12**.
+Non-finite/future/empty, removed, fully drained and faint water is rejected.
+For each of the four artwork variants, the actual opaque-body quadratic contour
+is sampled once (maximum 90 points), then contracted to **55%** around its center.
+These conservative interiors follow seed rotation and current visual size;
+they deliberately exclude some visible shallow water and all soft shorelines.
+Tests check their margins against the illustrated body, including concavities.
+Neither puddle artwork nor `puddleVisualState` was changed.
+
+The gnome's unanimated foot path uses its logical position plus the existing
+11px foot offset. Segment/polygon intersection catches crossings even when both
+sample endpoints are on dry soil. Water intervals merge across overlapping
+pools, so traversing their overlap never earns extra rolls. Each fresh continuous
+entry gets exactly one strict **`roll < 0.20`** chance; failures wait for an exit
+and another entry. Consecutive wet foot samples also suppress false re-entry
+from a shrinking shoreline. At most one success per gnome per incident, even if its
+reaction ends or its puddle disappears. Newly observed/replaced water establishes
+occupancy without inheriting a past crossing. Exact identity and water state are
+revalidated after the roll; removal notifications clear owned reactions at once.
+The private seeded random stream uses crypto/clock initialization and no
+`Math.random` calls, leaving ecology, incident/winner scheduling, frog planning
+and network rarity streams untouched.
+
+A **1000ms** reaction reuses existing startled gnome frames and their small `!`,
+with a restrained tilt/bob and tiny fading splash/ripple. Reduced motion retains
+the pose/ripple without tilting or bobbing. The shared reaction is separate from
+the existing 600ms clicked-gnome surprise and underpants-attempt flag. Both
+presentations keep their existing last-rendered-transform hit testing and
+gnome-first click priority. Logical positions, snips, fights, harvests, departure,
+target selection, cooldowns and drops are unchanged. No new sound, collection,
+score, activity, network event or ecological effect is introduced.
+
+Canvas draws the shared eight-line splash recipe on its existing overlay.
+Pixi adds **one** cached 40×32 logical ripple tile to the existing gnome atlas:
+**21 -> 22 frames**, **1680×64 -> 1760×64** backing at resolution two,
+**420 -> 440 KiB RGBA (+20 KiB)** before driver overhead. It reuses the existing
+startled frames, source and gnome group. At most **four extra noninteractive
+ripple Sprites** accompany the existing four actors; no idle group or effect
+Sprite is retained. Hidden state immediately destroys ripple Sprites even when
+the original dispute itself remains suspended. Clear, actor departure, water
+removal and teardown release their owned resources. All temporary atlas Graphics
+contexts are explicitly destroyed after baking. There is no runtime texture or
+Graphics generation, shader, new source, timer or render loop. Total current
+cardinality is **818 frames across four atlas sources** (767 main, 16 ecology,
+13 ambient, 22 gnome).
+
+Only `/pixi-live.html` loads `garden-gnome-puddles-dev.js` and shows **Trigger
+gnome puddle mishap**. It refuses an active incident, adds explicitly simulated
+broadleafs only if needed for the existing 30-living threshold, and replaces
+local water with one known simulated pool across a deterministic approach path.
+The normal incident and geometric entry run unchanged; only that explicitly
+armed actor's first valid entry is guaranteed for the demonstration. Production
+chance remains 20%, and accepted traffic/Recent activity are untouched. New
+assets/integrations carry cache versions; no production homepage controls were
+added. The fixture may replace retained water (and visitors then follow their
+normal exact-puddle departure rules), so it is explicitly a local simulation.
+
+Validation: **all 60 Node entry points passed**. `tests/gnome-puddles.cjs`
+checks each organic interior and rotated segment path, wetness/size and 20%
+boundaries, complete crossings, overlapping/disjoint entries, failure debounce,
+one-success limit, removal/replacement and post-roll identity safety, independent
+RNG, clock/hidden handling, click/underpants behavior and 30 resource cycles.
+Fight, vine, overcrowding and weed-harvest traces with and without water have
+identical positions, states, action timing and removals. Existing ecology,
+frog, grass, Stillbloom, mutation, drop, audio and event suites passed.
+
+The **complete installed-Chrome suite passed**, including actual diagnostic
+clicks, both renderers, day/night/hurricane/reduced-motion captures, underpants
+clicks during a mishap, immediate hidden-state cleanup, and 25 repeated
+demonstrations. Every cycle ended with zero gnomes/ripples, destroyed owned
+Sprites, one atlas bake and one gnome source. Debug/Release application builds,
+backend checks and actual ASP.NET polling -> SSE integration passed without
+backend changes. The checks-project build reported **NU1900** because NuGet
+vulnerability metadata was unavailable; builds/checks succeeded.
+
+Artifacts: **eight screenshots** at
+`artifacts/gnome-puddles/browser/gnome-puddle-{canvas,pixi}-{day,night,storm,reduced}.png`,
+paired in `gnome-puddles.html`; `gnome-puddle-resources.json` contains the full
+resource and CPU results. Frozen screenshot clocks are separate from native-clock
+CPU probes. Both rendering paths are warmed before 240 forced submissions:
+
+| Local Chrome probe | Existing four gnomes | Four simultaneous reactions |
+| --- | ---: | ---: |
+| Pixi mean submission (view update + render) | 0.025ms | 0.014ms |
+| Canvas mean overlay submission | 0.020ms | 0.033ms |
+| Additional gnome texture sources | 0 | 0 |
+| Extra temporary Sprites | 0 | <=4 |
+
+The worst-case bounded logical probe (four moving gnomes, eight overlapping
+pools, 240 checks, failed rolls allowing fresh entries) averaged **0.093ms** per
+logical tick, **1.10ms** worst, and returned from four tracked actors to zero on
+clear. Short CPU samples contain timing/JIT/driver noise; the lower Pixi number
+does not imply a speedup. These measure submission, not GPU completion, process
+memory, sustained frame pacing or a real-traffic soak. Other browsers/GPUs remain
+unverified. The page-close visibility/ticker race recorded during this slice
+is now fixed by the page lifecycle work above; errors are checked through closure.
+
+Focused reproduction with the already installed Playwright/Chrome runtime:
+
+```powershell
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/gnome-puddles/browser'
+node tests/pixi-default-browser.cjs --run --gnome-puddles-only
+node tests/gnome-puddles.cjs
+```
+
+The dated sections below preserve historical counts and feature boundaries.
+
+# Illustrated storm puddles (2026-10-21)
+
+Storm water now has **four shared finite shape/palette recipes** in
+`garden-puddle-art.js`. Asymmetrical quadratic contours form soft irregular
+shores, with subdued teal, blue-green and slate interiors, shallow silt/pebble
+marks, broken reflected-sky slivers and occasional static glints. Filled,
+translucent shore bands replace the overlapping stroked ellipses. Overlapping
+patches retain individual color fields without stacked black outlines. Small
+fresh pools, larger mature water, grass, frogs, night and heavy rain remain
+readable; nearly drained water becomes small and faint naturally.
+
+The existing seed selects one of four recipes, and the existing seed rotation
+is retained. Selection uses no randomness. Refresh and drainage retain the same
+recipe, exact puddle object and Sprite. **`garden-ecology.js` and
+`puddleVisualState` are unchanged**: probability/cadence, cap eight, position and
+clustering, logical size, growth, drainage, weather and grass/specimen behavior
+all remain authoritative. Artwork normalizes the existing maximum `.38` opacity
+to wetness when drawing the flattened tile; baked surface alpha supplies the
+stronger water colors. Radius still follows the exact shared size and fading
+remains linear in shared opacity. Frog thresholds and exact references continue
+to use the original model values, independent of the richer artwork.
+
+Canvas builds four page-owned **128×128** tiles once (64 logical pixels at
+resolution two, **256 KiB RGBA** total). It submits at most eight tile copies
+only when its existing cached base is dirty. The original aggregate analytic
+**0.5px / 0.02 model-opacity** deadlines, hidden handling and grass -> water ->
+specimen order are intact. No paths are generated on terrain repaints and no
+base bitmap is copied into the dynamic overlay. The finite tiles live with the
+page, independent of puddle births/removals.
+
+Pixi bakes the same contours, colors and alpha into its existing ecology atlas:
+**12 grass + 4 puddle frames = 16**, up from 13. Backing grows from
+**1664×128 to 2048×128**, **832 KiB to 1 MiB RGBA (+192 KiB)** before driver
+overhead. There is still **one ecology texture source**, one startup bake and
+one Sprite per puddle (maximum eight). All sixteen construction Graphics
+contexts are explicitly destroyed; frame/source ownership and teardown remain
+unchanged. The current garden retains **817 frames across four atlas sources**
+(767 main, 16 ecology, 13 ambient, 21 gnome). No extra shader, filter, particle,
+timer, render loop or per-frame geometry/texture generation was added. Artwork
+is static under both motion preferences. No gnome puddle interactions were added.
+
+Validation: all **59 Node entry points** passed, including the new
+`tests/puddle-art.cjs`, original ecology/frog/lifecycle/scheduling coverage and
+updated cached-art/count expectations. The new test checks four distinct stable
+variants, tile margins, no model RNG, exact Canvas/Pixi bake commands, identity,
+unchanged radius/fade, 30 refresh/expiry cycles, finite Canvas caches, reduced
+motion, hidden expiry, zero recurring geometry/textures and owned resource
+cleanup. Grass fixture commands were retained; only the reviewed puddle artwork
+commands changed. Chrome independently verifies transparent tile margins and
+**pixel-identical grass atlas content**; mean absolute premultiplied RGBA tile
+differences between Canvas and Pixi are **1.11–1.16 / 255** (rasterization).
+
+The complete installed-Chrome suite passed: cache upgrade, root/index SSE and
+stats, weather/audio, gnome incidents/landscaping/overcrowding/weed harvest,
+underpants, Amanita/buds, Stillbloom, frogs, grass inspection, resizing,
+centralized clicks, Canvas and the isolated stress page. Twenty browser ecology
+cycles each retained Sprite/texture identity on refresh, then ended with zero
+water views and destroyed owned Sprites; one bake/source remained constant.
+Debug/Release .NET builds, backend checks and real ASP.NET polling -> SSE tests
+passed without backend edits. The checks-project restore reported **NU1900**:
+NuGet vulnerability metadata was unavailable; compilation and checks succeeded.
+
+Before/after captures use identical seeds, objects, positions, clocks and normal
+garden scale: **small fresh, large mature, overlapping, wild grass, two frogs,
+night, botnet hurricane and nearly drained**, in both renderers (**32 images**).
+Canvas's hurricane fixture explicitly sets nonzero intensity. Captures and
+resource reports are under `artifacts/puddle-art/{before,after}/`; open
+`artifacts/puddle-art/comparison.html` for paired full-size images. The baseline
+serves only the two old artwork adapters from **ab1919c**, without modifying the
+checkout. Native-clock CPU probes run separately from frozen screenshot clocks.
+
+| Local Chrome probe | Before | After |
+| --- | ---: | ---: |
+| Ecology atlas backing / sources | 832 KiB / 1 | 1024 KiB / 1 |
+| Ecology startup bake, one observation | 4ms | 6ms |
+| Pixi CPU submission, mean of 120 frames, dense grass + eight pools | 0.224ms | 0.227ms |
+| Pixi mean ticker interval | 16.680ms | 16.681ms |
+| Canvas cached-base submission, mean of 240 forced paints, eight pools | 0.068ms | 0.041ms |
+
+These short, separate probes show similar recurring Pixi submission cost in this
+run; lower Canvas timings are not proof of a sustained speedup. They do not measure GPU
+completion, retained driver memory or long-term frame pacing. The fixed cache
+sizes above are RGBA accounting, not process-memory measurements. Other browsers,
+GPUs and long live-traffic soaks remain unverified. The pre-existing Chrome
+page-close race seen with both old and new art is now fixed by the page lifecycle
+work above, with page-error checks continuing through closure.
+
+Reproduction with the already available Playwright/Chrome runtime (no install):
+
+```powershell
+$env:NODE_PATH='C:/Users/me/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules'
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/puddle-art/before'
+node tests/pixi-default-browser.cjs --run --puddle-art-only --puddle-baseline
+$env:PACKETGARDEN_BROWSER_OUTPUT='artifacts/puddle-art/after'
+node tests/pixi-default-browser.cjs --run --puddle-art-only
+# Complete Chrome regression:
+node tests/pixi-default-browser.cjs --run
+```
+
+The dated sections below preserve historical counts and artwork descriptions.
+
+# Passive puddle frogs (2026-10-21)
+
+`garden-frogs.js` is one renderer-neutral wildlife model, called on the existing
+250ms logical tick. A scheduled check every **45 seconds** permits one strict
+**15%** roll when usable shared puddle water exists and fewer than **two** frogs
+are visiting. At most one arrival per check. Usable water comes from
+`puddleVisualState`: visible size **>=8** and opacity **>=0.12**, with finite,
+in-bounds, non-future shared puddle data. Weather classification alone never
+qualifies; frogs can visit retained water after a storm ends.
+
+Each frog retains the exact puddle reference and a route planned once at arrival.
+It sits for ten seconds, makes two or three bounded hops (650ms each, about
+10–16 logical pixels), occasionally glances around, then fades/departs by
+**60 seconds**. Green, olive and muted teal palettes share rounded bodies,
+visible eyes, hind legs and dark spots. Reduced motion uses sitting poses and
+discrete destination changes, with no hop arc. All positions remain in bounds.
+
+Lost, replaced or completely dry water starts a **1.5-second** fading departure
+from the current position. Replacement water cannot inherit an existing visitor.
+Hidden pages clear stale frogs immediately, release their views and schedule
+the next check 45 seconds from resume. Logical gaps over 1.5 seconds likewise
+clear visits and reset cadence, instead of replaying missed checks/hops. Explicit
+Clear and page teardown release all frog state/Sprites.
+
+Frogs use an independent seeded random stream, initialized without `Math.random`,
+and never consume placement, rarity, grass, weather or puddle-generation draws.
+They are passive: no clicks, sounds, network provenance/events, activity rows,
+scores, occupancy or ecological effects. Their separate two-object collection
+uses none of the first-seen, five-drop or gnome slots. Existing gnome-first click
+priority and all collection messages remain unchanged.
+
+Canvas's `garden-frogs-canvas.js` draws the shared finite shape recipes on the
+existing dynamic overlay and wakes its existing 30 FPS scheduler only while
+frogs are present. No base invalidation or bitmap copies are introduced. Pixi's
+existing ambient atlas adds **six frames** (three palettes × sit/hop), growing
+**7 → 13 frames**, **448×64 → 832×64** at resolution two. That is **+96 KiB RGBA**
+before driver/mipmap overhead, with the same one source and startup bake. At
+most two persistent noninteractive Sprites sit behind loose drops in the existing
+layer; per-frame work is bounded transforms and cached texture selection, with
+no Graphics rebuilding, extra containers or runtime texture generation.
+
+Only `/pixi-live.html` adds **Trigger frog (simulated)** and a status explanation.
+It imports suitable simulated water through the ecology's existing fixture API
+only when needed, then creates a normal timed visit. Press twice for two; a
+third press cannot exceed the cap. Existing water can be used directly. The
+fixture changes no incoming counts or Recent activity and is absent from the
+homepage. Updated entry/atlas scripts have new cache versions.
+
+Validation lives in `tests/garden-frogs.cjs`: exact `.15` boundary, wetness/size
+eligibility, quiet weather/absent water, dry/expired/future-invalid puddles,
+exact-reference replacement, two-frog cap, lifetime and fading departure,
+hidden/suspended cadence, bounds, reduced motion, pass-through clicks,
+independent RNG, Canvas/Pixi adapters and 30 repeated Sprite/atlas cleanup cycles.
+All **58 Node entry points** passed. Debug/Release application builds and backend
+checks passed, as did actual ASP.NET polling → SSE integration; the checks build
+reported NU1900 because the NuGet vulnerability feed was unavailable. Backend
+code/contracts were unchanged.
+
+Chrome's focused regression covers the trigger/two-cap, cached sit/hop poses,
+reduced motion, 60-second expiry, same-pixel puddle replacement and 20 resource
+cycles, each ending at zero views with destroyed owned Sprites. Deterministic
+capture clocks are separate from native-clock CPU/ticker probes. Canvas also
+measures 120 overlay submissions with frog drawing disabled/restored, without
+changing the frog model. Measurements are CPU submission/ticker observations,
+not GPU completion, sustained smoothness or cross-browser guarantees.
+
+The complete Chrome suite passed, preserving cache upgrades, both landscaping
+modes/weed harvest, underpants, Amanita/buds, Stillbloom, grass inspection,
+weather/storm audio, resizing and centralized clicks. Native-clock frog probes
+observed **16.68ms** mean ticker intervals: mean Pixi CPU submission was **0.163ms
+idle / 0.183ms sitting / 0.147ms hopping / 0.278ms rain** (short samples, with
+ordinary timing noise; the hopping value is not evidence of a speedup). Canvas's
+120-paint probe measured **0.008ms without frog drawing / 0.039ms with two frogs**,
+about **0.031ms additional submission time**. These were separate local viewport/
+DPR probes, not a renderer comparison. All samples produced zero audio nodes.
+
+Artifacts: `artifacts/frogs/browser/frog-resources.json` and
+`frogs-{pixi,canvas}-{day-sitting,day-hopping,night,rain}.png`, plus
+`frogs-pixi-reduced.png`. Captures show normal-scale water/wildlife in daylight,
+local-time night and rain. Longer real-traffic soaks and other browsers/GPUs
+remain unverified. The dated sections below retain previous resource counts
+and feature boundaries as historical snapshots.
+
+# Gnome weed harvest and underpants (2026-10-21)
+
+Implemented in both renderers through the existing shared models. `weed_harvest`
+is a third landscaping mode: at least **three mature ordinary weeds**, a strict
+**5%** roll on the existing **45-second** check and the same **seven-minute**
+arrival cooldown. Priority remains fight → overcrowding → vine → harvest;
+overcrowding failures never fall through, while a failed vine roll may allow
+eligible harvesting. Existing probabilities remain 2% / 25% / 10% for those
+earlier checks. A worker and suspicious burlap-sack carrier visit **1–3 original
+targets**, sharing the travel/snip/departure lifecycle and authoritative removal.
+
+Exact reference/id, cell/coordinates, creation time, lifetime, maturity and
+ordinary/protected status are revalidated before each cut. Rare palettes,
+mutations/pending mutations and weeds with **pending bud drops** are excluded.
+New replacements are never chased; active independent buds survive parent
+harvesting. The carrier follows the worker and hands over the single sack for
+departure. Hiding or a >1.5-second logical stall cancels safely without catch-up;
+reduced motion keeps static poses and discrete travel. No additional scheduler.
+
+All active gnomes are clickable before curiosities, loose drops, mutations and
+specimen/grass inspection. Both renderers record the logical transform actually
+used to paint the actor, then centralized hit testing applies its inverse
+rotation, including travel, shove and bounce offsets. Removed, hidden, expired,
+unpainted or zero-opacity actors cannot be clicked. There are no per-Sprite
+browser handlers. Repeated clicks still consume the click without touching an
+underlying plant or drop.
+
+Each actor has **one underpants attempt per appearance**, plus a **600ms**
+surprise pose. A full shared **five-drop cap** consumes the attempt without
+retry/eviction. White underpants with waistband and leg openings use the
+existing loose-drop array, notifications and Sprite ownership. They live
+**20 seconds independently** after their gnome leaves. Collecting chooses:
+
+- `< 0.8`: `You stole a gnome's underpants. +0 points`
+- `>= 0.8`: `Collected underpants +1, annoyed gnome -1`
+
+Only strings are chosen: no score arithmetic, annoyance totals, inventory,
+network provenance/events, Recent activity or acceptance statistics. Existing
+two-second messages and optional collection audio are reused. Score remains 0.
+Existing Amanita, bud and port-22 mutation rules/messages remain intact.
+
+`/pixi-live.html` alone adds **Trigger weed harvest (simulated)**, **Seed mixed
+gnome drops (simulated)** and an explicit message-boundary selector. The harvest
+button seeds mature simulated weeds when necessary, retaining cooldown/exclusion.
+The mixed fixture fills five slots with Amanita, bud and underpants artwork;
+ordinary clicks still enforce the one-attempt rule. The selector wraps on narrow
+screens. Public pages expose none of these diagnostics; changed scripts/styles
+have new cache versions.
+
+Resource bounds:
+
+- Gnome atlas **14 → 21 frames**, still one startup bake/source: two sack poses
+  and five surprise variants. Backing **1120×64 → 1680×64**, **+140 KiB RGBA**.
+- Ambient atlas **6 → 7 frames**, still one startup bake/source, for one
+  underpants frame. Backing **384×64 → 448×64**, **+16 KiB RGBA**.
+- Total added atlas pixels cost **156 KiB RGBA** before driver/mipmap overhead.
+  At most four actor Sprites/one temporary group and five shared drop Sprites;
+  no per-click textures, render passes, geometry generation or extra loops.
+- Painted transforms reuse each appearance object in a WeakMap; no population
+  scans during hit animation and no retained departed-actor lists.
+
+Validation: `tests/gnome-harvest-underpants.cjs` covers exact 5% and 80/20
+boundaries, priority/cooldown, maturity/protection/pending buds, identity-safe
+sequential cuts, all incident clicks, moving/fighting poses, cap consumption,
+independent expiry, unchanged score/statistics, Canvas/Pixi parity and 25 repeated
+resource cycles. All 57 Node entry points passed. Focused Chrome uses real
+centralized clicks, both messages, 20 cleanup cycles, and normal-scale captures.
+Every cycle ended with zero gnome/drop views and destroyed owned Sprites, with
+one bake per atlas. The full Chrome suite passed, including the 320px diagnostic
+layout, legacy cache upgrades, existing incidents/audio/storm/lighting/Stillbloom,
+Canvas and stress-page regressions. Debug/Release isolated builds and backend/SSE checks passed;
+the checks-project build reported NU1900 for the unavailable vulnerability feed.
+
+Captures and resources are in `artifacts/gnome-harvest/browser/`:
+`harvest-pixi-day.png`, `harvest-pixi-surprise.png`, `harvest-pixi-night-sack.png`,
+`underpants-pixi-departed.png`, `underpants-pixi-mixed-{day,night}.png`,
+`harvest-canvas-day.png`, `harvest-canvas-surprise-night.png`,
+`underpants-canvas-mixed-{day,night}.png`, and `gnome-harvest-resources.json`.
+
+Chrome's existing gnome timing probe observed approximately 16.68ms average
+ticker intervals and 0.13–0.19ms average CPU render submission in quiet/storm
+samples. These are local observations, not GPU completion or a long live-traffic
+soak. Other browsers remain unverified. Earlier dated notes below retain their
+original resource counts and interaction priorities as historical snapshots.
+
+# Ditch Weed Bud (2026-10-21)
+
+The shared loose-drop cap was subsequently raised from three to **five** for
+both renderers. The mixed diagnostic fixture still seeds three objects; visitors
+and collectible mutations retain their separate caps of three.
+
+Implemented through the existing shared `garden-ambient.js` loose-drop registry,
+pending-source map, logical tick and removal notifications. Successfully placed
+live TCPNoise canonical weeds get one strict **3%** creation roll, with no port
+restriction or rerolls. Buds activate at the exact source's **60-second maturity**;
+reference/id, occupancy, coordinates, creation time, ordinary eligibility and
+lifetime are checked again. Pre-activation removal/replacement/expiry/collection
+or clear cancels the pending object. A replacement cannot inherit it.
+
+An activated bud has an independent **20-second** lifetime and never alters its
+parent. Buds and Amanita share **five active drops total**. Due cap skips are
+consumed without retry, eviction or backlog. Amanita retains its 1% mushroom roll,
+five-second delay, parent cancellation and original hidden/resume behavior.
+Buds missed while hidden or over **1.5 seconds late** are discarded instead of
+appearing on resume. Existing port-22 mutation rules and message are unchanged.
+
+Collection retains curiosity → topmost loose drop → mutation → inspection
+priority. It removes only the selected object, says
+`You smoked some ditch weed. +0 points` for two seconds, and uses the existing
+optional collection sound. No source changes, cells, grass/puddles, acceptance
+statistics, Recent activity, scores, smoke effects, new loops or backend changes.
+
+Both renderers draw the same small olive-green cluster of seven overlapping
+pointed leaves and a shaded interior. The bud stays still with all motion
+preferences. Canvas draws on its existing overlay without invalidating the base.
+Pixi adds **one finite frame** to its startup ambient atlas: **5 → 6** frames,
+still **one GPU source**, with backing **320×64 → 384×64** at resolution two.
+That adds **16 KiB RGBA** before driver/mipmap overhead. At most five loose-drop
+Sprites share this atlas; the bake count remains unchanged. Collection/expiry/clear destroy owned Sprites.
+There is no runtime geometry or texture generation for buds.
+
+Development-only **Seed weed buds (simulated)** replaces local fixture state with
+two simulated weeds, a mushroom, grass, one nearby bud and a partially overlapping
+Amanita/bud pair. All five drop slots are shared, all drops expire normally,
+and incoming counters/activity remain untouched. The public pages expose no new
+development controls. Changed scripts have new cache versions.
+
+Validation and captures for this slice live in `artifacts/ditch-weed-bud/`:
+
+- `tests/ditch-weed-bud.cjs`: deterministic probability/one-attempt boundaries,
+  all-port eligibility, maturity, exact identity/cancellation, independent
+  lifetime, shared cap/no retries, hidden/late deadlines, Canvas/Pixi collection,
+  unchanged stats/activity, reduced motion, diagnostics and 30 resource cycles.
+- Chrome regression adds real overlapping-drop clicks, reduced-motion positions
+  and 20 create/collect/expire cycles. Ambient frames/source/bake counts stay
+  **6 / 1 / 1**; each cycle ends with zero views and destroyed owned Sprites.
+- Eight normal-scale captures: `browser/weed-bud-{pixi,canvas}-{nearby,grass,mixed,night}.png`.
+  They show the ordinary weed/bud distinction, grass coexistence, mixed Amanita
+  art and local-time night tint. Historical renderer artwork differences remain.
+- All 56 Node entry points passed, including the optional browser entry points'
+  default skip paths. The complete opt-in Chrome suite and focused bud pass also
+  passed, covering cache upgrades, collections/audio, both gnome modes, storms,
+  lighting, Stillbloom, Canvas and stress-page regression.
+- Isolated Debug and Release application builds passed with zero warnings;
+  backend checks and the actual ASP.NET polling → SSE integration passed.
+  The checks-project build emitted NU1900 because the NuGet vulnerability feed
+  was unavailable. No backend code/contracts were changed.
+
+The fixtures prove behavior and bounded object/texture ownership, not long-lived
+GPU/compositor smoothness. Other browsers and a long real-traffic soak remain
+unverified. Build output is isolated because a running local PacketGarden host
+can lock the usual executable. NuGet vulnerability-feed availability is separate
+from application build/test success.
+
+The sections below retain the history of earlier feature slices.
+
+# Stillbloom (2026-10-21)
+
+> **Current Pixi parity note (2026-10-21):** This document intentionally retains
+> dated, historical migration snapshots farther below. Statements in those older
+> sections saying Pixi lacks loose Amanita drops, first-seen visitors, collectible
+> weed mutations, inspection/collection, gnomes, audio or grass are **no longer
+> current**. Shared Canvas/Pixi models and current cached Pixi artwork now cover
+> those features; [README](../README.md) and [MVP](MVP.md) summarize current
+> behavior. Ordinary-weed buds and clicked-gnome underpants are now implemented;
+> opium pods and frogs remain future work. Canvas-specific fake-traffic/
+> numeric weather controls and Pixi-only storm bolts remain intentional differences.
+
+`garden-stillbloom.js` is one renderer-neutral scheduler, called by the existing
+250ms Canvas/Pixi logical tick. Organic growth requires connected SSE, Live
+weather, a validated snapshot, healthy upstream telemetry, an unexpired
+30-second certificate and authoritative `level === "quiet"`. Rates, zero traffic,
+initial fallback, manual previews and local lighting never establish calm.
+Ten continuously observed minutes earn one 10% roll; later checks are three
+minutes apart. Failure, full occupancy or two living flowers consumes that
+deadline without retry. At most one flower is added per interval. Hidden time,
+SSE disconnection, stale/unhealthy data, non-quiet weather, a continuity change
+or a >1.5-second logical stall resets qualification. No hidden/catch-up rolls.
+
+The weather adapter retains rendering values during outages, but now publishes
+`telemetryHealthy`, `freshUntil` (Unix milliseconds) and `telemetryGeneration`.
+Failures invalidate immediately; same-value recovery increments continuity.
+Successful polls remain every ten seconds with five-second timeouts. A
+30-second lease renews with <=15 seconds remaining (normally every 20 seconds),
+with scheduling margin rather than a broadcast on every unchanged poll. The
+existing adapter and SSE pump own this; there are no extra loops or providers.
+See [the additive contract and clock limitation](REAL-DATA.md#upstream-health-and-stillbloom).
+Older clients keep rendering; old backend frames without health cannot certify
+organic quiet. This proves successful snapshot polling, not independent health
+of every upstream collector or completeness of global network observations.
+
+The authoritative garden adds at most two Stillblooms to free cells, with no
+displacement. The ambient species is excluded from normalized garden/TCPNoise
+events, ordinary fake-event mappings, normal cosmetic rarity rolls and both
+landscaping modes; stronger-growth competition protects it. Placement uses the
+normal occupancy/grass-clearing lifecycle. Existing specimens are never removed
+to make room, and subsequent weather cannot kill a Stillbloom. Inspection says
+**Sustained quiet**, with em dashes for sensor/port/seen count/vigor. Simulated
+flowers say **Simulated Stillbloom**. No incoming acceptance counts, fabricated
+network events, Recent activity, grass influence, drops or sound are produced.
+
+Lifecycle: sprouting until 30 seconds, growing until 90 seconds, maturity until
+minute 17, then gradual fading/shrinkage through removal at minute 20. Young and
+fading flowers use bounded one-second visual deadlines; mature flowers are
+static. Canvas draws thin silver-green leaves/stem and five overlapping ivory
+cup petals with lavender/blue details. Pixi has four cached poses and one Sprite
+per flower; a faint baked halo needs no particles or dynamic geometry. Existing
+day/night lighting and its checkbox affect only appearance.
+
+The main atlas grows **763 → 767 frame objects**, retaining its **2048×1536**
+backing allocation (~12 MiB RGBA), source count and startup generation count.
+Four extra owned Graphics contexts are released after baking. Existing frame
+slots/art and other atlases remain. There is no per-frame flower geometry,
+texture generation or eligibility scan; at most two flowers receive the slow
+lifecycle transform/opacity updates.
+
+Only `/pixi-live.html` loads `garden-stillbloom-dev.js`. **Trigger Stillbloom
+(simulated)** exercises real local placement/cap without certifying weather.
+Separate virtual controls advance a private shared-rule simulation through
+verified quiet, ten-minute qualification, rain, stale/disconnected telemetry,
+recovery, `.099999` success / `.10` failure and the two-flower cap. Its state
+and results are labeled Simulation and cannot feed the organic scheduler.
+Existing Lighting presets provide day/night inspection. Public pages expose no
+Stillbloom diagnostics.
+
+Validation includes `stillbloom.cjs` and `stillbloom-integration.cjs`: exact
+weather/health/deadline/probability/cadence boundaries; fallback/legacy/stale
+data; real registered SSE disconnect/reconnect handlers; hidden/stalled/manual
+exclusion; full cells and protected targets; origin/counters/activity; aging;
+Canvas/Pixi parity under both motion preferences; and twenty growth/removal
+cycles with unchanged frame/source/generation/live-object counts and teardown.
+Backend checks cover normalization, exact 30-second staleness, ten-second
+unchanged polls, renewal and same-value failure/recovery. Actual ASP.NET/local
+snapshot integration covers the full polling-to-SSE path, including retained
+values, reconnection, unchanged recovery and lease renewal. NATS/TCPNoise tests
+retain all existing mappings/rarity outcomes.
+
+The Chrome runner supports a focused capture pass:
+
+```powershell
+$env:PACKETGARDEN_BROWSER_OUTPUT = 'artifacts/stillbloom/browser'
+node tests/pixi-default-browser.cjs --run --stillbloom-only
+```
+
+Ignored screenshots cover young/growing/mature, day/night, alone/among ordinary
+specimens, fading and quiet-to-rain, plus Canvas day/night. `stillbloom-resources.json`
+records 120-frame samples. Initial focused results: two flower Sprites, 767 main
+frames; ~16.68ms mean ticker interval and .208ms mean CPU submission for the
+two-flower daytime scene. The different mixed fading/rain fixture measured
+.348ms mean submission. These scenes are not a before/after speed comparison,
+and CPU submission does not measure GPU completion. Repeated live-traffic
+soaks, other browsers/devices and comprehensive heap/GPU profiling remain.
+
+The normal build output was locked by an already running PacketGarden process;
+validation uses isolated `artifacts/stillbloom/build` and `checks` outputs without
+stopping it. Main build passes with zero warnings/errors. Backend checks retain
+NU1900 vulnerability-feed warnings when NuGet metadata is unavailable. No
+server persistence, classification thresholds, port mapping or NATS changes.
+
+# Fuller wild grass and natural recovery (2026-10-20)
+
+Historical checkpoint; population and artwork policy is superseded by the
+2026-10-21 lush-grass/recovery section above.
+
+Canvas and Pixi now share 12 finite grass recipes in `garden-grass.js`: broader
+curved blades, three low groundcover clumps and two or three irregular taller
+fans, with four muted shade groups. The healthy shared tint is richer green;
+the yellow/brown/dead color anchors, growth, decline, opacity, inspection and
+visual deadlines remain. Canvas's rounded blobs and Pixi's thin highlighted
+fans are replaced. Grass still sits below puddles and specimens, and passes
+through the existing local-time surface light. No lighting/weather/audio rules change.
+
+Pixi retains **12 grass frames + one unchanged puddle frame**, one source,
+1664×128 backing (~832 KiB RGBA), and **one Sprite per grass cell**. Construction
+uses 12 temporary Graphics, released after the single startup bake. Shared
+recipes use private deterministic randomness, consuming no ecology or specimen
+rolls. Mature turf creates no frame geometry, texture or transform work; Canvas
+keeps the existing cached-base scheduling. Neighboring clumps can overlap while
+leaving organic soil gaps. The artwork introduces no continuous grass animation.
+
+Both entry points now call shared `seedInitialGrass`: **12** random seeds, one
+per distributed region, skipping occupied cells (and skipping a full region).
+Ordinary spread remains **4 seconds / 50% / 1–4 bounded attempts** from suitable
+mature turf, excluding occupied destinations and never refreshing parents.
+Fading still begins at 20 minutes, dying at 27, dry at 32, expiry at 35; the
+bounded one-time 40% fading seed opportunity is unchanged. Three fixed-seed,
+traffic-free simulations produced 29–31 patches at two minutes and 245–258 at
+ten minutes. This supported keeping the existing spreading probability.
+
+The shared ecology's grass tick now also runs with zero grass. Natural recovery
+checks at most once per **60 seconds**. Only **zero living patches** and **at
+least eight unoccupied specimen cells** permit **one 25% roll**. Success chooses
+one random empty cell and calls `influenceGrassCell`, which rechecks occupancy;
+failure or a newly occupied target produces no retry. At most one new patch is
+created. Surviving dry/unexpired turf also suppresses recovery. The occupancy
+scan is bounded at 640 cells, only on a due empty-population check; normal frame
+work gains no occupancy scans. Hidden ticks skip rolls, visibility transitions
+reset a fresh minute, and whole missed check windows are discarded, with no
+catch-up loop. This allows complete grass loss followed by gnome/expiry soil
+release, a possible natural seed, then ordinary neighboring spread. Isolated
+free cells may still prevent spreading until adjacent soil opens.
+
+This is uncertain ambient ecology: specimen removals do not directly plant
+grass. No changes to SSE/NATS, provenance, accepted growth statistics, Recent
+activity, specimen capacity/lifetimes/rarity, collectibles or gnome rules.
+
+## Visual comparison and reproduction
+
+The installed-Chrome artwork runner adds `--green-grass`, preserving older art
+fixtures. This comparison uses committed baseline
+`dd7f4356b6ed3bcbc3d1d7c3683e1c1af9d76301`; an explicit checkpoint keeps it
+reproducible after later commits. Use the already available Playwright/Chrome
+runtime, without installing dependencies:
+
+```powershell
+node tests/pixi-vine-art-browser.cjs --run --green-grass --checkpoint=dd7f4356b6ed3bcbc3d1d7c3683e1c1af9d76301 --baseline --seconds=5
+node tests/pixi-vine-art-browser.cjs --run --green-grass --checkpoint=dd7f4356b6ed3bcbc3d1d7c3683e1c1af9d76301 --seconds=5
+```
+
+Ignored `artifacts/grass-green/before/` and `after/` hold full-size Pixi and
+Canvas captures, 720px Pixi captures, atlas images/bounds, pixel checks and timing
+JSON. `comparison.png` places both renderers' before/after screenshots together.
+Fixtures use identical simulated specimen coordinates, grass ages/positions,
+weather and lighting: sparse young grass, expanding young clusters, 256 moderate
+patches, 512 dense patches with empty cells, mixed 160 specimens/384 grass,
+640 fading/dying/dry cells, fixed daytime/night and hurricane/eight puddles.
+
+Normal-scale inspection showed fuller, greener overlapping clumps replacing
+the separated thin fans and round Canvas blobs, while retaining open soil,
+young-to-mature size differences, fading straw/brown cues and clear specimens.
+The first review prompted more irregular clump positions and a correction to
+an atlas-margin overhang. The fixture's night preset now explicitly applies
+its surface matrix before capture. Night turf stays readable and rain/puddles
+retain their layer order. Finite patterns remain discoverable in artificial
+uniform fields; this is stylized grass, not a continuously animated lawn.
+
+Pixel checks find **2.69% → 9.57%** mean nontransparent grass-tile coverage,
+with transparent frame margins in all 12 variants. This measures atlas ink,
+not a percentage of garden soil. Every plant/mutation/rain/probe atlas pixel
+and the puddle tile remain byte-identical. Frame dimensions/counts and scene
+object counts are unchanged for comparable populations. Startup's seven extra
+seed Sprites are the only deliberate initial object-count increase.
+
+## Validation and limits
+
+All **53 Node test entry points** pass, including new `grass-recovery.cjs`:
+distributed seeding, exact `.25`/eight-free-cell boundaries, failed checks,
+occupancy revalidation/no retry, suppression with survivors, expiry/real gnome
+recovery, bounded scans, hidden/resume/no catch-up, unchanged spread/lifetimes,
+and Canvas/Pixi state parity. Twenty application recovery/clear cycles retain
+fixed texture generation, atlas frames and live-object counts, and teardown
+releases ownership. Existing artwork/deadline/occupancy/inspection/lighting/weather
+tests remain; Canvas grass command snapshots were deliberately updated for the
+reviewed artwork, while original puddle command snapshots remain unchanged.
+
+Installed Chrome passes the full root/index HTTP-cache/SSE/resize/inspection,
+audio, gnomes/both landscaping modes, hidden/reduced-motion, lighting/night
+rain/bolt, Canvas and stress regression suite, plus this artwork comparison.
+`.NET build` passes with zero warnings/errors; backend checks and actual ASP.NET
+weather-to-SSE integration pass. Backend checks retain NU1900 warnings because
+the NuGet vulnerability-data service is unavailable; no backend code changed.
+
+The five-second artwork samples report CPU render submission and ticker
+intervals, not GPU/compositor completion. Grass produces zero recurring Graphics
+calls or texture generations in these frozen-state samples, and no display
+object growth. The final full comparison ran after the regression browser closed:
+
+| Fixture | Grass / display objects | Mean CPU submission before → after |
+| --- | --- | --- |
+| Moderate mature | 256 / 273 | .098 → .108ms |
+| Dense mature | 512 / 529 | .112 → .121ms |
+| Fading/dying/dry | 640 / 657 | .110 → .118ms |
+| Mixed specimens + grass | 384 / 577 | .113 → .131ms |
+| Mixed + hurricane/puddles | 384 / 585 | .177 → .204ms |
+
+Revised mean ticker intervals were about **16.68ms**, with no >50ms gaps in
+these short samples. Timing differences this small are noisy and are not a
+speedup/regression guarantee. A separate matching 512-patch Canvas fixture,
+12 deliberately forced `drawGarden()` repaints, measured **4.27 → 4.78ms mean**
+and **6.30 → 7.60ms worst**. This includes base drawing and overlay submission;
+it is not a per-frame cost. Static mature grass still schedules no routine base
+repaint, while growing/fading art uses the existing bounded visual deadlines.
+Reproduce that focused measurement with `--scene=grass-mature`, `--baseline`
+and `--label=canvas-before`, then without `--baseline` and with
+`--label=canvas-after`; JSON/captures are saved in those separate directories.
+Allocation checks cover display objects, cached
+textures and geometry ownership, not a heap-allocation or GPU-memory profile. Longer live
+NATS soaks, other browsers/devices/GPUs and extended visual tuning remain.
+Historical measurements below describe their older checkpoints.
+
+# Local-time lighting (2026-10-20)
+
+**Day/night cycle** is checked by default beside Lightning on both Pixi pages,
+with the same control near Sound on Canvas. Unchecking applies daylight and
+skips routine clock sampling. Rechecking immediately restores current local
+lighting (or the retained diagnostic preset/hour on `/pixi-live.html`). Preview
+controls are disabled while off. The preference is page-local, independent of
+Lightning, and introduces no persistence, geometry rebuilding or timers.
+
+Pixi's default/diagnostic gardens and the Canvas fallback now share
+`garden-lighting.js`: browser-local hours, fixed anchors, smoothstep interpolation,
+30-second sampling and a quantized sRGB color matrix. Only presentation changes.
+There are no backend, SSE/NATS, specimen, ecology, rarity, growth, provenance,
+activity or sound changes, and no extra timers, dependencies or persistence.
+
+| Local hours | Transition |
+| --- | --- |
+| 22:00–05:00 | Readable blue/purple night |
+| 05:00–06:00 | Night to soft cool dawn |
+| 06:00–09:00 | Dawn gradually warms into day |
+| 09:00–16:00 | Original day appearance |
+| 16:00–18:00 | Day to gentle amber golden hour |
+| 18:00–20:00 | Golden hour to cooler purple dusk |
+| 20:00–22:00 | Dusk to night |
+
+Local `Date` components are read afresh at each sample, so timezone/DST changes
+are not stuck behind a cached UTC offset. Backwards clock jumps trigger a fresh
+sample; the existing Pixi ticker can refresh overdue light after a backwards
+jump while leaving ecology's logical deadline untouched. Hidden pages perform no visual sampling;
+resume forces one current-time sample with no transition backlog. Reduced motion
+uses the same slow light, with no added animation; existing lightning suppression
+still applies. Visual components are rounded to 1/512, less than half an 8-bit
+color level, and identical matrices cause no DOM/style writes.
+
+`garden-lighting-view.js` applies one diagonal RGB-plus-bias SVG color matrix to
+the existing rendered surface: Pixi's canvas, or Canvas's `.garden-stage`
+containing its two canvases. The zero-size SVG definition is static page markup;
+UI, inspection cards, messages and Recent activity are outside the filter.
+There are no new Pixi objects, textures, filters or per-specimen changes, and no
+Canvas bitmap copies, geometry rebuilds or new RAF. The daytime identity matrix
+sets CSS `filter: none`. Colored phases add **one browser compositor color pass**;
+its offscreen surface allocation/GPU cost is outside Pixi's resource counters.
+Teardown clears the CSS filter, disables sampling and detaches diagnostic handlers.
+Canvas `?perf=1` snapshots and the Pixi HUD expose bounded sample/update counters.
+
+Night retains blue light and a small color floor rather than using a black
+overlay. Existing ghostbloom halos and crystal highlights therefore stand out
+against cooler terrain without adding glow to ordinary specimens. Distinct
+species hues remain recognizable. Golden hour gently warms existing colors;
+there are no directional/lengthening shadows. Weather's existing soil darkening
+and rain are preserved, with a small night-only matrix compensation for severe
+darkening. Rain stays visible, and the existing lightning passes through the
+same light without extra intensity, flashes, sound or changed eligibility.
+
+Only `/pixi-live.html` has **Lighting**: Live local time, Dawn (06:00), Day
+(12:00), Golden hour (18:00), Dusk (20:00), Night (00:00), plus Simulated hour.
+The **Simulated local hour** slider spans 0–24 in .05-hour steps and switches to
+that manual mode. Returning to Live restores actual local time. Overrides stay
+in this page's memory. `/`, `/index.html` and `/canvas.html` always start live
+and expose no lighting controls. Canvas tests call its shared controller directly;
+there is no public query-parameter override.
+
+`node tests/garden-lighting.cjs` covers exact anchors, smooth boundaries/midnight,
+real Node timezone interpretation, live/manual behavior, clock/provider changes,
+weather/bolt bounds, reduced motion/hidden resume, both production adapters and
+cleanup. In a mature 640-specimen fixture, **120 lighting changes cause zero
+Canvas base rebuilds or Pixi sprite/texture/geometry/vine-neighbor changes**.
+Existing rendering/performance and ecology tests retain their assertions.
+
+The installed-Chrome runner adds `--lighting-only` for focused visual QA:
+
+```powershell
+$env:PACKETGARDEN_BROWSER_OUTPUT = 'artifacts/local-lighting'
+node tests/pixi-default-browser.cjs --run --lighting-only
+```
+
+Use the already available Playwright runtime/installed Chrome (normal module
+resolution or `NODE_PATH`); no application dependency is added. The full runner
+also includes these checks. Captures freeze the same 240-specimen garden with
+grass and water at dawn/day/golden/dusk/night, plus night hurricane and a frozen
+55ms bolt. Canvas captures all five phases with the same specimens. Tests also
+check actual live mode in UTC/Tokyo browser contexts, hidden/resume, reduced
+motion, nighttime inspection and unchanged resource counts.
+
+Ignored `artifacts/local-lighting/lighting-comparison.png` presents the actual
+five phases and night storm; individual `lighting-*.png`, Canvas captures and
+`lighting-comparison.json` remain alongside. In the initial focused comparison,
+mean image luminance was 74.88 dawn / 74.22 day / 74.67 golden / 65.71 dusk /
+59.53 night / 47.75 night hurricane (8-bit units). Night retained about **80%**
+of daytime mean luminance. A night bolt raised hurricane mean to 52.67, remaining
+distinct without a washed-out frame. These are whole-image fixture measurements,
+not a universal perceptual/accessibility guarantee.
+
+Dense 640-specimen, DPR-2 Chrome samples (120 frames each) retained **735 display
+objects and 763 specimen/weather atlas frames**. Day/night ticker means were
+16.68/16.68ms, worst 17.1/16.8ms, with CPU submission means .295/.289ms in the
+final focused run. Earlier pairs measured .377/.410ms and .279/.245ms. Short samples are noisy:
+they do **not** measure GPU completion, compositor work, battery use or long-run
+smoothness. Colored phases necessarily add a compositor pass; browser/driver
+surface caching and cost can differ. Firefox/Safari, multi-hour real traffic,
+clock-change visual comfort and GPU profiling remain unverified. Fixed boundaries
+are not seasonal or astronomical, and extra bloom/shadow systems are out of scope.
+
+Validation: all **52 Node entry points**, the complete Chrome browser regression
+suite, focused lighting/inspection checks, .NET build and backend checks, and
+actual ASP.NET polling/SSE integration pass. The .NET build has zero warnings or
+errors; the checks project retains its existing NU1900 vulnerability-feed warning.
+Local-server browser/SSE checks require execution outside the sandbox's socket
+limits. Canvas cache restoration is also covered: a persisted page keeps its
+lighting controller, refreshes at `pageshow`, and releases the restore listener
+and surface transform on final departure. `git diff --check` passes.
+
+# Emergency overcrowding relief (2026-10-20)
+
+The existing shared landscaping incident now has an explicit `mode`: `vine` or
+`overcrowding`. Actors, clipper poses, rendering, removal notifications and cleanup
+are reused unchanged in Pixi and Canvas. There are still just 14 shared gnome
+frames, one GPU source, and two incident sprites in one temporary group. No new
+timer, render loop, texture, dependency or backend change.
+
+On the existing 45-second check, the original four-gnome dispute keeps its 2%
+priority. If still idle and off the shared seven-minute landscaping cooldown:
+
+- **640 occupied specimen cells:** make one overcrowding roll, successful only
+  below **.25**. Never also make a vine roll, even if vines qualify or relief fails.
+- **Below capacity:** retain the existing 20-vine/40%-coverage eligibility and
+  **.10** vine roll, 25% trim share and eight-target cap.
+- Failure schedules no retry until the next check and never changes cooldown.
+  Successful arrival, including a subsequently cancelled visit, starts cooldown.
+
+Overcrowding samples at most **64 random original eligible specimens without
+replacement**. Any ordinary living species can qualify; protected rare species,
+Pixi palette index 4, every Canvas rare palette (including `broadleafVariant ===
+'rainbow'`), active/pending mutations and collectible mutations cannot. Each
+scheduled cut uses the same immediate object/id/cell/coordinates/creation-time,
+occupancy, lifetime and protection revalidation before `source.remove()`.
+Stale remaining sampled targets are skipped. Replacement specimens and new
+arrivals are never added to the route.
+
+Stop cutting at **32 currently free cells**, **32 successful removals**, sample
+exhaustion, or a **45-second work deadline**. The free-cell check uses the
+authoritative occupancy Map; unrelated expiry/collection can satisfy the goal.
+Only successful `remove()` calls increment the incident's local removal count.
+Incoming traffic can refill freed cells, so even 32 cuts can leave no free space.
+The fixed sample and deadline keep repeated replacement/refill from extending
+work indefinitely. Ideal 250ms ticks complete a full visit in about 41 seconds;
+real timer delays can exhaust the deadline with fewer cuts even without traffic. An exit
+already underway can finish up to 750ms plus logical-tick rounding after the
+deadline; a visit still working at the deadline clears immediately.
+
+Worker travel (750ms) and visible snip holds (at least 500ms), stationary
+supervision, silence, reduced-motion poses, hidden cancellation and >1.5s logical
+stall cancellation are inherited. Action and stop decisions run only on logical
+ticks, with no per-frame population scans. Ordinary removal updates vine
+connections, cached rendering, inspection, mutation cleanup and cell occupancy.
+SSE/NATS, normal growth/competition/rarity, provenance, accepted-growth statistics
+and Recent activity are unchanged. These volunteers do not guarantee assistance.
+
+`/pixi-live.html` retains **Trigger landscaping (simulated)** for vine mode and
+adds **Trigger overcrowding relief (simulated)**. The latter seeds a full
+640-specimen ordinary mixed fixture if needed (flower, mushroom, broadleaf, vine,
+wirefern and weed), then starts relief without a probability roll. Both enforce
+their own mode's eligibility, mutual exclusion and the same cooldown. Clear
+does not reset cooldown; a blocked click does not reseed. Fixtures use simulated
+provenance and bypass network input, acceptance counters and Recent activity.
+No diagnostic control is present on `/` or `/index.html`.
+
+`node tests/gnome-overcrowding.cjs` covers 639/640 occupancy, exact .25 boundary,
+single scheduled rolls, mode priority, shared cooldown, random sampling and all
+protection forms, free-space/removal/duration stops, refilling, stale identities,
+hidden handling, Canvas/Pixi counts/connections/inspection parity, both diagnostic
+buttons and 20 repeated incidents without growing display-object/texture counts.
+The existing vine and four-gnome suites retain their original assertions.
+The installed-Chrome suite (`node tests/pixi-default-browser.cjs --run`) now
+exercises complete real-time overcrowding visits in both renderers and Pixi
+reduced-motion/hidden cancellation; screenshots use
+`artifacts/homepage-browser/overcrowding-*.png`. Long real-NATS traffic sessions,
+frequency tuning and GPU profiling remain outside this slice.
+
+Validation: all **51 Node entry points** pass, along with the installed-Chrome
+regression suite, .NET build (zero warnings/errors), backend checks and actual
+ASP.NET polling/SSE integration. The checks project retains its NU1900 warning
+about unavailable NuGet vulnerability data. Browser/local-server integration
+needed execution outside the sandbox's socket restrictions. In the final real-time
+run, Pixi made 32 cuts (608 occupied cells); Canvas made 31 cuts (609 occupied)
+before the work deadline. Both cleaned up correctly. This is intentional
+best-effort behavior, not a promise to restore all 32 empty cells.
+
+# Gnome Landscaping Department — vine mode (2026-10-20)
+
+Implemented in the shared `garden-gnomes.js` model for the default Pixi garden,
+`/pixi-live.html` and Canvas. The existing 45-second eligibility check first
+offers the original dispute its unchanged 2% roll. If idle, ordinary living vines
+comprising at least 40% of living specimens, with at least 20 eligible vines,
+get a 10% landscaping roll. The cooldown is seven minutes from arrival, including
+cancelled visits. One incident slot prevents crews/disputes from overlapping.
+
+A worker with hedge clippers visits a fixed nearest-neighbor route while a
+stationary red-hatted supervisor contributes nothing. Target count is 25% rounded
+to the nearest integer, capped at eight. Each target gets 750ms travel and at
+least 500ms of visible snipping, then the crew exits in 750ms: roughly 7–11
+seconds on the normal 250ms logical cadence. Reduced motion uses discrete
+positions, still legs and a fixed closed snip pose. Landscaping is silent.
+
+Only the existing logical tick can call the authoritative garden's `remove()`;
+the renderer's animation path only positions actors. Before each snip, exact
+object/id, original cell/coordinates, occupancy, creation time, current lifetime,
+species, palette and mutation state are revalidated. Canvas's `silvervine` and
+Pixi's palette index 4 are excluded, as are active/pending mutations, protected
+species and all non-vines. Missing/expired/replaced/collected targets consume
+their visit with no substitute. The ordinary removal lifecycle updates Pixi
+neighbor curves/views, Canvas's cached base, inspection, mutations and occupancy.
+Freed cells admit normal growth and later ordinary grass spread. No invented
+SSE/NATS event, provenance, Recent activity row or accepted-growth statistic.
+
+Pixi adds two clipper frames to the shared gnome atlas: **14 frames / one GPU
+source**, with 40×32 logical tiles and a 1120×64 physical atlas at resolution 2.
+The original gnome silhouette/anchor stays rooted at (16,18). Landscaping owns
+only two sprites in one transient group; both and the group are destroyed when
+the crew leaves or is cancelled. The fixed atlas is reused across incidents and
+released on page teardown. Canvas uses the same blade endpoints and pose model,
+with no incident textures. No new timers, animation loops or dependencies.
+
+Hiding the tab cancels landscaping immediately and resets the eligibility
+cadence. A logical tick gap greater than 1.5s also cancels the crew, so suspended
+or stalled tabs never replay destructive actions. A slow tick still shows a full
+snip hold before moving on. The original dispute retains its completion rules.
+`pagehide`, Clear and teardown also release actors; Clear retains the cooldown.
+
+Only `/pixi-live.html` exposes **Trigger landscaping (simulated)**. It seeds a
+50-specimen local fixture (32 ordinary mature vines, 18 broadleaves) if the
+current garden is ineligible, then attempts landscaping without waiting for a
+check/chance roll. Eligibility, incident exclusion and cooldown still apply;
+a cooldown-blocked click does not reseed. Fixture provenance is simulated;
+it bypasses SSE, acceptance counters and Recent activity. Reload starts fresh
+browser state as usual. The homepage has no landscaping control.
+
+Deterministic coverage: `node tests/gnome-landscaping.cjs` exercises threshold,
+chance and cooldown boundaries, fixed/capped selection, identity/occupancy/lifetime
+safety, all exclusions, sequential one-time snips, mutual exclusion, hidden and
+reduced-motion behavior, both entry points, Canvas/Pixi removal/rendering parity,
+inspection closure and 25 repeated incidents without additional objects or
+textures. `node tests/pixi-default-browser.cjs --run` extends the installed-Chrome
+suite with actual timed snips/cleanup, reduced motion, hidden cancellation and
+Canvas/Pixi screenshots. Long real NATS sessions and aesthetic tuning of crew
+frequency/routes remain outside this slice; no GPU performance claim is made.
+
+Validation for this slice: the Node regression entry points pass, including the
+original dispute and rendering/performance checks; the new suite repeats 25
+landscaping visits without leaked sprites, groups or growing texture counts.
+Installed Chrome passes the complete default/diagnostic/Canvas/stress suite,
+including real-time landscaping, reduced motion and hidden cancellation.
+Screenshots are saved in ignored `artifacts/homepage-browser/landscaping-*.png`.
+`dotnet build PacketGarden.slnx` passes with zero warnings/errors; backend checks
+and the actual ASP.NET polling/SSE integration pass. The checks project retains
+its NU1900 warning because NuGet vulnerability data could not be fetched.
+Local-server integration required running outside the sandbox's socket limits.
+
 # Grass clears when specimens occupy soil (2026-10-20)
 
 Canvas and Pixi now remove destination grass from the shared ecology model on
@@ -1015,8 +2741,8 @@ cache-transition correctness, not a new performance or long-soak claim.
 A separate pre-existing teardown exception was captured when closing Pixi pages:
 a visibility callback can call `app.stop()` after pagehide has destroyed its
 ticker (`Cannot read properties of null (reading 'stop')`). It also occurred on
-the unchanged stress page and was not the black-startup failure. It remains
-outside this homepage-only fix; pre-teardown page errors are checked separately.
+the stress page and was not the black-startup failure. The later page lifecycle
+fix above resolves both entry points and checks errors through teardown.
 
 ---
 

@@ -26,7 +26,7 @@ module.exports = function createAudioContext(options = {}) {
       state.compressors.push(node);return node;
     }
     createBiquadFilter() {
-      const node={frequency:param(),Q:param(),connect(){},disconnect(){this.disconnected=true;}};
+      const node={frequency:param(),Q:param(),gain:param(),connect(){},disconnect(){this.disconnected=true;}};
       state.filters.push(node);return node;
     }
     createBuffer(channels,length,sampleRate) {

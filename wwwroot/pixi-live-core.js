@@ -4,7 +4,9 @@
   const garden = typeof module !== 'undefined' && module.exports ? require('./garden-core.js') : window.PacketGardenCore;
   const mutationCore = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
   const uiCore = typeof module !== 'undefined' && module.exports ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
-  const { dimensions, timings, species, normalizeGarden, stageAt } = garden;
+  const blooms = typeof module !== 'undefined' && module.exports ? require('./pixi-broadleaf-blooms.js') : window.PacketGardenBroadleafBlooms;
+  const vineBlooms = typeof module !== 'undefined' && module.exports ? require('./pixi-vine-blooms.js') : window.PacketGardenVineBlooms;
+  const { dimensions, timings, species, eventSpecies, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
     drizzle: { count: 16, speed: 120, darkening: .04, length: 5, opacity: .18, drift: 0, slant: 2 },
@@ -30,7 +32,10 @@
     if (!event || !Object.hasOwn(weatherLevels, event.level) || typeof event.eventsPerMinute !== 'number' || !Number.isFinite(event.eventsPerMinute)) return null;
     return { level: event.level, eventsPerMinute: Math.min(1000000, Math.max(0, event.eventsPerMinute)),
       eventsLastHour: Number.isSafeInteger(event.eventsLastHour) && event.eventsLastHour >= 0 ? event.eventsLastHour : null,
-      hasSnapshot: event.hasSnapshot !== false };
+      hasSnapshot: event.hasSnapshot !== false,
+      telemetryHealthy:event.hasSnapshot===true&&event.telemetryHealthy===true,
+      freshUntil:Number.isSafeInteger(event.freshUntil)?event.freshUntil:null,
+      telemetryGeneration:Number.isSafeInteger(event.telemetryGeneration)&&event.telemetryGeneration>0?event.telemetryGeneration:null };
   }
   function colorVariant(type, vigor, roll) {
     if (roll < .01) return 4; // cosmetic only, never alters species or backend rarity
@@ -53,7 +58,7 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
@@ -61,7 +66,9 @@
       const { kind, specimen, reason } = change;
       if (kind === 'added') {
         onAdded(specimen); // Placement succeeded; clear its soil before presenting the plant.
-        specimen.colorVariant = colorVariant(specimen.type, specimen.vigor, random());
+        specimen.colorVariant = specimen.type === 'stillbloom' ? 0 : colorVariant(specimen.type, specimen.vigor, random());
+        blooms.assign(specimen, bloomRandom);
+        vineBlooms.assign(specimen,vineBloomRandom);
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
@@ -87,8 +94,42 @@
       return { outcome, specimen: result?.specimen ?? null };
     }
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, recentEvents, tick,
-      clear: model.clear, remove: model.remove, acceptEvent, accept: raw => acceptEvent(raw).specimen,
+      clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedVineBlooms(mode='stages') {
+        const entries=vineBlooms.fixtureEntries(now(),mode),foliage=entries.map(p=>p.colorVariant);
+        model.seed(entries);
+        for(let i=0;i<model.specimens.length;i++){
+          model.specimens[i].colorVariant=foliage[i];view.update(model.specimens[i],model.byCell);
+        }
+      },
+      seedBroadleafBlooms(dense = false) {
+        const entries = blooms.fixtureEntries(now(), dense), foliage = entries.map(p => p.colorVariant);
+        model.seed(entries);
+        for (let i = 0; i < model.specimens.length; i++) {
+          model.specimens[i].colorVariant = foliage[i]; view.update(model.specimens[i], model.byCell);
+        }
+      },
+      seedWeedBuds() {
+        const at = now();
+        model.seed(['weed','weed','mushroom'].map((type,i) => ({ type, vigor:1, column:12+i*5,
+          row:10, createdAt:at-65000, origin:{kind:'simulated',eventType:'weed-bud-test'} })),at);
+      },
+      seedLandscaping(mode = 'vine') {
+        const at = now();
+        if (mode === 'weed_harvest') {
+          model.seed(Array.from({length:5},(_,i)=>({type:'weed',vigor:1,column:12+i*2,row:10,createdAt:at-65000,
+            colorVariant:0,origin:{kind:'simulated',eventType:'weed-harvest-test'}})),at);
+          for(const p of model.specimens){p.colorVariant=0;view.update(p,model.byCell);}return;
+        }
+        const full = mode === 'overcrowding', ordinary = ['flower','mushroom','broadleaf','vine','wirefern','weed'];
+        model.seed(Array.from({length:full?dimensions.capacity:50}, (_,i) => ({ type:full?ordinary[i%ordinary.length]:i<32?'vine':'broadleaf', vigor:0,
+          column:full?i%dimensions.columns:10+i%10, row:full?Math.floor(i/dimensions.columns):6+Math.floor(i/10), createdAt:at-65000,
+          origin:{kind:'simulated',eventType:'landscaping-test'} })), at);
+        for (const p of model.specimens) if (full || p.type === 'vine') {
+          p.colorVariant = 0; view.update(p, model.byCell); // Diagnostic fixture is deliberately ordinary.
+        }
+      },
       seedInteraction() {
         const at = now();
         model.seed([
@@ -118,7 +159,7 @@
       seed() {
         const at = now();
         model.seed(Array.from({ length: dimensions.capacity }, (_, cell) => {
-          const type = species[cell % species.length], vigor = Math.floor(cell / species.length) % 4;
+          const type = eventSpecies[cell % eventSpecies.length], vigor = Math.floor(cell / eventSpecies.length) % 4;
           const age = type === 'redbloom' ? cell % 8000 : timings[type].matureAfterMs + cell % 1000;
           return { type, vigor, column: cell % dimensions.columns, row: Math.floor(cell / dimensions.columns), createdAt: at - age,
             origin: { kind: 'simulated', eventType: 'seed', listenPort: null, sensor: null, seenCount: null } };
@@ -126,13 +167,20 @@
       }
     };
   }
-  function connectStream(Source, model, onWeather, onStatus) {
+  function connectStream(Source, model, onWeather, onStatus, onInvalidWeather = () => {}) {
     const stream = new Source('/api/garden/events');
-    stream.onopen = () => onStatus('connected'); stream.onerror = () => onStatus('disconnected/reconnecting');
-    stream.addEventListener('garden', message => { try { model.accept(JSON.parse(message.data)); } catch { /* malformed frames never stop the stream */ } });
-    stream.addEventListener('weather', message => { try { const state = normalizeWeather(JSON.parse(message.data)); if (state) onWeather(state); } catch { /* preserve last good weather */ } });
+    let closed=false;const close=stream.close.bind(stream);
+    stream.onopen = () => {if(!closed)onStatus('connected');}; stream.onerror = () => {if(!closed)onStatus('disconnected/reconnecting');};
+    const garden=message=>{if(closed)return;try { model.accept(JSON.parse(message.data)); } catch { /* malformed frames never stop the stream */ } };
+    const weather=message=>{if(closed)return;try { const state = normalizeWeather(JSON.parse(message.data)); if (state) onWeather(state); else onInvalidWeather(); } catch { onInvalidWeather(); /* preserve last good rendered weather */ } };
+    stream.addEventListener('garden',garden);stream.addEventListener('weather',weather);
+    stream.close=()=>{
+      if(closed)return;closed=true;
+      stream.removeEventListener?.('garden',garden);stream.removeEventListener?.('weather',weather);
+      stream.onopen=stream.onerror=null;close();
+    };
     return stream;
   }
-  const api = { dimensions, timings, species, palettes, stageAt, normalizeGarden, normalizeWeather, colorVariant, colorName, weatherLevels, weatherSettings, createModel, connectStream };
+  const api = { dimensions, timings, species, eventSpecies, palettes, stageAt, normalizeGarden, normalizeWeather, colorVariant, colorName, weatherLevels, weatherSettings, createModel, connectStream };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenPixiLiveCore = api;
 })();
