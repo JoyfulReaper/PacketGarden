@@ -124,6 +124,14 @@ plant and disappears with its exact parent. These decorations create no extra
 specimens, drops, events, scores or sounds. Diagnostic fixtures can force all
 colors and full fields without manipulating real input.
 
+Wireferns have an independent **25%** cosmetic chance to carry attached sori:
+two to four groups of tiny copper, golden-ochre or soft cyan dots along their
+angular fronds. One stable color/layout is selected at creation, independently
+of foliage, including rare afterglow. Sori appear at **50 seconds**, dim with the
+fern from **five minutes**, and disappear with its normal **six-minute** expiry.
+They create no spores in the air, drops, specimens, events, sounds or points.
+See [before/after artwork and validation](docs/PIXI-LIVE.md#wirefern-sori-2026-10-27).
+
 Ordinary live TCPNoise vines also get one independent **0.5%** cosmetic roll
 after successful placement. A selected vine stays ordinary until **60 seconds**,
 then becomes a dusty mauve opium poppy if fewer than two are active. Failed and

@@ -1,3 +1,146 @@
+# Wirefern sori (2026-10-27)
+
+Implemented on `dev` above opium-pod checkpoint `0719608`. Wireferns keep their
+canonical species, vigor, placement, provenance, 18s/50s/5m/6m lifecycle and
+existing phosphor/moss/cyan/amber/1%-afterglow foliage. The base stress-atlas art
+and its live tint/scale are unchanged. Sori are attached cosmetic dots, not
+flowers, berries, airborne particles, independent plants or collectible drops.
+
+## Selection and lifecycle
+
+`pixi-wirefern-spores.js` owns a dedicated crypto-seeded cosmetic PRNG with a
+distinct clock/performance fallback. The Pixi adapter calls `assign()` only after
+successful creation/replacement, before creating the view. One uniform sample
+selects `< .25` and nine equally likely color/layout pairs within that interval.
+An immutable, non-enumerable `wirefernSpores` trait (or permanent failed `null`)
+stays with that exact source. Ticks, recreated views, inspection, hiding and
+reconnection never roll. Unrelated species and rejected/paused input consume no
+spore randomness. Explicit simulated fixtures alone force traits without rolls.
+
+There is no draw from placement, vigor, foliage, broadleaf/vine blossoms, poppy
+selection, opium pods, Amanita/buds, gnomes, weather or ecology streams. Afterglow
+is neither excluded nor rerolled. Selection creates no SSE frame, activity row,
+sound, acceptance count, score, drop or additional specimen. Inspection remains
+the existing Wirefern card with original network fields.
+
+| Original age | Sori |
+| --- | --- |
+| 0–18s sprout | Hidden |
+| 18–50s growing | Hidden |
+| 50s–5m mature | Two, three or four groups of three rounded dots |
+| 5–6m fading | Same child Sprite, .66 scale, .55 alpha, muted tint |
+| 6m expiry | Parent and its exact child removed |
+
+Replacement, remove, Clear, page teardown and hidden/resume reconciliation use
+existing source notifications. Children belong to the original Sprite; the
+bounded `sporeViews` map retains at most 640 entries and releases the exact
+parent's entry on removal. No new scheduler, per-frame scan/geometry, texture
+generation, particle emitter, filter, shader or dependency is added.
+
+## Alignment with the actual artwork
+
+The existing base frame is **64×64**, anchored at **(.5,.9)** and baked into a
+live 32px tile at **.5 × 1.16 = .58** mature scale. Frond `i` uses
+`y = 51 - 5i`, `reach = 11 - .7i` and a real diagonal from `(32,y+2)` to
+`(32 ± reach,y-2)`. Dots sample that segment at `t=.40,.64,.88`, then apply the
+same anchor/scale transform. All vigor levels share their lower four fronds;
+three layouts select two to four of those real branches, so no vigor-specific
+frames or floating rectangular dot pattern are required. The geometry test
+captures the real stress-atlas line segments and checks every dot against them.
+
+Three cached neutral layouts receive independent copper, golden-ochre or soft
+cyan tints. Small dark rims keep dots distinguishable against cyan foliage.
+The live parent uses an untinted Sprite over already-tinted foliage, so child
+colors never inherit a foliage color multiply. Parent scale (normally 1.4,
+top-row limit 1.1) and visual edge insets are inherited unchanged. The child
+anchors at `(16,29)` with a constant `.2px` Y offset to account for the parent's
+28.8px anchor. Fading multiplies the source bake by `.66`, while preserving that
+constant anchor offset, matching the base's `.33 × 1.16` fade bake exactly.
+
+Sori remain inside the existing frond footprint. Their source alone owns them;
+they do not cover extra cells or create new picking targets. The synthetic
+`/pixi-stress.html` renderer remains unchanged.
+
+## Diagnostic controls and visual review
+
+Only `/pixi-live.html` adds simulated stages, all 180 vigor/foliage/color/layout
+combinations, mixed decorated/undecorated colonies with other plants and grass,
+a forced 640-wirefern field, one-second expiry and a saturated replacement
+setup. Replacement uses normal stronger-growth competition against the sole
+weaker fern. Existing Clear releases all decorations. No homepage controls or
+fabricated TCPNoise events are added.
+
+`tests/pixi-wirefern-spores-browser.cjs --run --baseline` serves frozen
+`0719608`; `--run` serves edited files. Both pages use identical fixture data,
+clock, lighting, foliage and viewport. Ignored local evidence is under
+`artifacts/wirefern-spores/{before,after}/`, with a native-size
+`artifacts/wirefern-spores/index.html` comparison gallery and raw JSON reports.
+Captures include undecorated ferns, all nine pairs on cyan foliage at ordinary
+scale, all 180 combinations including afterglow, stages, mixed colony, grass,
+night, fading, mobile and full 640. The separately labelled **5× camera** image
+is a review close-up; production fern size and all other captures are unchanged.
+
+Desktop review shows discrete sori following frond angles, with dark rims
+retaining contrast on cyan foliage. Mixed/dense views retain the same fern
+footprint and neighbor spacing. Fading and the 390px whole-garden mobile fit
+necessarily make individual dots less distinct; no neon boost, special mobile
+enlargement or animation is used to conceal that limit.
+
+## Resource cost and verification
+
+The specimen atlas grows **825 → 828 frames**, filling three unused slots in
+the existing logical **1024×832**, resolution-2 source (**2048×1664** backing,
+13 MiB uncompressed RGBA before driver overhead). **Additional atlas pixels:
+zero.** Three frame wrappers are added; retained GPU sources and the same five
+startup bakes remain unchanged. Construction Graphics contexts are released
+immediately after baking, and wrappers/sources release through existing page
+ownership. No geometry is generated by steady-state rendering.
+The three slots occupy 3,072 logical pixels (12,288 backing-pixel locations)
+inside the already allocated sheet, rather than allocating another source.
+
+One child Sprite is present per selected mature/fading fern: **0–640 additional
+Sprites**, with no extra containers. A forced 640-wirefern/full-grass fixture
+grows **1,934 → 2,574 display objects**, retaining 640 original specimen Sprites.
+The natural 25% probability is not a fixed per-field quota. Logical ticks do not
+visit the overlay map separately; normal stage notifications create/update or
+destroy the owned child, and steady frames need only normal Sprite traversal.
+
+`tests/pixi-wirefern-spores.cjs` covers exact 25% boundaries, uniform nine-pair
+distribution, stable success/failure and independent entropy, rejection and
+unrelated-species gates, unchanged foliage/rarity/provenance/counts, actual
+frond alignment across all vigor levels, all 180 combinations, exact 50s/5m/6m,
+replacement/remove/clear, hidden/resume, reduced motion and repeated 640-parent
+reset/teardown. The Chrome suite checks real WebGL, all requested comparisons,
+15 full-field resets, exact resource destruction, static poses and absence of
+recurring Graphics. Existing opium-pod, poppy, blossom, gnome, ecology and SSE
+regressions remain in the full validation commands.
+
+Chrome 155's 90-frame forced-full-field samples measured mean CPU submission
+**0.187 → 0.192ms** on the homepage and **0.199 → 0.171ms** on diagnostics, at
+roughly 16.7ms RAF intervals. Across 1,000 steady logical ticks, means were
+**0.0216 → 0.0187ms** and **0.0220 → 0.0184ms**. These tiny differences are noisy,
+not evidence of a speedup or zero GPU cost. Updating all 640 ferns at their fade
+boundary measured **2.1 → 3.1ms** and **1.9 → 2.3ms** respectively; steady ticks
+do not repeat those child updates. Raw render/tick/fade measurements remain in
+the JSON files.
+
+Validation: **61 Node suites passed**, with 13 optional browser/SSE entry points
+explicitly skipped by the Node-only runner; **all 17 Chrome jobs passed**.
+Debug/Release builds passed with zero warnings/errors using
+`-p:BaseOutputPath=C:/GitHub/PacketGarden/artifacts/wirefern-spores/build/`.
+The normal Debug executable was locked by an existing running process; isolated
+outputs avoided stopping it or overwriting its executable. Backend checks passed
+with their existing NU1900 unavailable-vulnerability-metadata warning, using
+`-p:BaseOutputPath=C:/GitHub/PacketGarden/artifacts/wirefern-spores/checks/`.
+Actual local ASP.NET polling-to-SSE integration passed against the isolated
+Debug DLL. `git diff --check` passed. All source changes remain uncommitted on
+`dev`; `main` and the opium-pod commit are preserved.
+
+Short CPU samples and controlled visibility handlers do not establish a long
+human visual/GPU/heap soak, operating-system suspension behavior or results on
+other devices. Mobile/fading dots are intentionally less distinct, as recorded
+in the ordinary-scale captures.
+
 # Collectible opium pods (2026-10-27)
 
 Implemented on `dev`, extending poppy checkpoint `0e691c3`. Loose `opium_pod`

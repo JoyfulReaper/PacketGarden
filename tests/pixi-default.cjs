@@ -24,7 +24,7 @@ for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includ
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99, poppyRandom, podRandom } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9 } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
   let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
@@ -76,9 +76,9 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create = context.window.PacketGardenCore.createGardenModel;
       context.window.PacketGardenCore.createGardenModel = (...args) => { const value=create(...args); garden ??= value; return value; };
     }
-    if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
+    if (assetPath(script) === 'pixi-live-core.js') {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
-      context.window.PacketGardenPixiLiveCore.createModel = (view,options) => { gardenView=view;model = create(view,{...options,...(poppyRandom?{poppyRandom}:{})}); return model; };
+      context.window.PacketGardenPixiLiveCore.createModel = (view,options) => { gardenView=view;model = create(view,{...options,sporeRandom,...(poppyRandom?{poppyRandom}:{})}); return model; };
     }
     if (assetPath(script) === 'garden-ecology.js' && captureModel) {
       const create = context.window.PacketGardenEcology.createEcologyModel;

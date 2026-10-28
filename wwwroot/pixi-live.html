@@ -32,7 +32,8 @@
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
-  <script src="pixi-live-core.js?v=opium-pods-1" defer></script><script src="pixi-live.js?v=opium-pods-1" defer></script>
+  <script src="pixi-wirefern-spores.js?v=wirefern-spores-1" defer></script>
+  <script src="pixi-live-core.js?v=wirefern-spores-1" defer></script><script src="pixi-live.js?v=wirefern-spores-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -56,6 +57,14 @@
       <button id="seed-vine-bloom-stages" type="button">Seed vine bloom stages (simulated)</button>
       <button id="seed-vine-bloom-connections" type="button">Seed connected flowering vines (simulated)</button>
       <button id="seed-vine-bloom-dense" type="button">Seed 640 flowering vines (simulated)</button>
+      <button id="seed-wirefern-spores-stages" type="button">Wirefern sori: stages (simulated)</button>
+      <button id="seed-wirefern-spores-combinations" type="button">Wirefern sori: all vigor/palette/color/layout pairs (simulated)</button>
+      <button id="seed-wirefern-spores-mixed" type="button">Wirefern sori: mixed colony and grass (simulated)</button>
+      <button id="seed-wirefern-spores-dense" type="button">Wirefern sori: dense 640 field (simulated)</button>
+      <button id="seed-wirefern-spores-expiry" type="button">Wirefern sori: expire in 1s (simulated)</button>
+      <button id="seed-wirefern-spores-replacement" type="button">Wirefern sori: replacement setup (simulated)</button>
+      <button id="replace-wirefern-spores" type="button">Replace simulated wirefern</button>
+      <span>Sori are attached cosmetic dots, never flowers or drops. Stages: undecorated, sprout, growing, mature, fading. All pairs include rare afterglow. Replacement uses normal stronger-growth competition; Clear releases every overlay.</span>
       <button id="seed-poppy-before" type="button">Poppy: vine before maturity (simulated)</button>
       <button id="seed-poppy-mature" type="button">Poppy: newly mature (simulated)</button>
       <button id="seed-poppy-fading" type="button">Poppy: fading (simulated)</button>

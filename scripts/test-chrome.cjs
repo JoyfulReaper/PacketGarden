@@ -5,6 +5,7 @@ const root=path.resolve(__dirname,'..'),out=path.join(root,'artifacts/retire-can
 const jobs=[['pixi-default-browser.cjs'],['grass-lush-browser.cjs'],['grass-under-plants-browser.cjs'],['pixi-broadleaf-blooms-browser.cjs'],['pixi-vine-blooms-browser.cjs'],['pixi-grass-separation-browser.cjs','--baseline'],['pixi-grass-separation-browser.cjs'],['pixi-vine-art-browser.cjs'],['canvas-retirement-browser.cjs'],['gnome-arrival-signal-browser.cjs','--baseline'],['gnome-arrival-signal-browser.cjs']];
 jobs.push(['pixi-poppies-browser.cjs','--baseline'],['pixi-poppies-browser.cjs']);
 jobs.push(['opium-pods-browser.cjs','--baseline'],['opium-pods-browser.cjs']);
+jobs.push(['pixi-wirefern-spores-browser.cjs','--baseline'],['pixi-wirefern-spores-browser.cjs']);
 const only=process.argv.find(a=>a.startsWith('--only='))?.slice(7),file=path.join(out,'results.json');
 const results=only&&fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):[];
 for(const [name,...args] of jobs){const id=name+(args.length?'-baseline':'');if(only&&!id.includes(only))continue;

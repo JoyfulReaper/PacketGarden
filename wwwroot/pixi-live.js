@@ -3,6 +3,7 @@
   const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
   const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
   const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
+  const spores=typeof module!=='undefined'&&module.exports?require('./pixi-wirefern-spores.js'):window.PacketGardenWirefernSpores;
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -225,6 +226,9 @@
     for (const stage of ['mature', 'fading']) {
       const g = poppyTile(P, stage === 'fading'); artTiles.push(g); tile(`opium-poppy:${stage}`, g);
     }
+    for (let layout = 0; layout < spores.layouts.length; layout++) {
+      const g = spores.tile(P, layout); artTiles.push(g); tile(`wirefern-spores:${layout}`, g);
+    }
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -252,6 +256,7 @@
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
     const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(), bloomViews = new Map(); let connectionHalves = 0;
     const vineBloomViews=new Map(),vineBloomLinks=new Map();
+    const sporeViews = new Map();
     let groundCover = null;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
@@ -361,7 +366,17 @@
       else sprite.texture=texture;
       vineBlooms.style(sprite,specimen);
     }
-    return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+    function syncSpores(specimen, parent) {
+      let sprite = sporeViews.get(specimen.id);
+      if (!spores.active(specimen)) { if (sprite) { sprite.destroy(); sporeViews.delete(specimen.id); } return; }
+      const texture = frames.get(`wirefern-spores:${specimen.wirefernSpores.layout}`);
+      if (!sprite) {
+        sprite = new P.Sprite(texture); sprite.anchor.set(.5, 29 / 32); sprite.eventMode = 'none';
+        parent.addChild(sprite); sporeViews.set(specimen.id, sprite);
+      } else sprite.texture = texture;
+      spores.style(sprite, specimen);
+    }
+    return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, sporeViews, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
       setGroundCover(presentation) { groundCover = presentation; },
       get contactLayer() { return links; },
       add(specimen, byCell) {
@@ -370,6 +385,7 @@
         sizeSpecimen(specimen, sprite);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
         syncBloom(specimen,sprite);
+        syncSpores(specimen, sprite);
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
           const offset = vineOffset(specimen), seed = specimen.row * columns + specimen.column;
@@ -386,6 +402,7 @@
         sizeSpecimen(specimen, byId.get(specimen.id));
         syncBloom(specimen,byId.get(specimen.id));
         syncVineBloom(specimen,byId.get(specimen.id));
+        syncSpores(specimen, byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
         if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell);
         groundCover?.specimenChanged(specimen); },
@@ -393,6 +410,7 @@
         const sprite = byId.get(specimen.id); sprite.destroy({children:true}); byId.delete(specimen.id); counters.destroyed++;
         bloomViews.delete(specimen.id);
         vineBloomViews.delete(specimen.id);
+        sporeViews.delete(specimen.id);
         mutationViews.delete(specimen.id);
         const graphic = vineLinks.get(specimen.id);
         if (graphic) {
@@ -426,14 +444,14 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, sporeViews: sporeViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + sporeViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() {
         // Each link owns a Graphics context and may own a blossom child.
         for(const graphic of vineLinks.values())graphic.destroy({children:true,context:true});
         groundCover?.destroy(); groundCover = null;
-        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
+        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();sporeViews.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
       }
     };
   }
@@ -622,6 +640,12 @@
       if (mode === 'grass') ecologyPresentation.seedDenseEcology(ecology, Date.now(), false);
     });
     listen(document.querySelector('#replace-poppy'), 'click', () => model.replacePoppyFixture());
+    for (const mode of ['stages', 'combinations', 'mixed', 'dense', 'expiry', 'replacement']) listen(document.querySelector(`#seed-wirefern-spores-${mode}`), 'click', () => {
+      ambient.clear(); frogs?.clear(); gnomes.clear(); ecology.clear();
+      document.querySelector('#allow-grass-under-plants').checked = true; ecology.setAllowGrassUnderPlants(true);
+      model.seedWirefernSpores(mode); ecologyPresentation.seedDenseEcology(ecology, Date.now(), false);
+    });
+    listen(document.querySelector('#replace-wirefern-spores'), 'click', () => model.replaceWirefernSporeFixture());
     for (const mode of ['pending', 'active', 'mixed', 'cap', 'cancel', 'hidden', 'expiry', 'reset']) listen(document.querySelector(`#seed-opium-${mode}`), 'click', () => {
       ambient.clear(); frogs?.clear(); gnomes.clear(); ecology.clear();
       const at = Date.now(), source = model.seedPoppies('pods');
@@ -744,6 +768,7 @@
         `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
+        `Wirefern sori ${counts.sporeViews}/640 · 3 cached layouts · 25% cosmetic selection`,
         `Opium poppies ${model.poppies.snapshot().active}/2 · pending ${model.poppies.snapshot().pending} · 2 cached frames · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,

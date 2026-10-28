@@ -6,6 +6,7 @@
   const uiCore = typeof module !== 'undefined' && module.exports ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
   const blooms = typeof module !== 'undefined' && module.exports ? require('./pixi-broadleaf-blooms.js') : window.PacketGardenBroadleafBlooms;
   const vineBlooms = typeof module !== 'undefined' && module.exports ? require('./pixi-vine-blooms.js') : window.PacketGardenVineBlooms;
+  const spores = typeof module !== 'undefined' && module.exports ? require('./pixi-wirefern-spores.js') : window.PacketGardenWirefernSpores;
   const { dimensions, timings, species, eventSpecies, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
@@ -58,7 +59,7 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, poppyRandom, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
@@ -69,6 +70,7 @@
         specimen.colorVariant = specimen.type === 'stillbloom' ? 0 : colorVariant(specimen.type, specimen.vigor, random());
         blooms.assign(specimen, bloomRandom);
         vineBlooms.assign(specimen,vineBloomRandom);
+        spores.assign(specimen, sporeRandom);
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
@@ -99,6 +101,16 @@
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedWirefernSpores(mode = 'stages') {
+        const entries = spores.fixtureEntries(now(), mode), foliage = entries.map(p => p.colorVariant);
+        model.seed(entries);
+        for (let i = 0; i < entries.length; i++) { entries[i].colorVariant = foliage[i]; view.update(entries[i], model.byCell); }
+      },
+      replaceWirefernSporeFixture() {
+        if (model.specimens.length !== dimensions.capacity || !model.specimens.every(p => p.origin?.kind === 'simulated'
+          && p.origin.eventType === 'wirefern-spore-fixture')) return null;
+        return model.addSpecimen('wirefern', 3, now(), { kind: 'simulated', eventType: 'wirefern-spore-fixture' });
+      },
       seedPoppies(mode = 'mature') {
         const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000, pods: 65000 }[mode] ?? 60000;
         const entries = Array.from({ length: 35 }, (_, i) => ({ type: 'vine', vigor: i % 4,

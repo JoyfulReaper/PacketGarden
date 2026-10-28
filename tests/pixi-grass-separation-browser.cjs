@@ -7,12 +7,12 @@ async function run() {
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline');
   const output=path.join(root,'artifacts/grass-separation',baseline?'before':'after');await fs.mkdir(output,{recursive:true});
   const checkpoint=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),old=new Map();
-  if(baseline)for(const file of ['index.html','pixi-live.html','pixi-live.js','pixi-live-ecology.js'])old.set(file,execFileSync('git',['show',`${checkpoint}:wwwroot/${file}`],{cwd:root}));
+  if(baseline)for(const file of ['index.html','pixi-live.html','pixi-live-core.js','pixi-live.js','pixi-live-ecology.js'])old.set(file,execFileSync('git',['show',`${checkpoint}:wwwroot/${file}`],{cwd:root}));
   const capture=`{
     const f=window.__separation={bakes:[],geometry:0,streams:0,contexts:[]};
     const NativeSource=EventSource;window.EventSource=class extends NativeSource{constructor(...args){super(...args);f.streams++;}};
     const garden=PacketGardenCore.createGardenModel;PacketGardenCore.createGardenModel=(...args)=>{const m=garden(...args);f.garden??=m;return m;};
-    const model=PacketGardenPixiLiveCore.createModel;PacketGardenPixiLiveCore.createModel=(...args)=>{f.view=args[0];return f.model=model(...args);};
+    const model=PacketGardenPixiLiveCore.createModel;PacketGardenPixiLiveCore.createModel=(view,options)=>{f.view=view;return f.model=model(view,{...options,sporeRandom:()=>.9});};
     const ecology=PacketGardenEcology.createEcologyModel;PacketGardenEcology.createEcologyModel=(...args)=>(f.ecology=ecology(...args));
     const presentation=PacketGardenPixiEcology.createEcologyView;PacketGardenPixiEcology.createEcologyView=(...args)=>(f.ground=presentation(...args));
     const light=PacketGardenLighting.createModel;PacketGardenLighting.createModel=(...args)=>(f.light=light(...args));

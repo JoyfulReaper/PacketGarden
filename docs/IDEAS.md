@@ -78,6 +78,21 @@ gameplay change. Future tuning should retain organic edges rather than
 rectangular occupied-cell tints; broader directional shadows remain a separate
 idea. See [captures, tradeoffs and bounds](PIXI-LIVE.md#grass-and-plant-visual-separation-2026-10-23).
 
+## Wirefern sori (implemented)
+
+Wireferns now have a separate 25% cosmetic selection at creation. Stable copper,
+golden-ochre or soft phosphor-cyan sori form two to four small three-dot groups
+on actual angular fronds. Color and pattern are independent of foliage/vigor,
+including the unchanged rare afterglow palette. The dots appear at 50-second
+maturity, dim/desaturate at five minutes and leave with the original fern at six
+minutes. Three cached layouts and source-owned child Sprites add no timers or
+per-frame geometry. Inspection, identity, network provenance, ecology, drops,
+gnomes and Score: 0 are unchanged. See
+[geometry, before/after captures and resource measurements](PIXI-LIVE.md#wirefern-sori-2026-10-27).
+
+Airborne spore particles, collectible spores, new plants and spreading remain
+out of scope; the implemented sori have no gameplay or collection behavior.
+
 ## Ambient actors and incidents
 
 The browser now has a transient actor/event layer because of The Gnome Incident.

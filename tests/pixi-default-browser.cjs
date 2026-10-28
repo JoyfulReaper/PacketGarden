@@ -49,6 +49,8 @@ async function run() {
         window.__gardenAudioGains.push(node); return node; }
     };
     const createGnomes = PacketGardenGnomes.createModel;
+    const createPixiModel = PacketGardenPixiLiveCore.createModel;
+    PacketGardenPixiLiveCore.createModel = (view,options) => createPixiModel(view,{...options,sporeRandom:()=>.9});
     const createLighting=PacketGardenLighting.createModel,createSurface=PacketGardenLightingView.createSurface;
     PacketGardenLighting.createModel=options=>(window.__gardenTestLighting=createLighting({...options,
       getLocalHour:new URLSearchParams(location.search).has('live-lighting')?PacketGardenLighting.localHour:()=>12}));
@@ -999,7 +1001,7 @@ async function run() {
     const saved=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>p.origin)));
     assert(!saved.includes('tcpnoise'));assert(saved.includes('simulated'));
     const buildCounts=await page.evaluate(()=>({objects:__gardenTestApp.stage.children[0].children[6].children.length,frames:document.querySelector('#hud').textContent.match(/atlas frames (\d+)/)?.[1]}));
-    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'825');
+    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'828');
     const metrics={resources:buildCounts,day:await sample(page)};
     // Fixed fixtures use the real model, existing cached artwork and surface light.
     const fixture=async(age,mixed=false)=>page.evaluate(({age,mixed})=>{
