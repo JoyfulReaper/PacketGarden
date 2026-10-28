@@ -394,6 +394,7 @@
       sprite.scale.set(pose.scaleX, pose.scaleY); sprite.alpha = pose.alpha;
     }
     return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, sporeViews, cloudViews, cloudChange, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+      mushroomVisual(details) { return {texture:texture({...details,type:'mushroom',stage:'mature'}),scale:details.row===0?1.1:1.4}; },
       setGroundCover(presentation) { groundCover = presentation; },
       get contactLayer() { return links; },
       add(specimen, byCell) {
@@ -584,14 +585,18 @@
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
     own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
-    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
+    let heistPreviewReduced = false;
+    const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced);
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual);
     own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
     const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
       getPuddles: () => ecology?.puddles ?? [],
       hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
+      hasPendingCollectible: specimen => ambient.pendingDrops.has(specimen),
+      getHeistPosition: specimen => view.byId.get(specimen.id)?.position,
       onUnderpantsAttempt: (point,at) => ambient.dropGnomeUnderpants(point,at),
-      getReducedMotion: () => reducedMotion?.matches ?? false,
+      getReducedMotion: gnomeReducedMotion,
       random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
       onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
       onCue: stage => sound?.maybePlayGnomeSound(stage) });
@@ -620,6 +625,31 @@
     listen(document.querySelector('#trigger-landscaping'),'click', () => triggerLandscaping('vine'));
     listen(document.querySelector('#trigger-overcrowding'),'click', () => triggerLandscaping('overcrowding'));
     listen(document.querySelector('#trigger-weed-harvest'),'click', () => triggerLandscaping('weed_harvest'));
+    const heistStatus = text => { const el=document.querySelector('#heist-status');if(el)el.textContent=text; };
+    listen(document.querySelector('#seed-heist'),'click', () => {
+      gnomes.clear();ambient.clear();model.seedHeist();gnomes.resetCadence();
+      heistStatus('35 simulated specimens, including four mature ordinary mushrooms. Trigger a heist; pickup removes the exact target after 3s.');
+    });
+    listen(document.querySelector('#trigger-heist'),'click', () => {
+      if(gnomes.incident){heistStatus('An incident is already active.');return;}
+      if(!gnomes.heistCandidates(Date.now(),true).length){heistStatus('Seed the simulated mushroom fixture first. Live mushrooms are never forced by this control.');return;}
+      heistStatus(gnomes.startHeist(Date.now(),undefined,true)?'Simulated heist: approaching a real occupied cell. Pickup in 3s, departure at 14s. Click either thief for underpants.':'Requires 30 living specimens and an eligible simulated mushroom.');
+      gnomeView.animate(Date.now());
+    });
+    for(const mode of ['remove','replace'])listen(document.querySelector(`#${mode}-heist-target`),'click',()=>{
+      const target=gnomes.incident?.type==='gnome_heist'?gnomes.incident.target?.specimen:null;
+      if(!target || target.origin?.kind!=='simulated'){heistStatus('Trigger a simulated heist before pickup first.');return;}
+      if(mode==='replace'){
+        if(!model.replaceHeistTarget(target)){heistStatus('Replacement preview requires the dedicated all-simulated mushroom fixture. Use Seed mature mushrooms first.');return;}
+      }else model.remove(target,'simulated-heist-target-removal');
+      heistStatus(`Simulated target ${mode==='replace'?'replaced in its exact cell':'removed'}; thieves will abort without stealing a new occupant.`);
+    });
+    listen(document.querySelector('#heist-reduced-motion'),'change',event=>{heistPreviewReduced=event.target.checked;});
+    listen(document.querySelector('#suspend-heist'),'click',()=>{
+      if(gnomes.incident?.type!=='gnome_heist'){heistStatus('Trigger a heist first; suspension can be tested in any phase.');return;}
+      const removed=gnomes.incident.removals;gnomes.suspend(Date.now());gnomes.resetCadence(Date.now());gnomeView.animate(Date.now());
+      heistStatus(`Heist-only hidden/resume path: views cleared, fresh 45s deadline. ${removed?'The stolen mushroom remains removed.':'Pickup had not occurred; the mushroom remains.'} Actual tab hiding also suspends the whole page.`);
+    });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
@@ -810,13 +840,14 @@
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
         `Wirefern sori ${counts.sporeViews}/640 · 3 cached layouts · 25% cosmetic selection`,
         `Wirefern clouds ${counts.cloudViews}/2 · 1 cached frame · checks ${emissions.counts.checks} · emitted ${emissions.counts.emitted} · 30s / 75%`,
         `Opium poppies ${model.poppies.snapshot().active}/2 · pending ${model.poppies.snapshot().pending} · 2 cached frames · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
+        `Mushroom heist · carried view ${gnomeView.carried?1:0} · authoritative removals ${model.counts.heistRemovals}`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,

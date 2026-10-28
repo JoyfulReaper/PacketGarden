@@ -158,7 +158,7 @@ long session is more memorable than a permanent crowd of frogs.
 Possible gnome incidents:
 
 - a lone gnome walks across the garden carrying something it apparently stole;
-- two gnomes drag a mushroom somewhere for reasons never explained;
+- two gnomes drag a mushroom somewhere for reasons never explained — implemented as the Great Gnome Mushroom Heist below;
 - one gnome chases another across the garden;
 - a tiny gnome funeral procession;
 - one gnome appears, looks around, and immediately leaves;
@@ -166,13 +166,41 @@ Possible gnome incidents:
 - a few gnomes build a tiny temporary campfire;
 - a much rarer **Gnome Civil War** as an escalated spectacle.
 
+### Great Gnome Mushroom Heist (implemented)
+
+Two gnomes really steal a garden mushroom. The existing **45-second / 2%**
+ordinary incident check still requires **30 living specimens**. On success,
+if an eligible mushroom exists, one **30%** branch selects a heist instead of
+the dispute; otherwise the normal dispute runs. This is a **0.6% chance per
+available check** with eligible mushrooms, not an extra periodic roll. The
+existing landscaping order, probabilities and seven-minute cooldown remain.
+
+One exact mature ordinary mushroom is sampled uniformly. Rare species/palettes,
+pending collectibles and active/pending mutations are excluded. The red/green
+thieves approach from opposite sides for **3s**; pickup rechecks the original
+object, id, cell, coordinates, creation time, occupancy and current eligibility.
+It then calls the authoritative garden removal API with `gnome-heist`, freeing
+the cell and running normal view/inspection/drop cleanup. The original specimen
+is gone. A temporary Sprite reuses its mature mushroom texture, palette and
+scale as the pair carry it toward the nearest edge; after a **1s** hold they
+depart by **14s** with a small wobble. No replacement specimen is created.
+
+Stale/replaced targets cause a short empty-handed exit. Hidden tabs or clock
+stalls cancel safely: before pickup the mushroom remains, after pickup it stays
+removed. Reduced motion uses static poses and discrete travel without wobble.
+Underpants clicks, collection caps, normal cell refill/competition and Score: 0
+remain intact. Heist removals have their own counter and never become accepted
+growth, Recent activity or invented TCPNoise provenance. The diagnostic page
+provides simulated source/removal/replacement, suspension and reduced previews.
+See [actual-scale captures, resource costs and tests](PIXI-LIVE.md#great-gnome-mushroom-heist-2026-10-27).
+
 ### Gnome Landscaping Department — vine control (implemented)
 
 When ordinary living vines reach **40% of living specimens**, with at least
 **20 eligible vines**, the shared 45-second gnome check gets a **10%** landscaping
 roll. A **seven-minute cooldown** runs from each crew's arrival, even if it is
-cancelled. The four-gnome dispute takes priority on a shared check; neither
-incident overlaps or interrupts the other. A full garden instead selects the
+cancelled. The ordinary dispute/heist choice takes priority on a shared check;
+incidents never overlap or interrupt one another. A full garden instead selects the
 overcrowding mode below, with no additional vine roll.
 
 Two gnomes arrive: a worker carries hedge clippers and a stationary supervisor

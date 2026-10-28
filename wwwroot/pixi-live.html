@@ -14,7 +14,7 @@
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
   <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
-  <script src="garden-gnomes.js?v=poppy-1" defer></script>
+  <script src="garden-gnomes.js?v=mushroom-heist-1" defer></script>
   <script src="garden-mutations.js?v=opium-pods-1" defer></script>
   <script src="garden-grass.js?v=grass-lush-1" defer></script>
   <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
@@ -27,13 +27,13 @@
   <script src="garden-ui-core.js?v=opium-pods-1" defer></script>
   <script src="pixi-live-ui.js?v=frog-gnome-ack-1" defer></script>
   <script src="pixi-live-ambient.js?v=opium-pods-1" defer></script>
-  <script src="pixi-live-gnomes.js?v=gnome-puddles-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=mushroom-heist-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
-  <script src="pixi-live-core.js?v=wirefern-spores-1" defer></script><script src="pixi-live.js?v=wirefern-release-1" defer></script>
+  <script src="pixi-live-core.js?v=mushroom-heist-1" defer></script><script src="pixi-live.js?v=mushroom-heist-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -102,6 +102,13 @@
       <button id="trigger-landscaping" type="button">Trigger landscaping (simulated)</button>
       <button id="trigger-overcrowding" type="button">Trigger overcrowding relief (simulated)</button>
       <button id="trigger-weed-harvest" type="button">Trigger weed harvest (simulated)</button>
+      <button id="seed-heist" type="button">Seed mature mushrooms (simulated)</button>
+      <button id="trigger-heist" type="button">Trigger mushroom heist (simulated)</button>
+      <button id="remove-heist-target" type="button">Remove heist target before pickup</button>
+      <button id="replace-heist-target" type="button">Replace heist target before pickup</button>
+      <button id="suspend-heist" type="button">Simulate heist hide/resume</button>
+      <label><input id="heist-reduced-motion" type="checkbox"> Preview heist reduced motion</label>
+      <span id="heist-status" role="status">Pickup after 3s really frees the original cell; the two thieves leave at 14s. Seed/trigger again for sequential tests. Hide the tab during any phase to cancel safely. System reduced motion always applies.</span>
       <button id="trigger-frog" type="button">Trigger frog (simulated)</button>
       <button id="trigger-gnome-puddle" type="button">Trigger gnome puddle mishap</button>
       <span id="gnome-puddle-status" role="status">Local simulated water and gnomes; ordinary water entries retain their 20% chance.</span>

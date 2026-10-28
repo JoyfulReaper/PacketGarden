@@ -1,3 +1,195 @@
+# Great Gnome Mushroom Heist (2026-10-27)
+
+Implemented on `dev` above `95940f4` (wirefern spore releases), preserving the
+opium-pod and sori slices. The initial tree was clean; fetched `origin`, verified
+matching local/remote `dev`, and explicitly selected `dev`. No applicable
+`AGENTS.md` was found. `main` remains `0e691c3`. Work is uncommitted; no push,
+merge, rebase or deployment was performed.
+
+## Shared scheduling and exact eligibility
+
+`garden-gnomes.js` retains the existing single **45,000ms** ordinary incident
+check, **30 living specimens** minimum and **`roll < .02`** gate. On success,
+build the currently eligible mushroom pool. If nonempty, one **`roll < .30`**
+branch replaces the ordinary dispute with a heist; choose one pool member
+uniformly using the existing bounded gnome random source. There is no extra
+random draw when no mushroom qualifies, so the original dispute retains its
+ordinary path and position draws. With eligible mushrooms, this is **0.6% per
+available check** for a heist and **1.4%** for a dispute. It is not a per-mushroom
+probability or a guaranteed arrival interval.
+
+Only canonical `mushroom`, mature at **40s inclusive to 4m exclusive**, can be
+stolen. Exact current cell/object occupancy, valid original coordinates and
+membership are required. Ordinary live TCPNoise mushrooms qualify. Protected
+species (including crystal fungus), rare palettes (index 4/bioluminescent and
+the shared rare-name set), active/pending mutations, poppy traits and pending
+collectibles are excluded. The Pixi adapter supplies its actual pending-drop
+map as the protection predicate. Simulated targets are allowed for explicit
+diagnostics; the forced diagnostic trigger accepts only simulated sources.
+
+One shared incident owns the two thieves. There is no overlapping dispute or
+landscaping, new timer, random stream, queue or catch-up incident. The existing
+ordinary-incident priority, overcrowding/vine/weed order, probabilities and
+seven-minute landscaping cooldown are preserved. A heist does not consume the
+landscaping cooldown. The existing optional arrival sound plays once; no new
+audio or backend event is introduced.
+
+## Authoritative pickup and getaway
+
+The model captures the exact source reference, id, cell, column/row and creation
+timestamp at arrival. Red- and green-hatted gnomes approach from opposite sides
+for **3,000ms**, targeting the actual rooted Pixi mushroom position (including
+normal edge insets). Only the existing **250ms logical tick** can pick up a
+mushroom; frame interpolation never removes specimens.
+
+Pickup revalidates every captured identity component, authoritative occupancy,
+membership, maturity and protection. It captures safe visual values
+`{type, vigor, colorVariant, row}` before calling **`garden.remove(source,
+'gnome-heist')`**. The normal removal callbacks destroy the original Sprite,
+close inspection, cancel associated pending attempts/mutations, update ground
+presentation and free the cell immediately. A successful theft increments the
+new cumulative `heistRemovals` once; ordinary lifecycle-removal/replacement and
+accepted-live counters keep their existing meanings. No array/map editing,
+replacement specimen, incoming event, Recent row or fabricated provenance is
+used. Score remains 0. The carried state releases its original source reference
+after pickup and retains no raw source provenance.
+
+After a **1,000ms** pickup hold, the pair move together toward the nearest of
+the four garden edges and finish at **14,000ms** from arrival. Their separation
+remains 36 logical pixels. A temporary, noninteractive carried Sprite uses the
+**same cached mature mushroom texture** as the original, preserving baked
+palette/vigor and rooted anchor, at its original 1.4 scale (1.1 on the top row).
+It sits between the thieves with a .6px wobble and .035-radian tilt. No logical
+specimen is created for it. Departure destroys all temporary views and releases
+incident state; the mushroom stays removed and normal growth may refill its
+cell. A target lost/replaced/protected before pickup causes a **2s empty-handed
+exit**, without selecting or removing another occupant.
+
+Both gnomes retain centralized picking priority and one underpants attempt each,
+including permanent consumption of an attempt at the five-drop cap. Their
+surprise poses leave the heist running. The carried art is not a separate hit
+target or collectible; underpants remain independent loose drops.
+
+## Hidden tabs, reduced motion and diagnostics
+
+Actual page hiding uses the existing visibility handler: clear actors, carried
+view and incident immediately and reset the shared deadline. Resume starts a
+fresh **45s** deadline. Backwards clocks and logical **or render** gaps over
+**1,500ms** also cancel and reset cadence. There is no delayed pickup/replay.
+Before pickup the original mushroom remains; after pickup it is never restored.
+Clear and page teardown release temporary references before atlas disposal.
+
+System reduced motion keeps static poses, removes wobble/tilt/walking and uses
+discrete approach/getaway positions. The diagnostic reduced checkbox can request
+this simpler mode but cannot override the system preference.
+
+Only `/pixi-live.html` adds mature-mushroom seed, forced simulated heist,
+pre-pickup removal/replacement, reduced-motion and heist-only hide/resume buttons.
+Seeding creates 35 explicitly simulated specimens with four mature mushrooms;
+it never creates TCPNoise observations or accepted events. Replacement reimports
+only the dedicated all-simulated fixture through the authoritative seed/cleanup
+API; it refuses mixed/live gardens. Tests separately exercise real stronger-vigor
+replacement in a saturated garden. The suspension button demonstrates the gnome
+cancel/fresh-deadline path; actual tab visibility is tested separately. Trigger
+again after departure, or reseed after cancellation, for sequential tests.
+The existing phase/removal HUD exposes authoritative theft and carried-view
+counts. No simulation controls were added to the homepage.
+
+## Native-size browser evidence
+
+`node tests/gnome-heist-browser.cjs --run` captures both supported pages at an
+actual **960×600 renderer/presentation size**, with no camera enlargement. The
+gold mushroom at **column 18, row 10** is the target in the standard fixture:
+
+- `artifacts/gnome-heist/{homepage,diagnostic}-01-arrival.png`
+- `…-02-approach-occupied.png` at 1.5s
+- `…-03-pickup.png` at 3s
+- `…-04-empty-cell-getaway.png` at 6.5s
+- `…-05-edge.png` at 12.5s and `…-06-departed.png` at 14s
+- `…-night.png`, `…-dense-grass.png`, `…-rain.png`, `…-dense-640.png`,
+  `…-mobile.png`, `…-reduced-motion.png`, and `…-underpants.png`
+
+The local `artifacts/gnome-heist/index.html` gallery retains native desktop
+image sizes, and `review.json` accompanies every scene with source membership,
+occupancy, original-view absence, carried texture/scale, exact specimen counts,
+theft counts, unchanged accepted/Recent state and Score: 0 assertions. Rain
+includes actual cached weather particles. Artifacts are ignored local evidence.
+
+Visual review confirms two distinct hats, an occupied source during approach,
+the original gold mushroom between raised hands, an empty original cell during
+the getaway and disappearance at the edge. The scene remains legible on grass,
+at night and in rain. At mobile whole-garden scale the hats and mushroom remain
+tiny; dense foliage can overlap the route. A full-garden image, not a magnified
+artwork crop, is the review evidence.
+
+## Resource cost and validation
+
+The carried art adds **zero specimen-atlas frames/pixels**: that atlas stays at
+**829 frames**. Four finite raised-arm/surprised-arm poses expand the existing
+gnome atlas from **22 to 26 frames**, logical **880×32 → 1040×32**, resolution-2
+backing **1760×64 → 2080×64**. This adds **20,480 backing pixels**, about **80KiB
+of RGBA8 texel storage** before driver overhead. It adds no GPU source or startup
+bake call (five total remain). All construction Graphics contexts are released.
+There are two temporary actor Sprites plus one carried Sprite and the existing
+transient group; existing bounded puddle splashes may also appear. Actors remain
+within the shared four-actor cap and never coexist with another incident.
+There are no idle actor/carry views, recurring texture generation, per-frame
+Graphics, new loops/timers, shaders, dependencies or permanent specimen Sprites.
+
+Chrome 155 short CPU samples use a 640-specimen garden, 120 moving-frame samples
+and 20 forced selection/pickup samples per page. These are CPU submission times,
+not GPU completion measurements:
+
+| CPU mean (ms) | Homepage | Diagnostic |
+| --- | ---: | ---: |
+| Idle gnome guard | below timer resolution | below timer resolution |
+| Existing four-gnome dispute animation | .0150 | .0092 |
+| Two thieves + carried mushroom animation | .0100 | .0050 |
+| Render submission with heist | .0942 | .0742 |
+| 45s selection, successful heist including actor creation | .120 | .130 |
+| Pickup, authoritative removal/notifications + carried Sprite creation | .030 | .010 |
+
+Worst sampled selection was **.20ms**, pickup **.10ms**. Short samples are noisy;
+they do not establish that this incident is faster than a dispute. Repeated
+40-cycle checks per page retain five bakes, one gnome GPU source, constant
+Graphics-context count, zero geometry delta and no leftover actor/carry views.
+
+Validation completed:
+
+- `npm test`: **63 passed**, 15 optional browser/SSE entry points skipped,
+  zero failures. The new heist suite also passes focused reruns after final
+  identity/protection/diagnostic checks.
+- `npm run test:chrome`: **all 20 jobs passed**, including actual heist sequence,
+  hidden/stall/source replacement, reduced motion, real underpants clicks,
+  cached ownership, existing disputes/landscaping/puddles, pods, wirefern
+  sori/releases and broadleaf/vine flowers. Focused heist review passed again
+  with final logical CPU probes and diagnostic guards.
+- Debug and Release `dotnet build PacketGarden.slnx --no-restore`, isolated
+  `BaseOutputPath=artifacts/gnome-heist/build/`: zero warnings/errors.
+- `dotnet run --project tests/PacketGarden.Checks --no-restore`, isolated output:
+  all backend assertions passed. Existing NU1900 reports unavailable NuGet
+  vulnerability metadata.
+- `node tests/weather-sse.cjs --run
+  artifacts/gnome-heist/build/Debug/net10.0/PacketGarden.dll`: actual ASP.NET
+  polling/SSE, startup, retained outage values, reconnect, same-value recovery,
+  compatibility and lease renewal passed.
+- `git diff --check`: passed; current branch `dev`, with all work uncommitted.
+
+Model coverage includes exact 2%/30% boundaries and uniform selection, no overlap
+or catch-up, original object/id/cell/coordinates/time/occupancy, maturity and rare
+protection, pending-drop exclusion plus normal removal cancellation fallback,
+real saturated replacement, no double removal/restoration, normal freed-cell
+refill, every cancellation phase, score/provenance/counter semantics, capped
+underpants and 80 repeated Pixi carry cleanup cycles on both pages. The original
+Sprite/inspection disappear synchronously and the carried texture/scale match.
+
+Remaining limits: fixed-clock Chromium scenes and controlled visibility dispatch
+do not replace an operating-system suspension or long live-traffic soak. The
+carry is an existing sprite with group wobble, not physically articulated hands;
+garden-edge masking clips the outgoing pair naturally. Mobile readability and
+dense-route occlusion remain intentionally small-scale. GPU completion, driver
+heap growth and other devices were not measured.
+
 # Wirefern spore release (2026-10-27)
 
 Implemented on `dev` above static-sori checkpoint `5c5746c`, preserving the

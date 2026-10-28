@@ -127,7 +127,7 @@ async function adapters() {
       assert([...view.views.values()].every(s=>sprites.includes(s)));
     }
     assert.equal(m.incident,null);assert.equal(layer.children.length,0);assert.equal(view.views.size,0);
-    assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),baseline+22);assert.equal(h.generated(),allocated);
+    assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),baseline+26);assert.equal(h.generated(),allocated);
   }
   view.destroy();cache.destroy();layer.destroy();assert.equal(h.textureCount(),baseline);
   for(const page of ['index.html','pixi-live.html'])for(const reduced of [false,true]) {

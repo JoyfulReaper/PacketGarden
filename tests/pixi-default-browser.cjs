@@ -736,7 +736,7 @@ async function run() {
       });
       await page.close();assert.deepEqual(errors,[],'including page-close errors');
     }
-    assert(resources.cycles.cycles.every(c=>c.active===1&&c.gnomes===0&&c.splashes===0&&c.destroyed));assert.equal(resources.cycles.frames,22);assert.equal(resources.cycles.bakes,1);assert.equal(resources.cycles.sources,1);
+    assert(resources.cycles.cycles.every(c=>c.active===1&&c.gnomes===0&&c.splashes===0&&c.destroyed));assert.equal(resources.cycles.frames,26);assert.equal(resources.cycles.bakes,1);assert.equal(resources.cycles.sources,1);
     // Isolated native-clock submission probes. Frozen fixtures above measure
     // pixels/state only; these repeated calls compare the same four actors.
     const perf=await newPage();await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestGnomes);
@@ -927,7 +927,7 @@ async function run() {
         gnomeBakes:__gardenGnomeBakes,ambientBakes:__gardenAmbientBakes,
         gnomeBacking:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight]};
     });
-    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,22);assert.equal(resources.ambientFrames,14);
+    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,26);assert.equal(resources.ambientFrames,14);
     assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
     assert.deepEqual(errors,[]);await page.close();await fs.writeFile(path.join(output,'gnome-harvest-resources.json'),JSON.stringify(resources,null,2));
     console.log('PASS: Chrome weed-harvest trigger/cuts/sacks, actual gnome clicks/one attempt, independent underpants, both 80/20 messages, day/night Pixi captures and 20 cleanup cycles:',JSON.stringify(resources));

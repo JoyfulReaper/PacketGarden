@@ -62,7 +62,7 @@
   function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
-    const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
+    const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0, heistRemovals: 0 };
     const model = garden.createGardenModel({ now, random, onChange(change) {
       const { kind, specimen, reason } = change;
       if (kind === 'added') {
@@ -74,7 +74,7 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
+      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });
@@ -101,6 +101,22 @@
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedHeist() {
+        const at=now();
+        model.seed(Array.from({length:35},(_,i)=>({type:i<4?'mushroom':'broadleaf',vigor:i%4,
+          column:i<4?12+i*2:7+(i-4)%18,row:i<4?10:13+Math.floor((i-4)/18),createdAt:at-65000,
+          origin:{kind:'simulated',eventType:'heist-fixture'}})),at);
+        for(const p of model.specimens){p.colorVariant=p.vigor;view.update(p,model.byCell);}
+      },
+      replaceHeistTarget(target) {
+        // Explicit all-simulated dev fixture only. Reimport through normal lifecycle notifications.
+        if(!model.specimens.includes(target) || !model.specimens.every(p=>p.origin?.kind==='simulated' && p.origin.eventType==='heist-fixture'))return null;
+        const replacement={type:'mushroom',vigor:3,colorVariant:3,column:target.column,row:target.row,createdAt:now()-65000,
+          origin:{kind:'simulated',eventType:'heist-fixture'}};
+        const entries=model.specimens.map(p=>p===target?replacement:p),colors=entries.map(p=>p.colorVariant);
+        model.seed(entries);
+        entries.forEach((p,i)=>{p.colorVariant=colors[i];view.update(p,model.byCell);});return replacement;
+      },
       seedWirefernSpores(mode = 'stages') {
         const entries = spores.fixtureEntries(now(), mode), foliage = entries.map(p => p.colorVariant);
         model.seed(entries);

@@ -200,6 +200,17 @@ stale or replaced targets are checked again. Puddle mishaps, surprise poses and
 independent underpants drops retain their existing behavior. Collection awards
 **+0 points** and `Score: 0` stays unchanged.
 
+The **Great Gnome Mushroom Heist** can replace 30% of successful ordinary gnome
+incidents when an unprotected mature mushroom is available: the shared check is
+still 2% every 45 seconds with at least 30 living specimens. A red-hatted and a
+green-hatted thief approach the exact mushroom, revalidate its identity after
+three seconds and **really remove it from the garden**. They carry its original
+palette/size in cached artwork to the nearest edge and leave after 14 seconds.
+Its cell stays free for normal growth. Pending collectibles, mutations and rare
+specimens are protected; hiding or stalls cancel without replay or restoration.
+Both thieves remain clickable for underpants. See the
+[heist review](docs/PIXI-LIVE.md#great-gnome-mushroom-heist-2026-10-27).
+
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,
 gnome sounds and optional thunder share the same output controls and cleanup.
