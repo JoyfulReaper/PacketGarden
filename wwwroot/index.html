@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PacketGarden</title>
   <link rel="stylesheet" href="garden.css">
-  <link rel="stylesheet" href="garden-ui.css">
+  <link rel="stylesheet" href="garden-ui.css?v=specimen-preview-1">
   <link rel="stylesheet" href="pixi-live.css?v=gnome-arrival-2">
   <script src="garden-audio.js?v=gnome-arrival-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
@@ -24,7 +24,8 @@
   <script src="garden-ambient.js?v=opium-pods-1" defer></script>
   <script src="garden-interaction.js?v=frog-gnome-ack-1" defer></script>
   <script src="garden-ui-core.js?v=opium-pods-1" defer></script>
-  <script src="pixi-live-ui.js?v=frog-gnome-ack-1" defer></script>
+  <script src="pixi-specimen-preview.js?v=specimen-preview-1" defer></script>
+  <script src="pixi-live-ui.js?v=specimen-preview-1" defer></script>
   <script src="pixi-live-ambient.js?v=opium-pods-1" defer></script>
   <script src="pixi-live-gnomes.js?v=mushroom-heist-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
@@ -33,7 +34,7 @@
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
   <script src="pixi-live-core.js?v=inverse-vigor-1" defer></script>
-  <script src="pixi-live.js?v=inverse-vigor-1" defer></script>
+  <script src="pixi-live.js?v=specimen-preview-1" defer></script>
 </head>
 <body class="pixi-default">
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -62,6 +63,8 @@
   <aside id="specimen-card" class="specimen-card" aria-live="polite" hidden>
     <button id="specimen-card-close" class="specimen-card-close" type="button" aria-label="Close specimen information">×</button>
     <h2 id="specimen-card-title">Specimen</h2>
+    <div class="specimen-card-content">
+    <div id="specimen-preview" class="specimen-preview" aria-live="off" hidden></div>
     <div id="grass-details" hidden>
       <p>Background ecology that spreads in small tufts. Not a collectible plant specimen.</p>
       <dl><div><dt>State</dt><dd id="grass-state">—</dd></div></dl>
@@ -76,6 +79,7 @@
       <div><dt>Age</dt><dd id="specimen-age">—</dd></div>
       <div><dt>Mutation</dt><dd id="specimen-mutation">None</dd></div>
     </dl>
+    </div>
   </aside>
   <footer aria-label="Garden status">
     <section class="network-activity" aria-label="Noise Observatory traffic" title="Aggregate Noise Observatory traffic, separate from accepted garden growth.">

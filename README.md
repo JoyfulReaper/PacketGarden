@@ -212,6 +212,16 @@ of the exact selected parent closes its card. Clicking grass without a higher
 priority hit opens a Wild grass card. Recent activity retains only three safe
 events, including no-growth outcomes at saturation.
 
+The card includes an enlarged **160px desktop / 120px mobile** preview of that
+exact specimen's current cached Pixi artwork and attached Sprite decorations:
+blossoms, sori, rare palettes, poppies, collectible weed and Stillbloom. It uses
+the existing renderer, fits opaque artwork proportionally and preserves its
+intrinsic colors and transforms. Stage/decorative changes refresh the image;
+ordinary age text and ambient bobbing do not. Grass hides the image. Short
+viewports scroll details beneath the visible close button. No extra garden
+events, atlas artwork, renderer or ticker are created. See
+[preview screenshots, ownership and measurements](docs/PIXI-LIVE.md#exact-specimen-inspection-preview-2026-10-28).
+
 First-seen ladybug/snail/moth/pebble visitors, separate Amanita and weed-bud drops,
 the collectible port-22 redbloom mutation, passive puddle frogs and the Gnome
 Incident retain their shared models and click priority. Gnome landscaping can

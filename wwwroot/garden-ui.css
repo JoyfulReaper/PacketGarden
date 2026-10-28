@@ -67,9 +67,14 @@
 }
 
 .specimen-card {
+  display: flex;
+  flex-direction: column;
   position: fixed;
   z-index: 20;
   width: min(290px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
   padding: 14px 16px 15px;
   background: rgba(31, 41, 34, 0.96);
   border: 1px solid #71816a;
@@ -83,6 +88,7 @@
 }
 
 .specimen-card h2 {
+  flex-shrink: 0;
   margin: 0 30px 10px 0;
   font-size: 17px;
   font-weight: 600;
@@ -93,8 +99,8 @@
   position: absolute;
   top: 7px;
   right: 8px;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -102,6 +108,27 @@
   font-size: 21px;
   line-height: 1;
 }
+
+.specimen-card-content {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.specimen-preview {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 12px;
+  flex-shrink: 0;
+  background: rgba(13, 24, 17, .38);
+  border: 1px solid rgba(113, 129, 106, .22);
+  border-radius: 7px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.specimen-preview[hidden] { display: none; }
+.specimen-preview canvas { display: block; width: 100%; height: 100%; }
 
 .specimen-card-close:hover,
 .specimen-card-close:focus-visible {
@@ -138,4 +165,7 @@
   .specimen-card {
     width: min(270px, calc(100vw - 20px));
   }
+  .specimen-card h2 { margin-right: 36px; }
+  .specimen-card-close { width: 44px; height: 44px; top: 0; right: 3px; }
+  .specimen-preview { width: 120px; height: 120px; }
 }

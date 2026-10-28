@@ -599,7 +599,10 @@
       hasSource: source => model.byCell.get(source.cell) === source,
       getReducedMotion: () => Boolean(reducedMotion?.matches || previewMotion === 'reduced'), onChange: view.cloudChange });
     own(() => emissions.destroy()); emissions.setHidden(document.hidden);
-    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
+    const preview=app.renderer.extract?.canvas?window.PacketGardenSpecimenPreview.createPreview({P,renderer:app.renderer,
+      getSprite:specimen=>view.byId.get(specimen.id),document,host:document.querySelector('#specimen-preview')}):null;
+    own(()=>preview?.destroy());preview?.setHidden(document.hidden);
+    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,preview,
       getGnomes: () => gnomes,
       getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
       collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
@@ -954,6 +957,7 @@
     });
     app.ticker.add(tick);own(()=>app.ticker.remove(tick));
     listen(document,'visibilitychange', () => {
+      ui.setHidden(document.hidden);
       frogs?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
       emissions.setHidden(document.hidden);

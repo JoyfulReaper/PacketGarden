@@ -1,9 +1,119 @@
+# Exact-specimen inspection preview (2026-10-28)
+
+The existing card on `/` and `/pixi-live.html` now shows the exact selected
+specimen below its name, above the existing fields. The centered dark inset is
+**160 × 160 CSS pixels**, or **120 × 120** at widths up to 560px. A 320px canvas
+fits the opaque visual bounds uniformly with transparent padding; unusually
+wide/tall plants cannot overflow. The card uses bounded viewport height and an
+internally scrolling content area, leaving its title and close button visible.
+The mobile close target is 44px. The canvas has `role="img"` and an accessible
+species description inside `aria-live="off"`; existing text semantics remain.
+
+## Artwork and ownership
+
+`pixi-specimen-preview.js` borrows the exact live root Sprite's texture and
+recursively copies attached Sprite children. Anchors, local scale, mirroring,
+rotation, tint, alpha, visibility, pivot, skew and blend mode are retained. This
+covers all four vigors and stages, rare afterglow/rainbow colors, broadleaf/vine
+blossoms, wirefern sori, active poppy/collectible-weed frames and Stillbloom's
+current appearance. No artwork recipes or cached atlas frames were added.
+
+Only intrinsic specimen art is copied. Neighbor vine links, airborne spores,
+weather, terrain, visitors and drops live outside that tree. The preview omits
+ancestor/world lighting and garden CSS filters so the isolated intrinsic palette
+is readable. It is a magnification of cached raster art, with the same source
+detail; it does not create higher-detail illustrations.
+
+The installed Pixi **8.22.0** implementation was inspected in
+`node_modules/pixi.js/lib/rendering/renderers/shared/extract/ExtractSystem.mjs`
+and `.../texture/GenerateTextureSystem.mjs`. Supported
+`renderer.extract.canvas({ target, frame, resolution, clearColor })` uses the
+existing renderer for one temporary RenderTexture, reads it into a canvas and
+destroys that owned texture/source. A detached Container holds independent
+copies, never the actual garden Sprite. Cleanup destroys copies with
+`texture:false, textureSource:false`, preserving the borrowed atlas textures.
+Alpha scanning trims transparent tile padding before a proportional canvas draw.
+The scratch canvas and pixel buffer are temporary; closing zeroes the owned
+output canvas and removes it from the DOM. No image decoding, data/blob URLs,
+second Application/renderer/ticker, timer or animation loop is involved.
+
+## Refresh and lifecycle
+
+The existing once-per-second inspection update compares the Sprite/texture tree
+signature. Selecting another source, a changed stage/frame, palette or decoration
+invalidates it; repeated clicks and age-only text updates do not extract again.
+Stillbloom's gradual scale/alpha changes use **0.05 absolute steps**, while its
+stage changes remain immediate on the next card update. Ambient mutation bobbing
+and glint do not trigger redraws; a capture preserves its current pose/alpha.
+
+There is at most one running render and one latest queued request. Selection
+epochs and a second signature check reject stale asynchronous results. Close,
+Escape, hidden tabs and teardown invalidate pending requests, remove queued
+source references and release the displayed canvas. A running async completion
+is disposed when it settles; actual Pixi canvas extraction is synchronous.
+Resume refreshes a still-selected source. Authoritative expiry, collection,
+heist, replacement and Clear close the card for the exact original object;
+another occupant of its cell never inherits inspection. Grass entirely hides
+and releases the plant preview. Model placement, SSE/provenance, click priority,
+collectibles, removal statistics and `Score: 0` are unchanged.
+
+## Browser review and costs
+
+Reproduce with `npm test` and `npm run test:chrome` (the existing installed
+Chrome/Playwright runtime must be available through `NODE_PATH`). The added
+Chrome jobs capture a frozen before-card from `84693b8` and the current card on
+both pages. `artifacts/specimen-preview/index.html` is a native-scale gallery;
+`before/` and `after/` contain screenshots and `review.json`. These generated
+artifacts are ignored by Git. Examples:
+
+- `before/homepage-mature-card.png`: original text card.
+- `after/homepage-mature-card.png`: new mature plant card.
+- `after/homepage-broadleaf-blossoms.png`, `homepage-vine-blossoms.png`:
+  attached flowers; `homepage-wirefern-sori.png`: visible sori.
+- `after/homepage-opium-poppy.png`, `homepage-rare-crystal.png`:
+  transformation and rare art.
+- `after/homepage-mobile-edge.png`, `homepage-mobile-short-scroll.png`:
+  390px mobile edge positioning and short landscape scrolling.
+
+Measured in Chrome **155.0.8059.86**, each page exercised 69 extractions including
+30 repeated open/close cycles, stale completion, hidden/resume and same-cell
+replacement. Synchronous full preview rendering averaged **3.41ms / 3.42ms**
+(homepage/diagnostic), maximum **12.6ms / 9.8ms**. The extraction portion averaged
+**1.76ms / 1.92ms**, maximum **7.1ms / 7.6ms**. The async controller's wall-clock
+counter includes promise scheduling/test delays; `meanRenderMs` isolates actual
+work. These are short local measurements, not a cross-device performance claim.
+
+Each page retained **one Application, one SSE stream, five atlas bakes and 832
+frames**. Zero persistent Pixi Sprites/textures were added. At capture, observed
+maximum was **two temporary Sprites** (hard cap eight), one offscreen target
+of **192 × 192 = 144KiB RGBA**, and one output canvas
+**320 × 320 = 400KiB RGBA**. The safety bound reduces local extent to 64 units
+before extraction at resolution four (at most 268px including rounding/padding).
+Scratch canvas, readback and driver allocations add transient memory beyond
+these raw pixel counts; no exact GPU heap measurement is claimed. All 138
+temporary targets/sources, copied trees and output canvases were released on
+close; shared atlas sources survived use and were destroyed only at page teardown.
+Age-only updates, 50 repeated selections and mutation bobbing caused zero
+additional extraction. One intentionally stale completion per page was discarded.
+There is no preview rendering work with inspection closed.
+
+Validation: **66 Node suites passed**, 18 optional entries skipped by that runner;
+**all 24 Chrome jobs passed**. New coverage checks all species/four vigors/stages,
+exact textures/transforms/overlays, real click inspection, mutations, visual
+invalidation, no invented growth/activity/SSE, exact-source removal/replacement,
+async stale completion, hidden/grass/Escape/clear, mobile bounds, repeated cleanup
+and atlas teardown. Debug/Release builds passed with zero warnings/errors,
+backend checks passed, and actual ASP.NET polling → SSE integration passed.
+Long-duration GPU/memory soak and screen-reader testing on physical mobile
+devices remain unmeasured. Work stays uncommitted on `dev`, based on `84693b8`;
+`main` is untouched. No dependencies or session persistence were added.
+
 # Inverse-vigor competition (2026-10-28)
 
 Current shared placement uses the [inverse-vigor policy](EVENT-MAPPINGS.md#inverse-vigor-competition).
 This supersedes the stronger-only/minimum-vigor/oldest ranking described in
 historical sections below. The prior fallen-log work is preserved on `dev` at
-`f99097b`; this follow-up remains uncommitted. `main` remains at PR #3's merge.
+`f99097b`; competition is committed at `84693b8`. `main` remains at PR #3's merge.
 
 TCPNoise vigor now maps valid counts 0–1 / 2–99 / 100–9999 / 10000+ to 0/1/2/3.
 Exact UInt64 inspection text, parsing fallback, rarity/species/SSE, lifetimes and
