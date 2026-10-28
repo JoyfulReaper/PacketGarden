@@ -8,7 +8,7 @@ const app={stage:new h.P.Container()},v=createView(h.P,app,h.cache.frames,core,s
 const ec=EP.makeEcologyAtlas(h.P,h.renderer),ev=EP.createEcologyView(h.P,v.grassLayer,v.puddleLayer,ec.frames);
 const ecology=E.createEcologyModel({now:()=>at,random:()=>.5,onChange:c=>ev.change(c,at)});
 const ac=AP.makeAmbientAtlas(h.P,h.renderer),av=AP.createAmbientView(h.P,v.curiosityLayer,v.dropLayer,ac.frames);
-assert.equal(h.cache.frames.size+ec.frames.size+ac.frames.size,867);
+assert.equal(h.cache.frames.size+ec.frames.size+ac.frames.size,868);
 assert.equal(new Set([...h.cache.frames.values(),...ec.frames.values(),...ac.frames.values()].map(t=>t.source)).size,3);
 const ambient=A.createAmbientModel({now:()=>at,random:()=>0,getSpecimens:()=>model.specimens,onChange:c=>av.change(c,at)});
 const model=core.createModel(v,{now:()=>at,random:()=>0,bloomRandom:()=>0,vineBloomRandom:()=>.9,onLive:p=>ambient.acceptLiveSpecimen(p),onRemoved:p=>ambient.cancelSource(p)});
@@ -61,4 +61,4 @@ assert.equal(model.mutations.snapshot().activations,beforeActivation+1);
 model.clear();
 ambient.clear();ecology.clear();av.destroy();ev.destroy();v.destroy();ac.destroy();ec.destroy();
 assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-live.js','utf8'),/setTimeout|setInterval|addEventListener\(['"]pointer|addEventListener\(['"]click['"],.*collect/);
-console.log('PASS: pending stays ordinary, same Sprite/id/cell on activation, three cached mutation views, exact expiry/no flash, full dense 1436 objects including 64 broadleaf overlays and 867 frames/3 sources, weather/ecology/ambient isolation, clear/refill and independent real mutation/Amanita scheduling.');
+console.log('PASS: pending stays ordinary, same Sprite/id/cell on activation, three cached mutation views, exact expiry/no flash, full dense 1436 objects including 64 broadleaf overlays and 868 frames/3 sources, weather/ecology/ambient isolation, clear/refill and independent real mutation/Amanita scheduling.');

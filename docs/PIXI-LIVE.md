@@ -1,3 +1,132 @@
+# Collectible opium pods (2026-10-27)
+
+Implemented on `dev`, extending poppy checkpoint `0e691c3`. Loose `opium_pod`
+objects use the existing ambient pending map, shared five-drop cap, expiry,
+centralized picking, collection UI and bounded Pixi Sprite ownership.
+
+`createPoppyModel` publishes its successful activation transition once with the
+current logical timestamp. The Pixi model updates that same vine's view, then
+calls `onPoppyActivated`; the page wires this to
+`ambient.acceptPoppyActivation`. No scheduling is attached to initial vine
+acceptance. Mutation/core/ambient models do not import one another cyclically.
+
+Each activated live poppy gets one `< .2` decision on a separate crypto-seeded
+pod PRNG (distinct fallback seed). Placement draws also use that pod stream.
+Ordinary vines, silvervines, failed mutations, two-poppy cap skips and simulated
+fixtures consume no natural pod randomness. A WeakSet consumes failures,
+successful schedules and cancelled/skipped attempts without retaining sources
+or allowing rerolls. Existing placement, vigor, poppy selection, vine/broadleaf
+flowers, first-seen visitors, Amanita and weed-bud random streams are unchanged.
+The nominal combined chance is **0.1% of eligible vine spawns before caps and
+survival/visibility eligibility**; it is not a guaranteed observed drop rate.
+
+## Pod timing and ownership
+
+| Boundary | Behavior |
+| --- | --- |
+| Successful live poppy activation | One 20% decision; success records a deadline three seconds later |
+| Pending | Exact parent reference, id, creation time, cell/coordinates and active mutation-trait identity must survive |
+| Three seconds later | Existing logical tick admits one loose pod if fewer than five total loose drops exist |
+| At cap / invalid parent | Consume the attempt without retry, eviction or queue |
+| Active | Independent 20-second drop; no retained parent reference |
+| Collection / absolute drop expiry | Remove only the pod |
+
+Removal, replacement, normal expiry, Clear and mutation ineligibility cancel
+pending pods. Active pods may finish their own lifetime after their parent goes.
+The vine's canonical type/id/object, vigor, cell, timestamp, original TCPNoise
+sensor/port/seen count, inspection, eight-minute fade, ten-minute expiry and
+two-active-poppy limit remain unchanged. Parent clicks still inspect. Pod
+collection says exactly **You collected an opium pod. +0 points**, may use the
+existing opt-in collection sound and leaves Score at **0**. No inventory,
+persistence, backend mapping, network event, activity row or audio cue is added.
+
+Pending pod deadlines missed while hidden are cancelled. A visible logical gap
+greater than **1,500ms** crossing a due deadline also consumes the attempt.
+Poppy activations reconciled more than 1,500ms after original maturity consume
+their pod decision without scheduling a fresh delayed catch-up drop. A brief
+hide/resume before a still-future deadline preserves it. Live-event pause retains
+the existing lifecycle/drop processing. Amanita's original resume activation and
+weed-bud timing remain unchanged; the stronger gap rule applies only to pods.
+
+## Artwork, diagnostics and screenshots
+
+One static atlas tile draws a small shaded sage oval, distinctive scalloped
+crown, highlight and short stem. Its offset is 18–22 logical pixels to one side
+of the original cell center and ten pixels down, reflected inward at garden
+edges. This clears the parent flower/stem and inspection center. Existing
+nine-pixel loose-drop picking applies. There are no filters, shaders, recurring
+geometry, new textures at activation or timers.
+
+Only `/pixi-live.html` adds clearly simulated pending/active/mixed/cap/parent
+cancellation/missed-hidden/expiry/reset controls. Active fixtures support parent
+inspection versus pod collection; cap waits three real seconds with five mixed
+drops already present. Hidden preview locally exercises the ambient visibility
+seam with a missed deadline; it does not hide the real page or manufacture SSE.
+Expiry shows a one-second remainder. Repeated fixture selection clears old owned
+state, and the parent provenance stays simulated.
+
+`node tests/opium-pods-browser.cjs --run --baseline` serves frozen `0e691c3`;
+`--run` serves edited files. The harness captures both supported pages at ordinary
+scale: poppy/pod on soil, dense grass by day and night, all four loose-drop types,
+and a 390px mobile viewport. Ignored local evidence is in
+`artifacts/opium-pods/{before,after}/`, with a native-size
+`artifacts/opium-pods/index.html` gallery and raw `review.json` measurements.
+Browser clicks verify inspection and the exact collection message with parent,
+statistics and activity unchanged. Controlled visibility dispatch, expiry,
+20 reset cycles and page teardown check actual handler and WebGL ownership.
+
+Desktop review shows a readable oval/crown capsule separate from the poppy,
+weed bud and Amanita, with a visible silhouette over grass and dark soil. The
+whole-garden mobile fit makes each capsule and its hit target small; no special
+zoom or larger mobile hit area was introduced. Finger ergonomics and other
+devices still need human review.
+
+## Resources and validation
+
+The ambient atlas grows **13 → 14 frames**, logical **416×32 → 448×32** at
+resolution 2 (backing **832×64 → 896×64**): **16 KiB** more uncompressed RGBA
+before driver overhead. It retains one GPU source and the same startup bake
+count. The specimen atlas stays 825 frames. Each active pod uses one existing
+loose-drop Sprite, still **at most five drop Sprites total**, with no new pool or
+container. Construction Graphics contexts are explicitly destroyed after the
+ambient bake; frames, sources, pending references and views release on teardown.
+Active drops contain coordinates/times/type only, never a source specimen.
+
+`tests/opium-pods.cjs` verifies the exact 20% boundary, one activation decision,
+source/cap exclusions, all random-stream independence, exact three-second/20s
+boundaries, original specimen fields, parent identity/trait validation, expiry
+and normal replacement cancellation, shared cap/consumed failures, no hidden or
+stall catch-up, bounded edge placement, mixed click priority, exact message,
+Score: 0, actual production callback wiring and simulated controls. Existing
+Amanita, bud, redbloom, gnome and SSE regression suites remain in place.
+
+The Chrome harness samples CPU submission and ambient ticks with the same full
+640-vine/five-drop fixture before and after; no per-frame Graphics calls occur.
+Chrome 155's 90-frame samples measured mean submission **0.222 → 0.199ms** on
+the homepage and **0.213 → 0.197ms** on diagnostics, with RAF near **16.7ms**.
+Across 1,000 fixed-time ambient ticks, both pages measured about
+**0.0005 → 0.0006ms/tick**. The render difference is measurement noise rather
+than evidence of a speedup. Raw timings are in the JSON reports.
+
+Validation completed: **60 Node suites passed**, with 12 optional browser/SSE
+entry points explicitly skipped by the Node-only runner; **all 15 Chrome jobs
+passed**, including frozen-baseline and feature pod review. Debug and Release
+builds passed with zero warnings/errors. Backend checks and actual local ASP.NET
+polling-to-SSE integration passed. The check project retained its existing
+NU1900 warning for unavailable NuGet vulnerability metadata; assertions passed.
+`git diff --check` passed. Implementation remains uncommitted on `dev`.
+
+Changed-file scope: eight runtime/page files (ambient rules/art, mutation callback,
+Pixi model/bootstrap, UI text and both HTML pages), four requested documentation
+files, two new pod suites and ten existing test/runner files. Existing assertions
+were updated for the extra ambient frame and versioned assets. The original poppy
+visual baseline is pinned to its pre-mutation checkpoint so it cannot drift with
+the current branch's HEAD. No backend source, mapping or audio module changed.
+
+These short CPU samples do not measure GPU
+completion or establish a long-session heap/GPU soak. Controlled visibility
+tests do not prove operating-system tab suspension. No dependencies were added.
+
 # Rare vine-to-opium-poppy mutation (2026-10-27)
 
 The homepage and diagnostic garden now support a cosmetic mutation of the exact
@@ -52,8 +181,9 @@ by the existing gnome ordinary-target predicate, including snip revalidation.
 Clicks use ordinary inspection, with **Opium poppy · original vine** and an
 explicit cosmetic/noncollectible mutation label. Real TCPNoise fields remain
 truthful; local fixtures say Simulated poppy fixture. Score stays exactly zero.
-**Collectible loose opium pods remain future work.** No inventory, processing,
-gameplay effect, audio cue, reward or collection message is implemented.
+The poppy itself remains noncollectible. **Separate loose opium pods are now
+implemented above**, reusing the existing collection message/audio path without
+inventory, processing, gameplay effects or rewards.
 
 ## Diagnostic fixtures and visual evidence
 

@@ -6,7 +6,7 @@ async function run() {
   const { execFileSync } = require('node:child_process'), { chromium } = require('playwright');
   const root = path.resolve(__dirname, '..'), assets = path.join(root, 'wwwroot'), baseline = process.argv.includes('--baseline');
   const output = path.join(root, 'artifacts/poppies', baseline ? 'before' : 'after'); await fs.mkdir(output, { recursive: true });
-  const old = new Map(), checkpoint = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+  const old = new Map(), checkpoint = '32e987c4b21265a066843f73cbba6f9b54a3dcbe';
   if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-mutations.js', 'garden-gnomes.js', 'garden-ui-core.js', 'pixi-live-core.js', 'pixi-live.js', 'pixi-vine-blooms.js'])
     old.set(file, execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], { cwd: root }));
   const capture = `{

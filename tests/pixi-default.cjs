@@ -24,7 +24,7 @@ for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includ
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99 } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99, poppyRandom, podRandom } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
   let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
@@ -78,7 +78,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
     }
     if (assetPath(script) === 'pixi-live-core.js' && captureModel) {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
-      context.window.PacketGardenPixiLiveCore.createModel = (...args) => { gardenView=args[0];model = create(...args); return model; };
+      context.window.PacketGardenPixiLiveCore.createModel = (view,options) => { gardenView=view;model = create(view,{...options,...(poppyRandom?{poppyRandom}:{})}); return model; };
     }
     if (assetPath(script) === 'garden-ecology.js' && captureModel) {
       const create = context.window.PacketGardenEcology.createEcologyModel;
@@ -86,7 +86,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
     }
     if (assetPath(script) === 'garden-ambient.js' && captureModel) {
       const create=context.window.PacketGardenAmbient.createAmbientModel;
-      context.window.PacketGardenAmbient.createAmbientModel=(...args)=>(ambient=create(...args));
+      context.window.PacketGardenAmbient.createAmbientModel=options=>(ambient=create({...options,...(podRandom?{podRandom}:{})}));
     }
     if(assetPath(script)==='garden-frogs.js'){
       const create=context.window.PacketGardenFrogs.createModel;

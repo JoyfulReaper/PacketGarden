@@ -359,7 +359,7 @@ mechanic. No smoke animation or gameplay effect is required. The static score
 remains zero. Keep the port-22 redbloom mutation's existing separate wording and
 behavior intact; do not change existing Amanita or first-seen eligibility.
 
-### Vine -> opium-poppy mutation: implemented; pods remain future work
+### Vine -> opium-poppy mutation and loose pods: implemented
 
 The visual transformation is implemented. Each successfully placed ordinary live
 TCPNoise vine gets one independent 0.5% cosmetic roll, excluding silvervine and
@@ -372,11 +372,18 @@ detach, gnomes spare active poppies, and clicks inspect the original provenance.
 The existing collectible redbloom mutation retains its separate 5%/three-active/
 three-second delay/20-second lifetime rules.
 
-The next slice may let a living poppy very rarely produce a separate temporary
-clickable **loose opium pod**, using the bounded collectible system. Pods are
-not implemented: no drops, messages, inventory or rewards are added here.
+Successful live poppy activation now gets one independent **20%** pod decision.
+The ordinary vine's arrival never rolls. A success schedules a separate loose
+capsule three seconds later, provided the exact active parent still exists and
+the shared five-drop cap has room. Cap skips, failures, cancellation and missed
+hidden/stalled deadlines never retry. The pod lives 20 seconds independently;
+collection or parent removal leaves the other object unchanged. The capsule's
+sage oval, crown and short stem use one static cached frame. Existing loose-drop
+click priority and optional collection audio apply; the parent still inspects.
+No network/activity event, scoring, inventory or progression is added. The
+combined 0.5% × 20% chance is 0.1% before caps and lifecycle eligibility reduce it.
 
-A collected pod can say:
+A collected pod says exactly:
 
 ```text
 You collected an opium pod. +0 points
@@ -387,7 +394,8 @@ intent, or security meaning of the traffic that created the vine. It must not gr
 into crafting, processing, inventory, trade, or any useful resource system.
 The 0.5% roll and two-active limit account for vines living much longer than
 redblooms. [Implementation and review](PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27)
-record the exact lifecycle and renderer ownership checks.
+record the exact lifecycle and renderer ownership checks. See also
+[pod diagnostics, screenshots and validation](PIXI-LIVE.md#collectible-opium-pods-2026-10-27).
 
 ### The zero-point anti-score
 

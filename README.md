@@ -130,8 +130,17 @@ then becomes a dusty mauve opium poppy if fewer than two are active. Failed and
 cap-skipped attempts never retry. The exact vine keeps its identity, cell, vigor,
 provenance and normal **eight-minute fade / ten-minute expiry**. Silvervines and
 simulated traffic cannot roll. Clicking inspects it; gnomes spare active poppies.
-No collectible pods, extra events, activity, sound or points are added. Pods remain
-future work. See [implementation, screenshots and validation](docs/PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27).
+The poppy itself is inspected rather than collected. See
+[transformation details](docs/PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27).
+
+Each successfully activated live poppy gets one separate **20%** chance to leave
+a loose **opium pod** three seconds later. The exact parent must still qualify;
+the pod shares the existing five-drop cap and lasts 20 seconds independently of
+its parent. Failures, cap skips and missed hidden/stalled deadlines never retry.
+Collecting removes only the pod and says **You collected an opium pod. +0 points**.
+The original poppy, network provenance, activity and `Score: 0` stay unchanged.
+There is no inventory or progression. See
+[pod screenshots, rules and validation](docs/PIXI-LIVE.md#collectible-opium-pods-2026-10-27).
 
 ### Grass and water
 

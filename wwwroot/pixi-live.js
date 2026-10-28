@@ -528,6 +528,7 @@
     const model = core.createModel(view, { onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
+      onPoppyActivated: (source, at) => ambient.acceptPoppyActivation(source, at),
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     own(() => model.clear());
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
@@ -621,6 +622,24 @@
       if (mode === 'grass') ecologyPresentation.seedDenseEcology(ecology, Date.now(), false);
     });
     listen(document.querySelector('#replace-poppy'), 'click', () => model.replacePoppyFixture());
+    for (const mode of ['pending', 'active', 'mixed', 'cap', 'cancel', 'hidden', 'expiry', 'reset']) listen(document.querySelector(`#seed-opium-${mode}`), 'click', () => {
+      ambient.clear(); frogs?.clear(); gnomes.clear(); ecology.clear();
+      const at = Date.now(), source = model.seedPoppies('pods');
+      document.querySelector('#allow-grass-under-plants').checked = true; ecology.setAllowGrassUnderPlants(true);
+      ecologyPresentation.seedDenseEcology(ecology, at, false);
+      const drop = (type, i) => ({ type, createdAt: at, expiresAt: at + 20000, x: 335 + i * 30, y: 315, phase: 0 });
+      if (mode === 'mixed' || mode === 'cap') ambient.seed({ drops: Array.from({ length: mode === 'cap' ? 5 : 3 },
+        (_, i) => drop(['amanita_muscaria', 'ditch_weed_bud', 'gnome_underpants'][i % 3], i)) });
+      if (mode === 'expiry') ambient.seed({ drops: [{ ...drop('opium_pod', 4), createdAt: at - 19000, expiresAt: at + 1000 }] });
+      else {
+        const immediate = mode === 'active' || mode === 'mixed';
+        ambient.scheduleLooseDrop(source, 'opium_pod', () => .5, immediate ? at - 3000 : at);
+        if (immediate) ambient.activateLooseDrop(source, at);
+        if (mode === 'cancel') model.remove(source, 'simulated-pod-cancellation');
+        if (mode === 'hidden') { ambient.setHidden(true, at); ambient.setHidden(false, at + 3001); }
+      }
+      document.querySelector('#opium-pod-status').textContent = `Simulated ${mode}: inspect the poppy; collect only the loose capsule. Hidden preview consumes a missed deadline locally.`;
+    });
     const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
     own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
@@ -735,6 +754,7 @@
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Loose drops ${ambient.drops.length}/${ambientCore.dropConfig.maxActiveDrops} · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · unified logical click priority`,
+        `Loose opium pods ${ambient.drops.filter(drop => drop.type === 'opium_pod').length}/5 shared slots · pending ${[...ambient.pendingDrops.values()].filter(drop => drop.type === 'opium_pod').length} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Mutations ${mc.active}/3 · pending ${mc.pending} · views ${counts.mutationViews} · activations ${mc.activations} · cap skips ${mc.capSkips} · cancellations ${mc.cancellations} · expiries ${mc.expiries} · 1 cached frame in specimen atlas`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
         'Local transient CPU/ticker intervals; not GPU completion. Dense/ambient seeding is local simulated state; temporary visitors expire normally.'

@@ -58,7 +58,7 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, poppyRandom, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, poppyRandom, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
@@ -77,7 +77,7 @@
     }});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });
     const poppies = mutationCore.createPoppyModel({ garden: model, now, random: poppyRandom,
-      onChange: specimen => view.update(specimen, model.byCell) });
+      onChange(specimen, at) { view.update(specimen, model.byCell); onPoppyActivated(specimen, at); } });
     function tick(at = now()) {
       model.tick(at);
       if (mutations.tick(at)) model.tick(at); // Publish the mutation stage on the existing specimen view.
@@ -100,7 +100,7 @@
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
       seedPoppies(mode = 'mature') {
-        const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000 }[mode] ?? 60000;
+        const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000, pods: 65000 }[mode] ?? 60000;
         const entries = Array.from({ length: 35 }, (_, i) => ({ type: 'vine', vigor: i % 4,
           column: 12 + i % 7, row: 7 + Math.floor(i / 7), createdAt: at - (i === 17 ? age : 65000),
           vineBloom: mode === 'flowers' || mode === 'connections' ? { color: i % 4, layout: i % 2 } : null,

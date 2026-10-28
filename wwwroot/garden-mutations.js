@@ -42,7 +42,7 @@
         if (p.poppyMutation?.state !== 'pending' || at < p.createdAt + core.timings.vine.matureAfterMs
           || core.lifecycleStage(p, at) === 'expired') continue;
         if (active >= poppyConfig.maxActive) { p.poppyMutation.state = 'cap-skipped'; counts.capSkips++; }
-        else { p.poppyMutation.state = 'active'; active++; counts.activations++; onChange(p); }
+        else { p.poppyMutation.state = 'active'; active++; counts.activations++; onChange(p, at); }
       }
     }
     return { consider, tick, counts,
