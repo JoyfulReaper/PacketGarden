@@ -868,6 +868,34 @@ a deliberate reason to combine them.
 
 ## Long-term garden memory
 
+Fallen blackthorn logs are the first implemented **long-lived blocking terrain**
+slice. Each naturally expired blackthorn gets one dedicated **30%** decision;
+at most **six** logs last **60 minutes** from the tree's natural 12-minute expiry.
+The source must still match its original object/id/cell/coordinates/time at
+natural removal and its cell must actually be empty afterward. Forced removal,
+gnome actions, special mutations, Clear and reseeding never generate logs.
+Full-cap attempts are consumed without queue, retry or displacement.
+
+Logs occupy a separate terrain model/map, leaving the specimen array, network
+activity, vigor, provenance and Score: 0 unchanged. Real placement excludes their
+cells. A garden with six logs can hold 634 plants; normal stronger-vigor
+competition still replaces eligible plant occupants only. Gnome overcrowding
+counts actual free cells including terrain; its living-specimen denominator,
+priorities and cooldowns remain. Stillbloom uses truly free cells. Grass keeps
+its existing under-plants checkbox policy: logs prevent new grass and clear
+grass on arrival when disabled; enabling it permits grass beneath the wood.
+No grass influence or automatic grass refill comes from a log.
+
+Three small cached crooked, dark-brown logs have broken/cut ends, moss and
+minor color variation. They use at most six static Sprites and no animation
+work. Natural decay releases the cell, allowing ordinary growth later. Hidden
+time counts toward the absolute hour; a completely missed log lifetime consumes
+the attempt without creating fresh terrain. Source objects are not retained,
+and changing a removed tree cannot change its log. Clear/reload/teardown remove
+terrain. Diagnostic controls preview simulated aging, success, cap, full/dense
+gardens, blocked growth and decay/regrowth. See
+[actual-scale evidence and validation](PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
+
 Simple persistence across browser/server restarts remains desirable. The goal is to
 preserve the feeling that the garden has history without turning PacketGarden into
 a telemetry database.
@@ -875,7 +903,7 @@ a telemetry database.
 Longer-lived terrain/history ideas from the vision include:
 
 - rocks;
-- logs;
+- additional logs/woodland terrain (fallen blackthorn logs are implemented above);
 - longer-lived ponds;
 - fallen branches;
 - tiny garden structures;

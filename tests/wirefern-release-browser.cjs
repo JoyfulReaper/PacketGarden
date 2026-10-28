@@ -90,7 +90,7 @@ async function run() {
       const resources=await page.evaluate(()=>({frames:__release.view.snapshot().textures,bakes:__release.bakes.length,
         dimensions:__release.bakes.map(b=>[b.width,b.height]),streams:__release.streams,sprites:__release.view.byId.size,
         clouds:__release.view.cloudViews?.size??0,contextsReleased:__release.contexts.every(c=>c.destroyed)}));
-      assert.equal(resources.frames,baseline?828:829);assert.equal(resources.bakes,5);assert.equal(resources.streams,1);assert.equal(resources.sprites,640);
+      assert.equal(resources.frames,baseline?828:832);assert.equal(resources.bakes,5);assert.equal(resources.streams,1);assert.equal(resources.sprites,640);
       assert.deepEqual(resources.dimensions[1],[1024,832]);assert(resources.contextsReleased);report.resources.push({page:name,...resources});
       for(const active of [0,1,2]){
         if(baseline&&active)continue;

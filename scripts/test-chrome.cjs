@@ -8,6 +8,7 @@ jobs.push(['opium-pods-browser.cjs','--baseline'],['opium-pods-browser.cjs']);
 jobs.push(['pixi-wirefern-spores-browser.cjs','--baseline'],['pixi-wirefern-spores-browser.cjs']);
 jobs.push(['wirefern-release-browser.cjs','--baseline'],['wirefern-release-browser.cjs']);
 jobs.push(['gnome-heist-browser.cjs']);
+jobs.push(['terrain-logs-browser.cjs']);
 const only=process.argv.find(a=>a.startsWith('--only='))?.slice(7),file=path.join(out,'results.json');
 const results=only&&fs.existsSync(file)?JSON.parse(fs.readFileSync(file,'utf8')):[];
 for(const [name,...args] of jobs){const id=name+(args.length?'-baseline':'');if(only&&!id.includes(only))continue;

@@ -92,6 +92,15 @@ can replace an eligible weaker resident, choosing the weakest and oldest first.
 Ghostbloom, crystal fungus, blackthorn and Stillbloom are protected from forced
 replacement. Vigor describes fullness, not a security score.
 
+Naturally expired blackthorns can leave **fallen logs**: one independent **30%**
+decision per expiry, at most **six**, each lasting **60 minutes** from the tree's
+natural expiry. A log is separate terrain that blocks its exact vacated cell;
+plants cannot grow there or replace it. A full garden can therefore contain
+634 plants plus six logs. Logs add no network events, specimen counts, vigor,
+activity or points. Forced removals and Clear never produce them. Decay frees
+the cell for normal growth, including after hidden time; reload clears this
+session-only terrain. See [fallen-log validation](docs/PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
+
 All state lives in browser memory. Reloading starts a new session. A single SSE
 connection supplies backend-normalized growth and aggregate weather. No replay
 or persistent planting history is added.

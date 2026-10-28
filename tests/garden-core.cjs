@@ -16,7 +16,7 @@ for (const [type, boundaries] of Object.entries(expected)) {
   assert(Object.isFrozen(core.timings[type]));
   const stages = type === 'redbloom' ? ['mature','fading','expired'] : ['sprout','growing','mature','fading','expired'];
   let now = 100000; const changes = [];
-  const model = core.createGardenModel({now:()=>now,random:()=>.5,onChange:c=>changes.push(c)});
+  const model = core.createGardenModel({terrainRandom:()=>.99,now:()=>now,random:()=>.5,onChange:c=>changes.push(c)});
   const { specimen } = model.addEvent(event(type, 3)); const id = specimen.id;
   assert.equal(changes[0].kind,'added'); assert.equal(changes[0].specimen.origin.seenCount,event().seenCount);
   assert.equal(core.stageAt(type,now,now-1),stages[0]);
@@ -47,14 +47,14 @@ const order = ['flower','mushroom','vine','broadleaf','wirefern','redbloom','wee
 for (const {rolls,cells} of fixture.cases) {
   let r = 0; const random = () => rolls[r++ % rolls.length];
   // Production consumes one palette roll after each successful spawn; it remains presentation-owned.
-  const model = core.createGardenModel({now:()=>10000,random,onChange:c=>{if(c.kind==='added')random();}});
+  const model = core.createGardenModel({terrainRandom:()=>.99,now:()=>10000,random,onChange:c=>{if(c.kind==='added')random();}});
   for (let i=0;i<cells.length;i++) {
     const type=order[i%order.length];
     assert.equal(model.addEvent(event(type,i%4)).specimen.cell,cells[i]);
   }
 }
 let now = 100000; const changes = [];
-const model = core.createGardenModel({now:()=>now,random:()=>.95,onChange:c=>changes.push(c)});
+const model = core.createGardenModel({terrainRandom:()=>.99,now:()=>now,random:()=>.95,onChange:c=>changes.push(c)});
 for(let i=0;i<640;i++) assert(model.addEvent(event()));
 assert.equal(model.specimens.length,640); assert.equal(model.byCell.size,640);
 assert.equal(new Set(model.specimens.map(s=>s.cell)).size,640);

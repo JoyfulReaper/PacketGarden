@@ -34,7 +34,7 @@
     const changed = () => {puddles.prune(actors);onChange({ actors, incident });};
     const livingCount = at => getSpecimens().filter(p => at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired').length;
     const occupiedBy = p => source?.byCell.get(p.cell) === p;
-    const freeCells = () => garden.dimensions.capacity - (source?.byCell.size ?? 0);
+    const freeCells = () => source?.freeCellCount?.() ?? garden.dimensions.capacity - (source?.byCell.size ?? 0);
     const eligibleMushroom = (p, at) => p?.type === 'mushroom' && ordinarySpecimen(p, at)
       && garden.lifecycleStage(p, at) === 'mature' && !p.poppyMutation && !hasPendingCollectible(p) && !hasPendingBud(p)
       && Number.isInteger(p.column) && p.column >= 0 && p.column < garden.dimensions.columns

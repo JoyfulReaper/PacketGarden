@@ -49,7 +49,7 @@ async function run(){
         return {...f.view.snapshot(),grass:f.ecology.grassCells.length,plants:f.garden.specimens.length,bakes,frames:times.length,
           meanSubmitMs:times.reduce((a,b)=>a+b,0)/times.length,accepted:f.model.counts.acceptedLive};
       },seconds);
-      assert.equal(data.plants,640);assert.equal(data.grass,640);assert.equal(data.contactShadows,640);assert.equal(data.bakes,5);assert.equal(data.textures,829);assert.equal(data.accepted,0);
+      assert.equal(data.plants,640);assert.equal(data.grass,640);assert.equal(data.contactShadows,640);assert.equal(data.bakes,5);assert.equal(data.textures,832);assert.equal(data.accepted,0);
       assert.equal(data.particles,scene==='hurricane'?400:0);if(scene==='vine')assert(data.connectionHalves>0);
       if(scene==='broadleaf')assert.equal(data.bloomViews,640);if(scene==='vine')assert.equal(data.vineBloomViews,640);
       await page.locator('#view canvas').screenshot({path:path.join(output,scene+'.png')});report.push({scene,...data});

@@ -53,26 +53,80 @@
     }
     return Number.isFinite(next) ? next : null;
   }
-  function createGardenModel({ now = Date.now, random = Math.random, onChange = () => {} } = {}) {
+  const terrainConfig = Object.freeze({ chance:.30, maxLogs:6, lifetimeMs:3600000, variants:3 });
+  function createTerrainRandom() {
+    const entropy=new Uint32Array(1);
+    if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(entropy);
+    else entropy[0]=(Date.now()^Math.floor((globalThis.performance?.now?.()??0)*1000)^0x10b1ac7d)>>>0;
+    let seed=entropy[0];return()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
+  }
+  // Separate, bounded terrain occupancy. No source reference is retained by a log.
+  function createTerrainModel({now=Date.now,random=createTerrainRandom(),isCellOccupied=()=>false,onChange=()=>{}}={}) {
+    const logs=[],byCell=new Map(),attempted=new WeakSet();let nextId=0,disposed=false;
+    const counts={attempts:0,created:0,chanceSkipped:0,capSkipped:0,elapsedSkipped:0,forced:0,removed:0};
+    function remove(log,reason='removed'){
+      const index=logs.indexOf(log);if(index<0)return false;
+      logs.splice(index,1);if(byCell.get(log.cell)===log)byCell.delete(log.cell);
+      counts.removed++;onChange({kind:'terrain-removed',terrain:log,reason});return true;
+    }
+    function tick(at=now()){for(let i=logs.length-1;i>=0;i--)if(at>=logs[i].expiresAt)remove(logs[i],'expired');}
+    function naturalExpiry(source,original,at=now(),forceFixture=false){
+      if(disposed||!source||!original||attempted.has(source)||original.type!=='blackthorn'||source.mutation||source.pendingMutation
+        || !Number.isFinite(at)||!Number.isFinite(original.createdAt)
+        || !['type','id','cell','column','row','createdAt'].every(k=>source[k]===original[k])
+        || !Number.isInteger(original.column)||original.column<0||original.column>=dimensions.columns
+        || !Number.isInteger(original.row)||original.row<0||original.row>=dimensions.rows
+        || original.cell!==original.row*dimensions.columns+original.column
+        || at<original.createdAt+timings.blackthorn.expiredAfterMs||isCellOccupied(original.cell)||byCell.has(original.cell))return null;
+      attempted.add(source);counts.attempts++;
+      const forced=forceFixture&&source.origin?.kind==='simulated'&&source.origin.eventType==='log-fixture';
+      if(forced)counts.forced++;
+      const roll=forced?(source.vigor%terrainConfig.variants+.5)*terrainConfig.chance/terrainConfig.variants:random();
+      if(!Number.isFinite(roll)||roll<0||roll>=terrainConfig.chance){counts.chanceSkipped++;return null;}
+      const createdAt=original.createdAt+timings.blackthorn.expiredAfterMs,expiresAt=createdAt+terrainConfig.lifetimeMs;
+      // Absolute decay never gives an overdue hidden/stalled expiry a fresh hour.
+      if(at>=expiresAt){counts.elapsedSkipped++;return null;}
+      tick(at);
+      if(logs.length>=terrainConfig.maxLogs){counts.capSkipped++;return null;}
+      const log=Object.freeze({type:'fallen_log',id:++nextId,cell:original.cell,column:original.column,row:original.row,
+        createdAt,expiresAt,simulated:source.origin?.kind==='simulated',variant:Math.min(terrainConfig.variants-1,Math.floor(roll/terrainConfig.chance*terrainConfig.variants))});
+      logs.push(log);byCell.set(log.cell,log);counts.created++;onChange({kind:'terrain-added',terrain:log,reason:'natural-blackthorn-expiry'});return log;
+    }
+    function clear(){while(logs.length)remove(logs.at(-1),'cleared');}
+    return {logs,byCell,counts,naturalExpiry,tick,clear,remove,isBlocked:cell=>byCell.has(cell),
+      snapshot(){return{...counts,active:logs.length,blockedCells:byCell.size};},destroy(){disposed=true;clear();}};
+  }
+  function createGardenModel({ now = Date.now, random = Math.random, terrainRandom, onChange = () => {} } = {}) {
     const specimens = [], byCell = new Map(); let nextId = 0;
-    const identities = new WeakMap(), visualTimes = new WeakMap();
+    const identities = new WeakMap(), visualTimes = new WeakMap(), originals=new WeakMap(),forcedLogFixtures=new WeakSet();
+    const terrain=createTerrainModel({now,random:terrainRandom,isCellOccupied:cell=>byCell.has(cell),onChange});
     function identify(specimen) {
       if (!identities.has(specimen)) identities.set(specimen, ++nextId);
       specimen.id = identities.get(specimen);
+      if(specimen.type==='blackthorn')originals.set(specimen,Object.freeze({type:specimen.type,id:specimen.id,
+        cell:specimen.row*dimensions.columns+specimen.column,column:specimen.column,row:specimen.row,createdAt:specimen.createdAt}));
       if(specimen.type==='stillbloom')visualTimes.set(specimen, specimen.createdAt);
     }
     const notify = (kind, specimen, reason, previousStage) => onChange({ kind, specimen, reason, previousStage });
     function remove(specimen, reason = 'removed') {
       const index = specimens.indexOf(specimen);
       if (index < 0) return false;
-      specimens.splice(index, 1); byCell.delete(specimen.cell);
+      specimens.splice(index, 1);
+      const originalCell=originals.get(specimen)?.cell??specimen.cell;
+      if(byCell.get(originalCell)===specimen)byCell.delete(originalCell);
+      if(specimen.cell!==originalCell&&byCell.get(specimen.cell)===specimen)byCell.delete(specimen.cell);
       notify('removed', specimen, reason); return true;
     }
     function tick(at = now()) {
+      terrain.tick(at);
       let removed = 0, updated = 0;
       for (let i = specimens.length - 1; i >= 0; i--) {
         const specimen = specimens[i], stage = lifecycleStage(specimen, at);
-        if (stage === 'expired') { remove(specimen, 'expired'); removed++; }
+        if (stage === 'expired') {
+          const original=originals.get(specimen),owned=original && byCell.get(original.cell)===specimen;
+          remove(specimen, 'expired'); removed++;
+          if(owned)terrain.naturalExpiry(specimen,original,at,forcedLogFixtures.has(specimen));
+        }
         else if (stage !== specimen.stage || (specimen.type === 'stillbloom' && at >= (nextChangeAt(specimen, visualTimes.get(specimen)) ?? Infinity))) {
           const previous = specimen.stage; specimen.stage = stage;
           if(specimen.type==='stillbloom')visualTimes.set(specimen, at);
@@ -85,7 +139,7 @@
       let victimIndex = null;
       for (let index = 0; index < specimens.length; index++) {
         const specimen = specimens[index], vigor = specimen.vigor ?? 0;
-        if (protectedTypes.has(specimen.type) || vigor >= incomingVigor) continue;
+        if (protectedTypes.has(specimen.type) || terrain.isBlocked(specimen.cell) || vigor >= incomingVigor) continue;
         const victim = victimIndex === null ? null : specimens[victimIndex];
         if (victim === null || vigor < (victim.vigor ?? 0)
           || (vigor === (victim.vigor ?? 0) && specimen.createdAt < victim.createdAt)) victimIndex = index;
@@ -97,7 +151,7 @@
       tick(at);
       if (type === 'stillbloom' && specimens.filter(p => p.type === type).length >= 2) return null;
       const empty = [];
-      for (let cell = 0; cell < dimensions.capacity; cell++) if (!byCell.has(cell)) empty.push(cell);
+      for (let cell = 0; cell < dimensions.capacity; cell++) if (!byCell.has(cell) && !terrain.isBlocked(cell)) empty.push(cell);
       let victimIndex = null, cell;
       if (!empty.length) {
         if (type === 'stillbloom') return null; // Ambient quiet growth never competes or counts as dropped input.
@@ -138,6 +192,7 @@
     }
     function clear() {
       for (let i = specimens.length - 1; i >= 0; i--) remove(specimens[i], 'cleared');
+      terrain.clear();
       // Ids are monotonic across clear so stale UI references cannot alias a new specimen.
     }
     function seed(entries, at = now()) {
@@ -172,9 +227,14 @@
       }
       return neighbors;
     }
-    const model = { specimens, byCell, addSpecimen, addEvent, tick, clear, seed, remove, getCell, getNeighbors, findReplacementCandidate };
+    const model = { specimens, byCell, terrain, addSpecimen, addEvent, tick, clear, seed, remove, getCell, getNeighbors, findReplacementCandidate,
+      forceLogFixture(){let count=0;for(const p of specimens)if(p.type==='blackthorn'&&p.origin?.kind==='simulated'&&p.origin.eventType==='log-fixture'){forcedLogFixtures.add(p);count++;}return count;},
+      freeCellCount:()=>dimensions.capacity-byCell.size-terrain.byCell.size,
+      isCellOccupied:(column,row)=>byCell.has(row*dimensions.columns+column)||terrain.isBlocked(row*dimensions.columns+column),
+      destroy(){clear();terrain.destroy();} };
     return model;
   }
-  const api = { dimensions, timings, species, eventSpecies, isProtected: type => protectedTypes.has(type), normalizeGarden, stageAt, lifecycleStage, nextChangeAt, createGardenModel };
+  const api = { dimensions, timings, species, eventSpecies, isProtected: type => protectedTypes.has(type), normalizeGarden, stageAt, lifecycleStage, nextChangeAt,
+    terrainConfig,createTerrainRandom,createTerrainModel,createGardenModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenCore = api;
 })();

@@ -40,8 +40,9 @@
       reconcile(at);
     }
     function living(at=now()) {return garden.specimens.filter(p=>p.type==='stillbloom'&&gardenCore.lifecycleStage(p,at)!=='expired').length;}
+    const full=()=>garden.freeCellCount?garden.freeCellCount()===0:garden.byCell.size>=gardenCore.dimensions.capacity;
     function spawn(at,simulated=false) {
-      if(disposed||hidden||living(at)>=config.maxLiving||garden.byCell.size>=gardenCore.dimensions.capacity)return null;
+      if(disposed||hidden||living(at)>=config.maxLiving||full())return null;
       const result=garden.addSpecimen('stillbloom',0,at,simulated?{kind:'simulated',eventType:'stillbloom-test'}:{kind:'quiet'});
       if(result)onSpawn(result.specimen);return result?.specimen??null;
     }
@@ -50,7 +51,7 @@
       if(stalled)reset();
       if(!reconcile(at)||at<nextCheckAt)return null;
       nextCheckAt=at+config.checkEveryMs;
-      if(living(at)>=config.maxLiving||garden.byCell.size>=gardenCore.dimensions.capacity)return null;
+      if(living(at)>=config.maxLiving||full())return null;
       return random()<config.chance?spawn(at):null;
     }
     return {setWeather,configure,tick,reset,verified,living,spawnSimulated(at=now()){return spawn(at,true);},
