@@ -88,7 +88,7 @@ async function run() {
       const resources = await page.evaluate(() => ({ frames: __poppy.view.snapshot().textures, sprites: __poppy.view.byId.size,
         displayObjects: __poppy.view.snapshot().displayObjects, streams: __poppy.streams, bakes: __poppy.bakes.length,
         dimensions: __poppy.bakes.map(b => [b.width, b.height]), bakeMs: __poppy.bakes.map(b => b.ms) }));
-      assert.equal(resources.frames, baseline ? 823 : 828); assert.equal(resources.sprites, 640); assert.equal(resources.streams, 1);
+      assert.equal(resources.frames, baseline ? 823 : 829); assert.equal(resources.sprites, 640); assert.equal(resources.streams, 1);
       assert.deepEqual(resources.dimensions[1], [1024, 832]); report.resources.push({ page: name, ...resources });
       report.timing.push({ page: name, ...await page.evaluate(async () => {
         const submit = [], intervals = []; let last; const geometry = __poppy.geometry;

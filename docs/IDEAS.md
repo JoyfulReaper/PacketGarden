@@ -90,8 +90,18 @@ per-frame geometry. Inspection, identity, network provenance, ecology, drops,
 gnomes and Score: 0 are unchanged. See
 [geometry, before/after captures and resource measurements](PIXI-LIVE.md#wirefern-sori-2026-10-27).
 
-Airborne spore particles, collectible spores, new plants and spreading remain
-out of scope; the implemented sori have no gameplay or collection behavior.
+The visibility follow-up enlarges and separates the cached dots and adds
+occasional airborne releases. One visible-page check every 30 seconds rolls
+75% on an independent emission stream, then chooses one currently mature,
+decorated source. A single cached eight-dot Sprite expands and drifts upward
+for three seconds, with at most two active clouds. Exact source removal or
+ineligibility cancels its cloud; hidden time and long logical gaps never catch
+up. Reduced motion shows a one-second static puff with opacity fading only.
+Actual 960×600 comparisons and resource measurements are in
+[the release review](PIXI-LIVE.md#wirefern-spore-release-2026-10-27).
+
+Collectible spores, new plants, spreading and fertilization remain out of scope.
+Neither attached sori nor airborne releases have gameplay or collection behavior.
 
 ## Ambient actors and incidents
 
@@ -870,7 +880,8 @@ is not an intrusion-detection system.
 
 Aggregate pressure is already used for weather. Possible extensions include:
 
-- pollen/spore bursts;
+- other pollen bursts beyond the implemented cosmetic wirefern release; any
+  future pressure-driven effect must remain distinct from the current 30s check;
 - wind events;
 - other short-lived environmental effects when a traffic burst should not create
   hundreds of permanent specimens;

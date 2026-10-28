@@ -1001,7 +1001,7 @@ async function run() {
     const saved=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>p.origin)));
     assert(!saved.includes('tcpnoise'));assert(saved.includes('simulated'));
     const buildCounts=await page.evaluate(()=>({objects:__gardenTestApp.stage.children[0].children[6].children.length,frames:document.querySelector('#hud').textContent.match(/atlas frames (\d+)/)?.[1]}));
-    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'828');
+    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'829');
     const metrics={resources:buildCounts,day:await sample(page)};
     // Fixed fixtures use the real model, existing cached artwork and surface light.
     const fixture=async(age,mixed=false)=>page.evaluate(({age,mixed})=>{

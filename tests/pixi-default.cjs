@@ -24,10 +24,10 @@ for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includ
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9 } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, random = () => 0, frogRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9, emissionRandom = () => .99 } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView;
+  let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView, emissions;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -76,6 +76,10 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create = context.window.PacketGardenCore.createGardenModel;
       context.window.PacketGardenCore.createGardenModel = (...args) => { const value=create(...args); garden ??= value; return value; };
     }
+    if (assetPath(script) === 'pixi-wirefern-spores.js') {
+      const create = context.window.PacketGardenWirefernSpores.createEmissionModel;
+      context.window.PacketGardenWirefernSpores.createEmissionModel = options => (emissions = create({ ...options, random: emissionRandom }));
+    }
     if (assetPath(script) === 'pixi-live-core.js') {
       const create = context.window.PacketGardenPixiLiveCore.createModel;
       context.window.PacketGardenPixiLiveCore.createModel = (view,options) => { gardenView=view;model = create(view,{...options,sporeRandom,...(poppyRandom?{poppyRandom}:{})}); return model; };
@@ -115,7 +119,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get garden(){return garden;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get garden(){return garden;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},get emissions(){return emissions;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {

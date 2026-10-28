@@ -85,7 +85,7 @@ async function run() {
       const resources=await page.evaluate(()=>({frames:__sori.view.snapshot().textures,overlays:__sori.view.sporeViews?.size??0,
         displayObjects:__sori.view.snapshot().displayObjects,specimenSprites:__sori.view.byId.size,streams:__sori.streams,bakes:__sori.bakes.length,
         dimensions:__sori.bakes.map(b=>[b.width,b.height]),constructionContextsReleased:__sori.contexts.every(c=>c.destroyed)}));
-      assert.equal(resources.frames,baseline?825:828);assert.equal(resources.specimenSprites,640);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);
+      assert.equal(resources.frames,baseline?825:829);assert.equal(resources.specimenSprites,640);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);
       assert.deepEqual(resources.dimensions[1],[1024,832]);assert(resources.constructionContextsReleased);report.resources.push({page:name,...resources});
       const fadeMs=await page.evaluate(()=>{const start=performance.now();__soriNow+=249000;__sori.model.tick(Date.now());return performance.now()-start;});
       report.timing.at(-1).fullFadeTransitionMs=fadeMs;

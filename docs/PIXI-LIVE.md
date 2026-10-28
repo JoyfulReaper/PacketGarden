@@ -1,4 +1,174 @@
+# Wirefern spore release (2026-10-27)
+
+Implemented on `dev` above static-sori checkpoint `5c5746c`, preserving the
+existing opium-pod work. Static sori retain their independent 25% selection,
+three colors, three layouts, stable success/failure traits and original fern
+50s/5m/6m lifecycle. Their pale centers grow **.53 → .73 logical-pixel radius**,
+with darker **.77 → 1.0** rims. Samples spread to `t=.26,.59,.92` along the same
+actual angular frond segments. No fern enlargement, palette/rarity change,
+flowers, berries or floating static dots are introduced.
+
+## One global emission check
+
+The same cosmetic helper owns `createEmissionModel`, with a second dedicated
+crypto-seeded PRNG and distinct fallback seed. It never advances the trait,
+placement, foliage, blossom, poppy, pod, Amanita/bud, gnome, ecology or weather
+streams. On the existing 250ms logical scheduler:
+
+- every **30,000ms** of visible operation, build the current eligible source pool;
+- only exact living canonical wireferns with valid successful sori and absolute
+  lifecycle stage **mature** qualify (50s inclusive to 5m exclusive);
+- if the pool is nonempty, make exactly one **`roll < .75`** emission decision;
+- success selects one uniform pool member on that same independent stream;
+- release one cloud if fewer than **two** are active. A cap skip consumes the
+  attempt and deadline, without queue, retry or eviction.
+
+Empty pools consume the scheduled check without an emission roll. Hundreds of
+eligible ferns still produce at most one puff per check. There is no source-local
+emission schedule or per-frame source scan. Between checks, validation touches
+only the at-most-two active sources using authoritative cell/object lookup.
+Cloud records retain exact source reference/id/cell/creation time; source
+removal/replacement cancels immediately, and fading/ineligible sources cancel on
+the existing logical reconciliation. No cloud survives independently of its
+source or occupies a specimen cell.
+
+## Cached appearance and motion
+
+One finite 32px frame contains **eight** tiny rounded particles with soft baked
+edges. A single tinted Sprite per cloud starts across the source's actual upper
+fronds, using its live Sprite position/scale and unchanged shared atlas geometry.
+Color is pale copper, gold or cyan from the original sori color. Over **3,000ms**,
+the Sprite grows from `.85 → 1.2` horizontally and `.75 → 1.1` vertically,
+separating the baked dots as it rises **18 logical pixels** and drifts up to
+**6 pixels** sideways. Opacity falls continuously as `.95 × (1 - t²)`.
+The visible dot/halo footprint grows from about **18 to 25 logical pixels** wide.
+
+The first native-scale design was too faint over grass. Review increased the
+cached particle cores to 1.0–1.25px radii and retained opacity longer at the start;
+it did not add particles, Sprites or geometry. The result reads as separate airy
+spores, without an opaque smoke sheet, explosion, glow shader or constant glitter.
+The old static selection and fern footprint are unchanged. Cloud Sprites share
+the existing plant layer and garden mask, below drops/wildlife/rain; they create
+no hit targets, audio, backend/SSE messages or Recent activity entries.
+
+Only active cloud transforms are visited by the existing Pixi ticker. An empty
+cloud map costs one branch per frame. There are no new timers, RAF loops,
+ParticleContainers/emitters, shaders, filters, dependencies or runtime geometry/
+texture generation. The phase helper produces transform/opacity values only.
+
+## Suspension, reduced motion and exact ownership
+
+`prefers-reduced-motion` selects a **1,000ms static** puff at constant `.85`
+scale and origin, with opacity fading only. A media-preference change cancels
+current clouds and starts a fresh deadline. Diagnostic normal preview never
+overrides the system preference.
+
+Hidden pages immediately clear cloud records and Sprites and skip checks.
+Resume starts a fresh **30s** deadline, without a burst or missed emissions.
+A logical gap over **1,500ms**, or a backwards clock jump, clears old effects and
+restarts the deadline rather than catching up. Existing live-event pause retains
+the page's normal lifecycle/atmosphere processing.
+
+Removal callbacks and view removal both release the exact source's cloud
+idempotently. Clear/reset and page ownership destroy all cloud Sprites before
+atlas teardown. Selection traits, source identity/timestamp/cell/vigor/provenance,
+accepted growth, specimens, grass, gnomes, wildlife, weather, Stillbloom, drops,
+mutations and `Score: 0` retain their existing rules.
+
+## Diagnostics and native-size evidence
+
+Only `/pixi-live.html` adds a one-puff trigger, three-color selector, normal/static
+motion previews, mature decorated seed, exact simulated source removal and cloud
+clear controls. The existing 640-wirefern fixture is retained. Forced previews
+accept only explicitly simulated sources, obey the two-cloud cap, and never
+fabricate TCPNoise events. Repeated triggers or fixture resets remain bounded.
+
+`node tests/wirefern-release-browser.cjs --run --baseline` serves frozen
+`5c5746c`; `--run` serves the working tree. Both supported pages are captured at
+exactly **960×600 renderer/presentation pixels**, with no camera enlargement.
+Ignored local evidence lives in `artifacts/wirefern-release/{before,after}/`,
+with a native-size `artifacts/wirefern-release/index.html` comparison gallery.
+It includes old/new static sori, cloud appearance/1.5s/2.6s, all three colors over
+grass, mixed colony, night, actual rain, mobile, dense 640 and reduced motion.
+The single-source cloud is above column 16, row 10. The mobile capture uses the
+normal fitted garden; it is not presented as native-size desktop evidence.
+
+Native-size review confirmed discrete spores separating above the fern in the
+middle phase and stronger attached sori against cyan foliage. Grass/night/rain
+retain the small airy shape. The puff intentionally becomes faint near expiry,
+and individual dots are less distinct at mobile whole-garden scale. Existing
+garden clipping can trim a puff at the top edge. No 5× close-up substitutes for
+the required native-size captures.
+
+## Cost and validation
+
+The specimen atlas grows **828 → 829 frames**, using one unused 32×32 slot in
+the existing logical **1024×832**, resolution-2 source (**2048×1664** backing).
+It adds **zero allocated atlas pixels / zero additional atlas pixel memory**;
+1,024 logical pixels (4,096 backing-pixel locations) are occupied inside the
+already allocated sheet. Retained GPU sources and five startup bake calls are
+unchanged. One temporary Sprite per puff is bounded at **two**, irrespective of
+garden density. The source-owned static sori still use their existing child
+Sprites. New construction Graphics contexts release after baking; frame wrappers
+and source textures release through page ownership.
+
+`tests/wirefern-clouds.cjs` covers exact 30s/75% rules, eligibility boundaries,
+independent streams, one current source/check, cap skips/no queue, hidden/fresh
+resume, long gaps, static reduced motion, source identity/removal/replacement,
+repeated reset, cached two-Sprite ownership and actual page scheduling with
+unchanged provenance/counts/score. Existing static tests retain 25%, all colors/
+layouts, frond geometry, 50s/5m/6m and source ownership coverage. Chrome review
+checks cached art, zero recurring Graphics, all phases, reduced/hidden/source
+cleanup, 30 repeated two-cloud resets, and full 640-source cost. Existing blossom,
+poppy, opium-pod, ecology, gnome and actual SSE regressions remain in validation.
+
+Chrome 155 samples use 640 decorated ferns, 90 frames per animation sample with
+changing transforms, and 20 checks per outcome on each supported page. Times
+include the existing view work; they are short CPU samples, not GPU timings:
+
+| CPU mean (ms) | Homepage | Diagnostic |
+| --- | ---: | ---: |
+| Baseline animation, no clouds | .0156 | .0200 |
+| Updated animation, no clouds | .0167 | .0133 |
+| Updated animation, one cloud | .0278 | .0278 |
+| Updated animation, two clouds | .0267 | .0233 |
+| 30s check, failed emission roll | .090 | .065 |
+| 30s check, successful emission including Sprite creation | .090 | .075 |
+
+Relative to the updated idle sample, active animation adds about **.010–.014ms**
+per frame. Updated render submission means range **.213–.251ms**, versus
+**.174–.184ms** for baseline; short-run noise prevents attributing that entire
+difference to this effect. The slowest sampled check is **.30ms**. No sampled
+animation or check creates Graphics/geometry or rebakes textures. Raw samples
+and resource counts are retained in the gallery's two `review.json` files.
+
+Validation completed:
+
+- `npm test`: **62 passed**, 14 optional browser/SSE entry points skipped,
+  zero failures. The dedicated cloud suite also passed after the cap-order check.
+- `npm run test:chrome`: **19 jobs passed**, including baseline/updated native
+  captures and existing broadleaf/vine/poppy/pod/static-sori regressions. The two
+  release-review jobs passed again after refining the moving-frame/check samples.
+- Debug and Release `dotnet build PacketGarden.slnx --no-restore`, with isolated
+  `BaseOutputPath=artifacts/wirefern-release/build/`: zero warnings/errors.
+- `dotnet run --project tests/PacketGarden.Checks --no-restore`, with isolated
+  output: all backend assertions passed. Existing NU1900 reports unavailable
+  NuGet vulnerability metadata.
+- Actual ASP.NET integration, `node tests/weather-sse.cjs --run
+  artifacts/wirefern-release/build/Debug/net10.0/PacketGarden.dll`: passed,
+  including polling/SSE, lease and outage/recovery behavior.
+- Final `git diff --check`: passed. Work remains uncommitted on `dev` above
+  `5c5746c`; no commit, push, merge, rebase, deployment or `main` change.
+
+Short CPU samples do not measure GPU completion, driver heap growth or a long
+human soak. Controlled visibility dispatch does not establish operating-system
+tab suspension. Mobile readability and other devices remain review limits.
+
 # Wirefern sori (2026-10-27)
+
+This section records the original static-only checkpoint. The visibility and
+airborne-release follow-up above supersedes its dot radii, sample spacing and
+static-only scope; the original selection/lifecycle rules remain applicable.
 
 Implemented on `dev` above opium-pod checkpoint `0719608`. Wireferns keep their
 canonical species, vigor, placement, provenance, 18s/50s/5m/6m lifecycle and

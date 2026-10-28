@@ -129,8 +129,14 @@ two to four groups of tiny copper, golden-ochre or soft cyan dots along their
 angular fronds. One stable color/layout is selected at creation, independently
 of foliage, including rare afterglow. Sori appear at **50 seconds**, dim with the
 fern from **five minutes**, and disappear with its normal **six-minute** expiry.
-They create no spores in the air, drops, specimens, events, sounds or points.
-See [before/after artwork and validation](docs/PIXI-LIVE.md#wirefern-sori-2026-10-27).
+The attached dots now have larger cores, stronger rims and wider separation for
+visibility at normal garden scale. A separate visible-page check every **30s**
+has a **75%** chance to release one airy eight-spore puff from a currently mature
+decorated fern. Puffs rise, spread and fade over **3s**, with at most **two** cloud
+Sprites. Reduced motion uses a brief static version. Hidden pages cancel clouds
+and resume on a fresh deadline; missed checks never catch up. These effects add
+no drops, specimens, network events, sounds or points. See
+[native-scale comparisons and validation](docs/PIXI-LIVE.md#wirefern-spore-release-2026-10-27).
 
 Ordinary live TCPNoise vines also get one independent **0.5%** cosmetic roll
 after successful placement. A selected vine stays ordinary until **60 seconds**,

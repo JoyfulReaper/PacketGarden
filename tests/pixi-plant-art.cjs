@@ -28,7 +28,7 @@ function capture(make,legacy=false) {
       position:[object.position.x,object.position.y], anchor:object.anchor?[object.anchor.x,object.anchor.y]:undefined, tint:object.tint, alpha:object.alpha }));
     return { source:{}, destroy(){} };
   } }, shared,legacy?{...core,species:core.eventSpecies}:core);
-  assert.equal(cache.frames.size,legacy?763:828); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
+  assert.equal(cache.frames.size,legacy?763:829); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
   for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true);
   return { tiles, dimensions };
 }
@@ -84,6 +84,6 @@ for (let i=0; i<keys.length; i++) {
     assert.deepEqual(a.anchor,type==='mushroom'?[.5,.94]:b.anchor,'mushroom bake origin preserves bottom margin');
   }
 }
-assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,385);
+assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,386);
 assert.equal(h.textureCount(),countBefore); assert.equal(h.live.size,objectsBefore,'construction display objects released');
 console.log('PASS: bounded Phase 2B artwork/leaflets/thorns, exact scale factors and stage differences, unchanged vine/redbloom/collectible commands, atlas cardinality/dimensions/ownership.');
