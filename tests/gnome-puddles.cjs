@@ -114,8 +114,8 @@ const cache=GV.makeGnomeAtlas({...h.P,Graphics},{generateTexture(options){
   assert.deepEqual(options.target.children.at(-1).lines,W.splashArt.lines.flatMap(([x,y,endX,endY])=>[['moveTo',x+16,y+18],['lineTo',endX+16,endY+18]]),'identical shared splash artwork in the atlas');
   return h.renderer.generateTexture(options);
 }}),view=GV.createGnomeView(h.P,layer,cache.frames);
-assert.equal(released,22,'every temporary gnome/ripple Graphics context is released after baking');
-assert.equal(cache.frames.size,22);assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
+assert.equal(released,26,'every temporary gnome/ripple Graphics context is released after baking');
+assert.equal(cache.frames.size,26);assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
 for(let cycle=0;cycle<30;cycle++){
   const water=[puddle()],actors=Array.from({length:4},(_,i)=>({x:450,y:289,createdAt:0,side:i%2?'red':'green',state:'approach'}));
   const m=W.createModel({getPuddles:()=>water,random:()=>0});view.change({actors});m.tick(actors,0);
@@ -123,7 +123,7 @@ for(let cycle=0;cycle<30;cycle++){
   const sprites=[...view.views.values(),...view.splashes.values()];
   for(let frame=0;frame<60;frame++)view.animate(250+frame*16);
   m.tick(actors,1250);view.animate(1250);assert.equal(view.splashes.size,0);m.clear(actors);view.change({actors:[]});
-  assert(sprites.every(s=>!h.live.has(s)));assert.equal(layer.children.length,0);assert.equal(h.textureCount(),textures+22);assert.equal(h.generated(),bakes+1);
+  assert(sprites.every(s=>!h.live.has(s)));assert.equal(layer.children.length,0);assert.equal(h.textureCount(),textures+26);assert.equal(h.generated(),bakes+1);
 }
 view.destroy();cache.destroy();layer.destroy();assert.equal(h.live.size,objects);assert.equal(h.textureCount(),textures);
 assert(!fs.readFileSync('wwwroot/index.html','utf8').includes('trigger-gnome-puddle'));

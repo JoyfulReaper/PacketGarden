@@ -1,4 +1,4 @@
-// Renderer-neutral ambient gnomes. Only landscaping changes the authoritative garden.
+// Renderer-neutral gnomes. Landscaping and mushroom heists use authoritative removal.
 (function () {
   'use strict';
   const garden = typeof module !== 'undefined' && module.exports ? require('./garden-core.js') : window.PacketGardenCore;
@@ -9,6 +9,8 @@
   const overcrowdingConfig = Object.freeze({ incidentChance:.25, freeCells:32, maxRemovals:32,
     maxTargets:64, maxDurationMs:45000 });
   const harvestConfig = Object.freeze({ minimumWeeds:3, incidentChance:.05, maxTargets:3 });
+  const heistConfig = Object.freeze({ incidentShare:.3, pickupAfterMs:3000, pickupHoldMs:1000,
+    finishedAfterMs:14000, abortExitMs:2000, maxTickGapMs:1500 });
   const reactionMs = 600, presentations = new WeakMap();
   // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
   const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
@@ -18,7 +20,9 @@
     && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
   function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,
     getPuddles = () => [], puddleRandom,
-    getReducedMotion = () => false, hasPendingBud = () => false, onUnderpantsAttempt = () => {},
+    getReducedMotion = () => false, hasPendingBud = () => false, hasPendingCollectible = () => false,
+    getHeistPosition = p => ({x:(p.column+.5)*garden.dimensions.cellSize,y:(p.row+.5)*garden.dimensions.cellSize+12}),
+    onUnderpantsAttempt = () => {},
     onChange = () => {}, onCue = () => {} }) {
     let actors = [], incident = null, nextCheckAt = now() + config.checkEveryMs;
     let lastLandscapingAt = -Infinity, suspended = false;
@@ -31,6 +35,84 @@
     const livingCount = at => getSpecimens().filter(p => at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired').length;
     const occupiedBy = p => source?.byCell.get(p.cell) === p;
     const freeCells = () => garden.dimensions.capacity - (source?.byCell.size ?? 0);
+    const eligibleMushroom = (p, at) => p?.type === 'mushroom' && ordinarySpecimen(p, at)
+      && garden.lifecycleStage(p, at) === 'mature' && !p.poppyMutation && !hasPendingCollectible(p) && !hasPendingBud(p)
+      && Number.isInteger(p.column) && p.column >= 0 && p.column < garden.dimensions.columns
+      && Number.isInteger(p.row) && p.row >= 0 && p.row < garden.dimensions.rows
+      && p.cell === p.row*garden.dimensions.columns+p.column && occupiedBy(p);
+    function heistCandidates(at = now(), simulatedOnly = false) {
+      return getSpecimens().filter(p => eligibleMushroom(p, at) && (!simulatedOnly || p.origin?.kind === 'simulated'));
+    }
+    function startHeist(at = now(), roll = random, simulatedOnly = false, candidates = null) {
+      if (suspended || incident || !source || livingCount(at) < config.minimumSpecimens) return false;
+      candidates ??= heistCandidates(at, simulatedOnly);
+      if (!candidates.length) return false;
+      const p = candidates[Math.floor(roll()*candidates.length)];
+      if (!p || !eligibleMushroom(p,at) || simulatedOnly && p.origin?.kind !== 'simulated') return false;
+      const position = getHeistPosition(p);
+      if (!position || !Number.isFinite(position.x) || !Number.isFinite(position.y)) return false;
+      const origin = {x:Math.max(0,Math.min(960,position.x)),y:Math.max(0,Math.min(600,position.y))};
+      const exits = [{x:-36,y:origin.y},{x:996,y:origin.y},{x:origin.x,y:-36},{x:origin.x,y:636}];
+      const exit = exits.reduce((a,b) => Math.hypot(b.x-origin.x,b.y-origin.y)<Math.hypot(a.x-origin.x,a.y-origin.y)?b:a);
+      incident = {type:'gnome_heist',phase:'approach',createdAt:at,lastTickAt:at,removals:0,origin,exit,
+        target:{specimen:p,id:p.id,cell:p.cell,column:p.column,row:p.row,createdAt:p.createdAt},
+        carried:null,aborted:false};
+      actors = ['green','red'].map((side,i) => ({type:'gnome',role:'thief',side,createdAt:at,state:'approach',
+        startX:Math.max(7,Math.min(953,origin.x+(i?100:-100))),startY:origin.y-4,
+        x:Math.max(7,Math.min(953,origin.x+(i?100:-100))),y:origin.y-4,
+        targetX:origin.x+(i?18:-18),targetY:origin.y-4}));
+      puddles.tick(actors,at);onCue('arrival');changed();return true;
+    }
+    function validHeistTarget(at) {
+      const t=incident.target,p=t?.specimen;
+      return p && p.id===t.id && p.cell===t.cell && p.column===t.column && p.row===t.row
+        && p.createdAt===t.createdAt && getSpecimens().includes(p) && eligibleMushroom(p,at);
+    }
+    function cancelHeistGap(at) { clear();resetCadence(at); }
+    function tickHeist(at) {
+      const c=heistConfig;
+      if(at<incident.lastTickAt || at-incident.lastTickAt>c.maxTickGapMs){cancelHeistGap(at);return;}
+      incident.lastTickAt=at;
+      if(at>=incident.createdAt+c.finishedAfterMs || incident.aborted && at>=incident.exitAt+c.abortExitMs){clear();return;}
+      if(incident.phase==='approach' && at>=incident.createdAt+c.pickupAfterMs){
+        // Only the logical tick can steal. Capture safe appearance values before normal removal/notifications.
+        if(validHeistTarget(at)){
+          const p=incident.target.specimen;
+          const visual=Object.freeze({type:'mushroom',vigor:p.vigor,colorVariant:p.colorVariant,row:p.row});
+          if(source.remove(p,'gnome-heist')){
+            incident.carried=visual;incident.removals=1;incident.pickupAt=at;incident.phase='pickup';
+          }
+        }
+        if(!incident.carried){incident.aborted=true;incident.phase='exit';incident.exitAt=at;}
+        incident.target=null; // No removed specimen or raw provenance retained by the getaway.
+        changed();
+      }
+    }
+    function advanceHeist(at) {
+      const c=heistConfig;
+      if(at<incident.lastTickAt || at-incident.lastTickAt>c.maxTickGapMs){cancelHeistGap(at);return;}
+      if(at>=incident.createdAt+c.finishedAfterMs || incident.aborted && at>=incident.exitAt+c.abortExitMs){clear();return;}
+      const reduced=getReducedMotion(),age=Math.max(0,at-incident.createdAt);
+      let progress=0;
+      if(incident.aborted)progress=Math.max(0,Math.min(1,(at-incident.exitAt)/c.abortExitMs));
+      else if(incident.carried){
+        const leaveAt=incident.pickupAt+c.pickupHoldMs;
+        progress=Math.max(0,Math.min(1,(at-leaveAt)/(incident.createdAt+c.finishedAfterMs-leaveAt)));
+        incident.phase=at<leaveAt?'pickup':'getaway';
+      }
+      if(reduced)progress=Math.floor(progress*4)/4;
+      for(const [i,actor] of actors.entries()){
+        const side=i?18:-18;
+        if(!incident.carried && !incident.aborted){
+          const t=reduced?age<c.pickupAfterMs?0:1:Math.min(1,age/c.pickupAfterMs);
+          actor.x=actor.startX+(actor.targetX-actor.startX)*t;actor.y=actor.targetY;
+        }else{
+          actor.x=incident.origin.x+(incident.exit.x-incident.origin.x)*progress+side;
+          actor.y=incident.origin.y-4+(incident.exit.y-incident.origin.y)*progress;
+        }
+        actor.carryMushroom=Boolean(incident.carried);actor.state=incident.phase;
+      }
+    }
     function landscapingCandidates(at = now(), mode = 'vine') {
       return getSpecimens().filter(p => eligibleTarget(p, at, mode) && occupiedBy(p));
     }
@@ -152,6 +234,7 @@
     function clear() { puddles.clear(actors);actors = []; incident = null; changed(); }
     function advance(at = now(), roll = random) {
       if (!incident) return;
+      if (incident.type === 'gnome_heist') { advanceHeist(at); return; }
       if (incident.type === 'gnome_landscaping') { advanceLandscaping(at); return; }
       const age = Math.max(0, at - incident.createdAt);
       // Completion precedes phase/audio handling, including a suspended page.
@@ -186,18 +269,23 @@
     function suspend(at = now()) {
       resetCadence(at);
       suspended = true;
-      if (incident?.type === 'gnome_landscaping') clear();
+      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist') clear();
       else changed(); // Release transient water presentation while a dispute is hidden.
     }
     function tick(at = now(), roll = random, hidden = false) {
       if (hidden) { suspend(at); return; }
       if (incident) {
         if (incident.type === 'gnome_landscaping') tickLandscaping(at);
+        else if (incident.type === 'gnome_heist') tickHeist(at);
         advance(at, roll); if(!suspended)puddles.tick(actors,at);return;
       }
       if (at < nextCheckAt) return;
       resetCadence(at); // One fresh check, never replay missed intervals.
-      if (livingCount(at) >= config.minimumSpecimens && roll() < config.incidentChance) start(at, roll);
+      if (livingCount(at) >= config.minimumSpecimens && roll() < config.incidentChance) {
+        const mushrooms=heistCandidates(at);
+        if(mushrooms.length && roll()<heistConfig.incidentShare) startHeist(at,roll,false,mushrooms);
+        else start(at,roll);
+      }
       if (!incident && at >= lastLandscapingAt + landscapingConfig.cooldownMs) {
         if (source && freeCells() === 0) {
           // Exactly one overcrowding chance; a failed roll never falls through to vine control.
@@ -215,6 +303,8 @@
         || actor.state === 'flee' && at >= incident.createdAt+config.losersGoneAfterMs)) return false;
       if (incident.type === 'gnome_landscaping' && (at-incident.lastTickAt > landscapingConfig.maxTickGapMs
         || incident.phase === 'exit' && at >= incident.stepAt+landscapingConfig.exitMs)) return false;
+      if (incident.type === 'gnome_heist' && (at<incident.lastTickAt || at-incident.lastTickAt>heistConfig.maxTickGapMs
+        || at>=incident.createdAt+heistConfig.finishedAfterMs || incident.aborted && at>=incident.exitAt+heistConfig.abortExitMs)) return false;
       return (presentations.get(actor)?.alpha ?? 0) > 0;
     }
     function hitAt(point, at = now()) {
@@ -236,7 +326,7 @@
       }
       return true; // Repeated clicks still consume the click, never the plant underneath.
     }
-    return { start, startLandscaping, landscapingEligible, landscapingCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
       puddleRemoved(puddle){puddles.removed(puddle);if(actors.length)changed();},
       simulatePuddleEntry(actor){if(!actors.includes(actor))return false;puddles.armDemo(actor);return true;},
       get lastLandscapingAt() { return lastLandscapingAt; },
@@ -247,7 +337,7 @@
     const surprised = at < (actor.surprisedUntil ?? -Infinity) || Boolean(water);
     const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier';
     const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle' && !surprised;
-    return { step, battle, surprised, water, sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
+    return { step, battle, surprised, water, mushroom:Boolean(actor.carryMushroom), sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
       bounce:water ? water.bounce : surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
       clippers:actor.role === 'worker' && !actor.carrySack, closed:surprised || actor.state === 'snip' && (reducedMotion || step > 0),
       shove:battle ? step * (actor.side === 'green' ? 2 : -2) : 0, rotation:water ? water.rotation : battle ? step * .12 : 0,
@@ -265,6 +355,6 @@
     const spread = closed ? 1 : 5;
     return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
   }
-  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
+  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();

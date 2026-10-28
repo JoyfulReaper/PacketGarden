@@ -124,14 +124,37 @@ plant and disappears with its exact parent. These decorations create no extra
 specimens, drops, events, scores or sounds. Diagnostic fixtures can force all
 colors and full fields without manipulating real input.
 
+Wireferns have an independent **25%** cosmetic chance to carry attached sori:
+two to four groups of tiny copper, golden-ochre or soft cyan dots along their
+angular fronds. One stable color/layout is selected at creation, independently
+of foliage, including rare afterglow. Sori appear at **50 seconds**, dim with the
+fern from **five minutes**, and disappear with its normal **six-minute** expiry.
+The attached dots now have larger cores, stronger rims and wider separation for
+visibility at normal garden scale. A separate visible-page check every **30s**
+has a **75%** chance to release one airy eight-spore puff from a currently mature
+decorated fern. Puffs rise, spread and fade over **3s**, with at most **two** cloud
+Sprites. Reduced motion uses a brief static version. Hidden pages cancel clouds
+and resume on a fresh deadline; missed checks never catch up. These effects add
+no drops, specimens, network events, sounds or points. See
+[native-scale comparisons and validation](docs/PIXI-LIVE.md#wirefern-spore-release-2026-10-27).
+
 Ordinary live TCPNoise vines also get one independent **0.5%** cosmetic roll
 after successful placement. A selected vine stays ordinary until **60 seconds**,
 then becomes a dusty mauve opium poppy if fewer than two are active. Failed and
 cap-skipped attempts never retry. The exact vine keeps its identity, cell, vigor,
 provenance and normal **eight-minute fade / ten-minute expiry**. Silvervines and
 simulated traffic cannot roll. Clicking inspects it; gnomes spare active poppies.
-No collectible pods, extra events, activity, sound or points are added. Pods remain
-future work. See [implementation, screenshots and validation](docs/PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27).
+The poppy itself is inspected rather than collected. See
+[transformation details](docs/PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27).
+
+Each successfully activated live poppy gets one separate **20%** chance to leave
+a loose **opium pod** three seconds later. The exact parent must still qualify;
+the pod shares the existing five-drop cap and lasts 20 seconds independently of
+its parent. Failures, cap skips and missed hidden/stalled deadlines never retry.
+Collecting removes only the pod and says **You collected an opium pod. +0 points**.
+The original poppy, network provenance, activity and `Score: 0` stay unchanged.
+There is no inventory or progression. See
+[pod screenshots, rules and validation](docs/PIXI-LIVE.md#collectible-opium-pods-2026-10-27).
 
 ### Grass and water
 
@@ -176,6 +199,17 @@ occasionally free ordinary cells through authoritative removals; protected,
 stale or replaced targets are checked again. Puddle mishaps, surprise poses and
 independent underpants drops retain their existing behavior. Collection awards
 **+0 points** and `Score: 0` stays unchanged.
+
+The **Great Gnome Mushroom Heist** can replace 30% of successful ordinary gnome
+incidents when an unprotected mature mushroom is available: the shared check is
+still 2% every 45 seconds with at least 30 living specimens. A red-hatted and a
+green-hatted thief approach the exact mushroom, revalidate its identity after
+three seconds and **really remove it from the garden**. They carry its original
+palette/size in cached artwork to the nearest edge and leave after 14 seconds.
+Its cell stays free for normal growth. Pending collectibles, mutations and rare
+specimens are protected; hiding or stalls cancel without replay or restoration.
+Both thieves remain clickable for underpants. See the
+[heist review](docs/PIXI-LIVE.md#great-gnome-mushroom-heist-2026-10-27).
 
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,

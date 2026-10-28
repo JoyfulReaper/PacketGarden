@@ -21,8 +21,9 @@ const h=require('./pixi-live.cjs');
     EventSource:Source,ResizeObserver:class{observe(){}disconnect(){}},window:{PIXI:{...h.P,Application},
       PacketGardenPixi:require('../wwwroot/pixi-stress.js'),devicePixelRatio:1,innerWidth:1280,innerHeight:1000,addEventListener:(name,fn)=>windowHandlers.set(name,fn),removeEventListener(name){windowHandlers.delete(name)}}};
   vm.createContext(context);
-  for(const name of ['garden-core','garden-stillbloom','garden-lighting','garden-lighting-view','garden-gnomes','garden-mutations','garden-grass','garden-ecology','garden-puddle-art','garden-gnome-puddles','garden-ambient','garden-interaction','garden-ui-core','pixi-live-ui','pixi-broadleaf-blooms','pixi-vine-blooms','pixi-live-core','pixi-live-ecology','pixi-live-ambient','pixi-live-gnomes','pixi-live-storm','pixi-live']){
+  for(const name of ['garden-core','garden-stillbloom','garden-lighting','garden-lighting-view','garden-gnomes','garden-mutations','garden-grass','garden-ecology','garden-puddle-art','garden-gnome-puddles','garden-ambient','garden-interaction','garden-ui-core','pixi-live-ui','pixi-broadleaf-blooms','pixi-vine-blooms','pixi-wirefern-spores','pixi-live-core','pixi-live-ecology','pixi-live-ambient','pixi-live-gnomes','pixi-live-storm','pixi-live']){
     vm.runInContext(fs.readFileSync(`wwwroot/${name}.js`,'utf8'),context);
+    if(name==='pixi-wirefern-spores')context.window.PacketGardenWirefernSpores.random=()=>.9;
     if(name==='pixi-vine-blooms')context.window.PacketGardenVineBlooms.random=()=>.9; // Isolate the existing ecology fixture.
   }
   await new Promise(resolve=>setImmediate(resolve));

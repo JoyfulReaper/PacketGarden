@@ -37,6 +37,17 @@
         g.poly(art.body.map((v,i)=>v+16)).fill(0xf2efe3).stroke({color:0xa5aba0,width:1});
         for(const [x,y,endX,endY] of art.lines)g.moveTo(x+16,y+16).lineTo(endX+16,endY+16);
         g.stroke({color:0xa5aba0,width:1});
+      } else if (type === 'opium_pod') {
+        // Sage seed capsule with a flat, scalloped crown; static and distinct from a leaf bud.
+        g.ellipse(16, 21, 5.5, 1.3).fill({ color: 0x293729, alpha: .28 });
+        g.moveTo(16, 19).quadraticCurveTo(17, 21, 16, 23).stroke({ color: 0x8f9e70, width: 1.4 });
+        g.ellipse(16, 15, 4.5, 5.7).fill(0x4e6955).stroke({ color: 0xb1bc8f, width: .8 });
+        g.ellipse(15, 14.6, 3, 4.3).fill(0x91a783);
+        g.moveTo(17.5, 11.8).quadraticCurveTo(19, 16, 16.8, 19).stroke({ color: 0x71866b, width: .8 });
+        g.ellipse(14.2, 13.3, .8, 2).fill({ color: 0xd0d7b0, alpha: .7 });
+        g.poly([11.2,9.4,13.2,9,13.5,7.5,15.4,8.7,17,7.6,18,9,20.5,9.5,18.8,11,13.5,11])
+          .fill(0xa3b08a).stroke({ color: 0x526c56, width: .7 });
+        g.moveTo(13.5, 9.7).lineTo(18, 9.7).stroke({ color: 0xd3d8b4, width: .65 });
       } else if (type === 'ditch_weed_bud') {
         g.ellipse(16,16,4.5,5).fill(0x39462b);
         for (const [color,x,y,cx,cy,tx,ty,ex,ey] of ambientCore.weedBudLeaves) {
@@ -52,6 +63,7 @@
       g.position.set(i*32,0); sheet.addChild(g);
     }
     const atlas = renderer.generateTexture({target:sheet,frame:new P.Rectangle(0,0,keys.length*32,32),resolution:2});
+    for (const graphic of [...sheet.children]) graphic.destroy({ context: true });
     sheet.destroy({children:true});
     const frames = new Map(keys.map((key,i)=>[key,new P.Texture({source:atlas.source,frame:new P.Rectangle(i*32,0,32,32)})]));
     return {frames,atlas,destroy(){for(const frame of frames.values())frame.destroy(false);atlas.destroy(true);}};

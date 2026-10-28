@@ -49,6 +49,8 @@ async function run() {
         window.__gardenAudioGains.push(node); return node; }
     };
     const createGnomes = PacketGardenGnomes.createModel;
+    const createPixiModel = PacketGardenPixiLiveCore.createModel;
+    PacketGardenPixiLiveCore.createModel = (view,options) => createPixiModel(view,{...options,sporeRandom:()=>.9});
     const createLighting=PacketGardenLighting.createModel,createSurface=PacketGardenLightingView.createSurface;
     PacketGardenLighting.createModel=options=>(window.__gardenTestLighting=createLighting({...options,
       getLocalHour:new URLSearchParams(location.search).has('live-lighting')?PacketGardenLighting.localHour:()=>12}));
@@ -734,7 +736,7 @@ async function run() {
       });
       await page.close();assert.deepEqual(errors,[],'including page-close errors');
     }
-    assert(resources.cycles.cycles.every(c=>c.active===1&&c.gnomes===0&&c.splashes===0&&c.destroyed));assert.equal(resources.cycles.frames,22);assert.equal(resources.cycles.bakes,1);assert.equal(resources.cycles.sources,1);
+    assert(resources.cycles.cycles.every(c=>c.active===1&&c.gnomes===0&&c.splashes===0&&c.destroyed));assert.equal(resources.cycles.frames,26);assert.equal(resources.cycles.bakes,1);assert.equal(resources.cycles.sources,1);
     // Isolated native-clock submission probes. Frozen fixtures above measure
     // pixels/state only; these repeated calls compare the same four actors.
     const perf=await newPage();await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestGnomes);
@@ -863,7 +865,7 @@ async function run() {
       const atlas=__gardenTestAmbientAtlas;
       return {states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],
         sources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
-    });assert(resources.states.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,13);assert.equal(resources.bakes,1);assert.equal(resources.sources,1);
+    });assert(resources.states.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,14);assert.equal(resources.bakes,1);assert.equal(resources.sources,1);
     assert.deepEqual(errors,[]);await page.close();
     // CPU/ticker probes use fresh native clocks, separate from deterministic screenshot clocks.
     const perf=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestFrogs);
@@ -925,7 +927,7 @@ async function run() {
         gnomeBakes:__gardenGnomeBakes,ambientBakes:__gardenAmbientBakes,
         gnomeBacking:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight]};
     });
-    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,22);assert.equal(resources.ambientFrames,13);
+    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,26);assert.equal(resources.ambientFrames,14);
     assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
     assert.deepEqual(errors,[]);await page.close();await fs.writeFile(path.join(output,'gnome-harvest-resources.json'),JSON.stringify(resources,null,2));
     console.log('PASS: Chrome weed-harvest trigger/cuts/sacks, actual gnome clicks/one attempt, independent underpants, both 80/20 messages, day/night Pixi captures and 20 cleanup cycles:',JSON.stringify(resources));
@@ -973,7 +975,7 @@ async function run() {
       return {cycles:states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,
         backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],gpuSources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
     });
-    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,13);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
+    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,14);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
     await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#seed-weed-buds').click();
     const positions=await page.evaluate(()=>{const v=__gardenTestAmbientView;v.animate(Date.now());const a=[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y]);
       v.animate(Date.now()+10000);return [a,[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y])];});
@@ -999,7 +1001,7 @@ async function run() {
     const saved=await page.evaluate(()=>JSON.stringify(__gardenTestGarden.specimens.map(p=>p.origin)));
     assert(!saved.includes('tcpnoise'));assert(saved.includes('simulated'));
     const buildCounts=await page.evaluate(()=>({objects:__gardenTestApp.stage.children[0].children[6].children.length,frames:document.querySelector('#hud').textContent.match(/atlas frames (\d+)/)?.[1]}));
-    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'825');
+    assert.equal(buildCounts.objects,2);assert.equal(buildCounts.frames,'829');
     const metrics={resources:buildCounts,day:await sample(page)};
     // Fixed fixtures use the real model, existing cached artwork and surface light.
     const fixture=async(age,mixed=false)=>page.evaluate(({age,mixed})=>{

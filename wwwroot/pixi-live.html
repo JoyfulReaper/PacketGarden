@@ -14,25 +14,26 @@
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
   <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
-  <script src="garden-gnomes.js?v=poppy-1" defer></script>
-  <script src="garden-mutations.js?v=poppy-1" defer></script>
+  <script src="garden-gnomes.js?v=mushroom-heist-1" defer></script>
+  <script src="garden-mutations.js?v=opium-pods-1" defer></script>
   <script src="garden-grass.js?v=grass-lush-1" defer></script>
   <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
   <script src="garden-puddle-art.js?v=puddle-art-1" defer></script>
   <script src="garden-gnome-puddles.js?v=gnome-puddles-1" defer></script>
   <script src="garden-gnome-puddles-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-frogs.js?v=frog-gnome-ack-1" defer></script>
-  <script src="garden-ambient.js?v=gnome-harvest-1" defer></script>
+  <script src="garden-ambient.js?v=opium-pods-1" defer></script>
   <script src="garden-interaction.js?v=frog-gnome-ack-1" defer></script>
-  <script src="garden-ui-core.js?v=poppy-1" defer></script>
+  <script src="garden-ui-core.js?v=opium-pods-1" defer></script>
   <script src="pixi-live-ui.js?v=frog-gnome-ack-1" defer></script>
-  <script src="pixi-live-ambient.js?v=frogs-1" defer></script>
-  <script src="pixi-live-gnomes.js?v=gnome-puddles-1" defer></script>
+  <script src="pixi-live-ambient.js?v=opium-pods-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=mushroom-heist-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
-  <script src="pixi-live-core.js?v=poppy-1" defer></script><script src="pixi-live.js?v=poppy-1" defer></script>
+  <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
+  <script src="pixi-live-core.js?v=mushroom-heist-1" defer></script><script src="pixi-live.js?v=mushroom-heist-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -56,6 +57,21 @@
       <button id="seed-vine-bloom-stages" type="button">Seed vine bloom stages (simulated)</button>
       <button id="seed-vine-bloom-connections" type="button">Seed connected flowering vines (simulated)</button>
       <button id="seed-vine-bloom-dense" type="button">Seed 640 flowering vines (simulated)</button>
+      <button id="seed-wirefern-spores-stages" type="button">Wirefern sori: stages (simulated)</button>
+      <button id="seed-wirefern-spores-mature" type="button">Seed mature decorated wireferns (simulated)</button>
+      <label>Cloud color <select id="wirefern-cloud-color"><option value="0">Pale copper</option><option value="1">Pale gold</option><option value="2">Pale cyan</option></select></label>
+      <label>Cloud motion <select id="wirefern-cloud-motion"><option value="normal">Normal preview</option><option value="reduced">Reduced-motion static preview</option></select></label>
+      <button id="trigger-wirefern-cloud" type="button">Trigger one spore cloud (simulated)</button>
+      <button id="remove-wirefern-cloud-source" type="button">Remove simulated cloud source</button>
+      <button id="clear-wirefern-clouds" type="button">Clear cloud previews</button>
+      <span id="wirefern-cloud-status" role="status">Local previews, at most two clouds. Repeated triggers never queue. System reduced motion always applies.</span>
+      <button id="seed-wirefern-spores-combinations" type="button">Wirefern sori: all vigor/palette/color/layout pairs (simulated)</button>
+      <button id="seed-wirefern-spores-mixed" type="button">Wirefern sori: mixed colony and grass (simulated)</button>
+      <button id="seed-wirefern-spores-dense" type="button">Wirefern sori: dense 640 field (simulated)</button>
+      <button id="seed-wirefern-spores-expiry" type="button">Wirefern sori: expire in 1s (simulated)</button>
+      <button id="seed-wirefern-spores-replacement" type="button">Wirefern sori: replacement setup (simulated)</button>
+      <button id="replace-wirefern-spores" type="button">Replace simulated wirefern</button>
+      <span>Sori are attached cosmetic dots, never flowers or drops. Stages: undecorated, sprout, growing, mature, fading. All pairs include rare afterglow. Replacement uses normal stronger-growth competition; Clear releases every overlay.</span>
       <button id="seed-poppy-before" type="button">Poppy: vine before maturity (simulated)</button>
       <button id="seed-poppy-mature" type="button">Poppy: newly mature (simulated)</button>
       <button id="seed-poppy-fading" type="button">Poppy: fading (simulated)</button>
@@ -65,6 +81,15 @@
       <button id="seed-poppy-expiry" type="button">Poppy: expires in 1s (simulated)</button>
       <button id="seed-poppy-replacement" type="button">Poppy: replacement setup (simulated)</button>
       <button id="replace-poppy" type="button">Replace simulated poppy</button>
+      <button id="seed-opium-pending" type="button">Pod: pending 3s (simulated)</button>
+      <button id="seed-opium-active" type="button">Pod: collect or inspect parent (simulated)</button>
+      <button id="seed-opium-mixed" type="button">Pod: mixed loose drops (simulated)</button>
+      <button id="seed-opium-cap" type="button">Pod: five-drop cap skip in 3s (simulated)</button>
+      <button id="seed-opium-cancel" type="button">Pod: remove pending parent (simulated)</button>
+      <button id="seed-opium-hidden" type="button">Pod: missed hidden deadline (simulated)</button>
+      <button id="seed-opium-expiry" type="button">Pod: expires in 1s (simulated)</button>
+      <button id="seed-opium-reset" type="button">Reset pod fixture (simulated)</button>
+      <span id="opium-pod-status" role="status">Local simulated poppies and loose drops. Repeated fixture controls clear old state; pods share five slots and leave their parent unchanged.</span>
       <span>Poppies are cosmetic mutations of the same vine, never collectible. Before maturity transforms after 1s; expiry disappears after 1s. Replacement setup fills all cells; Replace uses normal stronger-growth competition.</span>
       <span>Vine fixtures enable dense grass. Stage rows: no bloom, sprout, growing, mature, fading; colors: pink, lavender, pale yellow, white. Connected vines include an isolated flowering vine.</span>
       <span>Bloom fixtures enable grass under plants. Rows: no bloom, sprout, growing, mature, fading; columns: pink, yellow, white, purple, blue. Foliage varies by row.</span>
@@ -77,6 +102,13 @@
       <button id="trigger-landscaping" type="button">Trigger landscaping (simulated)</button>
       <button id="trigger-overcrowding" type="button">Trigger overcrowding relief (simulated)</button>
       <button id="trigger-weed-harvest" type="button">Trigger weed harvest (simulated)</button>
+      <button id="seed-heist" type="button">Seed mature mushrooms (simulated)</button>
+      <button id="trigger-heist" type="button">Trigger mushroom heist (simulated)</button>
+      <button id="remove-heist-target" type="button">Remove heist target before pickup</button>
+      <button id="replace-heist-target" type="button">Replace heist target before pickup</button>
+      <button id="suspend-heist" type="button">Simulate heist hide/resume</button>
+      <label><input id="heist-reduced-motion" type="checkbox"> Preview heist reduced motion</label>
+      <span id="heist-status" role="status">Pickup after 3s really frees the original cell; the two thieves leave at 14s. Seed/trigger again for sequential tests. Hide the tab during any phase to cancel safely. System reduced motion always applies.</span>
       <button id="trigger-frog" type="button">Trigger frog (simulated)</button>
       <button id="trigger-gnome-puddle" type="button">Trigger gnome puddle mishap</button>
       <span id="gnome-puddle-status" role="status">Local simulated water and gnomes; ordinary water entries retain their 20% chance.</span>

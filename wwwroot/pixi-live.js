@@ -3,6 +3,7 @@
   const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
   const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
   const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
+  const spores=typeof module!=='undefined'&&module.exports?require('./pixi-wirefern-spores.js'):window.PacketGardenWirefernSpores;
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -225,6 +226,10 @@
     for (const stage of ['mature', 'fading']) {
       const g = poppyTile(P, stage === 'fading'); artTiles.push(g); tile(`opium-poppy:${stage}`, g);
     }
+    for (let layout = 0; layout < spores.layouts.length; layout++) {
+      const g = spores.tile(P, layout); artTiles.push(g); tile(`wirefern-spores:${layout}`, g);
+    }
+    const cloudArt = spores.cloudTile(P); artTiles.push(cloudArt); tile('wirefern-cloud', cloudArt);
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -252,6 +257,8 @@
     root.addChild(soil, grid, darkening, grassLayer, puddleLayer, links, plants, dropLayer, curiosityLayer, rain, probe, clip); root.mask = clip;
     const byId = new Map(), vineLinks = new Map(), halfCurvesById = new Map(), mutationViews = new Map(), bloomViews = new Map(); let connectionHalves = 0;
     const vineBloomViews=new Map(),vineBloomLinks=new Map();
+    const sporeViews = new Map();
+    const cloudViews = new Map();
     let groundCover = null;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
@@ -361,7 +368,33 @@
       else sprite.texture=texture;
       vineBlooms.style(sprite,specimen);
     }
-    return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+    function syncSpores(specimen, parent) {
+      let sprite = sporeViews.get(specimen.id);
+      if (!spores.active(specimen)) { if (sprite) { sprite.destroy(); sporeViews.delete(specimen.id); } return; }
+      const texture = frames.get(`wirefern-spores:${specimen.wirefernSpores.layout}`);
+      if (!sprite) {
+        sprite = new P.Sprite(texture); sprite.anchor.set(.5, 29 / 32); sprite.eventMode = 'none';
+        parent.addChild(sprite); sporeViews.set(specimen.id, sprite);
+      } else sprite.texture = texture;
+      spores.style(sprite, specimen);
+    }
+    function removeCloud(cloud) { const record = cloudViews.get(cloud); if (record) { record.sprite.destroy(); cloudViews.delete(cloud); } }
+    function cloudChange({ kind, cloud }) {
+      if (kind === 'removed') { removeCloud(cloud); return; }
+      const parent = byId.get(cloud.source.id); if (!parent || cloudViews.has(cloud)) return;
+      const origin = spores.upperFrond(cloud.source.vigor), sprite = new P.Sprite(frames.get('wirefern-cloud'));
+      // Atlas tile origin y=29 plus cloud-art center y=-12 gives a 17px anchor.
+      sprite.anchor.set(.5, 17 / 32); sprite.eventMode = 'none'; sprite.tint = spores.cloudTints[cloud.color];
+      const record = { sprite, x: parent.position.x + origin.x * parent.scale.x, y: parent.position.y + origin.y * parent.scale.y };
+      plants.addChild(sprite); cloudViews.set(cloud, record); poseCloud(cloud, record, cloud.createdAt);
+    }
+    function poseCloud(cloud, record, at) {
+      const pose = spores.cloudPose(cloud, at), sprite = record.sprite;
+      sprite.visible = at < cloud.expiresAt; sprite.position.set(record.x + pose.x, record.y + pose.y);
+      sprite.scale.set(pose.scaleX, pose.scaleY); sprite.alpha = pose.alpha;
+    }
+    return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, sporeViews, cloudViews, cloudChange, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+      mushroomVisual(details) { return {texture:texture({...details,type:'mushroom',stage:'mature'}),scale:details.row===0?1.1:1.4}; },
       setGroundCover(presentation) { groundCover = presentation; },
       get contactLayer() { return links; },
       add(specimen, byCell) {
@@ -370,6 +403,7 @@
         sizeSpecimen(specimen, sprite);
         plants.addChild(sprite); byId.set(specimen.id, sprite); counters.created++;
         syncBloom(specimen,sprite);
+        syncSpores(specimen, sprite);
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite });
         if (specimen.type === 'vine') {
           const offset = vineOffset(specimen), seed = specimen.row * columns + specimen.column;
@@ -386,13 +420,16 @@
         sizeSpecimen(specimen, byId.get(specimen.id));
         syncBloom(specimen,byId.get(specimen.id));
         syncVineBloom(specimen,byId.get(specimen.id));
+        syncSpores(specimen, byId.get(specimen.id));
         if (specimen.mutation) mutationViews.set(specimen.id, { specimen, sprite: byId.get(specimen.id) });
         if (specimen.type === 'vine') refreshNeighborhood(specimen, byCell);
         groundCover?.specimenChanged(specimen); },
       remove(specimen, byCell) {
+        for (const cloud of cloudViews.keys()) if (cloud.source === specimen) removeCloud(cloud);
         const sprite = byId.get(specimen.id); sprite.destroy({children:true}); byId.delete(specimen.id); counters.destroyed++;
         bloomViews.delete(specimen.id);
         vineBloomViews.delete(specimen.id);
+        sporeViews.delete(specimen.id);
         mutationViews.delete(specimen.id);
         const graphic = vineLinks.get(specimen.id);
         if (graphic) {
@@ -415,6 +452,7 @@
         rain.update();
       },
       animate(seconds, elapsed, at = Date.now()) {
+        if (cloudViews.size) for (const [cloud, record] of cloudViews) poseCloud(cloud, record, at);
         for (const { specimen, sprite } of mutationViews.values()) {
           // Only the <=3 active views move; expired ones stay invisible until the logical removal.
           sprite.visible = at < specimen.mutation.expiresAt;
@@ -426,14 +464,14 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() {
         // Each link owns a Graphics context and may own a blossom child.
         for(const graphic of vineLinks.values())graphic.destroy({children:true,context:true});
         groundCover?.destroy(); groundCover = null;
-        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
+        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();sporeViews.clear();cloudViews.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
       }
     };
   }
@@ -504,6 +542,7 @@
     own(()=>storm.destroy());
     const lightningToggle = document.querySelector('#lightning-enabled');
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)');let lightningEnabled = true;
+    let emissions = null, previewMotion = 'normal';
     const updateLightning = () => {
       const reduced = reducedMotion?.matches ?? false;
       if(lightningToggle){lightningToggle.disabled=reduced;lightningToggle.checked=lightningEnabled&&!reduced;
@@ -511,7 +550,7 @@
       storm.configure({enabled:lightningEnabled,reducedMotion:reduced,hidden:document.hidden});
     };
     listen(lightningToggle,'change',event=>{lightningEnabled=event.target.checked;updateLightning();});
-    listen(reducedMotion,'change',updateLightning);updateLightning();
+    listen(reducedMotion,'change',()=>{updateLightning();emissions?.motionChanged();});updateLightning();
     const ambientCache = ambientPresentation.makeAmbientAtlas(P, app.renderer);
     own(()=>ambientCache.destroy());
     const frogView=frogCore?ambientPresentation.createFrogView(P,view.dropLayer,ambientCache.frames,()=>reducedMotion?.matches??false):null;
@@ -528,8 +567,13 @@
     const model = core.createModel(view, { onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
-      onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
+      onPoppyActivated: (source, at) => ambient.acceptPoppyActivation(source, at),
+      onRemoved: source => { emissions?.removed(source); ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     own(() => model.clear());
+    emissions = spores.createEmissionModel({ getSpecimens: () => model.specimens,
+      hasSource: source => model.byCell.get(source.cell) === source,
+      getReducedMotion: () => Boolean(reducedMotion?.matches || previewMotion === 'reduced'), onChange: view.cloudChange });
+    own(() => emissions.destroy()); emissions.setHidden(document.hidden);
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
       getGnomes: () => gnomes,
       getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
@@ -541,14 +585,18 @@
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
     own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
-    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, () => reducedMotion?.matches ?? false);
+    let heistPreviewReduced = false;
+    const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced);
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual);
     own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
     const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
       getPuddles: () => ecology?.puddles ?? [],
       hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
+      hasPendingCollectible: specimen => ambient.pendingDrops.has(specimen),
+      getHeistPosition: specimen => view.byId.get(specimen.id)?.position,
       onUnderpantsAttempt: (point,at) => ambient.dropGnomeUnderpants(point,at),
-      getReducedMotion: () => reducedMotion?.matches ?? false,
+      getReducedMotion: gnomeReducedMotion,
       random: () => simulatedWinner ? simulatedWinner === 'green' ? .25 : .75 : Math.random(),
       onChange(change) { gnomeView.change(change); if (!change.incident) simulatedWinner = null; },
       onCue: stage => sound?.maybePlayGnomeSound(stage) });
@@ -577,6 +625,31 @@
     listen(document.querySelector('#trigger-landscaping'),'click', () => triggerLandscaping('vine'));
     listen(document.querySelector('#trigger-overcrowding'),'click', () => triggerLandscaping('overcrowding'));
     listen(document.querySelector('#trigger-weed-harvest'),'click', () => triggerLandscaping('weed_harvest'));
+    const heistStatus = text => { const el=document.querySelector('#heist-status');if(el)el.textContent=text; };
+    listen(document.querySelector('#seed-heist'),'click', () => {
+      gnomes.clear();ambient.clear();model.seedHeist();gnomes.resetCadence();
+      heistStatus('35 simulated specimens, including four mature ordinary mushrooms. Trigger a heist; pickup removes the exact target after 3s.');
+    });
+    listen(document.querySelector('#trigger-heist'),'click', () => {
+      if(gnomes.incident){heistStatus('An incident is already active.');return;}
+      if(!gnomes.heistCandidates(Date.now(),true).length){heistStatus('Seed the simulated mushroom fixture first. Live mushrooms are never forced by this control.');return;}
+      heistStatus(gnomes.startHeist(Date.now(),undefined,true)?'Simulated heist: approaching a real occupied cell. Pickup in 3s, departure at 14s. Click either thief for underpants.':'Requires 30 living specimens and an eligible simulated mushroom.');
+      gnomeView.animate(Date.now());
+    });
+    for(const mode of ['remove','replace'])listen(document.querySelector(`#${mode}-heist-target`),'click',()=>{
+      const target=gnomes.incident?.type==='gnome_heist'?gnomes.incident.target?.specimen:null;
+      if(!target || target.origin?.kind!=='simulated'){heistStatus('Trigger a simulated heist before pickup first.');return;}
+      if(mode==='replace'){
+        if(!model.replaceHeistTarget(target)){heistStatus('Replacement preview requires the dedicated all-simulated mushroom fixture. Use Seed mature mushrooms first.');return;}
+      }else model.remove(target,'simulated-heist-target-removal');
+      heistStatus(`Simulated target ${mode==='replace'?'replaced in its exact cell':'removed'}; thieves will abort without stealing a new occupant.`);
+    });
+    listen(document.querySelector('#heist-reduced-motion'),'change',event=>{heistPreviewReduced=event.target.checked;});
+    listen(document.querySelector('#suspend-heist'),'click',()=>{
+      if(gnomes.incident?.type!=='gnome_heist'){heistStatus('Trigger a heist first; suspension can be tested in any phase.');return;}
+      const removed=gnomes.incident.removals;gnomes.suspend(Date.now());gnomes.resetCadence(Date.now());gnomeView.animate(Date.now());
+      heistStatus(`Heist-only hidden/resume path: views cleared, fresh 45s deadline. ${removed?'The stolen mushroom remains removed.':'Pickup had not occurred; the mushroom remains.'} Actual tab hiding also suspends the whole page.`);
+    });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
@@ -621,6 +694,51 @@
       if (mode === 'grass') ecologyPresentation.seedDenseEcology(ecology, Date.now(), false);
     });
     listen(document.querySelector('#replace-poppy'), 'click', () => model.replacePoppyFixture());
+    for (const mode of ['stages', 'mature', 'combinations', 'mixed', 'dense', 'expiry', 'replacement']) listen(document.querySelector(`#seed-wirefern-spores-${mode}`), 'click', () => {
+      emissions.clear(); emissions.resetCadence();
+      ambient.clear(); frogs?.clear(); gnomes.clear(); ecology.clear();
+      document.querySelector('#allow-grass-under-plants').checked = true; ecology.setAllowGrassUnderPlants(true);
+      model.seedWirefernSpores(mode); ecologyPresentation.seedDenseEcology(ecology, Date.now(), false);
+    });
+    listen(document.querySelector('#replace-wirefern-spores'), 'click', () => model.replaceWirefernSporeFixture());
+    listen(document.querySelector('#wirefern-cloud-motion'), 'change', event => {
+      previewMotion = event.target.value; emissions.motionChanged();
+      document.querySelector('#wirefern-cloud-status').textContent = 'Cloud preview mode changed; active clouds cleared. System reduced motion always applies.';
+    });
+    listen(document.querySelector('#trigger-wirefern-cloud'), 'click', () => {
+      const at = Date.now(), color = Number(document.querySelector('#wirefern-cloud-color').value);
+      const candidate = p => p.origin?.kind === 'simulated' && spores.eligible(p, at) && p.wirefernSpores.color === color;
+      if (!model.specimens.some(candidate)) { model.seedWirefernSpores('mature'); emissions.resetCadence(at); }
+      const source = model.specimens.find(p => candidate(p) && !emissions.clouds.some(c => c.source === p)) ?? model.specimens.find(candidate);
+      const cloud = source && emissions.preview(source, at);
+      document.querySelector('#wirefern-cloud-status').textContent = cloud
+        ? `Simulated ${spores.colors[color]} release · ${cloud.reduced ? 'brief static reduced-motion' : '3s rising/drifting'} preview`
+        : 'Simulated release skipped: two clouds are already active. No queued retry.';
+    });
+    listen(document.querySelector('#remove-wirefern-cloud-source'), 'click', () => {
+      const source = emissions.clouds.find(c => c.source.origin?.kind === 'simulated')?.source;
+      if (source) model.remove(source, 'simulated-cloud-source-removal');
+      document.querySelector('#wirefern-cloud-status').textContent = source ? 'Exact simulated source and its cloud removed.' : 'Trigger a simulated cloud first.';
+    });
+    listen(document.querySelector('#clear-wirefern-clouds'), 'click', () => { emissions.clear(); emissions.resetCadence(); });
+    for (const mode of ['pending', 'active', 'mixed', 'cap', 'cancel', 'hidden', 'expiry', 'reset']) listen(document.querySelector(`#seed-opium-${mode}`), 'click', () => {
+      ambient.clear(); frogs?.clear(); gnomes.clear(); ecology.clear();
+      const at = Date.now(), source = model.seedPoppies('pods');
+      document.querySelector('#allow-grass-under-plants').checked = true; ecology.setAllowGrassUnderPlants(true);
+      ecologyPresentation.seedDenseEcology(ecology, at, false);
+      const drop = (type, i) => ({ type, createdAt: at, expiresAt: at + 20000, x: 335 + i * 30, y: 315, phase: 0 });
+      if (mode === 'mixed' || mode === 'cap') ambient.seed({ drops: Array.from({ length: mode === 'cap' ? 5 : 3 },
+        (_, i) => drop(['amanita_muscaria', 'ditch_weed_bud', 'gnome_underpants'][i % 3], i)) });
+      if (mode === 'expiry') ambient.seed({ drops: [{ ...drop('opium_pod', 4), createdAt: at - 19000, expiresAt: at + 1000 }] });
+      else {
+        const immediate = mode === 'active' || mode === 'mixed';
+        ambient.scheduleLooseDrop(source, 'opium_pod', () => .5, immediate ? at - 3000 : at);
+        if (immediate) ambient.activateLooseDrop(source, at);
+        if (mode === 'cancel') model.remove(source, 'simulated-pod-cancellation');
+        if (mode === 'hidden') { ambient.setHidden(true, at); ambient.setHidden(false, at + 3001); }
+      }
+      document.querySelector('#opium-pod-status').textContent = `Simulated ${mode}: inspect the poppy; collect only the loose capsule. Hidden preview consumes a missed deadline locally.`;
+    });
     const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
     own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
@@ -688,7 +806,7 @@
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    listen(document.querySelector('#clear'),'click', () => { model.clear(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    listen(document.querySelector('#clear'),'click', () => { model.clear(); emissions.clear(); emissions.resetCadence(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
     listen(document.querySelector('#trigger-frog'),'click',()=>{
       const at=Date.now();
       if(!frogs.eligiblePuddles(at).length){
@@ -722,11 +840,14 @@
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
+        `Wirefern sori ${counts.sporeViews}/640 · 3 cached layouts · 25% cosmetic selection`,
+        `Wirefern clouds ${counts.cloudViews}/2 · 1 cached frame · checks ${emissions.counts.checks} · emitted ${emissions.counts.emitted} · 30s / 75%`,
         `Opium poppies ${model.poppies.snapshot().active}/2 · pending ${model.poppies.snapshot().pending} · 2 cached frames · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
+        `Mushroom heist · carried view ${gnomeView.carried?1:0} · authoritative removals ${model.counts.heistRemovals}`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
@@ -735,6 +856,7 @@
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Loose drops ${ambient.drops.length}/${ambientCore.dropConfig.maxActiveDrops} · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Ambient atlas: ${ac.ambientTextures} frames · 1 GPU source · unified logical click priority`,
+        `Loose opium pods ${ambient.drops.filter(drop => drop.type === 'opium_pod').length}/5 shared slots · pending ${[...ambient.pendingDrops.values()].filter(drop => drop.type === 'opium_pod').length} · cap skips ${ambient.counts.dropsCapSkipped}`,
         `Mutations ${mc.active}/3 · pending ${mc.pending} · views ${counts.mutationViews} · activations ${mc.activations} · cap skips ${mc.capSkips} · cancellations ${mc.cancellations} · expiries ${mc.expiries} · 1 cached frame in specimen atlas`,
         `Logical 960×600 · presentation ${app.renderer.screen.width.toFixed(0)}×${app.renderer.screen.height.toFixed(0)} · backing ${app.canvas.width}×${app.canvas.height}`,
         'Local transient CPU/ticker intervals; not GPU completion. Dense/ambient seeding is local simulated state; temporary visitors expire normally.'
@@ -746,7 +868,7 @@
       const now = ticker.lastTime, elapsed = lastTick === null ? 0 : now - lastTick;
       if (elapsed > 0) { measurements?.add(elapsed); seconds += elapsed / 1000; } lastTick = now;
       if (Date.now() >= nextLogicalAt) {
-        const at = Date.now(); model.tick();stillbloom.tick(at);ecology.tick(at); ecologyView.tick(at);
+        const at = Date.now(); model.tick(); emissions.tick(at);stillbloom.tick(at);ecology.tick(at); ecologyView.tick(at);
         updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
         frogs?.tick(at,{hidden:document.hidden});
@@ -769,6 +891,7 @@
     listen(document,'visibilitychange', () => {
       frogs?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
+      emissions.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);
       const at = Date.now(); ecology.resetCadence(at);
       stillbloom.configure({hidden:document.hidden},at);

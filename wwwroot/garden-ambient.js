@@ -10,7 +10,8 @@
   const dropTypes = Object.freeze({
     amanita_muscaria: Object.freeze({ sourceType: 'mushroom', chance: .01, delayMs: 5_000 }),
     ditch_weed_bud: Object.freeze({ sourceType: 'weed', chance: .03, atMaturity: true }),
-    gnome_underpants: Object.freeze({ clickedGnome: true })
+    gnome_underpants: Object.freeze({ clickedGnome: true }),
+    opium_pod: Object.freeze({ sourceType: 'vine', chance: .2, delayMs: 3000, maxTickGapMs: 1500 })
   });
   const underpantsArt = Object.freeze({ body:Object.freeze([-6,-4,6,-4,5,3,2,4,0,0,-2,4,-5,3]),
     lines:Object.freeze([[-6,-3,6,-3],[-5,2,-2,3],[2,3,5,2],[0,-1,0,0]].map(Object.freeze)) });
@@ -21,6 +22,14 @@
     [0x91a45c, 0,0, -4,-4, 0,-7, 3,-4], [0x728445, -1,4, -4,1, -1,-2, 2,1],
     [0xa4b772, 0,2, -2,0, 1,-3, 3,0]
   ].map(Object.freeze));
+  function createOpiumPodRandom() {
+    const entropy = new Uint32Array(1);
+    if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(entropy);
+    else entropy[0] = (Date.now() ^ Math.floor((globalThis.performance?.now?.() ?? 0) * 1000) ^ 0x0b1a5eed) >>> 0;
+    let seed = entropy[0];
+    return () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  }
+  const opiumPodRandom = createOpiumPodRandom();
 
   function curiosityPosition(curiosity, now = Date.now()) {
     const elapsed = Math.max(0, Math.min(now - curiosity.createdAt, curiosityConfig.lifetimeMs));
@@ -36,7 +45,7 @@
     return { x: curiosity.x + dx, y: curiosity.y + dy };
   }
   function looseDropPosition(drop, now = Date.now()) {
-    if (drop.type === 'ditch_weed_bud' || drop.type === 'gnome_underpants') return { x: drop.x, y: drop.y }; // Still, including reduced motion.
+    if (drop.type === 'ditch_weed_bud' || drop.type === 'gnome_underpants' || drop.type === 'opium_pod') return { x: drop.x, y: drop.y }; // Still, including reduced motion.
     return { x: drop.x, y: drop.y + Math.sin((now - drop.createdAt) / 1400 + drop.phase) * .6 };
   }
   function curiosityAppearance(item, now) {
@@ -46,10 +55,11 @@
       glint: Math.max(0, (Math.sin(age / 1100 + item.phase) - .92) / .08) };
   }
 
-  function createAmbientModel({ now = Date.now, random = Math.random, getSpecimens = () => [], onChange = () => {} } = {}) {
+  function createAmbientModel({ now = Date.now, random = Math.random, podRandom = opiumPodRandom, getSpecimens = () => [], onChange = () => {} } = {}) {
     let curiosities = [], drops = [], nextId = 0;
     const pendingDrops = new Map(), identities = new WeakMap(), budAttempts = new WeakSet(), scheduledBuds = new WeakSet();
-    let hidden = false;
+    const podAttempts = new WeakSet();
+    let hidden = false, lastDropTickAt = now();
     const counts = { curiositiesCreated: 0, curiositiesExpired: 0, dropsScheduled: 0,
       dropsActivated: 0, dropsCancelled: 0, dropsCapSkipped: 0, dropsExpired: 0 };
     function idFor(item) { if (!identities.has(item)) identities.set(item, ++nextId); return identities.get(item); }
@@ -109,29 +119,56 @@
         && ['id','createdAt','cell','column','row'].every(key => specimen[key] === original[key])
         && getSpecimens().find(p => p.column === original.column && p.row === original.row) === specimen;
     }
+    function eligiblePoppy(specimen, at) {
+      return specimen?.type === 'vine' && specimen.poppyMutation?.state === 'active'
+        && specimen.colorVariant !== 4 && specimen.colorVariant !== 'silvervine'
+        && !specimen.mutation && !specimen.pendingMutation
+        && at >= specimen.createdAt + core.timings.vine.matureAfterMs && isSourceAlive(specimen, at);
+    }
+    function validPodSource(specimen, pending, at) {
+      const original = pending.source;
+      return eligiblePoppy(specimen, at) && specimen.poppyMutation === original.poppyMutation
+        && ['id','createdAt','cell','column','row'].every(key => specimen[key] === original[key])
+        && getSpecimens().find(p => p.column === original.column && p.row === original.row) === specimen;
+    }
     function prunePendingDrops(at = now(), living = new Set(getSpecimens())) {
       for (const [specimen, pending] of pendingDrops) if (!isSourceAlive(specimen, at, living)
-        || (pending.type === 'ditch_weed_bud' && !validBudSource(specimen, pending, at))) cancelSource(specimen);
+        || (pending.type === 'ditch_weed_bud' && !validBudSource(specimen, pending, at))
+        || (pending.type === 'opium_pod' && !validPodSource(specimen, pending, at))) cancelSource(specimen);
     }
-    function scheduleLooseDrop(specimen, type, rng = random, at = now()) {
+    function scheduleLooseDrop(specimen, type, rng, at = now()) {
+      rng ??= type === 'opium_pod' ? podRandom : random;
       const definition = Object.hasOwn(dropTypes,type) ? dropTypes[type] : null;
       if (!definition || definition.clickedGnome || !isSourceAlive(specimen, at)
+        || (type === 'opium_pod' && (hidden || !eligiblePoppy(specimen, at) || podAttempts.has(specimen)))
         || (definition.atMaturity && (!eligibleWeed(specimen, at) || scheduledBuds.has(specimen)))) return false;
       prunePendingDrops(at);
       if (pendingDrops.has(specimen)) return false;
       if (definition.atMaturity) scheduledBuds.add(specimen);
+      if (type === 'opium_pod') podAttempts.add(specimen);
       const x = (specimen.column + .5) * cellSize, y = (specimen.row + .5) * cellSize;
       const angle = rng() * Math.PI * 2, radius = 18 + rng() * 4;
-      let dx = Math.cos(angle) * radius, dy = Math.sin(angle) * radius;
+      let dx = type === 'opium_pod' ? (Math.cos(angle) < 0 ? -radius : radius) : Math.cos(angle) * radius;
+      let dy = type === 'opium_pod' ? 10 : Math.sin(angle) * radius;
       const padding = dropConfig.placementPadding;
       if (x + dx < padding || x + dx > width - padding) dx = -dx;
       if (y + dy < padding || y + dy > height - padding) dy = -dy;
-      const source = definition.atMaturity ? Object.fromEntries(['id','createdAt','cell','column','row'].map(key => [key,specimen[key]])) : null;
+      const source = definition.atMaturity || type === 'opium_pod'
+        ? Object.fromEntries(['id','createdAt','cell','column','row'].map(key => [key,specimen[key]])) : null;
+      if (type === 'opium_pod') source.poppyMutation = specimen.poppyMutation;
       pendingDrops.set(specimen, { type, activateAt: definition.atMaturity
         ? specimen.createdAt + core.timings.weed.matureAfterMs : at + definition.delayMs,
         ...(source ? { source } : {}),
-        x: x + dx, y: y + dy, phase: rng() * Math.PI * 2 });
+        x: x + dx, y: y + dy, phase: type === 'opium_pod' ? 0 : rng() * Math.PI * 2 });
       counts.dropsScheduled++; return true;
+    }
+    function acceptPoppyActivation(specimen, at = now()) {
+      if (specimen?.origin?.kind !== 'tcpnoise' || !eligiblePoppy(specimen, at) || podAttempts.has(specimen)) return false;
+      const roll = podRandom(); // Exactly one decision on successful activation, including consumed failures.
+      const selected = Number.isFinite(roll) && roll >= 0 && roll < dropTypes.opium_pod.chance;
+      const missed = hidden || at - (specimen.createdAt + core.timings.vine.matureAfterMs) > dropTypes.opium_pod.maxTickGapMs;
+      const scheduled = selected && !missed && scheduleLooseDrop(specimen, 'opium_pod', podRandom, at);
+      podAttempts.add(specimen); return Boolean(scheduled);
     }
     function maybeScheduleAmanita(specimen, roll, rng = random, at = now()) {
       if (specimen?.type !== 'mushroom' || specimen.origin?.kind !== 'tcpnoise' || !isSourceAlive(specimen, at)) return false;
@@ -160,12 +197,13 @@
       const pending = pendingDrops.get(specimen);
       if (!pending || at < pending.activateAt) return null;
       // Buds missed while suspended are consumed, never replayed as a fresh burst.
-      if (pending.type === 'ditch_weed_bud' && (isHidden || at > pending.activateAt + 1500)) {
+      if ((pending.type === 'ditch_weed_bud' || pending.type === 'opium_pod') && (isHidden || at > pending.activateAt + 1500)) {
         cancelSource(specimen); return null;
       }
       if (isHidden) return null;
       pendingDrops.delete(specimen);
       if (!isSourceAlive(specimen, at, living)
+        || (pending.type === 'opium_pod' && !validPodSource(specimen, pending, at))
         || (pending.type === 'ditch_weed_bud' && !validBudSource(specimen, pending, at))) { counts.dropsCancelled++; return null; }
       if (drops.length >= dropConfig.maxActiveDrops) { counts.dropsCapSkipped++; return null; }
       const item = { type: pending.type, createdAt: at, expiresAt: at + dropConfig.lifetimeMs,
@@ -174,7 +212,7 @@
     }
     function setHidden(value, at = now()) {
       if (hidden || value) for (const [source, pending] of pendingDrops) {
-        if (pending.type === 'ditch_weed_bud' && at >= pending.activateAt) cancelSource(source);
+        if ((pending.type === 'ditch_weed_bud' || pending.type === 'opium_pod') && at >= pending.activateAt) cancelSource(source);
       }
       hidden = value;
     }
@@ -188,6 +226,10 @@
       drops.push(item);counts.dropsActivated++;notify('drop-added',item,'gnome-click');return item;
     }
     function tickDrops(at = now(), { hidden: isHidden = hidden, living = null } = {}) {
+      const gap = at - lastDropTickAt; lastDropTickAt = at;
+      if (gap > dropTypes.opium_pod.maxTickGapMs) for (const [source, pending] of pendingDrops) {
+        if (pending.type === 'opium_pod' && at >= pending.activateAt) cancelSource(source);
+      }
       setHidden(isHidden, at);
       let changed = false;
       for (let i = drops.length - 1; i >= 0; i--) if (at >= drops[i].expiresAt) {
@@ -227,10 +269,10 @@
       get drops() { return drops; }, set drops(entries) { drops = entries; }, // legacy Canvas fixture access
       pendingDrops, counts, idFor, isSourceAlive, createFirstSeenCuriosity, acceptLiveSpecimen,
       expireCuriosities, removeCuriosity, removeDrop, cancelSource, prunePendingDrops,
-      scheduleLooseDrop, maybeScheduleAmanita, maybeScheduleWeedBud, activateLooseDrop, tickDrops, setHidden, dropGnomeUnderpants, clear, seed,
+      scheduleLooseDrop, maybeScheduleAmanita, maybeScheduleWeedBud, acceptPoppyActivation, activateLooseDrop, tickDrops, setHidden, dropGnomeUnderpants, clear, seed,
       tick(at = now(), options) { const visitors = expireCuriosities(at); return tickDrops(at, options) || visitors; }
     };
   }
-  const api = { curiosityConfig, curiosityTypes, dropConfig, dropTypes, weedBudLeaves, underpantsArt, curiosityPosition, curiosityAppearance, looseDropPosition, createAmbientModel };
+  const api = { curiosityConfig, curiosityTypes, dropConfig, dropTypes, weedBudLeaves, underpantsArt, createOpiumPodRandom, curiosityPosition, curiosityAppearance, looseDropPosition, createAmbientModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenAmbient = api;
 })();

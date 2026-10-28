@@ -20,7 +20,7 @@ const a=m.createStormPuddle(now),b=m.createStormPuddle(now+1),av=ev.puddleViews.
 now+=100000;m.refreshStormPuddle(a,now);assert.equal(ev.puddleViews.get(a),av);
 now=b.lastRefreshedAt+510000;m.removeExpiredPuddles(now);assert(!live.has(bv));assert.equal(ev.puddleViews.get(a),av);
 m.clear();assert.equal(ev.grassViews.size,0);assert.equal(ev.puddleViews.size,0);
-const model=liveCore.createModel(view,{now:()=>now,random:()=>.5,bloomRandom:()=>0,vineBloomRandom:()=>.9});model.seed();
+const model=liveCore.createModel(view,{now:()=>now,random:()=>.5,bloomRandom:()=>0,vineBloomRandom:()=>.9,sporeRandom:()=>.9});model.seed();
 for(let cycle=0;cycle<10;cycle++){
   presentation.seedDenseEcology(m,now);assert.equal(m.grassCells.length,640);assert.equal(ev.grassViews.size,640);assert.equal(ev.puddleViews.size,8);
   const grassViews=new Map([...ev.grassViews].map(([k,r])=>[k,r.sprite])),specimenViews=new Map(view.byId),puddleViews=new Map(ev.puddleViews);

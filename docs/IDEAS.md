@@ -78,6 +78,31 @@ gameplay change. Future tuning should retain organic edges rather than
 rectangular occupied-cell tints; broader directional shadows remain a separate
 idea. See [captures, tradeoffs and bounds](PIXI-LIVE.md#grass-and-plant-visual-separation-2026-10-23).
 
+## Wirefern sori (implemented)
+
+Wireferns now have a separate 25% cosmetic selection at creation. Stable copper,
+golden-ochre or soft phosphor-cyan sori form two to four small three-dot groups
+on actual angular fronds. Color and pattern are independent of foliage/vigor,
+including the unchanged rare afterglow palette. The dots appear at 50-second
+maturity, dim/desaturate at five minutes and leave with the original fern at six
+minutes. Three cached layouts and source-owned child Sprites add no timers or
+per-frame geometry. Inspection, identity, network provenance, ecology, drops,
+gnomes and Score: 0 are unchanged. See
+[geometry, before/after captures and resource measurements](PIXI-LIVE.md#wirefern-sori-2026-10-27).
+
+The visibility follow-up enlarges and separates the cached dots and adds
+occasional airborne releases. One visible-page check every 30 seconds rolls
+75% on an independent emission stream, then chooses one currently mature,
+decorated source. A single cached eight-dot Sprite expands and drifts upward
+for three seconds, with at most two active clouds. Exact source removal or
+ineligibility cancels its cloud; hidden time and long logical gaps never catch
+up. Reduced motion shows a one-second static puff with opacity fading only.
+Actual 960×600 comparisons and resource measurements are in
+[the release review](PIXI-LIVE.md#wirefern-spore-release-2026-10-27).
+
+Collectible spores, new plants, spreading and fertilization remain out of scope.
+Neither attached sori nor airborne releases have gameplay or collection behavior.
+
 ## Ambient actors and incidents
 
 The browser now has a transient actor/event layer because of The Gnome Incident.
@@ -133,7 +158,7 @@ long session is more memorable than a permanent crowd of frogs.
 Possible gnome incidents:
 
 - a lone gnome walks across the garden carrying something it apparently stole;
-- two gnomes drag a mushroom somewhere for reasons never explained;
+- two gnomes drag a mushroom somewhere for reasons never explained — implemented as the Great Gnome Mushroom Heist below;
 - one gnome chases another across the garden;
 - a tiny gnome funeral procession;
 - one gnome appears, looks around, and immediately leaves;
@@ -141,13 +166,41 @@ Possible gnome incidents:
 - a few gnomes build a tiny temporary campfire;
 - a much rarer **Gnome Civil War** as an escalated spectacle.
 
+### Great Gnome Mushroom Heist (implemented)
+
+Two gnomes really steal a garden mushroom. The existing **45-second / 2%**
+ordinary incident check still requires **30 living specimens**. On success,
+if an eligible mushroom exists, one **30%** branch selects a heist instead of
+the dispute; otherwise the normal dispute runs. This is a **0.6% chance per
+available check** with eligible mushrooms, not an extra periodic roll. The
+existing landscaping order, probabilities and seven-minute cooldown remain.
+
+One exact mature ordinary mushroom is sampled uniformly. Rare species/palettes,
+pending collectibles and active/pending mutations are excluded. The red/green
+thieves approach from opposite sides for **3s**; pickup rechecks the original
+object, id, cell, coordinates, creation time, occupancy and current eligibility.
+It then calls the authoritative garden removal API with `gnome-heist`, freeing
+the cell and running normal view/inspection/drop cleanup. The original specimen
+is gone. A temporary Sprite reuses its mature mushroom texture, palette and
+scale as the pair carry it toward the nearest edge; after a **1s** hold they
+depart by **14s** with a small wobble. No replacement specimen is created.
+
+Stale/replaced targets cause a short empty-handed exit. Hidden tabs or clock
+stalls cancel safely: before pickup the mushroom remains, after pickup it stays
+removed. Reduced motion uses static poses and discrete travel without wobble.
+Underpants clicks, collection caps, normal cell refill/competition and Score: 0
+remain intact. Heist removals have their own counter and never become accepted
+growth, Recent activity or invented TCPNoise provenance. The diagnostic page
+provides simulated source/removal/replacement, suspension and reduced previews.
+See [actual-scale captures, resource costs and tests](PIXI-LIVE.md#great-gnome-mushroom-heist-2026-10-27).
+
 ### Gnome Landscaping Department — vine control (implemented)
 
 When ordinary living vines reach **40% of living specimens**, with at least
 **20 eligible vines**, the shared 45-second gnome check gets a **10%** landscaping
 roll. A **seven-minute cooldown** runs from each crew's arrival, even if it is
-cancelled. The four-gnome dispute takes priority on a shared check; neither
-incident overlaps or interrupts the other. A full garden instead selects the
+cancelled. The ordinary dispute/heist choice takes priority on a shared check;
+incidents never overlap or interrupt one another. A full garden instead selects the
 overcrowding mode below, with no additional vine roll.
 
 Two gnomes arrive: a worker carries hedge clippers and a stationary supervisor
@@ -359,7 +412,7 @@ mechanic. No smoke animation or gameplay effect is required. The static score
 remains zero. Keep the port-22 redbloom mutation's existing separate wording and
 behavior intact; do not change existing Amanita or first-seen eligibility.
 
-### Vine -> opium-poppy mutation: implemented; pods remain future work
+### Vine -> opium-poppy mutation and loose pods: implemented
 
 The visual transformation is implemented. Each successfully placed ordinary live
 TCPNoise vine gets one independent 0.5% cosmetic roll, excluding silvervine and
@@ -372,11 +425,18 @@ detach, gnomes spare active poppies, and clicks inspect the original provenance.
 The existing collectible redbloom mutation retains its separate 5%/three-active/
 three-second delay/20-second lifetime rules.
 
-The next slice may let a living poppy very rarely produce a separate temporary
-clickable **loose opium pod**, using the bounded collectible system. Pods are
-not implemented: no drops, messages, inventory or rewards are added here.
+Successful live poppy activation now gets one independent **20%** pod decision.
+The ordinary vine's arrival never rolls. A success schedules a separate loose
+capsule three seconds later, provided the exact active parent still exists and
+the shared five-drop cap has room. Cap skips, failures, cancellation and missed
+hidden/stalled deadlines never retry. The pod lives 20 seconds independently;
+collection or parent removal leaves the other object unchanged. The capsule's
+sage oval, crown and short stem use one static cached frame. Existing loose-drop
+click priority and optional collection audio apply; the parent still inspects.
+No network/activity event, scoring, inventory or progression is added. The
+combined 0.5% × 20% chance is 0.1% before caps and lifecycle eligibility reduce it.
 
-A collected pod can say:
+A collected pod says exactly:
 
 ```text
 You collected an opium pod. +0 points
@@ -387,7 +447,8 @@ intent, or security meaning of the traffic that created the vine. It must not gr
 into crafting, processing, inventory, trade, or any useful resource system.
 The 0.5% roll and two-active limit account for vines living much longer than
 redblooms. [Implementation and review](PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27)
-record the exact lifecycle and renderer ownership checks.
+record the exact lifecycle and renderer ownership checks. See also
+[pod diagnostics, screenshots and validation](PIXI-LIVE.md#collectible-opium-pods-2026-10-27).
 
 ### The zero-point anti-score
 
@@ -847,7 +908,8 @@ is not an intrusion-detection system.
 
 Aggregate pressure is already used for weather. Possible extensions include:
 
-- pollen/spore bursts;
+- other pollen bursts beyond the implemented cosmetic wirefern release; any
+  future pressure-driven effect must remain distinct from the current 30s check;
 - wind events;
 - other short-lived environmental effects when a traffic burst should not create
   hundreds of permanent specimens;

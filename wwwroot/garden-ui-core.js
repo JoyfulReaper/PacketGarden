@@ -9,6 +9,7 @@
   const messages = Object.freeze({ ladybug: 'You caught a ladybug. +0 points', snail: 'You collected a snail. It seems annoyed. +0 points',
     moth: 'You caught a moth. +0 points', shiny_pebble: 'You found a rock. +0 points',
     amanita_muscaria: 'You found Amanita muscaria. +0 points', ditch_weed_bud: 'You smoked some ditch weed. +0 points',
+    opium_pod: 'You collected an opium pod. +0 points',
     gnome_underpants: "You stole a gnome's underpants. +0 points", collectible_weed: 'You collected some weed. +0 points' });
   function collectionMessage(type, random = Math.random) {
     return type === 'gnome_underpants' && random() >= .8 ? 'Collected underpants +1, annoyed gnome -1' : messages[type];

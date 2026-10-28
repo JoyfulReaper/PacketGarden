@@ -1,3 +1,637 @@
+# Great Gnome Mushroom Heist (2026-10-27)
+
+Implemented on `dev` above `95940f4` (wirefern spore releases), preserving the
+opium-pod and sori slices. The initial tree was clean; fetched `origin`, verified
+matching local/remote `dev`, and explicitly selected `dev`. No applicable
+`AGENTS.md` was found. `main` remains `0e691c3`. Work is uncommitted; no push,
+merge, rebase or deployment was performed.
+
+## Shared scheduling and exact eligibility
+
+`garden-gnomes.js` retains the existing single **45,000ms** ordinary incident
+check, **30 living specimens** minimum and **`roll < .02`** gate. On success,
+build the currently eligible mushroom pool. If nonempty, one **`roll < .30`**
+branch replaces the ordinary dispute with a heist; choose one pool member
+uniformly using the existing bounded gnome random source. There is no extra
+random draw when no mushroom qualifies, so the original dispute retains its
+ordinary path and position draws. With eligible mushrooms, this is **0.6% per
+available check** for a heist and **1.4%** for a dispute. It is not a per-mushroom
+probability or a guaranteed arrival interval.
+
+Only canonical `mushroom`, mature at **40s inclusive to 4m exclusive**, can be
+stolen. Exact current cell/object occupancy, valid original coordinates and
+membership are required. Ordinary live TCPNoise mushrooms qualify. Protected
+species (including crystal fungus), rare palettes (index 4/bioluminescent and
+the shared rare-name set), active/pending mutations, poppy traits and pending
+collectibles are excluded. The Pixi adapter supplies its actual pending-drop
+map as the protection predicate. Simulated targets are allowed for explicit
+diagnostics; the forced diagnostic trigger accepts only simulated sources.
+
+One shared incident owns the two thieves. There is no overlapping dispute or
+landscaping, new timer, random stream, queue or catch-up incident. The existing
+ordinary-incident priority, overcrowding/vine/weed order, probabilities and
+seven-minute landscaping cooldown are preserved. A heist does not consume the
+landscaping cooldown. The existing optional arrival sound plays once; no new
+audio or backend event is introduced.
+
+## Authoritative pickup and getaway
+
+The model captures the exact source reference, id, cell, column/row and creation
+timestamp at arrival. Red- and green-hatted gnomes approach from opposite sides
+for **3,000ms**, targeting the actual rooted Pixi mushroom position (including
+normal edge insets). Only the existing **250ms logical tick** can pick up a
+mushroom; frame interpolation never removes specimens.
+
+Pickup revalidates every captured identity component, authoritative occupancy,
+membership, maturity and protection. It captures safe visual values
+`{type, vigor, colorVariant, row}` before calling **`garden.remove(source,
+'gnome-heist')`**. The normal removal callbacks destroy the original Sprite,
+close inspection, cancel associated pending attempts/mutations, update ground
+presentation and free the cell immediately. A successful theft increments the
+new cumulative `heistRemovals` once; ordinary lifecycle-removal/replacement and
+accepted-live counters keep their existing meanings. No array/map editing,
+replacement specimen, incoming event, Recent row or fabricated provenance is
+used. Score remains 0. The carried state releases its original source reference
+after pickup and retains no raw source provenance.
+
+After a **1,000ms** pickup hold, the pair move together toward the nearest of
+the four garden edges and finish at **14,000ms** from arrival. Their separation
+remains 36 logical pixels. A temporary, noninteractive carried Sprite uses the
+**same cached mature mushroom texture** as the original, preserving baked
+palette/vigor and rooted anchor, at its original 1.4 scale (1.1 on the top row).
+It sits between the thieves with a .6px wobble and .035-radian tilt. No logical
+specimen is created for it. Departure destroys all temporary views and releases
+incident state; the mushroom stays removed and normal growth may refill its
+cell. A target lost/replaced/protected before pickup causes a **2s empty-handed
+exit**, without selecting or removing another occupant.
+
+Both gnomes retain centralized picking priority and one underpants attempt each,
+including permanent consumption of an attempt at the five-drop cap. Their
+surprise poses leave the heist running. The carried art is not a separate hit
+target or collectible; underpants remain independent loose drops.
+
+## Hidden tabs, reduced motion and diagnostics
+
+Actual page hiding uses the existing visibility handler: clear actors, carried
+view and incident immediately and reset the shared deadline. Resume starts a
+fresh **45s** deadline. Backwards clocks and logical **or render** gaps over
+**1,500ms** also cancel and reset cadence. There is no delayed pickup/replay.
+Before pickup the original mushroom remains; after pickup it is never restored.
+Clear and page teardown release temporary references before atlas disposal.
+
+System reduced motion keeps static poses, removes wobble/tilt/walking and uses
+discrete approach/getaway positions. The diagnostic reduced checkbox can request
+this simpler mode but cannot override the system preference.
+
+Only `/pixi-live.html` adds mature-mushroom seed, forced simulated heist,
+pre-pickup removal/replacement, reduced-motion and heist-only hide/resume buttons.
+Seeding creates 35 explicitly simulated specimens with four mature mushrooms;
+it never creates TCPNoise observations or accepted events. Replacement reimports
+only the dedicated all-simulated fixture through the authoritative seed/cleanup
+API; it refuses mixed/live gardens. Tests separately exercise real stronger-vigor
+replacement in a saturated garden. The suspension button demonstrates the gnome
+cancel/fresh-deadline path; actual tab visibility is tested separately. Trigger
+again after departure, or reseed after cancellation, for sequential tests.
+The existing phase/removal HUD exposes authoritative theft and carried-view
+counts. No simulation controls were added to the homepage.
+
+## Native-size browser evidence
+
+`node tests/gnome-heist-browser.cjs --run` captures both supported pages at an
+actual **960×600 renderer/presentation size**, with no camera enlargement. The
+gold mushroom at **column 18, row 10** is the target in the standard fixture:
+
+- `artifacts/gnome-heist/{homepage,diagnostic}-01-arrival.png`
+- `…-02-approach-occupied.png` at 1.5s
+- `…-03-pickup.png` at 3s
+- `…-04-empty-cell-getaway.png` at 6.5s
+- `…-05-edge.png` at 12.5s and `…-06-departed.png` at 14s
+- `…-night.png`, `…-dense-grass.png`, `…-rain.png`, `…-dense-640.png`,
+  `…-mobile.png`, `…-reduced-motion.png`, and `…-underpants.png`
+
+The local `artifacts/gnome-heist/index.html` gallery retains native desktop
+image sizes, and `review.json` accompanies every scene with source membership,
+occupancy, original-view absence, carried texture/scale, exact specimen counts,
+theft counts, unchanged accepted/Recent state and Score: 0 assertions. Rain
+includes actual cached weather particles. Artifacts are ignored local evidence.
+
+Visual review confirms two distinct hats, an occupied source during approach,
+the original gold mushroom between raised hands, an empty original cell during
+the getaway and disappearance at the edge. The scene remains legible on grass,
+at night and in rain. At mobile whole-garden scale the hats and mushroom remain
+tiny; dense foliage can overlap the route. A full-garden image, not a magnified
+artwork crop, is the review evidence.
+
+## Resource cost and validation
+
+The carried art adds **zero specimen-atlas frames/pixels**: that atlas stays at
+**829 frames**. Four finite raised-arm/surprised-arm poses expand the existing
+gnome atlas from **22 to 26 frames**, logical **880×32 → 1040×32**, resolution-2
+backing **1760×64 → 2080×64**. This adds **20,480 backing pixels**, about **80KiB
+of RGBA8 texel storage** before driver overhead. It adds no GPU source or startup
+bake call (five total remain). All construction Graphics contexts are released.
+There are two temporary actor Sprites plus one carried Sprite and the existing
+transient group; existing bounded puddle splashes may also appear. Actors remain
+within the shared four-actor cap and never coexist with another incident.
+There are no idle actor/carry views, recurring texture generation, per-frame
+Graphics, new loops/timers, shaders, dependencies or permanent specimen Sprites.
+
+Chrome 155 short CPU samples use a 640-specimen garden, 120 moving-frame samples
+and 20 forced selection/pickup samples per page. These are CPU submission times,
+not GPU completion measurements:
+
+| CPU mean (ms) | Homepage | Diagnostic |
+| --- | ---: | ---: |
+| Idle gnome guard | below timer resolution | below timer resolution |
+| Existing four-gnome dispute animation | .0150 | .0092 |
+| Two thieves + carried mushroom animation | .0100 | .0050 |
+| Render submission with heist | .0942 | .0742 |
+| 45s selection, successful heist including actor creation | .120 | .130 |
+| Pickup, authoritative removal/notifications + carried Sprite creation | .030 | .010 |
+
+Worst sampled selection was **.20ms**, pickup **.10ms**. Short samples are noisy;
+they do not establish that this incident is faster than a dispute. Repeated
+40-cycle checks per page retain five bakes, one gnome GPU source, constant
+Graphics-context count, zero geometry delta and no leftover actor/carry views.
+
+Validation completed:
+
+- `npm test`: **63 passed**, 15 optional browser/SSE entry points skipped,
+  zero failures. The new heist suite also passes focused reruns after final
+  identity/protection/diagnostic checks.
+- `npm run test:chrome`: **all 20 jobs passed**, including actual heist sequence,
+  hidden/stall/source replacement, reduced motion, real underpants clicks,
+  cached ownership, existing disputes/landscaping/puddles, pods, wirefern
+  sori/releases and broadleaf/vine flowers. Focused heist review passed again
+  with final logical CPU probes and diagnostic guards.
+- Debug and Release `dotnet build PacketGarden.slnx --no-restore`, isolated
+  `BaseOutputPath=artifacts/gnome-heist/build/`: zero warnings/errors.
+- `dotnet run --project tests/PacketGarden.Checks --no-restore`, isolated output:
+  all backend assertions passed. Existing NU1900 reports unavailable NuGet
+  vulnerability metadata.
+- `node tests/weather-sse.cjs --run
+  artifacts/gnome-heist/build/Debug/net10.0/PacketGarden.dll`: actual ASP.NET
+  polling/SSE, startup, retained outage values, reconnect, same-value recovery,
+  compatibility and lease renewal passed.
+- `git diff --check`: passed; current branch `dev`, with all work uncommitted.
+
+Model coverage includes exact 2%/30% boundaries and uniform selection, no overlap
+or catch-up, original object/id/cell/coordinates/time/occupancy, maturity and rare
+protection, pending-drop exclusion plus normal removal cancellation fallback,
+real saturated replacement, no double removal/restoration, normal freed-cell
+refill, every cancellation phase, score/provenance/counter semantics, capped
+underpants and 80 repeated Pixi carry cleanup cycles on both pages. The original
+Sprite/inspection disappear synchronously and the carried texture/scale match.
+
+Remaining limits: fixed-clock Chromium scenes and controlled visibility dispatch
+do not replace an operating-system suspension or long live-traffic soak. The
+carry is an existing sprite with group wobble, not physically articulated hands;
+garden-edge masking clips the outgoing pair naturally. Mobile readability and
+dense-route occlusion remain intentionally small-scale. GPU completion, driver
+heap growth and other devices were not measured.
+
+# Wirefern spore release (2026-10-27)
+
+Implemented on `dev` above static-sori checkpoint `5c5746c`, preserving the
+existing opium-pod work. Static sori retain their independent 25% selection,
+three colors, three layouts, stable success/failure traits and original fern
+50s/5m/6m lifecycle. Their pale centers grow **.53 → .73 logical-pixel radius**,
+with darker **.77 → 1.0** rims. Samples spread to `t=.26,.59,.92` along the same
+actual angular frond segments. No fern enlargement, palette/rarity change,
+flowers, berries or floating static dots are introduced.
+
+## One global emission check
+
+The same cosmetic helper owns `createEmissionModel`, with a second dedicated
+crypto-seeded PRNG and distinct fallback seed. It never advances the trait,
+placement, foliage, blossom, poppy, pod, Amanita/bud, gnome, ecology or weather
+streams. On the existing 250ms logical scheduler:
+
+- every **30,000ms** of visible operation, build the current eligible source pool;
+- only exact living canonical wireferns with valid successful sori and absolute
+  lifecycle stage **mature** qualify (50s inclusive to 5m exclusive);
+- if the pool is nonempty, make exactly one **`roll < .75`** emission decision;
+- success selects one uniform pool member on that same independent stream;
+- release one cloud if fewer than **two** are active. A cap skip consumes the
+  attempt and deadline, without queue, retry or eviction.
+
+Empty pools consume the scheduled check without an emission roll. Hundreds of
+eligible ferns still produce at most one puff per check. There is no source-local
+emission schedule or per-frame source scan. Between checks, validation touches
+only the at-most-two active sources using authoritative cell/object lookup.
+Cloud records retain exact source reference/id/cell/creation time; source
+removal/replacement cancels immediately, and fading/ineligible sources cancel on
+the existing logical reconciliation. No cloud survives independently of its
+source or occupies a specimen cell.
+
+## Cached appearance and motion
+
+One finite 32px frame contains **eight** tiny rounded particles with soft baked
+edges. A single tinted Sprite per cloud starts across the source's actual upper
+fronds, using its live Sprite position/scale and unchanged shared atlas geometry.
+Color is pale copper, gold or cyan from the original sori color. Over **3,000ms**,
+the Sprite grows from `.85 → 1.2` horizontally and `.75 → 1.1` vertically,
+separating the baked dots as it rises **18 logical pixels** and drifts up to
+**6 pixels** sideways. Opacity falls continuously as `.95 × (1 - t²)`.
+The visible dot/halo footprint grows from about **18 to 25 logical pixels** wide.
+
+The first native-scale design was too faint over grass. Review increased the
+cached particle cores to 1.0–1.25px radii and retained opacity longer at the start;
+it did not add particles, Sprites or geometry. The result reads as separate airy
+spores, without an opaque smoke sheet, explosion, glow shader or constant glitter.
+The old static selection and fern footprint are unchanged. Cloud Sprites share
+the existing plant layer and garden mask, below drops/wildlife/rain; they create
+no hit targets, audio, backend/SSE messages or Recent activity entries.
+
+Only active cloud transforms are visited by the existing Pixi ticker. An empty
+cloud map costs one branch per frame. There are no new timers, RAF loops,
+ParticleContainers/emitters, shaders, filters, dependencies or runtime geometry/
+texture generation. The phase helper produces transform/opacity values only.
+
+## Suspension, reduced motion and exact ownership
+
+`prefers-reduced-motion` selects a **1,000ms static** puff at constant `.85`
+scale and origin, with opacity fading only. A media-preference change cancels
+current clouds and starts a fresh deadline. Diagnostic normal preview never
+overrides the system preference.
+
+Hidden pages immediately clear cloud records and Sprites and skip checks.
+Resume starts a fresh **30s** deadline, without a burst or missed emissions.
+A logical gap over **1,500ms**, or a backwards clock jump, clears old effects and
+restarts the deadline rather than catching up. Existing live-event pause retains
+the page's normal lifecycle/atmosphere processing.
+
+Removal callbacks and view removal both release the exact source's cloud
+idempotently. Clear/reset and page ownership destroy all cloud Sprites before
+atlas teardown. Selection traits, source identity/timestamp/cell/vigor/provenance,
+accepted growth, specimens, grass, gnomes, wildlife, weather, Stillbloom, drops,
+mutations and `Score: 0` retain their existing rules.
+
+## Diagnostics and native-size evidence
+
+Only `/pixi-live.html` adds a one-puff trigger, three-color selector, normal/static
+motion previews, mature decorated seed, exact simulated source removal and cloud
+clear controls. The existing 640-wirefern fixture is retained. Forced previews
+accept only explicitly simulated sources, obey the two-cloud cap, and never
+fabricate TCPNoise events. Repeated triggers or fixture resets remain bounded.
+
+`node tests/wirefern-release-browser.cjs --run --baseline` serves frozen
+`5c5746c`; `--run` serves the working tree. Both supported pages are captured at
+exactly **960×600 renderer/presentation pixels**, with no camera enlargement.
+Ignored local evidence lives in `artifacts/wirefern-release/{before,after}/`,
+with a native-size `artifacts/wirefern-release/index.html` comparison gallery.
+It includes old/new static sori, cloud appearance/1.5s/2.6s, all three colors over
+grass, mixed colony, night, actual rain, mobile, dense 640 and reduced motion.
+The single-source cloud is above column 16, row 10. The mobile capture uses the
+normal fitted garden; it is not presented as native-size desktop evidence.
+
+Native-size review confirmed discrete spores separating above the fern in the
+middle phase and stronger attached sori against cyan foliage. Grass/night/rain
+retain the small airy shape. The puff intentionally becomes faint near expiry,
+and individual dots are less distinct at mobile whole-garden scale. Existing
+garden clipping can trim a puff at the top edge. No 5× close-up substitutes for
+the required native-size captures.
+
+## Cost and validation
+
+The specimen atlas grows **828 → 829 frames**, using one unused 32×32 slot in
+the existing logical **1024×832**, resolution-2 source (**2048×1664** backing).
+It adds **zero allocated atlas pixels / zero additional atlas pixel memory**;
+1,024 logical pixels (4,096 backing-pixel locations) are occupied inside the
+already allocated sheet. Retained GPU sources and five startup bake calls are
+unchanged. One temporary Sprite per puff is bounded at **two**, irrespective of
+garden density. The source-owned static sori still use their existing child
+Sprites. New construction Graphics contexts release after baking; frame wrappers
+and source textures release through page ownership.
+
+`tests/wirefern-clouds.cjs` covers exact 30s/75% rules, eligibility boundaries,
+independent streams, one current source/check, cap skips/no queue, hidden/fresh
+resume, long gaps, static reduced motion, source identity/removal/replacement,
+repeated reset, cached two-Sprite ownership and actual page scheduling with
+unchanged provenance/counts/score. Existing static tests retain 25%, all colors/
+layouts, frond geometry, 50s/5m/6m and source ownership coverage. Chrome review
+checks cached art, zero recurring Graphics, all phases, reduced/hidden/source
+cleanup, 30 repeated two-cloud resets, and full 640-source cost. Existing blossom,
+poppy, opium-pod, ecology, gnome and actual SSE regressions remain in validation.
+
+Chrome 155 samples use 640 decorated ferns, 90 frames per animation sample with
+changing transforms, and 20 checks per outcome on each supported page. Times
+include the existing view work; they are short CPU samples, not GPU timings:
+
+| CPU mean (ms) | Homepage | Diagnostic |
+| --- | ---: | ---: |
+| Baseline animation, no clouds | .0156 | .0200 |
+| Updated animation, no clouds | .0167 | .0133 |
+| Updated animation, one cloud | .0278 | .0278 |
+| Updated animation, two clouds | .0267 | .0233 |
+| 30s check, failed emission roll | .090 | .065 |
+| 30s check, successful emission including Sprite creation | .090 | .075 |
+
+Relative to the updated idle sample, active animation adds about **.010–.014ms**
+per frame. Updated render submission means range **.213–.251ms**, versus
+**.174–.184ms** for baseline; short-run noise prevents attributing that entire
+difference to this effect. The slowest sampled check is **.30ms**. No sampled
+animation or check creates Graphics/geometry or rebakes textures. Raw samples
+and resource counts are retained in the gallery's two `review.json` files.
+
+Validation completed:
+
+- `npm test`: **62 passed**, 14 optional browser/SSE entry points skipped,
+  zero failures. The dedicated cloud suite also passed after the cap-order check.
+- `npm run test:chrome`: **19 jobs passed**, including baseline/updated native
+  captures and existing broadleaf/vine/poppy/pod/static-sori regressions. The two
+  release-review jobs passed again after refining the moving-frame/check samples.
+- Debug and Release `dotnet build PacketGarden.slnx --no-restore`, with isolated
+  `BaseOutputPath=artifacts/wirefern-release/build/`: zero warnings/errors.
+- `dotnet run --project tests/PacketGarden.Checks --no-restore`, with isolated
+  output: all backend assertions passed. Existing NU1900 reports unavailable
+  NuGet vulnerability metadata.
+- Actual ASP.NET integration, `node tests/weather-sse.cjs --run
+  artifacts/wirefern-release/build/Debug/net10.0/PacketGarden.dll`: passed,
+  including polling/SSE, lease and outage/recovery behavior.
+- Final `git diff --check`: passed. Work remains uncommitted on `dev` above
+  `5c5746c`; no commit, push, merge, rebase, deployment or `main` change.
+
+Short CPU samples do not measure GPU completion, driver heap growth or a long
+human soak. Controlled visibility dispatch does not establish operating-system
+tab suspension. Mobile readability and other devices remain review limits.
+
+# Wirefern sori (2026-10-27)
+
+This section records the original static-only checkpoint. The visibility and
+airborne-release follow-up above supersedes its dot radii, sample spacing and
+static-only scope; the original selection/lifecycle rules remain applicable.
+
+Implemented on `dev` above opium-pod checkpoint `0719608`. Wireferns keep their
+canonical species, vigor, placement, provenance, 18s/50s/5m/6m lifecycle and
+existing phosphor/moss/cyan/amber/1%-afterglow foliage. The base stress-atlas art
+and its live tint/scale are unchanged. Sori are attached cosmetic dots, not
+flowers, berries, airborne particles, independent plants or collectible drops.
+
+## Selection and lifecycle
+
+`pixi-wirefern-spores.js` owns a dedicated crypto-seeded cosmetic PRNG with a
+distinct clock/performance fallback. The Pixi adapter calls `assign()` only after
+successful creation/replacement, before creating the view. One uniform sample
+selects `< .25` and nine equally likely color/layout pairs within that interval.
+An immutable, non-enumerable `wirefernSpores` trait (or permanent failed `null`)
+stays with that exact source. Ticks, recreated views, inspection, hiding and
+reconnection never roll. Unrelated species and rejected/paused input consume no
+spore randomness. Explicit simulated fixtures alone force traits without rolls.
+
+There is no draw from placement, vigor, foliage, broadleaf/vine blossoms, poppy
+selection, opium pods, Amanita/buds, gnomes, weather or ecology streams. Afterglow
+is neither excluded nor rerolled. Selection creates no SSE frame, activity row,
+sound, acceptance count, score, drop or additional specimen. Inspection remains
+the existing Wirefern card with original network fields.
+
+| Original age | Sori |
+| --- | --- |
+| 0–18s sprout | Hidden |
+| 18–50s growing | Hidden |
+| 50s–5m mature | Two, three or four groups of three rounded dots |
+| 5–6m fading | Same child Sprite, .66 scale, .55 alpha, muted tint |
+| 6m expiry | Parent and its exact child removed |
+
+Replacement, remove, Clear, page teardown and hidden/resume reconciliation use
+existing source notifications. Children belong to the original Sprite; the
+bounded `sporeViews` map retains at most 640 entries and releases the exact
+parent's entry on removal. No new scheduler, per-frame scan/geometry, texture
+generation, particle emitter, filter, shader or dependency is added.
+
+## Alignment with the actual artwork
+
+The existing base frame is **64×64**, anchored at **(.5,.9)** and baked into a
+live 32px tile at **.5 × 1.16 = .58** mature scale. Frond `i` uses
+`y = 51 - 5i`, `reach = 11 - .7i` and a real diagonal from `(32,y+2)` to
+`(32 ± reach,y-2)`. Dots sample that segment at `t=.40,.64,.88`, then apply the
+same anchor/scale transform. All vigor levels share their lower four fronds;
+three layouts select two to four of those real branches, so no vigor-specific
+frames or floating rectangular dot pattern are required. The geometry test
+captures the real stress-atlas line segments and checks every dot against them.
+
+Three cached neutral layouts receive independent copper, golden-ochre or soft
+cyan tints. Small dark rims keep dots distinguishable against cyan foliage.
+The live parent uses an untinted Sprite over already-tinted foliage, so child
+colors never inherit a foliage color multiply. Parent scale (normally 1.4,
+top-row limit 1.1) and visual edge insets are inherited unchanged. The child
+anchors at `(16,29)` with a constant `.2px` Y offset to account for the parent's
+28.8px anchor. Fading multiplies the source bake by `.66`, while preserving that
+constant anchor offset, matching the base's `.33 × 1.16` fade bake exactly.
+
+Sori remain inside the existing frond footprint. Their source alone owns them;
+they do not cover extra cells or create new picking targets. The synthetic
+`/pixi-stress.html` renderer remains unchanged.
+
+## Diagnostic controls and visual review
+
+Only `/pixi-live.html` adds simulated stages, all 180 vigor/foliage/color/layout
+combinations, mixed decorated/undecorated colonies with other plants and grass,
+a forced 640-wirefern field, one-second expiry and a saturated replacement
+setup. Replacement uses normal stronger-growth competition against the sole
+weaker fern. Existing Clear releases all decorations. No homepage controls or
+fabricated TCPNoise events are added.
+
+`tests/pixi-wirefern-spores-browser.cjs --run --baseline` serves frozen
+`0719608`; `--run` serves edited files. Both pages use identical fixture data,
+clock, lighting, foliage and viewport. Ignored local evidence is under
+`artifacts/wirefern-spores/{before,after}/`, with a native-size
+`artifacts/wirefern-spores/index.html` comparison gallery and raw JSON reports.
+Captures include undecorated ferns, all nine pairs on cyan foliage at ordinary
+scale, all 180 combinations including afterglow, stages, mixed colony, grass,
+night, fading, mobile and full 640. The separately labelled **5× camera** image
+is a review close-up; production fern size and all other captures are unchanged.
+
+Desktop review shows discrete sori following frond angles, with dark rims
+retaining contrast on cyan foliage. Mixed/dense views retain the same fern
+footprint and neighbor spacing. Fading and the 390px whole-garden mobile fit
+necessarily make individual dots less distinct; no neon boost, special mobile
+enlargement or animation is used to conceal that limit.
+
+## Resource cost and verification
+
+The specimen atlas grows **825 → 828 frames**, filling three unused slots in
+the existing logical **1024×832**, resolution-2 source (**2048×1664** backing,
+13 MiB uncompressed RGBA before driver overhead). **Additional atlas pixels:
+zero.** Three frame wrappers are added; retained GPU sources and the same five
+startup bakes remain unchanged. Construction Graphics contexts are released
+immediately after baking, and wrappers/sources release through existing page
+ownership. No geometry is generated by steady-state rendering.
+The three slots occupy 3,072 logical pixels (12,288 backing-pixel locations)
+inside the already allocated sheet, rather than allocating another source.
+
+One child Sprite is present per selected mature/fading fern: **0–640 additional
+Sprites**, with no extra containers. A forced 640-wirefern/full-grass fixture
+grows **1,934 → 2,574 display objects**, retaining 640 original specimen Sprites.
+The natural 25% probability is not a fixed per-field quota. Logical ticks do not
+visit the overlay map separately; normal stage notifications create/update or
+destroy the owned child, and steady frames need only normal Sprite traversal.
+
+`tests/pixi-wirefern-spores.cjs` covers exact 25% boundaries, uniform nine-pair
+distribution, stable success/failure and independent entropy, rejection and
+unrelated-species gates, unchanged foliage/rarity/provenance/counts, actual
+frond alignment across all vigor levels, all 180 combinations, exact 50s/5m/6m,
+replacement/remove/clear, hidden/resume, reduced motion and repeated 640-parent
+reset/teardown. The Chrome suite checks real WebGL, all requested comparisons,
+15 full-field resets, exact resource destruction, static poses and absence of
+recurring Graphics. Existing opium-pod, poppy, blossom, gnome, ecology and SSE
+regressions remain in the full validation commands.
+
+Chrome 155's 90-frame forced-full-field samples measured mean CPU submission
+**0.187 → 0.192ms** on the homepage and **0.199 → 0.171ms** on diagnostics, at
+roughly 16.7ms RAF intervals. Across 1,000 steady logical ticks, means were
+**0.0216 → 0.0187ms** and **0.0220 → 0.0184ms**. These tiny differences are noisy,
+not evidence of a speedup or zero GPU cost. Updating all 640 ferns at their fade
+boundary measured **2.1 → 3.1ms** and **1.9 → 2.3ms** respectively; steady ticks
+do not repeat those child updates. Raw render/tick/fade measurements remain in
+the JSON files.
+
+Validation: **61 Node suites passed**, with 13 optional browser/SSE entry points
+explicitly skipped by the Node-only runner; **all 17 Chrome jobs passed**.
+Debug/Release builds passed with zero warnings/errors using
+`-p:BaseOutputPath=C:/GitHub/PacketGarden/artifacts/wirefern-spores/build/`.
+The normal Debug executable was locked by an existing running process; isolated
+outputs avoided stopping it or overwriting its executable. Backend checks passed
+with their existing NU1900 unavailable-vulnerability-metadata warning, using
+`-p:BaseOutputPath=C:/GitHub/PacketGarden/artifacts/wirefern-spores/checks/`.
+Actual local ASP.NET polling-to-SSE integration passed against the isolated
+Debug DLL. `git diff --check` passed. All source changes remain uncommitted on
+`dev`; `main` and the opium-pod commit are preserved.
+
+Short CPU samples and controlled visibility handlers do not establish a long
+human visual/GPU/heap soak, operating-system suspension behavior or results on
+other devices. Mobile/fading dots are intentionally less distinct, as recorded
+in the ordinary-scale captures.
+
+# Collectible opium pods (2026-10-27)
+
+Implemented on `dev`, extending poppy checkpoint `0e691c3`. Loose `opium_pod`
+objects use the existing ambient pending map, shared five-drop cap, expiry,
+centralized picking, collection UI and bounded Pixi Sprite ownership.
+
+`createPoppyModel` publishes its successful activation transition once with the
+current logical timestamp. The Pixi model updates that same vine's view, then
+calls `onPoppyActivated`; the page wires this to
+`ambient.acceptPoppyActivation`. No scheduling is attached to initial vine
+acceptance. Mutation/core/ambient models do not import one another cyclically.
+
+Each activated live poppy gets one `< .2` decision on a separate crypto-seeded
+pod PRNG (distinct fallback seed). Placement draws also use that pod stream.
+Ordinary vines, silvervines, failed mutations, two-poppy cap skips and simulated
+fixtures consume no natural pod randomness. A WeakSet consumes failures,
+successful schedules and cancelled/skipped attempts without retaining sources
+or allowing rerolls. Existing placement, vigor, poppy selection, vine/broadleaf
+flowers, first-seen visitors, Amanita and weed-bud random streams are unchanged.
+The nominal combined chance is **0.1% of eligible vine spawns before caps and
+survival/visibility eligibility**; it is not a guaranteed observed drop rate.
+
+## Pod timing and ownership
+
+| Boundary | Behavior |
+| --- | --- |
+| Successful live poppy activation | One 20% decision; success records a deadline three seconds later |
+| Pending | Exact parent reference, id, creation time, cell/coordinates and active mutation-trait identity must survive |
+| Three seconds later | Existing logical tick admits one loose pod if fewer than five total loose drops exist |
+| At cap / invalid parent | Consume the attempt without retry, eviction or queue |
+| Active | Independent 20-second drop; no retained parent reference |
+| Collection / absolute drop expiry | Remove only the pod |
+
+Removal, replacement, normal expiry, Clear and mutation ineligibility cancel
+pending pods. Active pods may finish their own lifetime after their parent goes.
+The vine's canonical type/id/object, vigor, cell, timestamp, original TCPNoise
+sensor/port/seen count, inspection, eight-minute fade, ten-minute expiry and
+two-active-poppy limit remain unchanged. Parent clicks still inspect. Pod
+collection says exactly **You collected an opium pod. +0 points**, may use the
+existing opt-in collection sound and leaves Score at **0**. No inventory,
+persistence, backend mapping, network event, activity row or audio cue is added.
+
+Pending pod deadlines missed while hidden are cancelled. A visible logical gap
+greater than **1,500ms** crossing a due deadline also consumes the attempt.
+Poppy activations reconciled more than 1,500ms after original maturity consume
+their pod decision without scheduling a fresh delayed catch-up drop. A brief
+hide/resume before a still-future deadline preserves it. Live-event pause retains
+the existing lifecycle/drop processing. Amanita's original resume activation and
+weed-bud timing remain unchanged; the stronger gap rule applies only to pods.
+
+## Artwork, diagnostics and screenshots
+
+One static atlas tile draws a small shaded sage oval, distinctive scalloped
+crown, highlight and short stem. Its offset is 18–22 logical pixels to one side
+of the original cell center and ten pixels down, reflected inward at garden
+edges. This clears the parent flower/stem and inspection center. Existing
+nine-pixel loose-drop picking applies. There are no filters, shaders, recurring
+geometry, new textures at activation or timers.
+
+Only `/pixi-live.html` adds clearly simulated pending/active/mixed/cap/parent
+cancellation/missed-hidden/expiry/reset controls. Active fixtures support parent
+inspection versus pod collection; cap waits three real seconds with five mixed
+drops already present. Hidden preview locally exercises the ambient visibility
+seam with a missed deadline; it does not hide the real page or manufacture SSE.
+Expiry shows a one-second remainder. Repeated fixture selection clears old owned
+state, and the parent provenance stays simulated.
+
+`node tests/opium-pods-browser.cjs --run --baseline` serves frozen `0e691c3`;
+`--run` serves edited files. The harness captures both supported pages at ordinary
+scale: poppy/pod on soil, dense grass by day and night, all four loose-drop types,
+and a 390px mobile viewport. Ignored local evidence is in
+`artifacts/opium-pods/{before,after}/`, with a native-size
+`artifacts/opium-pods/index.html` gallery and raw `review.json` measurements.
+Browser clicks verify inspection and the exact collection message with parent,
+statistics and activity unchanged. Controlled visibility dispatch, expiry,
+20 reset cycles and page teardown check actual handler and WebGL ownership.
+
+Desktop review shows a readable oval/crown capsule separate from the poppy,
+weed bud and Amanita, with a visible silhouette over grass and dark soil. The
+whole-garden mobile fit makes each capsule and its hit target small; no special
+zoom or larger mobile hit area was introduced. Finger ergonomics and other
+devices still need human review.
+
+## Resources and validation
+
+The ambient atlas grows **13 → 14 frames**, logical **416×32 → 448×32** at
+resolution 2 (backing **832×64 → 896×64**): **16 KiB** more uncompressed RGBA
+before driver overhead. It retains one GPU source and the same startup bake
+count. The specimen atlas stays 825 frames. Each active pod uses one existing
+loose-drop Sprite, still **at most five drop Sprites total**, with no new pool or
+container. Construction Graphics contexts are explicitly destroyed after the
+ambient bake; frames, sources, pending references and views release on teardown.
+Active drops contain coordinates/times/type only, never a source specimen.
+
+`tests/opium-pods.cjs` verifies the exact 20% boundary, one activation decision,
+source/cap exclusions, all random-stream independence, exact three-second/20s
+boundaries, original specimen fields, parent identity/trait validation, expiry
+and normal replacement cancellation, shared cap/consumed failures, no hidden or
+stall catch-up, bounded edge placement, mixed click priority, exact message,
+Score: 0, actual production callback wiring and simulated controls. Existing
+Amanita, bud, redbloom, gnome and SSE regression suites remain in place.
+
+The Chrome harness samples CPU submission and ambient ticks with the same full
+640-vine/five-drop fixture before and after; no per-frame Graphics calls occur.
+Chrome 155's 90-frame samples measured mean submission **0.222 → 0.199ms** on
+the homepage and **0.213 → 0.197ms** on diagnostics, with RAF near **16.7ms**.
+Across 1,000 fixed-time ambient ticks, both pages measured about
+**0.0005 → 0.0006ms/tick**. The render difference is measurement noise rather
+than evidence of a speedup. Raw timings are in the JSON reports.
+
+Validation completed: **60 Node suites passed**, with 12 optional browser/SSE
+entry points explicitly skipped by the Node-only runner; **all 15 Chrome jobs
+passed**, including frozen-baseline and feature pod review. Debug and Release
+builds passed with zero warnings/errors. Backend checks and actual local ASP.NET
+polling-to-SSE integration passed. The check project retained its existing
+NU1900 warning for unavailable NuGet vulnerability metadata; assertions passed.
+`git diff --check` passed. Implementation remains uncommitted on `dev`.
+
+Changed-file scope: eight runtime/page files (ambient rules/art, mutation callback,
+Pixi model/bootstrap, UI text and both HTML pages), four requested documentation
+files, two new pod suites and ten existing test/runner files. Existing assertions
+were updated for the extra ambient frame and versioned assets. The original poppy
+visual baseline is pinned to its pre-mutation checkpoint so it cannot drift with
+the current branch's HEAD. No backend source, mapping or audio module changed.
+
+These short CPU samples do not measure GPU
+completion or establish a long-session heap/GPU soak. Controlled visibility
+tests do not prove operating-system tab suspension. No dependencies were added.
+
 # Rare vine-to-opium-poppy mutation (2026-10-27)
 
 The homepage and diagnostic garden now support a cosmetic mutation of the exact
@@ -52,8 +686,9 @@ by the existing gnome ordinary-target predicate, including snip revalidation.
 Clicks use ordinary inspection, with **Opium poppy · original vine** and an
 explicit cosmetic/noncollectible mutation label. Real TCPNoise fields remain
 truthful; local fixtures say Simulated poppy fixture. Score stays exactly zero.
-**Collectible loose opium pods remain future work.** No inventory, processing,
-gameplay effect, audio cue, reward or collection message is implemented.
+The poppy itself remains noncollectible. **Separate loose opium pods are now
+implemented above**, reusing the existing collection message/audio path without
+inventory, processing, gameplay effects or rewards.
 
 ## Diagnostic fixtures and visual evidence
 

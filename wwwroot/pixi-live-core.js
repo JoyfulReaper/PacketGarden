@@ -6,6 +6,7 @@
   const uiCore = typeof module !== 'undefined' && module.exports ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
   const blooms = typeof module !== 'undefined' && module.exports ? require('./pixi-broadleaf-blooms.js') : window.PacketGardenBroadleafBlooms;
   const vineBlooms = typeof module !== 'undefined' && module.exports ? require('./pixi-vine-blooms.js') : window.PacketGardenVineBlooms;
+  const spores = typeof module !== 'undefined' && module.exports ? require('./pixi-wirefern-spores.js') : window.PacketGardenWirefernSpores;
   const { dimensions, timings, species, eventSpecies, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
@@ -58,10 +59,10 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, poppyRandom, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
-    const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
+    const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0, heistRemovals: 0 };
     const model = garden.createGardenModel({ now, random, onChange(change) {
       const { kind, specimen, reason } = change;
       if (kind === 'added') {
@@ -69,15 +70,16 @@
         specimen.colorVariant = specimen.type === 'stillbloom' ? 0 : colorVariant(specimen.type, specimen.vigor, random());
         blooms.assign(specimen, bloomRandom);
         vineBlooms.assign(specimen,vineBloomRandom);
+        spores.assign(specimen, sporeRandom);
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
+      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });
     const poppies = mutationCore.createPoppyModel({ garden: model, now, random: poppyRandom,
-      onChange: specimen => view.update(specimen, model.byCell) });
+      onChange(specimen, at) { view.update(specimen, model.byCell); onPoppyActivated(specimen, at); } });
     function tick(at = now()) {
       model.tick(at);
       if (mutations.tick(at)) model.tick(at); // Publish the mutation stage on the existing specimen view.
@@ -99,8 +101,34 @@
     return { specimens: model.specimens, byCell: model.byCell, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedHeist() {
+        const at=now();
+        model.seed(Array.from({length:35},(_,i)=>({type:i<4?'mushroom':'broadleaf',vigor:i%4,
+          column:i<4?12+i*2:7+(i-4)%18,row:i<4?10:13+Math.floor((i-4)/18),createdAt:at-65000,
+          origin:{kind:'simulated',eventType:'heist-fixture'}})),at);
+        for(const p of model.specimens){p.colorVariant=p.vigor;view.update(p,model.byCell);}
+      },
+      replaceHeistTarget(target) {
+        // Explicit all-simulated dev fixture only. Reimport through normal lifecycle notifications.
+        if(!model.specimens.includes(target) || !model.specimens.every(p=>p.origin?.kind==='simulated' && p.origin.eventType==='heist-fixture'))return null;
+        const replacement={type:'mushroom',vigor:3,colorVariant:3,column:target.column,row:target.row,createdAt:now()-65000,
+          origin:{kind:'simulated',eventType:'heist-fixture'}};
+        const entries=model.specimens.map(p=>p===target?replacement:p),colors=entries.map(p=>p.colorVariant);
+        model.seed(entries);
+        entries.forEach((p,i)=>{p.colorVariant=colors[i];view.update(p,model.byCell);});return replacement;
+      },
+      seedWirefernSpores(mode = 'stages') {
+        const entries = spores.fixtureEntries(now(), mode), foliage = entries.map(p => p.colorVariant);
+        model.seed(entries);
+        for (let i = 0; i < entries.length; i++) { entries[i].colorVariant = foliage[i]; view.update(entries[i], model.byCell); }
+      },
+      replaceWirefernSporeFixture() {
+        if (model.specimens.length !== dimensions.capacity || !model.specimens.every(p => p.origin?.kind === 'simulated'
+          && p.origin.eventType === 'wirefern-spore-fixture')) return null;
+        return model.addSpecimen('wirefern', 3, now(), { kind: 'simulated', eventType: 'wirefern-spore-fixture' });
+      },
       seedPoppies(mode = 'mature') {
-        const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000 }[mode] ?? 60000;
+        const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000, pods: 65000 }[mode] ?? 60000;
         const entries = Array.from({ length: 35 }, (_, i) => ({ type: 'vine', vigor: i % 4,
           column: 12 + i % 7, row: 7 + Math.floor(i / 7), createdAt: at - (i === 17 ? age : 65000),
           vineBloom: mode === 'flowers' || mode === 'connections' ? { color: i % 4, layout: i % 2 } : null,
