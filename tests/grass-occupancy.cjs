@@ -2,8 +2,8 @@
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const G=require('../wwwroot/garden-core.js'),E=require('../wwwroot/garden-ecology.js');
 const P=require('../wwwroot/pixi-live-core.js'),{start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
-let at=0,ecology,notifications=[];
-const garden=G.createGardenModel({now:()=>at,random:()=>0,onChange:c=>{
+let at=0,ecology,notifications=[],competitionRoll=.99,competitionCalls=0;
+const garden=G.createGardenModel({now:()=>at,random:()=>0,competitionRandom:()=>competitionCalls++%2?competitionRoll:5.5/640,onChange:c=>{
   if(c.kind==='added')ecology.removeGrassCell(c.specimen.column,c.specimen.row);
   notifications.push(c.kind);
 }});
@@ -23,6 +23,7 @@ for(const [key,value] of savedCells)garden.byCell.set(key,value);
 const unchanged=JSON.stringify(ecology.grassCells);notifications=[];
 assert.equal(garden.addSpecimen('flower',0),null);assert.equal(garden.addEvent({}),null);assert.equal(garden.addSpecimen('bogus'),null);
 assert.equal(JSON.stringify(ecology.grassCells),unchanged);assert.deepEqual(notifications,['dropped']);
+competitionRoll=0;
 assert.equal(garden.addSpecimen('broadleaf',1).specimen.cell,5);assert.equal(ecology.grassCells.length,1);assert.equal(ecology.grassCells[0].column,6);
 garden.clear();ecology.clear();at=0;
 const blockers=[];for(let y=0;y<=2;y++)for(let x=0;x<=2;x++)if(x!==1||y!==1)blockers.push({column:x,row:y,type:x===0&&y===0?'redbloom':'flower',createdAt:0});
@@ -42,7 +43,7 @@ let rolls=0;const fading=E.createEcologyModel({random:()=>{rolls++;return 0;},is
 fading.influenceGrassCell(1,1,0);fading.spreadGrass(1200000);assert.equal(fading.grassCells.length,1);assert.equal(rolls,0,'blocked soil retains the final opportunity without a roll');
 (async()=>{
   for(const page of ['index.html','pixi-live.html']) {
-    const g=await start(false,{pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8'),captureModel:true});
+    let pageCompetitionRoll=.99;const g=await start(false,{pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8'),captureModel:true,competitionRandom:()=>pageCompetitionRoll});
     const now=g.context.Date.now(),root=g.app.stage.children[0];g.model.clear();g.ecology.seed({grassCells:[{column:0,row:0,createdAt:now-60000,lastInfluencedAt:now},{column:1,row:0,createdAt:now-60000,lastInfluencedAt:now}]});
     const target=root.children[3].children[0],neighbor=root.children[3].children[1],generated=h.generated(),textures=h.textureCount();
     const rect=g.app.canvas.getBoundingClientRect(),screen=g.app.renderer.screen;
@@ -63,6 +64,7 @@ fading.influenceGrassCell(1,1,0);fading.spreadGrass(1200000);assert.equal(fading
     g.model.setPaused(true);assert.equal(g.model.acceptEvent({specimenType:'flower',listenPort:53,vigor:3}).outcome,'paused');g.model.setPaused(false);
     assert.equal(g.model.acceptEvent({}).outcome,'invalid');assert.equal(g.model.acceptEvent({specimenType:'flower',listenPort:53,vigor:0}).outcome,'dropped');
     assert.equal(JSON.stringify(g.ecology.grassCells),snapshot);assert(h.live.has(sprite));
+    pageCompetitionRoll=0;
     assert.equal(g.model.acceptEvent({specimenType:'flower',listenPort:53,vigor:1}).outcome,'replaced');assert(!h.live.has(sprite));assert.equal(g.ecology.grassCells.length,0);
     g.model.clear();
     for(let cycle=0;cycle<20;cycle++){

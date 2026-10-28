@@ -16,7 +16,7 @@ for (const [type, boundaries] of Object.entries(expected)) {
   assert(Object.isFrozen(core.timings[type]));
   const stages = type === 'redbloom' ? ['mature','fading','expired'] : ['sprout','growing','mature','fading','expired'];
   let now = 100000; const changes = [];
-  const model = core.createGardenModel({now:()=>now,random:()=>.5,onChange:c=>changes.push(c)});
+  const model = core.createGardenModel({terrainRandom:()=>.99,now:()=>now,random:()=>.5,onChange:c=>changes.push(c)});
   const { specimen } = model.addEvent(event(type, 3)); const id = specimen.id;
   assert.equal(changes[0].kind,'added'); assert.equal(changes[0].specimen.origin.seenCount,event().seenCount);
   assert.equal(core.stageAt(type,now,now-1),stages[0]);
@@ -47,14 +47,15 @@ const order = ['flower','mushroom','vine','broadleaf','wirefern','redbloom','wee
 for (const {rolls,cells} of fixture.cases) {
   let r = 0; const random = () => rolls[r++ % rolls.length];
   // Production consumes one palette roll after each successful spawn; it remains presentation-owned.
-  const model = core.createGardenModel({now:()=>10000,random,onChange:c=>{if(c.kind==='added')random();}});
+  const model = core.createGardenModel({terrainRandom:()=>.99,now:()=>10000,random,onChange:c=>{if(c.kind==='added')random();}});
   for (let i=0;i<cells.length;i++) {
     const type=order[i%order.length];
     assert.equal(model.addEvent(event(type,i%4)).specimen.cell,cells[i]);
   }
 }
-let now = 100000; const changes = [];
-const model = core.createGardenModel({now:()=>now,random:()=>.95,onChange:c=>changes.push(c)});
+let now = 100000,competitionRoll=.99,competitionSelection=0,competitionCalls=0,competitionForbidden=false; const changes = [];
+const model = core.createGardenModel({terrainRandom:()=>.99,now:()=>now,random:()=>.95,
+  competitionRandom:()=>{if(competitionForbidden)throw Error('Expiry must precede competition');return competitionCalls++%2?competitionRoll:competitionSelection;},onChange:c=>changes.push(c)});
 for(let i=0;i<640;i++) assert(model.addEvent(event()));
 assert.equal(model.specimens.length,640); assert.equal(model.byCell.size,640);
 assert.equal(new Set(model.specimens.map(s=>s.cell)).size,640);
@@ -64,6 +65,7 @@ const fullSnapshot=JSON.stringify(model.specimens); changes.length=0;
 assert.equal(model.addEvent(event()),null); assert.equal(JSON.stringify(model.specimens),fullSnapshot);
 assert.deepEqual(changes.map(c=>c.kind),['dropped']);
 const full = (type='ghostbloom',vigor=3) => {
+  now+=15000;competitionRoll=.99;
   model.seed(Array.from({length:640},(_,cell)=>({type,vigor,column:cell%32,row:Math.floor(cell/32),createdAt:now})));
   changes.length=0;
 };
@@ -75,9 +77,10 @@ for(const type of ['ghostbloom','crystalfungus','blackthorn']) {
 for(const type of ['flower','mushroom','broadleaf','vine','wirefern','weed','redbloom']) {
   full(); const victim=model.specimens[17]; victim.type=type;victim.vigor=1;
   model.tick(); changes.length=0;
-  assert.equal(model.addEvent(event('flower',1)),null,'equal vigor cannot churn');
-  assert.equal(model.addEvent(event('flower',0)),null,'lower vigor cannot churn');
+  assert.equal(model.addEvent(event('flower',1)),null,'failed equal-vigor roll drops');
+  assert.equal(model.addEvent(event('flower',0)),null,'failed weak-newcomer roll drops');
   changes.length=0;
+  competitionRoll=0;
   const result=model.addEvent(event('flower',2));
   assert.equal(result.replaced,victim); assert.equal(result.specimen.cell,17);
   assert.notEqual(result.specimen.id,victim.id); assert.equal(model.getCell(17,0),result.specimen);
@@ -89,16 +92,21 @@ full('flower',2);
 model.specimens[4].vigor=0;model.specimens[4].createdAt=now-100;
 model.specimens[8].vigor=0;model.specimens[8].createdAt=now-200;
 model.specimens[11].vigor=0;model.specimens[11].createdAt=now-200;
-model.specimens[0].createdAt=now-1000; // Older but higher vigor loses to the minimum.
-assert.equal(model.addEvent(event('weed',3)).specimen.cell,8,'oldest minimum, then first array entry on exact ties');
+model.specimens[0].createdAt=now-1000;
+competitionSelection=8/640;competitionRoll=0;
+assert.equal(model.addEvent(event('weed',3)).specimen.cell,8,'uniform candidate selection is injected independently');
+assert.equal(model.addEvent(event('weed',3)),null,'success starts global cooldown');
+now+=15000;competitionSelection=11/640;
 assert.equal(model.addEvent(event('weed',3)).specimen.cell,11);
+now+=15000;competitionSelection=4/640;
 assert.equal(model.addEvent(event('weed',3)).specimen.cell,4);
 full(); const expired=model.specimens[23];expired.createdAt=now-360000;
-model.findReplacementCandidate=()=>{throw Error('Expiry must precede saturation selection');};
+competitionForbidden=true;
 const incoming=model.addEvent(event('flower',0));
 assert.equal(incoming.replaced,null);assert.equal(incoming.specimen.cell,23);
 assert.equal(changes[0].specimen,expired);assert.equal(changes[0].reason,'expired');
 assert.deepEqual(changes.map(c=>c.kind),['removed','added']);
+competitionForbidden=false;
 // Mutation lifetime overrides normal expiry but does not alter identity/protection/vigor.
 model.clear(); const mutation=model.addEvent(event('redbloom',2)).specimen;
 mutation.mutation={expiresAt:now+45000}; const mutationId=mutation.id;
@@ -127,4 +135,4 @@ assert.doesNotMatch(live,/function stageAt|const timings\s*=|candidate\.vigor|vi
 assert.match(live,/garden\.createGardenModel/);
 for(const page of ['index','pixi-live']) assert.match(read(`wwwroot/${page}.html`),/src="garden-core\.js(?:\?[^"]*)?"/);
 assert.match(live,/new Source\('\/api\/garden\/events'\)/);
-console.log('PASS: frozen production placement oracle; exact ten-species lifecycle boundaries/identity; 640 bounded unique cells; strict vigor/minimum/oldest/protected/weed/redbloom/reused-cell/drop parity; expiry first; mutations; clear/refill; local neighbors; safe fields; shared imports; no timers or duplicated Pixi rules.');
+console.log('PASS: frozen free-cell placement oracle; exact ten-species lifecycle/identity; 640 unique cells; protected/ordinary inverse competition, same-cell callbacks/cooldown/drop; expiry first; mutations; clear/refill; neighbors; safe fields; no timers or duplicated Pixi rules.');

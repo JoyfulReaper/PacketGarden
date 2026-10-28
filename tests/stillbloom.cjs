@@ -51,8 +51,8 @@ for(const roll of [.099999999,.1,.100000001]){
 }
 {
   const f=fixture(0);f.advance(599750);f.garden.seed(Array.from({length:640},(_,i)=>({type:'broadleaf',column:i%32,row:Math.floor(i/32),vigor:0,createdAt:f.at})));
-  f.garden.findReplacementCandidate=()=>{throw Error('ambient growth attempted replacement');};
   f.advance(250);assert.equal(f.calls,0);assert.equal(f.garden.specimens.length,640);
+  assert.equal(f.garden.competitionSnapshot().lastAttempt,null,'ambient full-garden growth never attempts competition');
   f.garden.remove(f.garden.specimens[0]);f.advance(180000);assert.equal(f.spawned.length,1);assert.equal(f.garden.specimens.length,640);
 }
 {
@@ -60,7 +60,7 @@ for(const roll of [.099999999,.1,.100000001]){
   assert(G.isProtected('stillbloom'));assert.equal(G.normalizeGarden({specimenType:'stillbloom',listenPort:53,vigor:0}),null);
   const crew=N.createModel({garden:f.garden,getSpecimens:()=>f.garden.specimens,now:()=>f.at});
   assert.equal(crew.landscapingCandidates(f.at,'overcrowding').length,0);assert.equal(crew.landscapingCandidates(f.at,'vine').length,0);
-  f.garden.specimens.forEach(p=>p.vigor=0);assert.equal(f.garden.findReplacementCandidate(3),null);
+  f.garden.specimens.forEach(p=>p.vigor=0);assert.equal(f.garden.replacementCandidates().length,0);
   const flower=f.garden.specimens[0],id=flower.id;
   for(const [age,stage] of [[0,'sprout'],[29999,'sprout'],[30000,'growing'],[89999,'growing'],[90000,'mature'],[1020000,'fading'],[1199999,'fading']]){
     f.garden.tick(age);assert.equal(f.garden.specimens[0].stage,stage);assert.equal(f.garden.specimens[0].id,id);

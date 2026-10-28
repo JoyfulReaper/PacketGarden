@@ -34,7 +34,7 @@ class Graphics extends h.P.Graphics{
   stroke(style){geometry++;this.curves.push({start:this.begin,points:this.points,style});return super.stroke();}
 }
 const P={...h.P,Graphics},stage=new h.P.Container(),view=createView(P,{stage},h.cache.frames,core,shared);
-let at=100000,rolls=0;const model=core.createModel(view,{now:()=>at,random:()=>.5,poppyRandom:()=>.9,vineBloomRandom:()=>{rolls++;return .01;}});
+let at=100000,rolls=0;const model=core.createModel(view,{now:()=>at,random:()=>.5,competitionRandom:()=>0,poppyRandom:()=>.9,vineBloomRandom:()=>{rolls++;return .01;}});
 const p=model.acceptEvent({...event(),vineBloom:null}).specimen,trait=p.vineBloom,parent=view.byId.get(p.id);
 assert(trait,'network payload cannot override cosmetics');assert.equal(view.vineBloomViews.size,0);
 at=p.createdAt+20000;model.tick();assert.equal(view.vineBloomViews.size,0);
@@ -89,7 +89,7 @@ at=owner.createdAt+480000;model.tick();assert.equal(view.vineBloomLinks.get(owne
 assert.equal(matureLink.alpha,.38);assert.equal(matureLink.scale.x,.66);assert.equal(owner.vineBloom,ownerTrait);auditConnections();
 const beforeRender=geometry,checks=view.counters.vineNeighborChecks;
 for(let i=0;i<1000;i++)view.animate(i/60,1/60,at);assert.equal(geometry,beforeRender);assert.equal(view.counters.vineNeighborChecks,checks);
-const victim=model.specimens.find(p=>p.vigor===0),victimBody=view.vineBloomViews.get(victim.id),victimLink=view.vineBloomLinks.get(victim.id)?.sprite;
+const victim=model.specimens[0],victimBody=view.vineBloomViews.get(victim.id),victimLink=view.vineBloomLinks.get(victim.id)?.sprite;
 const replace=model.acceptEvent(event('broadleaf',3));assert.equal(replace.outcome,'replaced');assert(!h.live.has(victimBody));if(victimLink)assert(!h.live.has(victimLink));auditConnections();
 model.clear();assert.equal(view.vineBloomViews.size,0);assert.equal(view.vineBloomLinks.size,0);
 for(let i=0;i<5;i++){model.seedVineBlooms('dense');model.clear();}

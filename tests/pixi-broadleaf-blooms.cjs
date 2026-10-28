@@ -30,7 +30,7 @@ assert.deepEqual(blooming.model.counts,plain.model.counts);assert.deepEqual(bloo
 assert.equal(core.colorVariant('broadleaf',2,.0099999),4);assert.equal(core.colorVariant('broadleaf',2,.01),2);
 const before=h.live.size,textures=h.textureCount(),bakes=h.generated(),stage=new h.P.Container();
 const view=createView(h.P,{stage},h.cache.frames,core,shared);let at=100000,calls=0;
-const model=core.createModel(view,{now:()=>at,random:()=>.5,bloomRandom:()=>{calls++;return .19999;}});
+const model=core.createModel(view,{now:()=>at,random:()=>.5,competitionRandom:()=>0,bloomRandom:()=>{calls++;return .19999;}});
 const p=model.acceptEvent({...event,broadleafBloom:null}).specimen,trait=p.broadleafBloom;
 assert(trait,'network cannot supply the cosmetic outcome');assert.equal(calls,1);
 const parent=view.byId.get(p.id);assert.equal(parent.children.length,0,'sprout');

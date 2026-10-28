@@ -7,7 +7,7 @@ const beforeObjects = h.live.size, beforeTextures = h.textureCount(), beforeBake
 const atlas = art.makeEcologyAtlas(h.P, h.renderer), stage = new h.P.Container();
 const view = createView(h.P, { stage }, h.cache.frames, core, shared);
 let at = 5000000, ev, model;
-model = core.createModel(view, { now: () => at, random: () => 0, bloomRandom: () => 0, vineBloomRandom: () => 0,
+model = core.createModel(view, { now: () => at, random: () => 0, competitionRandom:()=>0, bloomRandom: () => 0, vineBloomRandom: () => 0,
   onAdded: p => ground.specimenAdded(p.column, p.row) });
 ev = art.createEcologyView(h.P, view.grassLayer, view.puddleLayer, atlas.frames, {
   getSpecimen: (column, row) => model.byCell.get(row * 32 + column), getPlantSprite: p => view.byId.get(p.id), shadowLayer: view.contactLayer

@@ -87,10 +87,30 @@ explicitly historical.
 The whole garden scales to the window and retains **32 × 20 cells**, with at most
 **640 specimens**. Shared renderer-neutral models own placement, competition,
 lifecycles, grass, water, mutations, wildlife and interactions. Incoming growth
-prefers nearby same-species plants. At saturation, only strictly stronger growth
-can replace an eligible weaker resident, choosing the weakest and oldest first.
+prefers nearby same-species plants. At saturation, one eligible resident is chosen
+uniformly for inverse-vigor competition: weaker newcomers have better odds against
+fuller residents, and older residents receive an extra vulnerability bonus.
 Ghostbloom, crystal fungus, blackthorn and Stillbloom are protected from forced
 replacement. Vigor describes fullness, not a security score.
+
+TCPNoise counts **0–1 → vigor 0**, **2–99 → 1**, **100–9999 → 2**, and
+**10000+ → 3**; unusable optional counts still fall back to 0. Valid UInt64
+inspection counts remain exact decimal strings. Full-garden replacement uses
+`clamp(.25 + .15 × (residentVigor − incomingVigor) + .15 × ageFraction, .05, .85)`.
+One candidate, one independent probability roll, no retry. Successful saturated
+replacements start one global **15-second cooldown**; failures do not. Natural
+vacancies always permit ordinary placement, including during cooldown. Active
+and pending mutations/poppies are protected, as are the rare species above.
+See [the competition policy](docs/EVENT-MAPPINGS.md#inverse-vigor-competition).
+
+Naturally expired blackthorns can leave **fallen logs**: one independent **30%**
+decision per expiry, at most **six**, each lasting **60 minutes** from the tree's
+natural expiry. A log is separate terrain that blocks its exact vacated cell;
+plants cannot grow there or replace it. A full garden can therefore contain
+634 plants plus six logs. Logs add no network events, specimen counts, vigor,
+activity or points. Forced removals and Clear never produce them. Decay frees
+the cell for normal growth, including after hidden time; reload clears this
+session-only terrain. See [fallen-log validation](docs/PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
 
 All state lives in browser memory. Reloading starts a new session. A single SSE
 connection supplies backend-normalized growth and aggregate weather. No replay
@@ -192,6 +212,16 @@ of the exact selected parent closes its card. Clicking grass without a higher
 priority hit opens a Wild grass card. Recent activity retains only three safe
 events, including no-growth outcomes at saturation.
 
+The card includes an enlarged **160px desktop / 120px mobile** preview of that
+exact specimen's current cached Pixi artwork and attached Sprite decorations:
+blossoms, sori, rare palettes, poppies, collectible weed and Stillbloom. It uses
+the existing renderer, fits opaque artwork proportionally and preserves its
+intrinsic colors and transforms. Stage/decorative changes refresh the image;
+ordinary age text and ambient bobbing do not. Grass hides the image. Short
+viewports scroll details beneath the visible close button. No extra garden
+events, atlas artwork, renderer or ticker are created. See
+[preview screenshots, ownership and measurements](docs/PIXI-LIVE.md#exact-specimen-inspection-preview-2026-10-28).
+
 First-seen ladybug/snail/moth/pebble visitors, separate Amanita and weed-bud drops,
 the collectible port-22 redbloom mutation, passive puddle frogs and the Gnome
 Incident retain their shared models and click priority. Gnome landscaping can
@@ -260,6 +290,18 @@ testing. Set `Nats__Url` to enable discrete input; `Nats__Subject` defaults to
 `tcpnoise.connection`. With no NATS URL, growth input is disabled and the app
 still starts normally. The browser only connects to PacketGarden.
 
+Optional **Mission Control visit notifications** reuse
+`JoyfulReaperLib.MissionControl` **0.0.3**. After successful visible initialization
+of `/` or `/index.html`, the browser makes one empty same-origin POST to
+`/api/garden/visit`. The server publishes `packetgarden.garden.visited`, schema
+version 1, with exactly `{"message":"Someone visited the garden!"}`. Diagnostic
+pages, failed startup, weather changes and SSE reconnects never trigger it.
+No visitor identity or persistent tracking is added, and notification failures
+cannot block garden rendering. Integration defaults to **disabled**. Set
+`MissionControl__Enabled`, `MissionControl__BaseUrl`, `MissionControl__ApiKey`
+and optionally `MissionControl__TimeoutMilliseconds` only on the server. See
+[Mission Control setup, contract and abuse limits](docs/MISSION-CONTROL.md).
+
 The footer's Events/min figure is the source's five-minute average; Last hour
 is its actual retained hourly count. Missing data displays Waiting or
 Unavailable. The source's bounded 5,000-event window can undercount busy periods.
@@ -285,7 +327,10 @@ new project dependencies. Make that existing runtime available through Node's
 module search path (`NODE_PATH`) when needed. `test:chrome` runs every remaining
 Chrome entry point, including full page interactions, lifecycle/resource
 ownership, grass, both bloom types, full fields, weather and WebGL-disabled
-startup. Native gnome audio checks render the production mix, exercise all four
+startup. Its visit integration job builds an isolated ASP.NET host and checks
+Chrome → PacketGarden → a local Gateway double through the actual shared client;
+no production credentials or NATS are required. Native gnome audio checks render
+the production mix, exercise all four
 incident routes and preview gating, and compare against the pre-fix signal.
 Logs and screenshots are ignored under `artifacts/retire-canvas/`; audio reports
 and locally rendered WAV evidence are under `artifacts/gnome-arrival/`.

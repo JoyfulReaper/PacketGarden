@@ -21,7 +21,7 @@ for(const test of require('./fixtures/production-ambient.json').cases){
   }
 }
 let now=100000,rolls=[],calls=0;
-const specimens=G.createGardenModel({now:()=>now,random:()=>.5});
+const specimens=G.createGardenModel({now:()=>now,random:()=>.5,competitionRandom:()=>0});
 const changes=[],a=A.createAmbientModel({now:()=>now,random:()=>{calls++;return rolls.shift()??.5},getSpecimens:()=>specimens.specimens,onChange:c=>changes.push(c)});
 const live=(type='flower',seenCount='1')=>specimens.addEvent({specimenType:type,seenCount,listenPort:53,vigor:0}).specimen;
 for(const seen of ['2','01',null,'1.0',1]){a.acceptLiveSpecimen(live('flower',seen));assert.equal(a.curiosities.length,0);}

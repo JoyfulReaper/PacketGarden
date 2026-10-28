@@ -2,7 +2,7 @@ const assert = require('node:assert/strict'), fs = require('node:fs');
 const G = require('../wwwroot/garden-core.js'), M = require('../wwwroot/garden-mutations.js');
 function setup() {
   let at = 100000, rolls = 0, changes = [], mutations;
-  const garden = G.createGardenModel({ now: () => at, random: () => .5, onChange(c) {
+  const garden = G.createGardenModel({ now: () => at, random: () => .5, competitionRandom:()=>0, onChange(c) {
     if (c.kind === 'removed') mutations.removed(c.specimen, c.reason);
   }});
   mutations = M.createMutationModel({ garden, now: () => at, random: () => { rolls++; return 0; }, onChange: c => changes.push(c) });
@@ -48,16 +48,16 @@ for (const reason of ['removed','cleared','replaced','expired','collected']) {
   const replacement=c.add();assert.equal(c.mutations.activateMutation(old,c.at()+3000),false);assert(!replacement.pendingMutation);
   assert(!replacement.mutation);assert.equal(c.changes.at(-1).kind,'pending-cancelled');
 }
-// Actual saturated replacement, not just a simulated removal callback. Same-cell identity never aliases.
+// Active and pending collectible sources are excluded from actual saturated competition.
 for (const active of [false,true]) {
-  const c=setup();c.garden.seed(Array.from({length:640},(_,cell)=>({type:'broadleaf',vigor:3,column:cell%32,row:Math.floor(cell/32),createdAt:c.at()})));
-  c.garden.specimens[0].vigor=0;
-  const old=c.garden.addEvent({specimenType:'redbloom',listenPort:22,vigor:1}).specimen;
+  const c=setup();c.garden.seed(Array.from({length:640},(_,cell)=>({type:cell===0?'redbloom':'broadleaf',vigor:3,column:cell%32,row:Math.floor(cell/32),createdAt:c.at(),origin:{kind:'tcpnoise',listenPort:22}})));
+  const old=c.garden.specimens[0];
   c.mutations.maybeSchedulePort22Mutation(old,0);if(active)c.tick(3000);
   const cell=old.cell, newer=c.garden.addEvent({specimenType:'flower',listenPort:80,vigor:2}).specimen;
-  assert.equal(newer.cell,cell);assert.notEqual(newer.id,old.id);assert.equal(c.garden.byCell.get(cell),newer);
-  assert.equal(old.pendingMutation,undefined);c.tick(3000);assert(!newer.mutation);assert(!newer.pendingMutation);
-  assert.equal(c.mutations.snapshot().active,0,'active mutation receives no new saturation protection');
+  assert.notEqual(newer.cell,cell);assert.notEqual(newer.id,old.id);assert.equal(c.garden.byCell.get(cell),old);
+  assert(!newer.mutation);assert(!newer.pendingMutation);assert(!c.garden.replacementCandidates().includes(old));
+  assert.equal(c.mutations.snapshot().active,active?1:0);assert.equal(c.mutations.snapshot().pending,active?0:1);
+  c.garden.remove(old,'collected');assert.equal(old.pendingMutation,undefined);
 }
 const cap=setup(), candidates=Array.from({length:4},()=>cap.add());
 for(const source of candidates)cap.mutations.maybeSchedulePort22Mutation(source,0);

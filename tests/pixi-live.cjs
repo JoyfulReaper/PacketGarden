@@ -49,7 +49,7 @@ const expiryFirst=core.createModel(nullView,{now:()=>expiryNow,random:()=>.5});e
 assert(expiryFirst.accept(event('flower',0)), 'Natural expiry frees cells before equal-vigor competition');
 assert.equal(expiryFirst.counts.lifecycleRemovals,64);assert.equal(expiryFirst.counts.replacements,0);assert.equal(expiryFirst.specimens.length,577);
 for(const replaceable of ['weed','redbloom']) {
-  const full=core.createModel(nullView,{now:()=>100000,random:()=>.5});full.seed();
+  const full=core.createModel(nullView,{now:()=>100000,random:()=>.5,competitionRandom:()=>0});full.seed();
   for(const specimen of full.specimens){specimen.type='ghostbloom';specimen.createdAt=100000;specimen.vigor=3;}
   full.specimens[17].type=replaceable;full.specimens[17].vigor=1;
   const incoming=full.accept(event('flower',2));assert.equal(incoming.cell,17);
@@ -76,10 +76,11 @@ class Texture{constructor(options){Object.assign(this,options);textureCount++;}d
 Texture.WHITE={};
 const P={Container,Graphics,Sprite,Particle,ParticleContainer,Rectangle,Texture};
 const renderer={generateTexture(){generated++;return {source:{},destroy(){}};}};
-const cache=makeLiveAtlas(P,renderer,shared,core); assert.equal(cache.frames.size,829);assert.equal(textureCount,829);assert.equal(live.size,0);
+const cache=makeLiveAtlas(P,renderer,shared,core); assert.equal(cache.frames.size,832);assert.equal(textureCount,832);assert.equal(live.size,0);
 assert.equal(new Set([...cache.frames.values()].map(frame=>frame.source)).size,1);
 let now=100000; const app={stage:new Container()}, view=createView(P,app,cache.frames,core,shared);
-const model=core.createModel(view,{now:()=>now,random:()=>.5});
+let competitionRoll=.99;
+const model=core.createModel(view,{now:()=>now,random:()=>.5,competitionRandom:()=>competitionRoll});
 const first=model.accept(event()), firstSprite=view.byId.get(first.id); assert.equal(view.counters.created,1); assert.equal(view.byId.size,1);
 const originalTexture=firstSprite.texture; now+=15000;model.tick(); assert.equal(view.byId.get(first.id),firstSprite);assert.notEqual(firstSprite.texture,originalTexture);assert.equal(view.counters.created,1);
 const updates=view.counters.stageUpdates;model.tick();assert.equal(view.counters.stageUpdates,updates);
@@ -87,13 +88,12 @@ const color=first.colorVariant;now+=30000;model.tick();assert.equal(first.colorV
 now=first.createdAt+core.timings.flower.expiredAfterMs;model.tick();assert.equal(view.byId.size,0);assert(!live.has(firstSprite));assert.equal(model.counts.lifecycleRemovals,1);
 model.seed();assert.equal(model.specimens.length,640);assert.equal(view.byId.size,640);assert.equal(model.byCell.size,640);
 const beforeCreated=view.counters.created;assert.equal(model.accept(event('flower',0)),null);assert.equal(view.counters.created,beforeCreated);
-let eligible=model.specimens.filter(p=>!['ghostbloom','crystalfungus','blackthorn'].includes(p.type)&&p.vigor<3);
-const minimum=Math.min(...eligible.map(p=>p.vigor));eligible=eligible.filter(p=>p.vigor===minimum);
-const oldest=eligible.reduce((a,b)=>a.createdAt<=b.createdAt?a:b), victimSprite=view.byId.get(oldest.id), others=new Map(view.byId);
-const replacement=model.accept(event('weed',3));assert.equal(replacement.cell,oldest.cell);assert(!live.has(victimSprite));assert.equal(view.byId.size,640);
+const victim=model.specimens.find(p=>!garden.isProtected(p.type)), victimSprite=view.byId.get(victim.id), others=new Map(view.byId);
+competitionRoll=0;
+const replacement=model.accept(event('weed',3));assert.equal(replacement.cell,victim.cell);assert(!live.has(victimSprite));assert.equal(view.byId.size,640);
 assert.equal(view.counters.created,beforeCreated+1);assert.equal(model.counts.replacements,1);
-for(const [id,sprite] of others)if(id!==oldest.id)assert.equal(view.byId.get(id),sprite);
-assert.equal(textureCount,829);assert.equal(generated,2);
+for(const [id,sprite] of others)if(id!==victim.id)assert.equal(view.byId.get(id),sprite);
+assert.equal(textureCount,832);assert.equal(generated,2);
 const count=model.counts.acceptedLive;model.setPaused(true);assert.equal(model.accept(event('redbloom',3)),null);assert.equal(model.counts.acceptedLive,count);model.setPaused(false);
 // Protected-only saturated grid cannot churn even at maximum incoming vigor.
 for(const specimen of model.specimens)specimen.type='ghostbloom';assert.equal(model.accept(event('weed',3)),null);
@@ -108,13 +108,14 @@ now=a.createdAt+600000;vines.tick();assert.equal(view.vineLinks.size,0);assert.e
 vines.clear();
 // A synchronous event burst creates only successful views and keeps the same scene hierarchy.
 const burstCreated=view.counters.created, fixedChildren=view.root.children.slice();
+competitionRoll=.99; // This persistent-view fixture isolates failed saturated rolls; competition has its own burst tests.
 for(let i=0;i<1000;i++)model.accept(event('flower',0));
 assert.equal(model.specimens.length,640);assert.equal(view.byId.size,640);assert.equal(view.counters.created,burstCreated+640);
-assert.deepEqual(view.root.children,fixedChildren);assert.equal(textureCount,829);assert.equal(generated,2);model.clear();
-for(let i=0;i<10;i++){model.seed();model.clear();assert.equal(view.byId.size,0);assert.equal(view.vineLinks.size,0);assert.equal(textureCount,829);}
+assert.deepEqual(view.root.children,fixedChildren);assert.equal(textureCount,832);assert.equal(generated,2);model.clear();
+for(let i=0;i<10;i++){model.seed();model.clear();assert.equal(view.byId.size,0);assert.equal(view.vineLinks.size,0);assert.equal(textureCount,832);}
 view.setWeather({level:'botnet_hurricane',eventsPerMinute:10000});assert.equal(view.snapshot().particles,400);
 const displayCount=live.size;for(let i=0;i<100;i++)for(const level of Object.keys(core.weatherLevels))view.setWeather({level,eventsPerMinute:10000});
-assert.equal(view.snapshot().particles,400);assert.equal(live.size,displayCount);assert.equal(textureCount,829);
+assert.equal(view.snapshot().particles,400);assert.equal(live.size,displayCount);assert.equal(textureCount,832);
 view.setWeather({level:'quiet',eventsPerMinute:10000});assert.equal(view.snapshot().particles,0);
 for(const size of [[390,844],[1280,900]]){const fit=shared.contain(...size);assert.equal(960*fit.scale/(600*fit.scale),1.6);}
 const samples=shared.frameWindow();for(let i=0;i<5000;i++)samples.add(17);assert.equal(samples.snapshot().size,240);
@@ -150,6 +151,6 @@ for(const port of [420,42069])for(const vigor of [0,1,2,3]) {
   assert.equal(specimen.origin.listenPort,port);assert.equal(specimen.origin.sensor,'public');assert.equal(specimen.origin.seenCount,seenCount);
   assert(!specimen.mutation && !specimen.pendingMutation,'ordinary port-mapped weed is not the port-22 collectible mutation');
 }
-view.destroy();assert.equal(live.size,1);assert.equal(textureCount,829);
+view.destroy();assert.equal(live.size,1);assert.equal(textureCount,832);
 console.log('PASS: Pixi live isolation/SSE/safe contract; production timing and placement parity; capacity/protected vigor competition; persistent views/local vine curves; bounded atlas/particles/timing; clear/seed/pause/lifecycle/resize.');
 module.exports = { P, renderer, cache, live, textureCount: () => textureCount, generated: () => generated };

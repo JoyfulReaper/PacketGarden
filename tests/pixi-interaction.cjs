@@ -14,7 +14,7 @@ const win={innerWidth:1280,innerHeight:1000,addEventListener:(k,fn)=>windowHandl
 const view=createView(h.P,{stage:new h.P.Container()},h.cache.frames,core,shared);
 const cache=AV.makeAmbientAtlas(h.P,h.renderer),av=AV.createAmbientView(h.P,view.curiosityLayer,view.dropLayer,cache.frames);
 const ambient=A.createAmbientModel({now:()=>at,random:()=>.5,getSpecimens:()=>garden.specimens,onChange:c=>av.change(c,at)});
-const garden=core.createModel(view,{now:()=>at,random:()=>{rolls++;return .5},onRemoved:p=>{ambient.cancelSource(p);ui?.removed(p)},onActivity:()=>ui?.activity(at)});
+const garden=core.createModel(view,{now:()=>at,random:()=>{rolls++;return .5},competitionRandom:()=>0,onRemoved:p=>{ambient.cancelSource(p);ui?.removed(p)},onActivity:()=>ui?.activity(at)});
 ui=createUi({document:doc,window:win,garden,ambient,colorName:core.colorName,now:()=>at});
 const score=()=>assert.equal(element('garden-score').textContent,'Score: 0');
 const center=p=>({x:(p.column+.5)*30,y:(p.row+.5)*30});

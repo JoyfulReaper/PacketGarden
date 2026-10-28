@@ -1,3 +1,329 @@
+# Exact-specimen inspection preview (2026-10-28)
+
+The existing card on `/` and `/pixi-live.html` now shows the exact selected
+specimen below its name, above the existing fields. The centered dark inset is
+**160 × 160 CSS pixels**, or **120 × 120** at widths up to 560px. A 320px canvas
+fits the opaque visual bounds uniformly with transparent padding; unusually
+wide/tall plants cannot overflow. The card uses bounded viewport height and an
+internally scrolling content area, leaving its title and close button visible.
+The mobile close target is 44px. The canvas has `role="img"` and an accessible
+species description inside `aria-live="off"`; existing text semantics remain.
+
+## Artwork and ownership
+
+`pixi-specimen-preview.js` borrows the exact live root Sprite's texture and
+recursively copies attached Sprite children. Anchors, local scale, mirroring,
+rotation, tint, alpha, visibility, pivot, skew and blend mode are retained. This
+covers all four vigors and stages, rare afterglow/rainbow colors, broadleaf/vine
+blossoms, wirefern sori, active poppy/collectible-weed frames and Stillbloom's
+current appearance. No artwork recipes or cached atlas frames were added.
+
+Only intrinsic specimen art is copied. Neighbor vine links, airborne spores,
+weather, terrain, visitors and drops live outside that tree. The preview omits
+ancestor/world lighting and garden CSS filters so the isolated intrinsic palette
+is readable. It is a magnification of cached raster art, with the same source
+detail; it does not create higher-detail illustrations.
+
+The installed Pixi **8.22.0** implementation was inspected in
+`node_modules/pixi.js/lib/rendering/renderers/shared/extract/ExtractSystem.mjs`
+and `.../texture/GenerateTextureSystem.mjs`. Supported
+`renderer.extract.canvas({ target, frame, resolution, clearColor })` uses the
+existing renderer for one temporary RenderTexture, reads it into a canvas and
+destroys that owned texture/source. A detached Container holds independent
+copies, never the actual garden Sprite. Cleanup destroys copies with
+`texture:false, textureSource:false`, preserving the borrowed atlas textures.
+Alpha scanning trims transparent tile padding before a proportional canvas draw.
+The scratch canvas and pixel buffer are temporary; closing zeroes the owned
+output canvas and removes it from the DOM. No image decoding, data/blob URLs,
+second Application/renderer/ticker, timer or animation loop is involved.
+
+## Refresh and lifecycle
+
+The existing once-per-second inspection update compares the Sprite/texture tree
+signature. Selecting another source, a changed stage/frame, palette or decoration
+invalidates it; repeated clicks and age-only text updates do not extract again.
+Stillbloom's gradual scale/alpha changes use **0.05 absolute steps**, while its
+stage changes remain immediate on the next card update. Ambient mutation bobbing
+and glint do not trigger redraws; a capture preserves its current pose/alpha.
+
+There is at most one running render and one latest queued request. Selection
+epochs and a second signature check reject stale asynchronous results. Close,
+Escape, hidden tabs and teardown invalidate pending requests, remove queued
+source references and release the displayed canvas. A running async completion
+is disposed when it settles; actual Pixi canvas extraction is synchronous.
+Resume refreshes a still-selected source. Authoritative expiry, collection,
+heist, replacement and Clear close the card for the exact original object;
+another occupant of its cell never inherits inspection. Grass entirely hides
+and releases the plant preview. Model placement, SSE/provenance, click priority,
+collectibles, removal statistics and `Score: 0` are unchanged.
+
+## Browser review and costs
+
+Reproduce with `npm test` and `npm run test:chrome` (the existing installed
+Chrome/Playwright runtime must be available through `NODE_PATH`). The added
+Chrome jobs capture a frozen before-card from `84693b8` and the current card on
+both pages. `artifacts/specimen-preview/index.html` is a native-scale gallery;
+`before/` and `after/` contain screenshots and `review.json`. These generated
+artifacts are ignored by Git. Examples:
+
+- `before/homepage-mature-card.png`: original text card.
+- `after/homepage-mature-card.png`: new mature plant card.
+- `after/homepage-broadleaf-blossoms.png`, `homepage-vine-blossoms.png`:
+  attached flowers; `homepage-wirefern-sori.png`: visible sori.
+- `after/homepage-opium-poppy.png`, `homepage-rare-crystal.png`:
+  transformation and rare art.
+- `after/homepage-mobile-edge.png`, `homepage-mobile-short-scroll.png`:
+  390px mobile edge positioning and short landscape scrolling.
+
+Measured in Chrome **155.0.8059.86**, each page exercised 69 extractions including
+30 repeated open/close cycles, stale completion, hidden/resume and same-cell
+replacement. Synchronous full preview rendering averaged **3.41ms / 3.42ms**
+(homepage/diagnostic), maximum **12.6ms / 9.8ms**. The extraction portion averaged
+**1.76ms / 1.92ms**, maximum **7.1ms / 7.6ms**. The async controller's wall-clock
+counter includes promise scheduling/test delays; `meanRenderMs` isolates actual
+work. These are short local measurements, not a cross-device performance claim.
+
+Each page retained **one Application, one SSE stream, five atlas bakes and 832
+frames**. Zero persistent Pixi Sprites/textures were added. At capture, observed
+maximum was **two temporary Sprites** (hard cap eight), one offscreen target
+of **192 × 192 = 144KiB RGBA**, and one output canvas
+**320 × 320 = 400KiB RGBA**. The safety bound reduces local extent to 64 units
+before extraction at resolution four (at most 268px including rounding/padding).
+Scratch canvas, readback and driver allocations add transient memory beyond
+these raw pixel counts; no exact GPU heap measurement is claimed. All 138
+temporary targets/sources, copied trees and output canvases were released on
+close; shared atlas sources survived use and were destroyed only at page teardown.
+Age-only updates, 50 repeated selections and mutation bobbing caused zero
+additional extraction. One intentionally stale completion per page was discarded.
+There is no preview rendering work with inspection closed.
+
+Validation: **66 Node suites passed**, 18 optional entries skipped by that runner;
+**all 24 Chrome jobs passed**. New coverage checks all species/four vigors/stages,
+exact textures/transforms/overlays, real click inspection, mutations, visual
+invalidation, no invented growth/activity/SSE, exact-source removal/replacement,
+async stale completion, hidden/grass/Escape/clear, mobile bounds, repeated cleanup
+and atlas teardown. Debug/Release builds passed with zero warnings/errors,
+backend checks passed, and actual ASP.NET polling → SSE integration passed.
+Long-duration GPU/memory soak and screen-reader testing on physical mobile
+devices remain unmeasured. Work stays uncommitted on `dev`, based on `84693b8`;
+`main` is untouched. No dependencies or session persistence were added.
+
+# Inverse-vigor competition (2026-10-28)
+
+Current shared placement uses the [inverse-vigor policy](EVENT-MAPPINGS.md#inverse-vigor-competition).
+This supersedes the stronger-only/minimum-vigor/oldest ranking described in
+historical sections below. The prior fallen-log work is preserved on `dev` at
+`f99097b`; competition is committed at `84693b8`. `main` remains at PR #3's merge.
+
+TCPNoise vigor now maps valid counts 0–1 / 2–99 / 100–9999 / 10000+ to 0/1/2/3.
+Exact UInt64 inspection text, parsing fallback, rarity/species/SSE, lifetimes and
+cached artwork remain unchanged. Only full plant-or-terrain occupancy invokes
+one uniformly chosen eligible resident and one independent competition roll.
+Chance is `clamp(.25 + .15*(residentVigor-incomingVigor) + .15*ageFraction,.05,.85)`.
+Protected species and active/pending collectible mutations/poppies are excluded.
+One global 15s cooldown begins only after successful saturated replacement;
+vacant-cell placement bypasses it, failures do not extend it, Clear/reseed keeps
+it, and ticks never replay opportunities. Exact-source removal/addition uses the
+existing notifications with a reserved destination during cleanup callbacks.
+
+Only `/pixi-live.html` adds four-vigor/full-garden, resident-age and incoming-vigor
+controls. The explicit simulated poppy/wirefern source-replacement controls now
+use authoritative removal followed by normal growth into the sole free cell;
+they do not override production competition or mutation protection. No artwork,
+atlas, Sprite budget, animation, timers or dependencies were added by this slice.
+`artifacts/inverse-vigor/{homepage,diagnostic}-four-vigor-fixture.png` and
+`review.json` capture the normal 960×600 fixtures and browser state checks.
+
+The old selection-query helper is superseded by read-only
+`replacementCandidates(at?)` and `competitionSnapshot(at?)` diagnostics; querying
+them never rolls. Candidate selection occurs only in the saturated insertion
+path, after cooldown/expiry checks.
+
+Validation: 65 Node suites passed (17 optional entries skipped), **all 22 Chrome
+jobs passed**, Debug/Release
+builds had zero warnings/errors, backend checks and actual ASP.NET SSE integration
+passed. The expanded browser suite verifies a failed exact 82% boundary, success
+just below it, no cooldown draws, a natural vacancy during cooldown, the exact
+15s boundary, independent provenance/statistics, no hidden replay and unchanged
+832-frame/five-bake resources. Backend checks include every requested threshold,
+UInt64.MaxValue and invalid optional counts, independently of rarity outcomes.
+Short synthetic fixtures do not establish long-term ecological balance; this is
+a browser-local wall-clock policy without session persistence. An absent eligible
+pool or protected/terrain saturation can still drop all incoming growth.
+
+# Fallen blackthorn logs (2026-10-28)
+
+Implemented on `dev` above **`250cd5c`**, the PR #3 merge commit. The initial
+working tree was clean. No applicable `AGENTS.md` was found. After fetching,
+local `dev`, `origin/dev` and `origin/main` already matched, so no fast-forward
+or merge was necessary. `main` is unchanged. Work remains uncommitted, with no
+push, reset, force-push or deployment. Older sections below record their
+historical checkpoints and resource counts.
+
+## Authoritative terrain and natural expiry
+
+`garden-core.js` exports a separate bounded `createTerrainModel`; the garden owns
+it as `terrain.logs` and `terrain.byCell`. Logs never enter the specimen array,
+specimen `byCell`, species/event normalization, neighbor lists or live counts.
+They are noncollectible terrain with no vigor, incoming event, network provenance,
+Recent row, score or sound. No source object reference survives in a log.
+
+At identification, each blackthorn gets a weakly held original snapshot of its
+type, id, cell, column/row and creation timestamp. Only the natural lifecycle
+`tick()` can offer a source after its **12-minute** expiry. Before removal it
+must occupy its exact original cell; afterward, all original fields must still
+match and the cell must actually be empty of plants and terrain. Mutation and
+pending-mutation sources do not qualify. Normal removal notifications destroy
+the tree view, close inspection and cancel associated lifecycle/collectible work.
+Calling `remove()` directly, even with reason `expired`, never creates a log.
+Forced removal, gnome actions, Clear and reseeding likewise cannot generate one.
+Identity-safe map cleanup preserves a different occupant if a source is stale.
+
+Each eligible natural expiry gets exactly one dedicated **`roll < .30`**. The
+terrain PRNG is independently crypto/clock seeded and never calls or advances
+placement, traits, ecology, gnome, weather, mutation, collectible or spore RNG.
+One sample also chooses one of three equally likely restrained art variants
+within the success interval. Full-cap attempts are consumed: at most **six**
+logs, no retries, queues, replacement or eviction. Weak attempt keys allow source
+objects to be collected without an unbounded retained source history.
+
+A log stores only immutable terrain id/type, coordinates/cell, variant, absolute
+creation/expiry times and a simulated-fixture flag. It appears in the exact
+vacated cell and lasts **3,600,000ms (60 minutes)** from the original natural
+expiry boundary. The original tree can change or disappear without affecting
+its log. Expiry/Clear/teardown remove logical occupancy and destroy the exact
+Sprite. Terrain removal does not increase specimen lifecycle-removal counters.
+
+## Placement, capacity and ecology
+
+Actual `addSpecimen()` placement excludes terrain-blocked cells, including its
+same-species adjacent/nearby choices. At combined saturation, existing
+strictly-stronger-vigor/lowest-tier/oldest competition still replaces only
+eligible plant specimens. Logs cannot be replacement victims, and rare protected
+species retain their rules. Six logs plus **634 plants** use all **640 cells**;
+the logs are not six live TCPNoise specimens.
+
+`freeCellCount()` and `isCellOccupied()` expose combined occupancy while
+`getCell()`, `getNeighbors()` and specimen maps remain plant-only. Gnome
+overcrowding uses actual free space, including terrain, for full eligibility
+and its 32-free-cell stopping condition; its probabilities, living counts,
+priority and cooldown remain unchanged. Stillbloom also checks actual free space
+before rolling or spawning. Ordinary future network growth can fill a cell as
+soon as its log decays.
+
+Grass uses its existing **Allow grass under plants** policy for occupied terrain.
+When disabled, a new log removes grass in its cell and prevents new grass there;
+when enabled, grass may remain beneath the wood. Logs add no grass influence,
+spread, vigor, contact-shadow Sprite or automatic turf refill on decay. Existing
+spread/maintenance can reclaim a freed cell normally. Weather puddles keep their
+nonblocking rules. Picking still follows existing actor/visitor/drop/frog/
+mutation/inspection priority; a log adds no collectible or fabricated plant card.
+
+## Hidden time, rendering and diagnostics
+
+Terrain is static world state. Hiding does **not** cancel logs; rendering stops
+with the existing page ticker. Resume or incoming growth reconciles absolute
+decay before placement. Late-observed blackthorn expiry uses the original expiry
+timestamp rather than granting a fresh hour. If the entire hour was missed, its
+single attempt is consumed without creating terrain. Backwards clocks cannot
+restore removed logs. Like existing plants, timestamps otherwise follow the
+browser wall clock. No separate timer, animation loop, persistence or replay
+system was added.
+
+Three finite cached log recipes show crooked dark-brown bark, grain/rings on a
+cut end, a broken end/twig and muted moss. Their small approximately **28×13px**
+footprint fits the existing 30px cell at normal scale. One static, noninteractive
+Sprite per log shares the existing plant layer, mask, day/night lighting and
+weather. There is no per-frame terrain visit, geometry, particle or shader work.
+
+Only `/pixi-live.html` adds simulated aging-blackthorn, forced-success, eight
+source/six-log-cap, dense/full-garden, blocked-growth and decay/regrowth controls.
+The standard seeded thorn expires naturally in **2s**. Force arms its chance
+before expiry and still requires the normal lifecycle, identity and occupancy
+checks; it cannot force a live source or bypass timing/cap. The HUD shows plants,
+blocked terrain and truly free cells separately. Clear and reseeding exercise
+normal owned-view cleanup. The decay button accepts only dedicated all-simulated
+fixtures, advances the terrain clock to the one-hour boundary, then calls normal
+simulated growth placement; it does not fabricate a TCPNoise observation or
+change the browser clock. The full fixture makes the freed log cell the sole
+placement choice. No simulation controls were added to the homepage.
+
+## Actual-scale screenshots and resource cost
+
+`node tests/terrain-logs-browser.cjs --run` captures **both supported pages** at
+actual **960×600 renderer/presentation pixels**, without camera enlargement.
+The standard source/log is at **column 16, row 10**. Ignored local evidence:
+
+- `artifacts/terrain-logs/{homepage,diagnostic}-01-before-expiry.png`
+- `…-02-fallen-log.png`, `…-03-decayed-free-cell.png`, `…-04-normal-regrowth.png`
+- `…-variant-{0,1,2}.png`, `…-night.png`, `…-rain.png`, `…-dense-grass.png`
+- `…-dense.png`, `…-full-garden.png`, `…-six-log-cap.png`, `…-mobile.png`
+
+The native-size `artifacts/terrain-logs/index.html` gallery and `review.json`
+include exact occupancy, free/blocked/specimen counts, source-view destruction,
+unchanged accepted/Recent state, actual rain particles and Score: 0 assertions.
+The hour-later soil scene reflects normal expiry of other plants/grass in a
+session with no incoming growth. A separate full-garden test proves ordinary
+placement uses the exact freed cell after decay. Visual review confirms readable
+end grain, bark and moss against soil/grass at normal desktop scale. Night/full
+gardens keep the small log visible, but dense neighbors can obscure details;
+mobile whole-garden scaling makes the fine grain tiny.
+
+The existing specimen atlas grows **829 → 832 frames**, filling its three unused
+32×32 slots. Logical **1024×832**, resolution-2 **2048×1664** backing is unchanged:
+**zero additional allocated atlas pixels/texel memory or GPU sources**, three
+additional frame wrappers. The new recipes occupy 3,072 logical / 12,288 backing
+pixel locations inside that existing allocation. Five startup bake calls remain.
+One owned Sprite per log is bounded at **six**, with no extra terrain container;
+all startup Graphics contexts are released. Forty six-log creation/clear cycles
+per page retain constant bakes/textures, zero recurring geometry and no leftover
+terrain views. Source bookkeeping uses weak keys and bounded active records.
+
+Chrome 155 short CPU samples compare the **same 634 plants** with zero/six logs,
+90 frames per case/page. The logical values include the whole existing garden,
+mutation and poppy reconciliation, not just the at-most-six-record terrain scan:
+
+| CPU mean (ms) | Homepage 0 / 6 logs | Diagnostic 0 / 6 logs |
+| --- | ---: | ---: |
+| Existing view animation | .0244 / .0133 | .0167 / .0144 |
+| Renderer submission | .2756 / .2089 | .2256 / .2033 |
+| Logical reconciliation | .1500 / .1144 | .0744 / .1022 |
+
+Short-run noise exceeds a stable marginal frame-cost estimate; faster samples
+do not establish a speedup. Static logs add no per-frame application animation
+work. CPU submission timing does not measure GPU completion or driver heap use.
+Raw results are in the gallery's `review.json`.
+
+## Validation and remaining limits
+
+- `npm test`: **64 passed**, 16 optional browser/SSE entries skipped, zero
+  failures. The new terrain suite checks exact probability/time/cap boundaries,
+  original identities, natural-only removal, no duplicate/retry, actual placement,
+  protected/full replacement, normal regrowth, gnome/Stillbloom capacity, grass
+  policy, independent RNG and source-free immutable terrain records.
+- `npm run test:chrome`: **all 21 jobs passed**, including terrain captures and
+  ownership, hidden/resume/long-gap decay, normal blocked/freed-cell placement,
+  existing ecology, gnomes/heist, collectibles/mutations, pods, wirefern spores
+  and broadleaf/vine flowers. Unit tests also run 60 repeated cap/reset cycles
+  on both pages, with real accepted blackthorn expiry and unchanged activity.
+- Debug and Release `dotnet build PacketGarden.slnx --no-restore`, isolated
+  `BaseOutputPath=artifacts/terrain-logs/build/`: zero warnings/errors.
+- `dotnet run --project tests/PacketGarden.Checks --no-restore`, isolated output:
+  all backend assertions passed. Existing NU1900 reports unavailable NuGet
+  vulnerability metadata.
+- `node tests/weather-sse.cjs --run
+  artifacts/terrain-logs/build/Debug/net10.0/PacketGarden.dll`: actual ASP.NET
+  polling/SSE, startup, outages, reconnect/recovery and lease renewal passed.
+- Final `git diff --check` passes; branch `dev`, changes uncommitted.
+
+There is **no session persistence**: reload starts a fresh garden and terrain.
+Decay is a static removal at the boundary, with no intermediate rotten-art
+animation. Fixed-clock browser/controlled visibility checks do not replace a
+60-minute live human soak or operating-system suspension test. Other devices,
+GPU completion/driver memory, mobile detail and dense-route occlusion remain
+review limits. This slice adds fallen logs only; other long-lived terrain and
+persistence remain separate future work.
+
 # Great Gnome Mushroom Heist (2026-10-27)
 
 Implemented on `dev` above `95940f4` (wirefern spore releases), preserving the

@@ -49,7 +49,7 @@ for (let vigor = 0; vigor < 4; vigor++) for (let layout = 0; layout < 3; layout+
 for (const t of original.frames.values()) t.destroy(false); original.atlas.destroy(true);
 let at = 100000, rolls = 0;
 const stage = new h.P.Container(), view = createView(h.P, { stage }, h.cache.frames, C, shared);
-const model = C.createModel(view, { now: () => at, random: () => .5, sporeRandom: () => { rolls++; return .02; } });
+const model = C.createModel(view, { now: () => at, random: () => .5, competitionRandom:()=>.99, sporeRandom: () => { rolls++; return .02; } });
 model.accept({}); model.setPaused(true); model.accept(event()); model.setPaused(false); assert.equal(rolls, 0);
 const p = model.accept({ ...event(), wirefernSpores: null }), parent = view.byId.get(p.id), before = { ...p }, trait = p.wirefernSpores;
 assert(trait, 'raw event cannot force a trait'); assert.equal(rolls, 1);

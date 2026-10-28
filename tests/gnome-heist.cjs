@@ -2,9 +2,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const Core=require('../wwwroot/garden-core.js'),G=require('../wwwroot/garden-gnomes.js');
 const A=require('../wwwroot/garden-ambient.js'),I=require('../wwwroot/garden-interaction.js');
 const C=G.heistConfig;
-function fixture({count=35,age=65000,reduced=false,pendingGuard=true}={}){
+function fixture({count=35,age=65000,reduced=false,pendingGuard=true,competitionRandom=()=>.99}={}){
   let at=100000;const removals=[],cues=[];
-  const garden=Core.createGardenModel({now:()=>at,random:()=>0,onChange:c=>{
+  const garden=Core.createGardenModel({now:()=>at,random:()=>0,competitionRandom,onChange:c=>{
     if(c.kind==='removed'){ambient.cancelSource(c.specimen);removals.push(c);}
   }});
   const ambient=A.createAmbientModel({now:()=>at,random:()=>0,getSpecimens:()=>garden.specimens});
@@ -79,7 +79,7 @@ for(const invalidate of [p=>p.id++,p=>p.cell++,p=>p.column++,p=>p.row++,p=>p.cre
 }
 // Exercise real stronger-vigor replacement in a saturated authoritative garden, not direct array/map edits.
 {
-  const f=fixture({count:30});
+  let competitionCalls=0;const f=fixture({count:30,competitionRandom:()=>competitionCalls++%2?0:300.5/640});
   const entries=Array.from({length:640},(_,i)=>({type:i===300?'mushroom':'broadleaf',vigor:i===300?0:3,
     column:i%32,row:Math.floor(i/32),createdAt:f.at-65000,colorVariant:0}));f.garden.seed(entries);f.removals.length=0;
   f.model.startHeist(f.at,()=>0);const target=f.model.incident.target.specimen;

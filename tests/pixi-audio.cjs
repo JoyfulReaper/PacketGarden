@@ -5,9 +5,9 @@ const html=file=>fs.readFileSync(`wwwroot/${file}`,'utf8');
 const outputGain=value=>2*value**1.25;
 async function setup(page,options={}) {
   const audio=createAudioContext(options);
-  const g=await start(false,{pageHtml:html(page),AudioContext:options.supported===false?undefined:audio.AudioContext,captureModel:true});
+  let competitionRoll=.99;const g=await start(false,{pageHtml:html(page),AudioContext:options.supported===false?undefined:audio.AudioContext,captureModel:true,competitionRandom:()=>competitionRoll});
   assert.deepEqual(g.errors,[]);assert(g.app.active);
-  return {...g,...audio,emit:(name,data)=>g.sources[0].handlers.get(name)({data:typeof data==='string'?data:JSON.stringify(data)}),
+  return {...g,...audio,allowReplacement(){competitionRoll=0;},emit:(name,data)=>g.sources[0].handlers.get(name)({data:typeof data==='string'?data:JSON.stringify(data)}),
     toggle:()=>g.element('#sound-toggle').handlers.get('click')(),
     volume:value=>{g.element('#sound-volume').value=String(value);g.element('#sound-volume').handlers.get('input')();},
     grow:(type='flower',vigor=0)=>g.sources[0].handlers.get('garden')({data:JSON.stringify({specimenType:type,
@@ -44,7 +44,7 @@ async function check(page) {
   assert.equal(voices(),count,'invalid/paused/reconnect/weather are silent');
   g.model.seed();assert.equal(voices(),count,'dense seeding is silent');g.model.specimens.forEach(p=>p.vigor=3);
   g.grow('ghostbloom',3);assert.equal(voices(),count,'saturated dropped event is silent');
-  g.model.specimens.find(p=>p.type==='flower').vigor=0;g.grow('weed',1);
+  g.model.specimens.find(p=>p.type==='flower').vigor=0;g.allowReplacement();g.grow('weed',1);
   count+=2;assert.equal(voices(),count,'successful replacement uses ordinary weed tone');assert.equal(g.model.counts.replacements,1);
   for(let i=0;i<120;i++)g.frame(1000/60);
   assert.equal(voices(),count,'ticker/aging/animation never requests audio');

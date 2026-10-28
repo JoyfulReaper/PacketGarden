@@ -59,12 +59,13 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, competitionRandom, terrainRandom, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onTerrainChange = () => {}, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0, heistRemovals: 0 };
-    const model = garden.createGardenModel({ now, random, onChange(change) {
+    const model = garden.createGardenModel({ now, random, competitionRandom, terrainRandom, onChange(change) {
       const { kind, specimen, reason } = change;
+      if(kind==='terrain-added'||kind==='terrain-removed'){view.terrainChange?.(change);onTerrainChange(change);return;}
       if (kind === 'added') {
         onAdded(specimen); // Placement succeeded; clear its soil before presenting the plant.
         specimen.colorVariant = specimen.type === 'stillbloom' ? 0 : colorVariant(specimen.type, specimen.vigor, random());
@@ -98,9 +99,28 @@
       if (result) { counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); poppies.consider(result.specimen); onLive(result.specimen); }
       return { outcome, specimen: result?.specimen ?? null };
     }
-    return { specimens: model.specimens, byCell: model.byCell, counts, mutations, poppies, recentEvents, tick,
+    return { specimens: model.specimens, byCell: model.byCell, terrain:model.terrain, freeCellCount:model.freeCellCount,
+      isCellOccupied:model.isCellOccupied,competitionSnapshot:model.competitionSnapshot, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedCompetition(mode='mixed',old=false){
+        const at=now();model.seed(Array.from({length:dimensions.capacity},(_,cell)=>({type:'broadleaf',
+          vigor:mode==='mixed'?Math.floor(cell%32/8):Number(mode),column:cell%32,row:Math.floor(cell/32),
+          createdAt:at-timings.broadleaf.expiredAfterMs*(old?.8:.1),origin:{kind:'simulated',eventType:'competition-fixture'}})),at);
+      },
+      seedLogs(mode='aging') {
+        const at=now(),count=mode==='cap'?8:1,full=mode==='full',dense=mode==='dense';
+        const cells=Array.from({length:count},(_,i)=>10*dimensions.columns+10+i*2),used=new Set(cells);
+        const entries=cells.map((cell,i)=>({type:'blackthorn',vigor:i%4,column:cell%32,row:Math.floor(cell/32),
+          createdAt:at-garden.timings.blackthorn.expiredAfterMs+2000,colorVariant:i%5,origin:{kind:'simulated',eventType:'log-fixture'}}));
+        for(let cell=0;cell<640;cell++)if(!used.has(cell)&&(full||dense && cell%3===0))entries.push({type:'broadleaf',vigor:2,
+          column:cell%32,row:Math.floor(cell/32),createdAt:at-65000,origin:{kind:'simulated',eventType:'log-fixture'}});
+        model.seed(entries,at);for(const p of entries){p.colorVariant=p.vigor;view.update(p,model.byCell);}return entries[0];
+      },
+      forceLogFixture(at=now()) {
+        // Explicit simulated fixture only; the normal expiry/occupancy/removal path still runs.
+        const count=model.forceLogFixture();model.tick(at);return count;
+      },
       seedHeist() {
         const at=now();
         model.seed(Array.from({length:35},(_,i)=>({type:i<4?'mushroom':'broadleaf',vigor:i%4,
@@ -125,7 +145,10 @@
       replaceWirefernSporeFixture() {
         if (model.specimens.length !== dimensions.capacity || !model.specimens.every(p => p.origin?.kind === 'simulated'
           && p.origin.eventType === 'wirefern-spore-fixture')) return null;
-        return model.addSpecimen('wirefern', 3, now(), { kind: 'simulated', eventType: 'wirefern-spore-fixture' });
+        const source=model.byCell.get(303);if(!source)return null;
+        model.remove(source,'simulated-wirefern-replacement');
+        const result=model.addSpecimen('wirefern',3,now(),{kind:'simulated',eventType:'wirefern-spore-fixture'});
+        return result?{...result,replaced:source}:null;
       },
       seedPoppies(mode = 'mature') {
         const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000, pods: 65000 }[mode] ?? 60000;
@@ -148,7 +171,11 @@
       replacePoppyFixture() {
         if (model.specimens.length !== dimensions.capacity || !model.specimens.every(p => p.origin?.kind === 'simulated'
           && p.origin.eventType === 'poppy-fixture')) return null;
-        return model.addSpecimen('vine', 3, now(), { kind: 'simulated', eventType: 'poppy-replacement' });
+        const source=model.specimens.find(p=>p.poppyMutation);if(!source)return null;
+        // Explicit simulated removal previews cleanup; active/pending poppies are protected from competition.
+        model.remove(source,'simulated-poppy-replacement');
+        const result=model.addSpecimen('vine',3,now(),{kind:'simulated',eventType:'poppy-replacement'});
+        return result?{...result,replaced:source}:null;
       },
       seedVineBlooms(mode='stages') {
         const entries=vineBlooms.fixtureEntries(now(),mode),foliage=entries.map(p=>p.colorVariant);

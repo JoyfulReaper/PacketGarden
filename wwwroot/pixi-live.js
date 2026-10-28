@@ -4,6 +4,22 @@
   const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
   const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
   const spores=typeof module!=='undefined'&&module.exports?require('./pixi-wirefern-spores.js'):window.PacketGardenWirefernSpores;
+  function logTile(P,variant) {
+    const g=new P.Graphics(),bend=[0,1,-1][variant],bark=[0x64442c,0x6c4b32,0x59432e][variant];
+    g.ellipse(0,-2,14,3.5).fill({color:0x20261b,alpha:.38});
+    g.poly([-13,-8,-5,-11,2,-9+bend,10,-10,14,-6,12,-1,4,-2+bend,-3,0,-13,-2]).fill(0x2c281e);
+    g.poly([-12,-7,-5,-9,2,-7+bend,10,-8,12,-5,10,-2,3,-4+bend,-4,-2,-12,-3]).fill(bark);
+    g.moveTo(-8,-6).lineTo(-2,-7).lineTo(4,-5+bend).lineTo(10,-6).stroke({color:0x9a7450,width:.8});
+    g.moveTo(-8,-3).lineTo(-3,-4).lineTo(3,-3).moveTo(3,-8).lineTo(1,-6).stroke({color:0x352d23,width:1});
+    g.ellipse(-11,-5,3.2,4).fill(0x9e7d55);g.ellipse(-11,-5,1.9,2.6).stroke({color:0x61462f,width:.8});
+    g.moveTo(-12,-6).lineTo(-10,-5).lineTo(-11,-3).stroke({color:0x624b34,width:.65});
+    g.poly([9,-9,12,-10,11,-7,15,-6,12,-5,11,-3,9,-4]).fill(0x8b6947);
+    g.moveTo(-3,-9).lineTo(-5,-13).lineTo(-3,-12).lineTo(0,-8).stroke({color:0x4a3826,width:1.7});
+    for(const [x,y,r] of [[-5,-8,2.2],[0,-6+bend,2.1],[5,-7,1.6]]){
+      g.ellipse(x,y,r+1,r*.6).fill(0x425c32);g.ellipse(x-.5,y-.4,r*.7,r*.35).fill([0x8a9e4b,0x78924b,0x91a15a][variant]);
+    }
+    return g;
+  }
   // Presentation seeds never consume the model's random stream. Five restrained
   // colors retain the model's variant identity without its luminous wire palette.
   const vineColors = [0x7eaa91, 0x9ba96d, 0xb0b17b, 0x829069, 0xb7c5aa];
@@ -230,6 +246,7 @@
       const g = spores.tile(P, layout); artTiles.push(g); tile(`wirefern-spores:${layout}`, g);
     }
     const cloudArt = spores.cloudTile(P); artTiles.push(cloudArt); tile('wirefern-cloud', cloudArt);
+    for(let variant=0;variant<3;variant++){const g=logTile(P,variant);artTiles.push(g);tile(`fallen-log:${variant}`,g);}
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -259,6 +276,7 @@
     const vineBloomViews=new Map(),vineBloomLinks=new Map();
     const sporeViews = new Map();
     const cloudViews = new Map();
+    const terrainViews = new Map();
     let groundCover = null;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
@@ -394,6 +412,12 @@
       sprite.scale.set(pose.scaleX, pose.scaleY); sprite.alpha = pose.alpha;
     }
     return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, sporeViews, cloudViews, cloudChange, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
+      terrainViews,terrainChange({kind,terrain:log}) {
+        if(kind==='terrain-removed'){const sprite=terrainViews.get(log);if(sprite){sprite.destroy();terrainViews.delete(log);}return;}
+        if(terrainViews.has(log))return;
+        const sprite=new P.Sprite(frames.get(`fallen-log:${log.variant}`));sprite.anchor.set(.5,29/32);sprite.eventMode='none';
+        sprite.position.set((log.column+.5)*cellSize,(log.row+.5)*cellSize+6);plants.addChild(sprite);terrainViews.set(log,sprite);
+      },
       mushroomVisual(details) { return {texture:texture({...details,type:'mushroom',stage:'mature'}),scale:details.row===0?1.1:1.4}; },
       setGroundCover(presentation) { groundCover = presentation; },
       get contactLayer() { return links; },
@@ -464,14 +488,14 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        return { sprites: byId.size, terrainViews:terrainViews.size, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + terrainViews.size + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() {
         // Each link owns a Graphics context and may own a blossom child.
         for(const graphic of vineLinks.values())graphic.destroy({children:true,context:true});
         groundCover?.destroy(); groundCover = null;
-        root.destroy({ children: true }); byId.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();sporeViews.clear();cloudViews.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
+        root.destroy({ children: true }); byId.clear(); terrainViews.clear(); mutationViews.clear(); bloomViews.clear();vineBloomViews.clear();vineBloomLinks.clear();sporeViews.clear();cloudViews.clear();vineLinks.clear(); halfCurvesById.clear(); connectionHalves = 0; particles = [];
       }
     };
   }
@@ -480,6 +504,8 @@
     // Pixi.init is async: pagehide may arrive before it creates a ticker/renderer.
     let stop=()=>{},reloadRequested=false;
     const lifetime=window.PacketGardenPixi.pageLifetime(()=>stop()),{guard,own,listen,dispose}=lifetime;
+    const visits=window.PacketGardenVisits.createPageNotifier(document);
+    own(()=>visits.destroy());
     listen(window,'pagehide',event=>{
       try{dispose();}finally{if(event.persisted){
         // Preserve the existing fresh-page policy on bfcache return. All GPU,
@@ -564,7 +590,8 @@
     own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
     let ui, ecology = null;
-    const model = core.createModel(view, { onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
+    const model = core.createModel(view, { onTerrainChange:change=>{if(change.kind==='terrain-added')ecology?.specimenAdded(change.terrain.column,change.terrain.row);},
+      onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onPoppyActivated: (source, at) => ambient.acceptPoppyActivation(source, at),
@@ -574,7 +601,10 @@
       hasSource: source => model.byCell.get(source.cell) === source,
       getReducedMotion: () => Boolean(reducedMotion?.matches || previewMotion === 'reduced'), onChange: view.cloudChange });
     own(() => emissions.destroy()); emissions.setHidden(document.hidden);
-    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
+    const preview=app.renderer.extract?.canvas?window.PacketGardenSpecimenPreview.createPreview({P,renderer:app.renderer,
+      getSprite:specimen=>view.byId.get(specimen.id),document,host:document.querySelector('#specimen-preview')}):null;
+    own(()=>preview?.destroy());preview?.setHidden(document.hidden);
+    ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,preview,
       getGnomes: () => gnomes,
       getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
       collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
@@ -664,13 +694,51 @@
     });
     view.setGroundCover(ecologyView);
     own(()=>{ view.setGroundCover(null); ecologyView.destroy(); });
-    ecology = ecologyCore.createEcologyModel({ isCellOccupied: (column, row) => model.byCell.has(row * core.dimensions.columns + column),
+    ecology = ecologyCore.createEcologyModel({ isCellOccupied: model.isCellOccupied,
       onChange(change) {
         ecologyView.change(change, Date.now());
         if (change.kind === 'grass-removed') ui.grassRemoved(change.item);
         if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
     own(()=>ecology.clear());
+    const logStatus=text=>{const el=document.querySelector('#log-status');if(el)el.textContent=text;};
+    const competitionStatus=text=>{const el=document.querySelector('#competition-status');if(el)el.textContent=text;};
+    listen(document.querySelector('#seed-competition'),'click',()=>{
+      gnomes.clear();ambient.clear();ecology.clear();
+      model.seedCompetition(document.querySelector('#competition-residents').value,document.querySelector('#competition-old').checked);
+      competitionStatus(`640 simulated residents seeded. Existing replacement cooldown retained (${Math.ceil(model.competitionSnapshot().remainingMs/1000)}s remaining).`);
+    });
+    listen(document.querySelector('#try-competition'),'click',()=>{
+      const vigor=Number(document.querySelector('#competition-incoming').value);
+      const result=model.addSpecimen('broadleaf',vigor,Date.now(),{kind:'simulated',eventType:'competition-fixture'});
+      const state=model.competitionSnapshot(),attempt=state.lastAttempt;
+      competitionStatus(result?result.replaced?`Simulated vigor ${vigor} replaced cell ${result.specimen.cell}; resident vigor ${attempt.residentVigor}, chance ${(attempt.chance*100).toFixed(1)}%. 15s cooldown.`
+        :'Simulated growth used a free cell without a competition roll.'
+        :state.outcome==='cooldown'?`Saturated growth skipped during cooldown (${Math.ceil(state.remainingMs/1000)}s remaining).`
+        :attempt?`Simulated vigor ${vigor} lost against resident vigor ${attempt.residentVigor}; chance ${(attempt.chance*100).toFixed(1)}%. No cooldown started.`:'No eligible ordinary resident. No replacement.');
+    });
+    for(const mode of ['aging','cap','dense','full'])listen(document.querySelector(`#seed-logs-${mode}`),'click',()=>{
+      gnomes.clear();ambient.clear();ecology.clear();model.seedLogs(mode);gnomes.resetCadence();
+      logStatus(`Simulated ${mode} fixture: blackthorn expires naturally in 2s. Force chance before expiry to guarantee the preview. Plants ${model.byCell.size}, blocked ${model.terrain.byCell.size}, free ${model.freeCellCount()}.`);
+    });
+    listen(document.querySelector('#force-log'),'click',()=>{
+      const count=model.forceLogFixture();logStatus(count?`${count} simulated blackthorn expiry decisions armed for success; normal natural expiry and six-log cap still apply.`:'Seed an aging simulated blackthorn first. Live sources cannot be forced.');
+    });
+    listen(document.querySelector('#test-log-growth'),'click',()=>{
+      if(!model.terrain.logs.length||model.freeCellCount()!==0){logStatus('Use Full garden, then Force chance, and wait 2s. The test requires all plant-or-log cells occupied.');return;}
+      const blocked=[...model.terrain.byCell.keys()],before=model.specimens.length;
+      const result=model.addSpecimen('broadleaf',0,Date.now(),{kind:'simulated',eventType:'log-fixture'});
+      logStatus(`Ordinary simulated growth ${result?'replaced an eligible plant':'was saturated'}; blocked cells stayed empty of plants: ${blocked.every(cell=>!model.byCell.has(cell))}. Plants ${before} → ${model.specimens.length}; no TCPNoise event.`);
+    });
+    listen(document.querySelector('#decay-log-fixture'),'click',()=>{
+      if(!model.terrain.logs.length||!model.terrain.logs.every(log=>log.simulated)
+        ||!model.specimens.every(p=>p.origin?.kind==='simulated'&&p.origin.eventType==='log-fixture')){
+        logStatus('Decay preview requires the dedicated all-simulated log fixture.');return;
+      }
+      model.terrain.tick(Math.max(...model.terrain.logs.map(log=>log.expiresAt)));
+      const result=model.addSpecimen('mushroom',1,Date.now(),{kind:'simulated',eventType:'log-fixture'});
+      logStatus(`Simulated terrain clock advanced to the 60m boundary; all logs decayed. Normal placement ${result?`grew a mushroom in cell ${result.specimen.cell}`:'found no space'}. Reset the fixture to repeat.`);
+    });
     const grassUnderPlantsControl = document.querySelector('#allow-grass-under-plants');
     grassUnderPlantsControl.checked = false;
     listen(grassUnderPlantsControl,'change',event=>ecology.setAllowGrassUnderPlants(event.target.checked));
@@ -838,6 +906,8 @@
         `Frame ms recent avg ${data.averageMs.toFixed(2)} / worst ${data.worstMs.toFixed(2)} · session worst ${data.sessionWorstMs.toFixed(2)}`,
         `Gaps >50ms ${data.over50} / >300ms ${data.over300} · frames ${data.frames} · measured ${(data.elapsedMs / 1000).toFixed(1)}s · samples ${data.size}/${data.capacity}`,
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
+        `Terrain logs ${model.terrain.logs.length}/6 · blocked ${model.terrain.byCell.size} · occupied by plants ${model.byCell.size} · free ${model.freeCellCount()} · 60m decay`,
+        `Full-garden competition · replacement cooldown ${(model.competitionSnapshot().remainingMs/1000).toFixed(1)}s · weaker newcomers favored`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
@@ -889,6 +959,7 @@
     });
     app.ticker.add(tick);own(()=>app.ticker.remove(tick));
     listen(document,'visibilitychange', () => {
+      ui.setHidden(document.hidden);
       frogs?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
       emissions.setHidden(document.hidden);
@@ -906,14 +977,16 @@
         ui.tick(at);
         nextLogicalAt = at + 250; lastTick = null; app.start();
       }
+      visits.visible();
     });
     updateHud(); if (!document.hidden) app.start();
+    visits.initialized();
     } catch(error) {
       try{dispose();}catch(cleanupError){throw new AggregateError([error,cleanupError],'Garden initialization and teardown failed');}
       throw error;
     }
   }
-  if (typeof module !== 'undefined' && module.exports) module.exports = { makeLiveAtlas, createView };
+  if (typeof module !== 'undefined' && module.exports) module.exports = { makeLiveAtlas, createView, logTile };
   else start().catch(error => {
     const view = document.querySelector('#view');
     view.textContent = 'PacketGarden requires WebGL to display the garden. Try a browser with WebGL enabled.';

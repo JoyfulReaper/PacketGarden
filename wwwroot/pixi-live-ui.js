@@ -6,7 +6,7 @@
   const text = common ? require('./garden-ui-core.js') : window.PacketGardenUiCore;
   const ecology = common ? require('./garden-ecology.js') : window.PacketGardenEcology;
   function createUi({ document, window, garden, ambient, colorName, getGnomes = () => null, collectionRandom = Math.random,
-    getGrassCells = () => [], getFrogs = () => null, getReducedMotion = () => false, now = Date.now, onCollected = () => {} }) {
+    getGrassCells = () => [], getFrogs = () => null, getReducedMotion = () => false, preview = null, now = Date.now, onCollected = () => {} }) {
     const element = id => document.querySelector(`#${id}`);
     const card = element('specimen-card'), title = element('specimen-card-title'), closeButton = element('specimen-card-close');
     const specimenDetails = element('specimen-details'), grassDetails = element('grass-details'), grassState = element('grass-state');
@@ -16,7 +16,7 @@
     const sourceNames = { ...text.fakeSourceNames, seed: 'Simulated garden seed', 'mutation-test': 'Simulated mutation fixture', 'interaction-test': 'Simulated interaction fixture' };
     let inspected = null, inspectedGrass = null, anchor = null, messageUntil = 0, nextUpdateAt = 0;
     const setText = (node, value) => { if (node.textContent !== value) node.textContent = value; };
-    function close() { inspected = null; inspectedGrass = null; anchor = null; card.hidden = true; }
+    function close() { inspected = null; inspectedGrass = null; anchor = null; card.hidden = true;preview?.clear(); }
     function position() {
       if (!anchor) return;
       const gap = 12, width = card.offsetWidth || 280, height = card.offsetHeight || 240;
@@ -27,6 +27,7 @@
       if (specimenDetails) specimenDetails.hidden = Boolean(inspectedGrass);
       if (grassDetails) grassDetails.hidden = !inspectedGrass;
       if (inspectedGrass) {
+        preview?.clear();
         setText(title, 'Wild grass');
         const stage = ecology.grassVisualState(inspectedGrass, at).stage;
         setText(grassState, { sprout:'Young', growing:'Growing', mature:'Mature', fading:'Fading', dying:'Dying', dead:'Dry' }[stage] ?? 'Fading');
@@ -34,6 +35,7 @@
       }
       const info = text.inspection(inspected, at, { sourceNames, colorName: colorName(inspected) });
       setText(title, info.title);
+      preview?.refresh(inspected,`Enlarged preview of ${info.title}`);
       for (const key of Object.keys(fields)) setText(fields[key], info[key === 'seen-count' ? 'seenCount' : key]);
     }
     function inspect(specimen, client, at = now()) {
@@ -63,7 +65,7 @@
       if (messageUntil && at >= messageUntil) { message.textContent = ''; message.hidden = true; messageUntil = 0; }
       if (at < nextUpdateAt) return;
       nextUpdateAt = at + 1000;
-      if (inspected || inspectedGrass) renderInspection(at);
+      if (inspected || inspectedGrass) {renderInspection(at);position();}
       if (garden.recentEvents.length) activity(at);
     }
     function click(point, client, at = now()) {
@@ -92,8 +94,8 @@
       }
       return hit;
     }
-    return { click, inspect, close, removed, grassRemoved, activity, tick, position, showMessage, get inspected() { return inspected; }, get inspectedGrass() { return inspectedGrass; },
-      destroy() { close(); closeButton.removeEventListener('click', close); toggle.removeEventListener('change', visibility); window.removeEventListener('keydown', keydown); } };
+    return { click, inspect, close, removed, grassRemoved, activity, tick, position, showMessage,setHidden(value){preview?.setHidden(value);if(!value)position();}, get inspected() { return inspected; }, get inspectedGrass() { return inspectedGrass; },
+      destroy() { close();preview?.destroy(); closeButton.removeEventListener('click', close); toggle.removeEventListener('change', visibility); window.removeEventListener('keydown', keydown); } };
   }
   const api = { createUi };
   if (common) module.exports = api; else window.PacketGardenPixiUi = api;

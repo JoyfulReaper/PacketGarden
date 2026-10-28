@@ -6,12 +6,12 @@ const I = require('../wwwroot/garden-interaction.js'), h = require('./pixi-live.
 const { createView } = require('../wwwroot/pixi-live.js'), shared = require('../wwwroot/pixi-stress.js');
 const event = (type = 'vine', vigor = 1) => ({ specimenType: type, vigor, listenPort: 3389, sensor: 'real sensor', seenCount: '18446744073709551615' });
 function fixture(roll = 0, palette = .5) {
-  let at = 1000000, draws = 0, geometry = 0;
+  let at = 1000000, draws = 0, geometry = 0, competitionRoll=.99;
   class Graphics extends h.P.Graphics { clear() { geometry++; return super.clear(); } }
   const stage = new h.P.Container(), view = createView({ ...h.P, Graphics }, { stage }, h.cache.frames, core, shared);
-  const model = core.createModel(view, { now: () => at, random: () => palette, vineBloomRandom: () => 0,
+  const model = core.createModel(view, { now: () => at, random: () => palette, competitionRandom:()=>competitionRoll, vineBloomRandom: () => 0,
     poppyRandom: () => { draws++; return roll; } });
-  return { model, view, get draws() { return draws; }, get geometry() { return geometry; },
+  return { model, view, allowReplacement(){competitionRoll=0;},get draws() { return draws; }, get geometry() { return geometry; },
     get at() { return at; }, set at(t) { at = t; }, tick(t) { at = t; model.tick(at); },
     destroy() { model.clear(); view.destroy(); stage.destroy(); } };
 }
@@ -32,6 +32,7 @@ for (const [roll, selected] of [[0, true], [.004999999999, true], [.005, false],
   for (const p of f.model.specimens) p.vigor = 3;
   assert.equal(f.model.acceptEvent(event('vine', 0)).outcome, 'dropped'); assert.equal(f.draws, 0);
   const victim = f.model.specimens.find(p => !garden.isProtected(p.type)); victim.vigor = 0;
+  f.allowReplacement();
   assert.equal(f.model.acceptEvent(event('vine', 3)).outcome, 'replaced'); assert.equal(f.draws, 1);
   f.destroy();
   const silver = fixture(0, .009); const p = silver.model.accept(event()); assert.equal(p.colorVariant, 4);

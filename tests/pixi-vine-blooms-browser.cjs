@@ -94,7 +94,7 @@ async function run(){
       }
       const resources=await page.evaluate(()=>({bakes:__vine.bakes.length,timers:__vineTimers,dimensions:__vine.bakes.map(b=>[b.width,b.height]),
         frames:__vine.view.snapshot().textures,displayObjects:__vine.view.snapshot().displayObjects,groups:__vine.view.vineBloomViews?.size??0,connections:__vine.view.vineBloomLinks?.size??0,streams:__vine.streams}));
-      if(!baseline){assert.equal(resources.frames,829);assert.deepEqual(resources.dimensions[1],[1024,832]);assert.equal(resources.groups,640);}
+      if(!baseline){assert.equal(resources.frames,832);assert.deepEqual(resources.dimensions[1],[1024,832]);assert.equal(resources.groups,640);}
       assert.equal(resources.streams,1);const bakes=resources.bakes;
       for(let i=0;i<3;i++)await seed(V.fixtureEntries(at,'dense'));
       assert.equal(await page.evaluate(()=>__vine.bakes.length),bakes);assert.equal(await page.evaluate(()=>__vineTimers),resources.timers);report.resources.push({page:name,...resources});
