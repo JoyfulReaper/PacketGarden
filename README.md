@@ -290,6 +290,18 @@ testing. Set `Nats__Url` to enable discrete input; `Nats__Subject` defaults to
 `tcpnoise.connection`. With no NATS URL, growth input is disabled and the app
 still starts normally. The browser only connects to PacketGarden.
 
+Optional **Mission Control visit notifications** reuse
+`JoyfulReaperLib.MissionControl` **0.0.3**. After successful visible initialization
+of `/` or `/index.html`, the browser makes one empty same-origin POST to
+`/api/garden/visit`. The server publishes `packetgarden.garden.visited`, schema
+version 1, with exactly `{"message":"Someone visited the garden!"}`. Diagnostic
+pages, failed startup, weather changes and SSE reconnects never trigger it.
+No visitor identity or persistent tracking is added, and notification failures
+cannot block garden rendering. Integration defaults to **disabled**. Set
+`MissionControl__Enabled`, `MissionControl__BaseUrl`, `MissionControl__ApiKey`
+and optionally `MissionControl__TimeoutMilliseconds` only on the server. See
+[Mission Control setup, contract and abuse limits](docs/MISSION-CONTROL.md).
+
 The footer's Events/min figure is the source's five-minute average; Last hour
 is its actual retained hourly count. Missing data displays Waiting or
 Unavailable. The source's bounded 5,000-event window can undercount busy periods.
@@ -315,7 +327,10 @@ new project dependencies. Make that existing runtime available through Node's
 module search path (`NODE_PATH`) when needed. `test:chrome` runs every remaining
 Chrome entry point, including full page interactions, lifecycle/resource
 ownership, grass, both bloom types, full fields, weather and WebGL-disabled
-startup. Native gnome audio checks render the production mix, exercise all four
+startup. Its visit integration job builds an isolated ASP.NET host and checks
+Chrome → PacketGarden → a local Gateway double through the actual shared client;
+no production credentials or NATS are required. Native gnome audio checks render
+the production mix, exercise all four
 incident routes and preview gating, and compare against the pre-fix signal.
 Logs and screenshots are ignored under `artifacts/retire-canvas/`; audio reports
 and locally rendered WAV evidence are under `artifacts/gnome-arrival/`.

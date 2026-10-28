@@ -122,6 +122,7 @@ async function run() {
       const url = new URL(req.url, 'http://localhost'), file = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
       requests.push({url:req.url, promoted});
       if (file === 'favicon.ico') { res.writeHead(204); res.end(); return; }
+      if (file === 'api/garden/visit') { res.writeHead(204); res.end(); return; }
       if(file==='__lifecycle-stress.js'){
         res.setHeader('Content-Type','text/javascript');res.end(`{
           const init=PIXI.Application.prototype.init;

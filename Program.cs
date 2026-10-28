@@ -2,6 +2,7 @@ using System.Text.Json;
 using PacketGarden;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.AddGardenVisits();
 builder.Services.AddHttpClient("weather", client => client.Timeout = TimeSpan.FromSeconds(5)).RemoveAllLoggers();
 builder.Services.AddSingleton<WeatherAdapter>();
 builder.Services.AddHostedService(services => services.GetRequiredService<WeatherAdapter>());
@@ -11,6 +12,8 @@ var app = builder.Build();
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
+app.UseRateLimiter();
+app.MapGardenVisits();
 
 var eventJson = new JsonSerializerOptions(JsonSerializerDefaults.Web);
 app.MapGet("/api/garden/events", async (HttpContext context, WeatherAdapter weather, GardenEvents garden) =>

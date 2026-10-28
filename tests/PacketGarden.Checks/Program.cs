@@ -343,3 +343,4 @@ foreach (var client in cappedClients.Skip(1)) capped.RemoveClient(client!);
 Console.WriteLine("PASS: bounded SSE queues, overflow disconnect, healthy-client isolation, weather backpressure, subscriber limit and cleanup.");
 
 Console.WriteLine("PASS: TCPNoise validation/mapping, exact 420/42069 known weed bases and unaffected neighbors, bounded vigor and safe metadata, port-22 bypass, all 10000 rarity rolls/three rare choices/trait combinations, sensitive-field exclusion, fanout, no replay, disconnect cleanup.");
+await GardenVisitChecks.RunAsync();

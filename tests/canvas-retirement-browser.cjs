@@ -8,6 +8,7 @@ async function run(){
     const file=new URL(req.url,'http://localhost').pathname.slice(1)||'index.html';
     if(file==='api/garden/events'){res.writeHead(200,{'Content-Type':'text/event-stream'});res.write('event: weather\ndata: {"level":"quiet","eventsPerMinute":0,"hasSnapshot":false}\n\n');return;}
     if(file==='favicon.ico'){res.writeHead(204);res.end();return;}
+    if(file==='api/garden/visit'){res.writeHead(req.method==='POST'?204:405);res.end();return;}
     const p=path.resolve(assets,file);if(!p.startsWith(assets+path.sep)){res.writeHead(404);res.end();return;}
     const body=await fs.readFile(p);res.setHeader('Content-Type',file.endsWith('.html')?'text/html':file.endsWith('.js')?'text/javascript':'text/css');res.end(body);
   }catch{res.writeHead(404);res.end();}});

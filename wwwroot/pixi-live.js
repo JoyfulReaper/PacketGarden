@@ -504,6 +504,8 @@
     // Pixi.init is async: pagehide may arrive before it creates a ticker/renderer.
     let stop=()=>{},reloadRequested=false;
     const lifetime=window.PacketGardenPixi.pageLifetime(()=>stop()),{guard,own,listen,dispose}=lifetime;
+    const visits=window.PacketGardenVisits.createPageNotifier(document);
+    own(()=>visits.destroy());
     listen(window,'pagehide',event=>{
       try{dispose();}finally{if(event.persisted){
         // Preserve the existing fresh-page policy on bfcache return. All GPU,
@@ -975,8 +977,10 @@
         ui.tick(at);
         nextLogicalAt = at + 250; lastTick = null; app.start();
       }
+      visits.visible();
     });
     updateHud(); if (!document.hidden) app.start();
+    visits.initialized();
     } catch(error) {
       try{dispose();}catch(cleanupError){throw new AggregateError([error,cleanupError],'Garden initialization and teardown failed');}
       throw error;

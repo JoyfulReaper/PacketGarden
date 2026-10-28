@@ -1,5 +1,18 @@
 # PacketGarden Real Data
 
+## Optional outgoing visit notification
+
+Production page initialization can send one best-effort event in the opposite
+direction: browser → empty same-origin `/api/garden/visit` POST → shared
+`JoyfulReaperLib.MissionControl` 0.0.3 client → Gateway `POST /api/events`.
+The constant type is `packetgarden.garden.visited`, schema 1, payload
+`{"message":"Someone visited the garden!"}`. Gateway source registration resolves
+the source as `packetgarden`. Server credentials stay outside the browser.
+This defaults to disabled and never feeds incoming SSE, network activity,
+specimen placement, weather, ecology, collectibles or score. It is an unverified
+page-load signal with bounded loss/abuse exposure, not a unique-person count.
+See [the contract, configuration, privacy boundaries and tests](MISSION-CONTROL.md).
+
 ## Implemented live aggregate weather
 
 The browser prototype already has five event mappings, clustered placement,
