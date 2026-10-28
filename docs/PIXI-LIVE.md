@@ -1,3 +1,127 @@
+# Rare vine-to-opium-poppy mutation (2026-10-27)
+
+The homepage and diagnostic garden now support a cosmetic mutation of the exact
+original vine. `garden-mutations.js` owns a separate `createPoppyModel`, not the
+collectible weed's `specimen.mutation` lifetime override. One crypto-seeded
+cosmetic stream (distinct clock/performance fallback) rolls `< .005` once for
+each successfully accepted ordinary live TCPNoise vine, after its existing
+palette selection. Invalid, paused, dropped, simulated and silvervine specimens
+consume no poppy randomness. Placement, vigor, foliage, both blossom streams and
+the existing redbloom 5% stream are unaffected. Failed rolls stay failed.
+
+The non-enumerable `poppyMutation` trait records pending, active or cap-skipped
+state. Weak attempt bookkeeping prevents retries without retaining removed
+sources. At the original 60-second maturity, selected survivors activate only
+when fewer than two living poppies exist. Cap skips are consumed, with no queue.
+The existing logical tick reconciles surviving hidden-time candidates once;
+candidates already expired while hidden are removed without activation. No new
+timer, replayed event, growth cue, activity row, acceptance count or backend/SSE
+contract is introduced.
+
+| Original vine age | Presentation |
+| --- | --- |
+| 0–20s | Ordinary vine sprout |
+| 20–60s | Ordinary growing vine |
+| 60s–8m | Selected, admitted sources show a mature poppy |
+| 8–10m | Muted petals, lowered head and drying stem |
+| 10m | Original vine and all owned views/traits are removed |
+
+Canonical type, object/id, cell/coordinates, vigor, creation timestamp, original
+sensor/listening-port/seen-count provenance and placement/replacement rules stay
+intact. Poppies never use the collectible weed's 20-second expiry. The unchanged
+redbloom mutation still rolls 5%, activates after three seconds under its own
+three-active cap, and removes its source on collection or 20-second expiry.
+
+## Artwork and exact ownership
+
+The existing Sprite swaps to one of two baked `opium-poppy` frames: slender
+green stem, scalloped gray-green leaves, asymmetric rounded mauve/pink petals,
+dark center and a tiny decorative capsule. The capsule has no drop or input
+behavior. Original vine pose/root placement are retained. No new Sprite,
+continuous animation, shader, dependency or per-frame geometry is needed.
+
+Active poppies suppress their parent vine-flower overlay. The existing local
+neighborhood refresh clears their own tendrils/blossom and recomputes actual
+neighbors' halves and blossom ownership, so no disconnected tendrils remain.
+Logical adjacency is unchanged, and other vines keep their 15% blossom rule.
+Removal, normal expiry, replacement and Clear release the exact source trait;
+page ownership clears the model while views are still alive, then releases
+Graphics contexts, frame wrappers and atlas sources. Active poppies are excluded
+by the existing gnome ordinary-target predicate, including snip revalidation.
+
+Clicks use ordinary inspection, with **Opium poppy · original vine** and an
+explicit cosmetic/noncollectible mutation label. Real TCPNoise fields remain
+truthful; local fixtures say Simulated poppy fixture. Score stays exactly zero.
+**Collectible loose opium pods remain future work.** No inventory, processing,
+gameplay effect, audio cue, reward or collection message is implemented.
+
+## Diagnostic fixtures and visual evidence
+
+Only `/pixi-live.html` adds before-maturity, newly-mature, fading, flowering-vine,
+dense-grass, connected-neighbor, imminent-expiry and saturated-replacement
+controls. Before-maturity transforms after one second; expiry removes the source
+after one second. Replacement setup fills 640 cells with the poppy as the only
+weaker occupant; Replace simulated poppy uses normal stronger-growth competition.
+All forced outcomes retain simulated provenance and never enter SSE acceptance.
+
+`tests/pixi-poppies-browser.cjs --run --baseline` serves committed main
+`32e987c4b21265a066843f73cbba6f9b54a3dcbe`; `--run` serves this working tree.
+Both use the same clock, coordinates, foliage/bloom traits, lighting and local
+simulations. Ignored local evidence is in `artifacts/poppies/{before,after}/`:
+each supported page has normal-scale before-transformation, newly-mature,
+mature-vines, flowering-vines, dense-grass, night, fading and 390px-mobile PNGs.
+Raw `review.json` files preserve counts, identity and timings; the local
+`artifacts/poppies/index.html` gallery links every image at its original size.
+
+Desktop review shows a readable soft mauve head, muted foliage and no old vine
+stems through the poppy. Both sides of actual connections disappear together
+(the 35-vine fixture changes from 76 to 70 half-curves). Flowering neighbors
+retain 34 groups while the transformed vine loses its group. The poppy remains
+visible over dense grass and at night. At a 390px fit, individual plant details
+are necessarily tiny; no enlargement or separate camera was used to hide this.
+
+## Resource cost and validation
+
+Two frame wrappers increase the specimen atlas **823 → 825**, using unused slots
+in the same logical **1024×832**, resolution-2 source (**2048×1664**, 13 MiB
+uncompressed RGBA before driver overhead). **Additional atlas pixel memory: 0**;
+retained GPU source count and five startup bake calls are unchanged. The original
+vine Sprite is reused: a full 640-vine fixture still has **640 specimen Sprites**.
+With dense grass and forced blossoms, display objects decrease **3,478 → 3,476**
+when one poppy removes its parent and owned connection flower. Actual counts
+depend on neighboring blossom ownership. Weak records and at most 640 tiny
+source-local traits are the additional model state; no retained source list.
+
+Chrome 155 local 90-frame samples measured mean render submission
+**0.200 → 0.212ms** on `/` and **0.200 → 0.194ms** on diagnostics, with RAF around
+16.7ms. Across 1,000 fixed-time 640-vine logical ticks, mean tick cost was
+**0.0108 → 0.0198ms** and **0.0076 → 0.0156ms** respectively. These are noisy CPU
+samples, not GPU completion or a long-session performance guarantee; raw reruns
+remain in the JSON reports. No geometry changes occur during frame sampling.
+
+`tests/pixi-poppies.cjs` covers exact probability boundary, one roll, exclusions,
+stream isolation, consumed cap skips, exact 60s/8m/10m boundaries, original identity
+and provenance, inspect-only clicks, gnome modes, actual neighbor/blossom cleanup,
+normal stronger replacement, repeated reset/clear, hidden/resume and teardown.
+Existing redbloom, blossom, placement and SSE regressions remain in the suite.
+The Chrome harness additionally checks actual WebGL, symmetric connection ends,
+all requested screenshots, no recurring geometry, same Sprite, resource bounds,
+expiry, replacement, reduced-motion rendering and destroyed atlas/link contexts.
+
+Commands: `npm test`, `npm run test:chrome`, Debug and Release
+`dotnet build PacketGarden.slnx --no-restore` (Release adds `-c Release`),
+`dotnet run --project tests/PacketGarden.Checks --no-restore`, and
+`node tests/weather-sse.cjs --run bin/Debug/net10.0/PacketGarden.dll`.
+Results: **59 Node suites passed**, with 11 optional browser/SSE entry points
+explicitly skipped by the Node-only runner; **all 13 Chrome jobs passed**,
+including before/after poppy captures. Debug and Release builds passed with zero
+warnings/errors. Backend assertions and actual local ASP.NET polling-to-SSE
+integration passed. The backend check project emitted its existing NU1900 warning
+because NuGet vulnerability metadata was unavailable; its assertions completed.
+Long human soaks, other browsers/devices and driver/GPU heap profiling remain
+unverified. Hidden tests dispatch the actual visibility handler with a controlled
+clock; they do not establish operating-system tab suspension behavior.
+
 # Gnome arrival audio diagnosis and audibility (2026-10-24)
 
 All four production incident routes already dispatched the arrival cue correctly.

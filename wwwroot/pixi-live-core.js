@@ -58,7 +58,7 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+  function createModel(view, { now = Date.now, random = Math.random, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, poppyRandom, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
     let paused = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0 };
@@ -72,13 +72,16 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { mutations.removed(specimen, reason); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
+      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });
+    const poppies = mutationCore.createPoppyModel({ garden: model, now, random: poppyRandom,
+      onChange: specimen => view.update(specimen, model.byCell) });
     function tick(at = now()) {
       model.tick(at);
       if (mutations.tick(at)) model.tick(at); // Publish the mutation stage on the existing specimen view.
+      poppies.tick(at);
     }
     function acceptEvent(raw) {
       const event = normalizeGarden(raw); if (!event) return { outcome: 'invalid', specimen: null };
@@ -90,12 +93,35 @@
       const outcome = result ? result.replaced ? 'replaced' : 'spawned' : 'dropped';
       const entry = uiCore.appendRecent(recentEvents, { kind: 'tcpnoise', ...event, receivedAt: at, outcome });
       onActivity(entry);
-      if (result) { counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); onLive(result.specimen); }
+      if (result) { counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); poppies.consider(result.specimen); onLive(result.specimen); }
       return { outcome, specimen: result?.specimen ?? null };
     }
-    return { specimens: model.specimens, byCell: model.byCell, counts, mutations, recentEvents, tick,
+    return { specimens: model.specimens, byCell: model.byCell, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
+      seedPoppies(mode = 'mature') {
+        const at = now(), age = { before: 59000, mature: 60000, fading: 480000, expiry: 599000 }[mode] ?? 60000;
+        const entries = Array.from({ length: 35 }, (_, i) => ({ type: 'vine', vigor: i % 4,
+          column: 12 + i % 7, row: 7 + Math.floor(i / 7), createdAt: at - (i === 17 ? age : 65000),
+          vineBloom: mode === 'flowers' || mode === 'connections' ? { color: i % 4, layout: i % 2 } : null,
+          origin: { kind: 'simulated', eventType: 'poppy-fixture' } }));
+        if (mode === 'replacement') {
+          for (const p of entries) p.vigor = 3;
+          entries[17].vigor = 0;
+          const occupied = new Set(entries.map(p => p.row * dimensions.columns + p.column));
+          for (let cell = 0; cell < dimensions.capacity; cell++) if (!occupied.has(cell)) entries.push({
+            type: 'broadleaf', vigor: 3, column: cell % dimensions.columns, row: Math.floor(cell / dimensions.columns),
+            createdAt: at - 65000, origin: { kind: 'simulated', eventType: 'poppy-fixture' } });
+        }
+        model.seed(entries, at);
+        for (const p of model.specimens) { p.colorVariant = p.vigor; view.update(p, model.byCell); }
+        const source = model.specimens[17]; poppies.force(source); tick(at); return source;
+      },
+      replacePoppyFixture() {
+        if (model.specimens.length !== dimensions.capacity || !model.specimens.every(p => p.origin?.kind === 'simulated'
+          && p.origin.eventType === 'poppy-fixture')) return null;
+        return model.addSpecimen('vine', 3, now(), { kind: 'simulated', eventType: 'poppy-replacement' });
+      },
       seedVineBlooms(mode='stages') {
         const entries=vineBlooms.fixtureEntries(now(),mode),foliage=entries.map(p=>p.colorVariant);
         model.seed(entries);

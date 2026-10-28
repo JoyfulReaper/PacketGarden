@@ -13,7 +13,7 @@
   // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
   const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
   const ordinarySpecimen = (p, at) => garden.species.includes(p.type) && !garden.isProtected(p.type)
-    && !p.mutation && !p.pendingMutation && !rareColors.has(p.colorVariant) && p.colorVariant !== 4
+    && !p.mutation && !p.pendingMutation && p.poppyMutation?.state !== 'active' && !rareColors.has(p.colorVariant) && p.colorVariant !== 4
     && !(p.type === 'broadleaf' && p.broadleafVariant === 'rainbow')
     && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
   function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,

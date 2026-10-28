@@ -55,7 +55,7 @@
   }
   function linkTile(P) { const g=new P.Graphics();flower(g,0,-1,.78,.18);return g; }
   function active(specimen) {
-    return specimen?.type==='vine'&&!specimen.mutation&&specimen.vineBloom
+    return specimen?.type==='vine'&&!specimen.mutation&&specimen.poppyMutation?.state!=='active'&&specimen.vineBloom
       &&(specimen.stage==='mature'||specimen.stage==='fading');
   }
   function style(sprite,specimen,link=false) {

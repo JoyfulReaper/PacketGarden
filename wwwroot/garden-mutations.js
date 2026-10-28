@@ -5,7 +5,55 @@
   const config = Object.freeze({ port22WeedChance: .05, mutationDelayMs: 3000, maxActive: 3, collectibleLifetimeMs: 20000 });
   const type = 'collectible_weed';
   const isMutationActive = (specimen, at = Date.now()) => specimen?.mutation?.type === type && at < specimen.mutation.expiresAt;
-  const mutationLabel = (specimen, at = Date.now()) => isMutationActive(specimen, at) ? 'Collectible weed' : 'None';
+  const poppyConfig = Object.freeze({ chance: .005, maxActive: 2 });
+  const isPoppyActive = (p, at = Date.now()) => p?.type === 'vine' && p.poppyMutation?.state === 'active'
+    && at >= p.createdAt + core.timings.vine.matureAfterMs && core.lifecycleStage(p, at) !== 'expired';
+  const mutationLabel = (specimen, at = Date.now()) => isMutationActive(specimen, at) ? 'Collectible weed'
+    : isPoppyActive(specimen, at) ? 'Opium-poppy mutation of original vine (cosmetic, not collectible)' : 'None';
+  function createPoppyRandom() {
+    const entropy = new Uint32Array(1);
+    if (globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(entropy);
+    else entropy[0] = (Date.now() ^ Math.floor((globalThis.performance?.now?.() ?? 0) * 1000) ^ 0x50f19a7d) >>> 0;
+    let seed = entropy[0];
+    return () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 4294967296);
+  }
+  const poppyRandom = createPoppyRandom();
+  function createPoppyModel({ garden, now = Date.now, random = poppyRandom, onChange = () => {} }) {
+    // Weak bookkeeping cannot retain removed sources. Failed and cap-skipped attempts never retry.
+    const attempted = new WeakSet();
+    const counts = { rolls: 0, selected: 0, activations: 0, capSkips: 0 };
+    const present = p => garden.byCell.get(p.cell) === p;
+    function select(p, selected) {
+      attempted.add(p);
+      Object.defineProperty(p, 'poppyMutation', { value: selected ? { state: 'pending' } : null, configurable: true });
+      if (selected) counts.selected++;
+      return selected;
+    }
+    function consider(p) {
+      if (!p || attempted.has(p) || !present(p) || p.type !== 'vine' || p.origin?.kind !== 'tcpnoise'
+        || core.isProtected(p.type) || p.colorVariant === 4 || p.colorVariant === 'silvervine'
+        || p.mutation || p.pendingMutation) return false;
+      const roll = random(); counts.rolls++;
+      return select(p, Number.isFinite(roll) && roll >= 0 && roll < poppyConfig.chance);
+    }
+    function tick(at = now()) {
+      let active = garden.specimens.filter(p => isPoppyActive(p, at)).length;
+      for (const p of garden.specimens) {
+        if (p.poppyMutation?.state !== 'pending' || at < p.createdAt + core.timings.vine.matureAfterMs
+          || core.lifecycleStage(p, at) === 'expired') continue;
+        if (active >= poppyConfig.maxActive) { p.poppyMutation.state = 'cap-skipped'; counts.capSkips++; }
+        else { p.poppyMutation.state = 'active'; active++; counts.activations++; onChange(p); }
+      }
+    }
+    return { consider, tick, counts,
+      // Explicit local fixtures alone may bypass probability and the live provenance gate.
+      force(p) { return present(p) && p.type === 'vine' && p.colorVariant !== 4
+        && p.origin?.kind === 'simulated' && !attempted.has(p) && select(p, true); },
+      removed(p) { delete p.poppyMutation; },
+      snapshot(at = now()) { return { ...counts, active: garden.specimens.filter(p => isPoppyActive(p, at)).length,
+        pending: garden.specimens.filter(p => p.poppyMutation?.state === 'pending').length }; }
+    };
+  }
   function createMutationModel({ garden, now = Date.now, random = Math.random, onChange = () => {} }) {
     const counts = { scheduled: 0, activations: 0, capSkips: 0, cancellations: 0, expiries: 0 };
     const present = specimen => garden.specimens.includes(specimen);
@@ -56,6 +104,7 @@
     return { counts, scheduleMutation, maybeSchedulePort22Mutation, activateMutation, tick, removed, snapshot,
       clear: () => garden.clear() };
   }
-  const api = { config, createMutationModel, isMutationActive, mutationLabel };
+  const api = { config, createMutationModel, isMutationActive, mutationLabel,
+    poppyConfig, createPoppyRandom, createPoppyModel, isPoppyActive };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenMutations = api;
 })();

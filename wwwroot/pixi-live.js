@@ -39,6 +39,33 @@
     g.alpha = stage === 'fading' ? .55 : 1;
     return g;
   }
+  function poppyTile(P, fading) {
+    const g = new P.Graphics(), stem = fading ? 0x8c8865 : 0x719576;
+    const x = fading ? 4 : 1, y = fading ? -20 : -22;
+    g.moveTo(0, -1).bezierCurveTo(-2, -9, 3, -16, x, y).stroke({ color: stem, width: 1.2 });
+    // Narrow, scalloped gray-green leaves, one off-center capsule and a cupped flower.
+    for (const [side, height] of [[-1, -7], [1, -12], [-1, -15]]) {
+      g.moveTo(0, height).lineTo(side * 2, height - 3).lineTo(side * 3, height - 2)
+        .quadraticCurveTo(side * 9, height - 7, side * 8, height - 3)
+        .lineTo(side * 5, height - 2).lineTo(side * 6, height - 1)
+        .quadraticCurveTo(side * 3, height + 1, 0, height).fill(fading ? 0x989680 : 0x91a99b);
+      g.moveTo(0, height).lineTo(side * 6, height - 3).stroke({ color: stem, width: .45 });
+    }
+    g.moveTo(1, -10).quadraticCurveTo(9, -14, 7, -17).stroke({ color: stem, width: .8 });
+    g.ellipse(7, -17, 1.7, 2).fill(fading ? 0xa19a7c : 0x9aaa8c);
+    g.moveTo(5.4, -19).lineTo(8.5, -19).stroke({ color: 0x727b65, width: .7 });
+    const petals = fading ? [0xa48e99, 0xb29ba5, 0xbba4ac, 0xc0aab2] : [0x956c96, 0xb58ba8, 0xcba1b8, 0xd4acbd];
+    for (const [i, angle] of [-2.4, -.8, .7, 2.3].entries()) {
+      const p = (a, b) => [x + Math.cos(angle) * a - Math.sin(angle) * b, y + Math.sin(angle) * a + Math.cos(angle) * b];
+      g.moveTo(x, y).bezierCurveTo(...p(2, -6), ...p(7, -5), ...p(6.2, 0))
+        .bezierCurveTo(...p(7, 4), ...p(2, 4.8), x, y).fill(petals[i]);
+      g.moveTo(x, y).quadraticCurveTo(...p(3, -.8), ...p(4.8, -1.2)).stroke({ color: 0xe0bbce, alpha: .4, width: .45 });
+    }
+    g.ellipse(x, y, 2.3, 1.8).fill(0x524355);
+    g.ellipse(x, y - .3, .9, .7).fill(0xb8a582);
+    g.alpha = fading ? .62 : 1;
+    return g;
+  }
   // Artwork is rooted at (0,0), with a one-pixel inset inside the existing 32px
   // tile at (16,29). These paths are rasterized once, never in the live ticker.
   function foliageTile(P, type, vigor, variant, stage) {
@@ -195,6 +222,9 @@
       const g=vineBlooms.group(P,vineShape(vigor,variant),layout);artTiles.push(g);tile(`vine-bloom:${vigor}:${variant}:${layout}`,g);
     }
     const vineFlower=vineBlooms.linkTile(P);artTiles.push(vineFlower);tile('vine-bloom-link',vineFlower);
+    for (const stage of ['mature', 'fading']) {
+      const g = poppyTile(P, stage === 'fading'); artTiles.push(g); tile(`opium-poppy:${stage}`, g);
+    }
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -225,7 +255,7 @@
     let groundCover = null;
     const counters = { created: 0, destroyed: 0, stageUpdates: 0, vineNeighborChecks: 0 };
     let particles = [], settings = core.weatherSettings({ level: 'quiet', eventsPerMinute: 0 }), lastWeatherKey = '';
-    const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout';
+    const eligible = specimen => specimen?.type === 'vine' && specimen.stage !== 'sprout' && specimen.poppyMutation?.state !== 'active';
     function syncVineConnection(specimen,graphic,candidate) {
       let record=vineBloomLinks.get(specimen.id);
       if(!candidate){if(record){record.sprite.destroy();vineBloomLinks.delete(specimen.id);}return;}
@@ -289,7 +319,8 @@
         if (neighbor?.type === 'vine') refreshVine(neighbor, byCell);
       }
     }
-    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : specimen.type==='stillbloom'?`stillbloom:${specimen.stage}`:`${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
+    const texture = specimen => frames.get(specimen.mutation ? 'collectible_weed' : specimen.poppyMutation?.state === 'active'
+      ? `opium-poppy:${specimen.stage}` : specimen.type==='stillbloom'?`stillbloom:${specimen.stage}`:`${specimen.type}:${specimen.stage}:${specimen.vigor}:${specimen.colorVariant}`);
     const specimenScale = { flower: 1.4, mushroom: 1.4, broadleaf: 1.35, wirefern: 1.4, weed: 1.4,
       redbloom: 1.25, ghostbloom: 1.3, crystalfungus: 1.3, blackthorn: 1.25 };
     function sizeSpecimen(specimen, sprite) {
@@ -498,6 +529,7 @@
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onRemoved: source => { ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
+    own(() => model.clear());
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,
       getGnomes: () => gnomes,
       getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
@@ -581,6 +613,14 @@
       document.querySelector('#allow-grass-under-plants').checked=true;ecology.setAllowGrassUnderPlants(true);
       model.seedVineBlooms(mode);ecologyPresentation.seedDenseEcology(ecology,Date.now(),false);
     });
+    for (const mode of ['before', 'mature', 'fading', 'flowers', 'grass', 'connections', 'expiry', 'replacement']) listen(document.querySelector(`#seed-poppy-${mode}`), 'click', () => {
+      ambient.clear(); frogs?.clear(); gnomes.clear(); ecology.clear();
+      document.querySelector('#allow-grass-under-plants').checked = mode === 'grass';
+      ecology.setAllowGrassUnderPlants(mode === 'grass');
+      model.seedPoppies(mode);
+      if (mode === 'grass') ecologyPresentation.seedDenseEcology(ecology, Date.now(), false);
+    });
+    listen(document.querySelector('#replace-poppy'), 'click', () => model.replacePoppyFixture());
     const puddleDiagnostics=window.PacketGardenGnomePuddlesDev?.bind({document,gnomes,garden:model,ecology});
     own(()=>puddleDiagnostics?.destroy());
     // The default garden omits development controls and timing collection entirely.
@@ -685,6 +725,7 @@
         `Display objects ${counts.displayObjects + gnomeView.views.size + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
+        `Opium poppies ${model.poppies.snapshot().active}/2 · pending ${model.poppies.snapshot().pending} · 2 cached frames · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,

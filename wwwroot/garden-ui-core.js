@@ -3,7 +3,8 @@
   'use strict';
   const mutations = typeof module !== 'undefined' && module.exports ? require('./garden-mutations.js') : window.PacketGardenMutations;
   const fakeSourceNames = Object.freeze({ dns: 'Simulated DNS', gopher: 'Simulated Gopher', http: 'Simulated HTTP',
-    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe', 'weed-bud-test': 'Simulated weed bud fixture', 'weed-harvest-test':'Simulated weed harvest fixture' });
+    ssh: 'Simulated SSH', 'port22-probe': 'Simulated port 22 probe', 'weed-bud-test': 'Simulated weed bud fixture', 'weed-harvest-test':'Simulated weed harvest fixture',
+    'poppy-fixture': 'Simulated poppy fixture', 'poppy-replacement': 'Simulated vine replacement' });
   const vigorNames = Object.freeze(['one-off', 'repeated', 'frequent', 'persistent']);
   const messages = Object.freeze({ ladybug: 'You caught a ladybug. +0 points', snail: 'You collected a snail. It seems annoyed. +0 points',
     moth: 'You caught a moth. +0 points', shiny_pebble: 'You found a rock. +0 points',
@@ -44,7 +45,7 @@
     const origin = specimen.origin ?? {}, vigor = specimen.vigor ?? 0;
     if(specimen.type==='stillbloom')return {title:'Stillbloom',source:origin.kind==='quiet'?'Sustained quiet':'Simulated Stillbloom',sensor:'—',port:'—',seenCount:'—',vigor:'—',color:'Ivory · silver-green',age:formatAge(at-specimen.createdAt),mutation:'None'};
     const singular = { broadleaf: 'broad-leaf plant', redbloom: 'red bloom', crystalfungus: 'crystal fungus' }[specimen.type] ?? specimen.type;
-    return { title: capitalize(singular), source: origin.kind === 'tcpnoise' ? 'Live TCPNoise' : sourceNames[origin.eventType] ?? 'Garden event',
+    return { title: mutations.isPoppyActive(specimen, at) ? 'Opium poppy · original vine' : capitalize(singular), source: origin.kind === 'tcpnoise' ? 'Live TCPNoise' : sourceNames[origin.eventType] ?? 'Garden event',
       sensor: origin.sensor ?? (origin.kind === 'tcpnoise' ? 'Not supplied' : 'Development controls'),
       port: Number.isInteger(origin.listenPort) ? String(origin.listenPort) : '—', seenCount: origin.seenCount ?? '—',
       vigor: `${vigor} — ${vigorNames[vigor] ?? 'unknown'}`, color: colorName ?? 'Default',

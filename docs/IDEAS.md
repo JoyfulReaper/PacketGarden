@@ -359,20 +359,22 @@ mechanic. No smoke animation or gameplay effect is required. The static score
 remains zero. Keep the port-22 redbloom mutation's existing separate wording and
 behavior intact; do not change existing Amanita or first-seen eligibility.
 
-### Vine -> opium mutation
+### Vine -> opium-poppy mutation: implemented; pods remain future work
 
-This remains future work. Use the same semantic pattern for vines rather than
-spawning an unrelated plant beside them:
+The visual transformation is implemented. Each successfully placed ordinary live
+TCPNoise vine gets one independent 0.5% cosmetic roll, excluding silvervine and
+simulations. It first appears as a normal vine, then transforms at 60 seconds
+under a separate two-active cap. Failures and cap skips never retry. The exact
+vine retains its identity, cell, vigor, source and history, fades from eight
+minutes and expires at ten minutes. Dusty mauve petals and gray-green foliage use
+two cached frames on its existing Sprite. Neighbor tendrils and vine blossoms
+detach, gnomes spare active poppies, and clicks inspect the original provenance.
+The existing collectible redbloom mutation retains its separate 5%/three-active/
+three-second delay/20-second lifetime rules.
 
-1. a live event first produces its normal vine;
-2. on a much rarer browser-only mutation roll, that exact vine may visibly mutate
-   into a stylized opium-poppy / opium-plant form;
-3. the mutation keeps the original specimen's cell, safe TCPNoise provenance,
-   vigor, and history rather than inventing another network event;
-4. while the mutation exists, it may have a still rarer chance to produce a
-   temporary clickable opium pod;
-5. the pod uses the same bounded transient collectible system and disappears if
-   ignored.
+The next slice may let a living poppy very rarely produce a separate temporary
+clickable **loose opium pod**, using the bounded collectible system. Pods are
+not implemented: no drops, messages, inventory or rewards are added here.
 
 A collected pod can say:
 
@@ -383,8 +385,9 @@ You collected an opium pod. +0 points
 This is visual garden nonsense only. It says nothing about the protocol, source,
 intent, or security meaning of the traffic that created the vine. It must not grow
 into crafting, processing, inventory, trade, or any useful resource system.
-Because vines live much longer than redblooms, the vine mutation should be rarer
-than the redbloom -> weed mutation so mutated plants do not accumulate everywhere.
+The 0.5% roll and two-active limit account for vines living much longer than
+redblooms. [Implementation and review](PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27)
+record the exact lifecycle and renderer ownership checks.
 
 ### The zero-point anti-score
 

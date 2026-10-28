@@ -50,6 +50,6 @@ view.update(active,garden.byCell);const mutation=view.byId.get(active.id);
 assert.equal(mutation.texture,h.cache.frames.get('collectible_weed'));
 assert.deepEqual([mutation.scale.x,mutation.scale.y],[1,1]);
 assert.deepEqual([mutation.position.x,mutation.position.y],[(active.column+.5)*30,(active.row+.5)*30+12]);
-assert.equal(h.textureCount(),initialTextures);assert.equal(h.generated(),initialGenerated);assert.equal(h.cache.frames.size,823);
+assert.equal(h.textureCount(),initialTextures);assert.equal(h.generated(),initialGenerated);assert.equal(h.cache.frames.size,825);
 view.destroy();stage.destroy();assert.equal(h.live.size,initialObjects);
 console.log('PASS: larger cached Sprites, bounded edge presentation, stable stages/roots, unchanged logical picking/vines/mutation size, no new textures or recurring neighbor work.');

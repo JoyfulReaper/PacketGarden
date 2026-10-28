@@ -34,7 +34,7 @@ class Graphics extends h.P.Graphics{
   stroke(style){geometry++;this.curves.push({start:this.begin,points:this.points,style});return super.stroke();}
 }
 const P={...h.P,Graphics},stage=new h.P.Container(),view=createView(P,{stage},h.cache.frames,core,shared);
-let at=100000,rolls=0;const model=core.createModel(view,{now:()=>at,random:()=>.5,vineBloomRandom:()=>{rolls++;return .01;}});
+let at=100000,rolls=0;const model=core.createModel(view,{now:()=>at,random:()=>.5,poppyRandom:()=>.9,vineBloomRandom:()=>{rolls++;return .01;}});
 const p=model.acceptEvent({...event(),vineBloom:null}).specimen,trait=p.vineBloom,parent=view.byId.get(p.id);
 assert(trait,'network payload cannot override cosmetics');assert.equal(view.vineBloomViews.size,0);
 at=p.createdAt+20000;model.tick();assert.equal(view.vineBloomViews.size,0);

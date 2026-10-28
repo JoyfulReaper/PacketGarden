@@ -124,6 +124,15 @@ plant and disappears with its exact parent. These decorations create no extra
 specimens, drops, events, scores or sounds. Diagnostic fixtures can force all
 colors and full fields without manipulating real input.
 
+Ordinary live TCPNoise vines also get one independent **0.5%** cosmetic roll
+after successful placement. A selected vine stays ordinary until **60 seconds**,
+then becomes a dusty mauve opium poppy if fewer than two are active. Failed and
+cap-skipped attempts never retry. The exact vine keeps its identity, cell, vigor,
+provenance and normal **eight-minute fade / ten-minute expiry**. Silvervines and
+simulated traffic cannot roll. Clicking inspects it; gnomes spare active poppies.
+No collectible pods, extra events, activity, sound or points are added. Pods remain
+future work. See [implementation, screenshots and validation](docs/PIXI-LIVE.md#rare-vine-to-opium-poppy-mutation-2026-10-27).
+
 ### Grass and water
 
 Grass has separate state and consumes no specimen slots. Twelve distributed
