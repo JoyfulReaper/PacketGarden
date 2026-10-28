@@ -1,3 +1,46 @@
+# Inverse-vigor competition (2026-10-28)
+
+Current shared placement uses the [inverse-vigor policy](EVENT-MAPPINGS.md#inverse-vigor-competition).
+This supersedes the stronger-only/minimum-vigor/oldest ranking described in
+historical sections below. The prior fallen-log work is preserved on `dev` at
+`f99097b`; this follow-up remains uncommitted. `main` remains at PR #3's merge.
+
+TCPNoise vigor now maps valid counts 0–1 / 2–99 / 100–9999 / 10000+ to 0/1/2/3.
+Exact UInt64 inspection text, parsing fallback, rarity/species/SSE, lifetimes and
+cached artwork remain unchanged. Only full plant-or-terrain occupancy invokes
+one uniformly chosen eligible resident and one independent competition roll.
+Chance is `clamp(.25 + .15*(residentVigor-incomingVigor) + .15*ageFraction,.05,.85)`.
+Protected species and active/pending collectible mutations/poppies are excluded.
+One global 15s cooldown begins only after successful saturated replacement;
+vacant-cell placement bypasses it, failures do not extend it, Clear/reseed keeps
+it, and ticks never replay opportunities. Exact-source removal/addition uses the
+existing notifications with a reserved destination during cleanup callbacks.
+
+Only `/pixi-live.html` adds four-vigor/full-garden, resident-age and incoming-vigor
+controls. The explicit simulated poppy/wirefern source-replacement controls now
+use authoritative removal followed by normal growth into the sole free cell;
+they do not override production competition or mutation protection. No artwork,
+atlas, Sprite budget, animation, timers or dependencies were added by this slice.
+`artifacts/inverse-vigor/{homepage,diagnostic}-four-vigor-fixture.png` and
+`review.json` capture the normal 960×600 fixtures and browser state checks.
+
+The old selection-query helper is superseded by read-only
+`replacementCandidates(at?)` and `competitionSnapshot(at?)` diagnostics; querying
+them never rolls. Candidate selection occurs only in the saturated insertion
+path, after cooldown/expiry checks.
+
+Validation: 65 Node suites passed (17 optional entries skipped), **all 22 Chrome
+jobs passed**, Debug/Release
+builds had zero warnings/errors, backend checks and actual ASP.NET SSE integration
+passed. The expanded browser suite verifies a failed exact 82% boundary, success
+just below it, no cooldown draws, a natural vacancy during cooldown, the exact
+15s boundary, independent provenance/statistics, no hidden replay and unchanged
+832-frame/five-bake resources. Backend checks include every requested threshold,
+UInt64.MaxValue and invalid optional counts, independently of rarity outcomes.
+Short synthetic fixtures do not establish long-term ecological balance; this is
+a browser-local wall-clock policy without session persistence. An absent eligible
+pool or protected/terrain saturation can still drop all incoming growth.
+
 # Fallen blackthorn logs (2026-10-28)
 
 Implemented on `dev` above **`250cd5c`**, the PR #3 merge commit. The initial

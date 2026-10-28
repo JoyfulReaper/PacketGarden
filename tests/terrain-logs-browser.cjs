@@ -11,7 +11,7 @@ async function run(){
       ['PacketGardenEcology','ecology','createEcologyModel'],['PacketGardenPixiEcology','ecologyView','createEcologyView'],
       ['PacketGardenLighting','light','createModel'],['PacketGardenLightingView','surface','createSurface'],['PacketGardenGnomes','gnomes','createModel']]){
       const create=window[global][method];window[global][method]=(...args)=>{
-        if(key==='model'){f.view=args[0];args[1]={...args[1],terrainRandom:()=>f.terrainRoll,sporeRandom:()=>.9};}
+        if(key==='model'){f.view=args[0];args[1]={...args[1],competitionRandom:()=>.99,terrainRandom:()=>f.terrainRoll,sporeRandom:()=>.9};}
         if(key==='gnomes')args[0]={...args[0],random:()=>.99};
         const value=create(...args);f[key]??=value;return value;
       };

@@ -61,7 +61,7 @@ public sealed class TcpNoiseAdapter(
         if (seenCount.ValueKind != JsonValueKind.Number || !seenCount.TryGetUInt64(out var count))
             return (0, null);
 
-        var vigor = count switch { <= 1 => 0, <= 3 => 1, <= 9 => 2, _ => 3 };
+        var vigor = count switch { <= 1 => 0, <= 99 => 1, <= 9999 => 2, _ => 3 };
         return (vigor, count.ToString(CultureInfo.InvariantCulture));
     }
 

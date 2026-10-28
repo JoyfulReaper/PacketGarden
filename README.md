@@ -87,10 +87,21 @@ explicitly historical.
 The whole garden scales to the window and retains **32 × 20 cells**, with at most
 **640 specimens**. Shared renderer-neutral models own placement, competition,
 lifecycles, grass, water, mutations, wildlife and interactions. Incoming growth
-prefers nearby same-species plants. At saturation, only strictly stronger growth
-can replace an eligible weaker resident, choosing the weakest and oldest first.
+prefers nearby same-species plants. At saturation, one eligible resident is chosen
+uniformly for inverse-vigor competition: weaker newcomers have better odds against
+fuller residents, and older residents receive an extra vulnerability bonus.
 Ghostbloom, crystal fungus, blackthorn and Stillbloom are protected from forced
 replacement. Vigor describes fullness, not a security score.
+
+TCPNoise counts **0–1 → vigor 0**, **2–99 → 1**, **100–9999 → 2**, and
+**10000+ → 3**; unusable optional counts still fall back to 0. Valid UInt64
+inspection counts remain exact decimal strings. Full-garden replacement uses
+`clamp(.25 + .15 × (residentVigor − incomingVigor) + .15 × ageFraction, .05, .85)`.
+One candidate, one independent probability roll, no retry. Successful saturated
+replacements start one global **15-second cooldown**; failures do not. Natural
+vacancies always permit ordinary placement, including during cooldown. Active
+and pending mutations/poppies are protected, as are the rare species above.
+See [the competition policy](docs/EVENT-MAPPINGS.md#inverse-vigor-competition).
 
 Naturally expired blackthorns can leave **fallen logs**: one independent **30%**
 decision per expiry, at most **six**, each lasting **60 minutes** from the tree's

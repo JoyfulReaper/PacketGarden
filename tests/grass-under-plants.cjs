@@ -40,7 +40,7 @@ m.setAllowGrassUnderPlants(true); assert.deepEqual(m.grassCells,[parent]);
 m.spreadGrass(8000); assert.equal(m.grassCells.length,2,'natural regrowth after re-enable');
 // Full specimen grid, real shared placement/replacement, unchanged plants and bounded unique grass.
 let at=0, ecology;
-const garden=G.createGardenModel({now:()=>at,random:()=>0,onChange:c=>{
+const garden=G.createGardenModel({now:()=>at,random:()=>0,competitionRandom:()=>0,onChange:c=>{
   if(c.kind==='added')ecology.specimenAdded(c.specimen.column,c.specimen.row);
 }});
 ecology=E.createEcologyModel({now:()=>at,random:()=>0,isCellOccupied:(x,y)=>garden.byCell.has(y*32+x)});

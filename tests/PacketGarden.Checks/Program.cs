@@ -208,7 +208,8 @@ var vigorCases = new (string Count, int Vigor)[]
 {
     ("null", 0), ("\"10\"", 0), ("{}", 0), ("[]", 0), ("true", 0),
     ("0", 0), ("-1", 0), ("-10", 0), ("1", 0), ("2", 1), ("3", 1),
-    ("4", 2), ("9", 2), ("10", 3), ("1000000000", 3), ("18446744073709551615", 3),
+    ("4", 1), ("9", 1), ("10", 1), ("99", 1), ("100", 2), ("9999", 2),
+    ("10000", 3), ("50000", 3), ("1000000000", 3), ("18446744073709551615", 3),
     ("18446744073709551616", 0), ("1e1000", 0), ("9999999999999999999999999999999999999999", 0),
     ("2.5", 0), ("10.0", 0), ("1e1", 0)
 };
@@ -280,14 +281,14 @@ Check(a is { Name: "garden", Data: GardenGrowth { SpecimenType: "broadleaf", Lis
 Check(!first.Reader.TryRead(out _) && !second.Reader.TryRead(out _), "Exactly once per client");
 events.Publish(Parse(Seen(WithPort(good, 22), "10"), 9999, 2)!);
 Check(first.Reader.TryRead(out var redA) && second.Reader.TryRead(out var redB) && redA == redB
-    && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 3, SeenCount: "10" } },
+    && redA is { Name: "garden", Data: GardenGrowth { SpecimenType: "redbloom", ListenPort: 22, Vigor: 1, SeenCount: "10" } },
     "Port-22 redbloom uses existing transient fanout with inspection count");
 foreach (var port in new[] { 420, 42069 })
 {
     var growth = Parse(Seen(WithPort(Traits(good, "4", "\"public\""), port), "10"), 9949)!;
     events.Publish(growth);
     Check(first.Reader.TryRead(out var weedA) && second.Reader.TryRead(out var weedB) && weedA == weedB
-        && weedA is { Name: "garden", Data: GardenGrowth weedGrowth } && weedGrowth == new GardenGrowth("weed", port, 3, "public", "10"),
+        && weedA is { Name: "garden", Data: GardenGrowth weedGrowth } && weedGrowth == new GardenGrowth("weed", port, 1, "public", "10"),
         "Port-mapped ordinary weed retains exact port/vigor/safe provenance through existing SSE fanout");
 }
 events.RemoveClient(first);

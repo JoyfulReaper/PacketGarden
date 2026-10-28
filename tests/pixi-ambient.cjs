@@ -6,7 +6,7 @@ const atlas=V.makeAmbientAtlas(P,renderer),curiosityLayer=new P.Container(),drop
 assert.equal(atlas.frames.size,14);assert.equal(new Set([...atlas.frames.values()].map(t=>t.source)).size,1);
 const view=V.createAmbientView(P,curiosityLayer,dropLayer,atlas.frames);let now=100000;
 let model;const ambient=A.createAmbientModel({now:()=>now,random:()=>0,getSpecimens:()=>model.specimens,onChange:c=>view.change(c,now)});
-model=C.createModel({add(){},update(){},remove(){}},{now:()=>now,random:()=>.5,onLive:s=>ambient.acceptLiveSpecimen(s),onRemoved:s=>ambient.cancelSource(s)});
+model=C.createModel({add(){},update(){},remove(){}},{now:()=>now,random:()=>.5,competitionRandom:()=>0,onLive:s=>ambient.acceptLiveSpecimen(s),onRemoved:s=>ambient.cancelSource(s)});
 const event=(type='flower',seenCount='1',vigor=0)=>({specimenType:type,listenPort:53,seenCount,vigor});
 model.accept(event());assert.equal(view.curiosityViews.size,1);const item=ambient.curiosities[0],id=ambient.idFor(item),sprite=view.curiosityViews.get(id).sprite;
 const texture=sprite.texture;view.animate(now+5000);assert.equal(view.curiosityViews.get(id).sprite,sprite);assert.equal(sprite.texture,texture);

@@ -697,6 +697,21 @@
       } });
     own(()=>ecology.clear());
     const logStatus=text=>{const el=document.querySelector('#log-status');if(el)el.textContent=text;};
+    const competitionStatus=text=>{const el=document.querySelector('#competition-status');if(el)el.textContent=text;};
+    listen(document.querySelector('#seed-competition'),'click',()=>{
+      gnomes.clear();ambient.clear();ecology.clear();
+      model.seedCompetition(document.querySelector('#competition-residents').value,document.querySelector('#competition-old').checked);
+      competitionStatus(`640 simulated residents seeded. Existing replacement cooldown retained (${Math.ceil(model.competitionSnapshot().remainingMs/1000)}s remaining).`);
+    });
+    listen(document.querySelector('#try-competition'),'click',()=>{
+      const vigor=Number(document.querySelector('#competition-incoming').value);
+      const result=model.addSpecimen('broadleaf',vigor,Date.now(),{kind:'simulated',eventType:'competition-fixture'});
+      const state=model.competitionSnapshot(),attempt=state.lastAttempt;
+      competitionStatus(result?result.replaced?`Simulated vigor ${vigor} replaced cell ${result.specimen.cell}; resident vigor ${attempt.residentVigor}, chance ${(attempt.chance*100).toFixed(1)}%. 15s cooldown.`
+        :'Simulated growth used a free cell without a competition roll.'
+        :state.outcome==='cooldown'?`Saturated growth skipped during cooldown (${Math.ceil(state.remainingMs/1000)}s remaining).`
+        :attempt?`Simulated vigor ${vigor} lost against resident vigor ${attempt.residentVigor}; chance ${(attempt.chance*100).toFixed(1)}%. No cooldown started.`:'No eligible ordinary resident. No replacement.');
+    });
     for(const mode of ['aging','cap','dense','full'])listen(document.querySelector(`#seed-logs-${mode}`),'click',()=>{
       gnomes.clear();ambient.clear();ecology.clear();model.seedLogs(mode);gnomes.resetCadence();
       logStatus(`Simulated ${mode} fixture: blackthorn expires naturally in 2s. Force chance before expiry to guarantee the preview. Plants ${model.byCell.size}, blocked ${model.terrain.byCell.size}, free ${model.freeCellCount()}.`);
@@ -887,6 +902,7 @@
         `Gaps >50ms ${data.over50} / >300ms ${data.over300} · frames ${data.frames} · measured ${(data.elapsedMs / 1000).toFixed(1)}s · samples ${data.size}/${data.capacity}`,
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
         `Terrain logs ${model.terrain.logs.length}/6 · blocked ${model.terrain.byCell.size} · occupied by plants ${model.byCell.size} · free ${model.freeCellCount()} · 60m decay`,
+        `Full-garden competition · replacement cooldown ${(model.competitionSnapshot().remainingMs/1000).toFixed(1)}s · weaker newcomers favored`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
         `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,

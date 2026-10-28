@@ -1,9 +1,9 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const Core=require('../wwwroot/garden-core.js'),G=require('../wwwroot/garden-gnomes.js'),E=require('../wwwroot/garden-ecology.js'),B=require('../wwwroot/garden-stillbloom.js');
 const C=Core.terrainConfig;
-function fixture({roll=0,count=1,full=false,age=719000,origin={kind:'tcpnoise',listenPort:22,sensor:'safe'},onChange=()=>{}}={}){
+function fixture({roll=0,count=1,full=false,age=719000,competitionRandom=()=>.99,origin={kind:'tcpnoise',listenPort:22,sensor:'safe'},onChange=()=>{}}={}){
   let at=1000000,rolls=0;const changes=[];
-  const garden=Core.createGardenModel({now:()=>at,random:()=>.5,terrainRandom:()=>{rolls++;return roll;},onChange:c=>{changes.push(c);onChange(c,garden);}});
+  const garden=Core.createGardenModel({now:()=>at,random:()=>.5,competitionRandom,terrainRandom:()=>{rolls++;return roll;},onChange:c=>{changes.push(c);onChange(c,garden);}});
   const entries=Array.from({length:full?640:count},(_,i)=>({type:i<count?'blackthorn':'broadleaf',vigor:1,colorVariant:0,
     column:i%32,row:Math.floor(i/32),createdAt:at-(i<count?age:65000),origin:{...origin}}));
   garden.seed(entries);changes.length=0;
@@ -52,9 +52,9 @@ for(const invalidate of [p=>p.id++,p=>p.cell++,p=>p.column++,p=>p.row++,p=>p.cre
 }
 // Dense placement has 634 specimens and six blocking cells, still exactly 640 cells total.
 for(const incoming of [0,1,2,3]){
-  const f=fixture({count:6,full:true});f.tick();const logs=f.garden.terrain.logs.slice();
+  const f=fixture({count:6,full:true,competitionRandom:()=>0});f.tick();const logs=f.garden.terrain.logs.slice();
   assert.equal(f.garden.specimens.length,634);assert.equal(f.garden.freeCellCount(),0);
-  const result=f.garden.addSpecimen('flower',incoming,f.at);assert.equal(Boolean(result),incoming>1);
+  const result=f.garden.addSpecimen('flower',incoming,f.at);assert(result,'successful competition cannot replace terrain at any incoming vigor');
   if(result){assert(result.replaced);assert(!logs.some(l=>l.cell===result.specimen.cell));assert.equal(f.garden.specimens.length,634);}
   for(const l of logs)assert(!f.garden.byCell.has(l.cell));assert.equal(f.garden.terrain.logs.length,6);
 }

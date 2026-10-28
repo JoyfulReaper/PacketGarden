@@ -167,14 +167,14 @@ port-22 redbloom special case or, for every other port, the base mapping and
 [artistic rarity roll](EVENT-MAPPINGS.md#tcpnoise-rarity) before independently
 converting `seenCount` to coarse visual vigor.
 
-Usable counts are unsigned 64-bit JSON integers: 0–1 give vigor 0, 2–3 give 1, 4–9
-give 2, and 10 through 18,446,744,073,709,551,615 give 3. Missing, null, strings,
+Usable counts are unsigned 64-bit JSON integers: 0–1 give vigor 0, 2–99 give 1,
+100–9999 give 2, and 10000 through 18,446,744,073,709,551,615 give 3. Missing, null, strings,
 objects, negative, fractional/exponent representations, or overflowing numbers
 give vigor 0 without rejecting a valid connection. No arithmetic on the raw count
 is needed.
 
 Vigor is artistic recurrence, not a threat score or rarity input; it affects
-bounded rendering details and competition only at full specimen occupancy.
+bounded rendering details and inverse competition only at full plant-or-terrain occupancy.
 
 For click inspection, a valid TCPNoise sensor string is forwarded as a bounded
 label (maximum 128 characters), and a valid unsigned `seenCount` is forwarded as
@@ -185,7 +185,7 @@ A typical live frame is:
 
 ```text
 event: garden
-data: {"specimenType":"broadleaf","listenPort":445,"vigor":3,"sensor":"wurstcase-public","seenCount":"17"}
+data: {"specimenType":"broadleaf","listenPort":445,"vigor":1,"sensor":"wurstcase-public","seenCount":"17"}
 
 ```
 
@@ -241,15 +241,29 @@ TCPNoise port hits share placement, clustering, lifecycles, and occupancy with f
 do not inherit fake DNS/HTTP grass effects. Real TCPNoise growth does not directly
 seed or refresh grass in this slice, including forced replacements.
 
-After expiry, if all 640 cells remain full, incoming vigor must strictly exceed an
-unprotected occupant's. Replacement targets the lowest eligible vigor and then its
-oldest specimen, reusing the exact cell with a fresh creation timestamp.
-Ghostbloom, crystal fungus, and blackthorn are protected from displacement but
-still expire normally; weed and redbloom are eligible. Incoming rare growth uses
-the same gate. Equal vigor cannot churn the grid. Successful replacement uses
-normal growth sound/cooldowns; a dropped saturated event is silent. Natural expiry
-remains the usual source of space, and the status notes saturation only while the
-grid is full.
+After natural expiry and terrain decay, genuinely free cells use ordinary
+placement without competition. If all 640 plant-or-terrain cells remain full,
+one uniformly chosen eligible resident gets one inverse-vigor attempt:
+`clamp(.25 + .15*(residentVigor-incomingVigor) + .15*ageFraction, .05,.85)`.
+Age is elapsed time divided by that resident's unchanged normal species lifespan,
+clamped to 0–1. Before age bonus, incoming/resident 0/3 is 70%, 3/0 is 5%, and
+2/2 is 25%. Weaker newcomers are deliberately favored against fuller residents.
+Ghostbloom, crystal fungus, blackthorn, Stillbloom and active/pending mutations/
+poppies are excluded; logs cannot be displaced. Loose-drop independence and
+normal pending-source cancellation remain.
+
+The dedicated competition stream never advances rarity, placement or cosmetic
+randomness. No eligible resident means no draw. Failed attempts drop without
+trying another candidate or starting a cooldown. Success revalidates and removes
+the exact original through authoritative notifications, reuses its cell with a
+fresh identity/time, and starts one global **15s** cooldown. Saturated events
+during cooldown drop without rolling; natural vacancies remain usable. The
+deadline survives Clear/reseed, and hidden/stalled clocks never replay missed
+opportunities. Incoming rare growth uses the same rule. Successful replacement
+increments normal accepted/replacement statistics, preserves sanitized provenance,
+and uses existing growth sound; dropped valid input remains one `no growth`
+Recent row and no accepted increase. Lifetimes and Score: 0 are unchanged. See
+[the full policy](EVENT-MAPPINGS.md#inverse-vigor-competition).
 
 ## Browser-only transient uses of live provenance
 

@@ -755,7 +755,27 @@ occupied influence/spread, later reclamation, inspection and renderer cleanup.
 
 ## Ecology and event pressure
 
-The current full-grid vigor rule is intentionally bounded. Richer future ecology
+Implemented inverse-vigor competition now treats vigor as fullness rather than
+strength. TCPNoise counts 0–1, 2–99, 100–9999 and 10000+ produce vigor 0, 1, 2
+and 3 respectively; unusable optional counts retain fallback 0 and valid UInt64
+inspection strings stay exact. At full plant-or-terrain occupancy, one uniformly
+selected eligible resident gets one independent attempt with
+`clamp(.25 + .15*(residentVigor-incomingVigor) + .15*ageFraction, .05,.85)`.
+Weaker newcomers are favored against fuller/older residents. There is no
+weakest-first or oldest-first ranking: age changes the chosen resident's odds.
+Protected rare species, active/pending mutations and poppies remain excluded.
+
+One successful saturated replacement starts a global **15s** cooldown. Failures
+do not start/extend it, Clear/reseed cannot bypass it, and natural vacancies
+always permit ordinary placement with no competition roll. The existing clock
+drives incoming-only attempts without timers, retries or hidden-time backlog.
+The dedicated competition RNG leaves rarity, placement, terrain, cosmetics and
+collectibles independent. Source identity/removal callbacks, actual occupancy,
+lifetimes, provenance, counts and Score: 0 keep their existing meanings.
+Development-only full gardens show four vigor bands, selectable resident/incoming
+levels and young/old ages. See [the policy](EVENT-MAPPINGS.md#inverse-vigor-competition).
+
+The full-grid rule remains intentionally bounded. Richer future ecology
 could let repeated traffic reshape existing growth instead of requiring one new
 specimen per accepted event.
 
@@ -878,7 +898,7 @@ Full-cap attempts are consumed without queue, retry or displacement.
 
 Logs occupy a separate terrain model/map, leaving the specimen array, network
 activity, vigor, provenance and Score: 0 unchanged. Real placement excludes their
-cells. A garden with six logs can hold 634 plants; normal stronger-vigor
+cells. A garden with six logs can hold 634 plants; inverse-vigor
 competition still replaces eligible plant occupants only. Gnome overcrowding
 counts actual free cells including terrain; its living-specimen denominator,
 priorities and cooldowns remain. Stillbloom uses truly free cells. Grass keeps

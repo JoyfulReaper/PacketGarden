@@ -11,7 +11,7 @@ function createGarden(options = {}) {
   if(options.supported!==false)sandbox.window.AudioContext=AudioContext;sandbox.Math.random=()=>.5;
   vm.createContext(sandbox);vm.runInContext(fs.readFileSync('wwwroot/garden-audio.js','utf8'),sandbox);
   const run=code=>vm.runInContext(code,sandbox),core=require('../wwwroot/garden-core.js'),pixi=require('../wwwroot/pixi-live-core.js');
-  const model=core.createGardenModel({now:()=>state.now,random:()=>.5});
+  const model=core.createGardenModel({now:()=>state.now,random:()=>.5,competitionRandom:()=>state.competitionRoll??.99});
   sandbox.columns=32;sandbox.rows=20;sandbox.gardenState={};
   Object.defineProperty(sandbox.gardenState,'specimens',{get:()=>model.specimens,set:entries=>model.seed(entries)});
   class Source {constructor(){this.handlers={};}addEventListener(name,fn){this.handlers[name]=fn;}close(){}
@@ -95,15 +95,16 @@ module.exports=async function checkAudio() {
   assert.equal(burst.state.oscillators.length,2,'subsequent growth uses the shared sound path');
   burst.run('gardenState.specimens=Array.from({length:columns*rows},(_,i)=>({type:"flower",column:i%columns,row:Math.floor(i/columns),createdAt:400,vigor:0}))');
   burst.grow('ghostbloom',1000); assert.equal(burst.state.oscillators.length,2,'vigor-0 growth at capacity cannot play a spawn sound');
+  burst.state.competitionRoll=0;
   burst.source.emit({specimenType:'flower',listenPort:5432,vigor:3});
   assert.equal(burst.state.oscillators.length,3,'successful forced replacement uses ordinary synthesis');
   assert.equal(burst.run('gardenState.specimens.length'),640);
-  burst.state.now=1100;
+  burst.state.now=16000;
   burst.source.emit({specimenType:'ghostbloom',listenPort:443,vigor:3});
   assert.equal(burst.state.oscillators.length,6,'rare forced replacement can break ordinary cooldown');
   burst.source.emit({specimenType:'flower',listenPort:5432,vigor:3});
   assert.equal(burst.state.oscillators.length,6,'replacement still obeys ordinary cooldown');
-  burst.state.now=1200;
+  burst.state.now=16100;
   burst.source.emit({specimenType:'blackthorn',listenPort:443,vigor:3});
   assert.equal(burst.state.oscillators.length,6,'replacement still obeys independent rare cooldown');
   for(const roll of [0,1,-1,2,NaN]) {

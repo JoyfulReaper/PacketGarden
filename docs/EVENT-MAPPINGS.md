@@ -154,7 +154,13 @@ concept and does not change this policy.
 
 After species/rarity selection, the backend independently maps optional
 `seenCount` to vigor: **0** for counts 0–1 or missing/unusable values, **1** for
-2–3, **2** for 4–9, and **3** for usable integers 10 or more.
+2–99, **2** for 100–9999, and **3** for usable integers 10000 or more.
+
+Only unsigned 64-bit JSON integers qualify. Valid values through
+`18446744073709551615` retain exact decimal-string inspection metadata. The
+optional-count parser and fallback are unchanged: missing/null, strings, objects,
+negative, fractional/exponent representations and UInt64 overflow produce vigor
+0 and omit unusable inspection counts without rejecting a valid connection.
 
 Vigor is artistic recurrence, not a threat score, and never influences rarity or
 species selection (including the unconditional port-22 redbloom).
@@ -165,13 +171,58 @@ ghostbloom fullness, crystal facets, or blackthorn structure. Vigor is fixed at
 spawn; fake controls use 0. Lifetimes, free-cell placement/clustering, grass, and
 weather do not depend on vigor.
 
-Only at full 640-cell occupancy, coarse artistic recurrence also supplies bounded
-competitive strength. After normal expiry, incoming vigor must exceed an
-unprotected occupant's vigor. Among eligible occupants, replace the oldest in the
-lowest vigor tier and reuse its cell with a fresh timestamp. Ghostbloom, crystal
-fungus, and blackthorn are protected from forced displacement, while weed and
-redbloom are eligible. Incoming rare specimens use the same gate, and equal vigor
-never replaces.
+### Inverse-vigor competition
+
+Vigor describes visual fullness. At full occupancy the ecology intentionally
+favors **weaker newcomers over fuller residents**; high recurrence is not greater
+competitive strength. First reconcile natural expiry and blocking terrain. If
+any plant-or-terrain cell is genuinely free, ordinary placement proceeds with
+no competition roll or cooldown check. Logs continue to block their own cells.
+
+Otherwise, if the global replacement cooldown has elapsed, uniformly select one
+eligible resident from the current authoritative specimen array. Exclude
+ghostbloom, crystal fungus, blackthorn and Stillbloom, plus active/pending
+collectible mutations and active/pending poppies. Cosmetic palettes retain their
+existing species policy. Loose collectibles remain independent; replacing an
+ordinary source still cancels its pending source-owned attempts normally.
+
+For that resident only:
+
+```text
+ageFraction = clamp((now - resident.createdAt) / normalSpeciesLifespan, 0, 1)
+chance = clamp(0.25 + 0.15 * (residentVigor - incomingVigor)
+              + 0.15 * ageFraction, 0.05, 0.85)
+success = independentRoll < chance
+```
+
+| Incoming vigor | Resident vigor | Chance before age adjustment |
+| --- | --- | --- |
+| 0 | 3 | 70% |
+| 3 | 0 | 5% |
+| 2 | 2 | 25% |
+
+Age adds up to 15 percentage points before the final clamp; expiry is reconciled
+first, so an expired resident never competes. Selection and probability use a
+dedicated competition PRNG, independent of rarity, placement, terrain, cosmetics
+and collectibles. There is no minimum-vigor/oldest ordering or second candidate
+after failure. An empty eligible pool consumes no competition randomness.
+
+On success, revalidate the exact captured reference/id/cell/coordinates/creation
+time/type/vigor and authoritative occupancy, then use normal removal and addition
+notifications in that same cell. The incoming specimen has its own fresh identity
+and timestamp. A reserved destination prevents nested removal callbacks from
+claiming the cell. Capacity remains 640 plant-or-terrain cells.
+
+Only a **successful saturated replacement** starts the one global **15-second**
+cooldown, with the boundary inclusive. While it is active, saturated input drops
+without a candidate or probability draw; vacant-cell growth is still allowed.
+Failed rolls do not start or extend it. Clear/reseed retains the deadline.
+Incoming rare growth follows the same rule. There are no new timers, queued
+attempts or hidden/stall catch-up checks; competition runs only on incoming
+growth and uses the existing browser clock. Backwards time does not bypass an
+outstanding deadline. Lifetimes, backend rarity/species mappings and score stay
+unchanged. Existing specimens retain their received vigor; no retroactive remap
+from inspection counts occurs.
 
 Natural expiry remains the usual source of space; this replacement rule exists
 only because the garden is bounded. Successful replacement uses shared growth

@@ -9,7 +9,7 @@
   <script src="garden-audio.js?v=gnome-arrival-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js?v=canvas-retired-1" defer data-pixi-library></script>
-  <script src="garden-core.js?v=fallen-logs-1" defer></script>
+  <script src="garden-core.js?v=inverse-vigor-1" defer></script>
   <script src="garden-stillbloom.js?v=fallen-logs-1" defer></script>
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
@@ -33,7 +33,7 @@
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
-  <script src="pixi-live-core.js?v=fallen-logs-1" defer></script><script src="pixi-live.js?v=fallen-logs-1" defer></script>
+  <script src="pixi-live-core.js?v=inverse-vigor-1" defer></script><script src="pixi-live.js?v=inverse-vigor-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -103,6 +103,12 @@
       <button id="trigger-overcrowding" type="button">Trigger overcrowding relief (simulated)</button>
       <button id="trigger-weed-harvest" type="button">Trigger weed harvest (simulated)</button>
       <button id="seed-heist" type="button">Seed mature mushrooms (simulated)</button>
+      <label>Competition residents <select id="competition-residents"><option value="mixed">All vigor levels 0–3</option><option value="0">Vigor 0</option><option value="1">Vigor 1</option><option value="2">Vigor 2</option><option value="3">Vigor 3</option></select></label>
+      <label><input id="competition-old" type="checkbox"> Older residents (80% lifespan; otherwise 10%)</label>
+      <button id="seed-competition" type="button">Seed full competition garden (simulated)</button>
+      <label>Incoming vigor <select id="competition-incoming"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>
+      <button id="try-competition" type="button">Try simulated growth</button>
+      <span id="competition-status" role="status">One uniformly selected eligible resident, one inverse-vigor roll. Only successful full-garden replacements start the 15s cooldown. Clear/reseed keeps the cooldown.</span>
       <button id="seed-logs-aging" type="button">Seed aging blackthorn (simulated)</button>
       <button id="force-log" type="button">Force log chance (simulated expiry only)</button>
       <button id="seed-logs-cap" type="button">Seed 8 aging thorns / six-log cap</button>
