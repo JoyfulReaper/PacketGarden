@@ -1,3 +1,147 @@
+# Great Gnome Campfire Incident (2026-10-28)
+
+Implemented on `dev` above `1f2d3bf`, preserving the existing terrain,
+inverse-vigor competition, specimen previews and visit integration. The initial
+tree was clean, fetched `origin/dev` matched, and no applicable `AGENTS.md` was
+present. `main` is untouched. No commit, push, merge, reset, rebase or deployment
+is part of this work.
+
+## Selection and authoritative lifecycle
+
+The existing gnome **45-second check**, **30 living specimens** threshold and
+strict **roll < 0.02** base chance remain. Existing eligible-mushroom selection
+and its **roll < 0.30** heist branch execute first, unchanged. Only an otherwise
+ordinary dispute checks actual fallen-log candidates and tries **roll < 0.40**.
+No log means no extra branch draw. One candidate is selected uniformly, followed
+by a 50/50 choice of two or three gnomes. Only one incident may be active.
+
+| Eligible resources | Heist per qualifying check | Campfire per qualifying check |
+| --- | --- | --- |
+| Mushrooms and logs | 0.6% | 0.56% (`.02 × .70 × .40`) |
+| Logs, no mushrooms | 0 | 0.8% (`.02 × .40`) |
+| Mushrooms, no logs | 0.6% | 0 |
+| Neither | 0 | 0 |
+
+These are per eligible check, not per second or guaranteed visit frequencies.
+Existing dispute outcomes and landscaping fallbacks retain their order. Failed
+base checks never independently try campfires.
+
+An eligible log must be the same live object in both the terrain list and cell
+map, with valid id/cell/coordinates, finite creation/expiry times, no plant in its
+cell, and `createdAt <= now < expiresAt`. Selection snapshots the object, id,
+cell, column, row, creation time and expiry time. Logical ticks and presentation
+advances revalidate them, including immediately before ignition and consumption.
+A replacement in the same cell is never inherited or retried.
+
+Timeline, relative to incident start:
+
+- **0–2.5s:** two/three campers approach using existing cached gnome poses.
+- **2.5–4s:** gather around the actual log.
+- **4–17s:** small flames and two baked ember marks flicker above the real wood.
+  Terrain remains blocked. A darkened borrowed-texture overlay appears from 15s.
+- **17s:** revalidate, then call **`terrain.remove(exactLog, 'gnome-campfire')`**
+  once. The existing notification removes occupancy and destroys its real log
+  Sprite. Fire/char Sprites are destroyed and the target reference is released.
+  This does not increment specimen-removal or network-event statistics.
+- **17–21s:** gnomes depart; the cell is genuinely free for ordinary placement.
+- **21s:** remaining actor Sprites and their transient group are destroyed.
+
+The source log Sprite's texture/tint/alpha/transform are not mutated. Char uses
+an independent Sprite borrowing its exact cached texture, with no texture/source
+ownership. Existing gnome click priority, one underpants attempt and shared drop
+cap remain; there is no fire collection mechanic or new audio cue. The existing
+arrival cue still plays once when enabled.
+
+Natural expiry and external terrain removal cancel immediately through the
+normal terrain notification. Missing/stale/changed identity cancels on validation.
+Hidden tabs, backwards clocks or **gaps greater than 1500ms** cancel the whole
+sequence and establish a fresh 45s deadline. An exact 1500ms gap remains allowed.
+No fire/removal step is replayed after a gap; consumed wood is never restored.
+Normal completion keeps the existing incident cadence. Clear, reseed and page
+teardown release all owned effects and source references. Score stays zero.
+
+## Presentation, diagnostics and evidence
+
+Three 40×32 logical fire tiles are baked once into the existing gnome atlas at
+2× resolution. Flame frames switch every 160ms via the existing animation call;
+no new timer, ticker, renderer, particle system or per-frame geometry is used.
+Embers are part of the tile. Smoke is omitted. Reduced motion fixes the flame
+frame/alpha, suppresses flicker and uses snapped approach / four-step departure.
+Existing hidden-tab and puddle-reaction paths apply. Fire inherits world lighting;
+rain adds no extinguishing, spread, damage or lifetime rules.
+
+Only `/pixi-live.html` has Seed campfire log, Trigger campfire, Remove before
+ignition/during burning, reduced-motion preview, hidden/stalled cancellation and
+cell-occupancy controls. The seed creates 35 simulated plants plus an actual log
+through a forced **natural blackthorn expiry**, not a fake TCPNoise event or
+direct terrain-array insertion. Its one-millisecond fixture boundary avoids
+trying to render an already expired specimen. Forced triggers/removals are
+limited to simulated logs; ordinary runtime incidents can select real logs.
+
+`artifacts/gnome-campfire/index.html` is the generated native-scale gallery.
+For both `homepage-` and `diagnostic-`, captures include `approach`, `gathered`,
+`burning`, `charred`, `burned-out-empty`, `departure`, `finished`, `night`, `rain`,
+`night-rain-grass`, `reduced-motion` and `mobile`. Desktop captures are the actual
+**960×600** garden at CSS scale 1; mobile uses a **390×844** viewport without
+enlarging garden art. `review.json` records state, timings and cleanup. Generated
+captures/builds/logs remain ignored by Git.
+
+## Resource and performance bounds
+
+The gnome atlas grows **26 → 29 frames**, **2080×64 → 2320×64** physical pixels:
+**+61,440 bytes (60KiB) raw RGBA**, from 520KiB to 580KiB. There is still one
+gnome GPU source/bake; the whole live page retains **five atlas bakes**, one
+Application, one SSE stream and the unchanged **832 specimen frames**. Driver
+allocations can exceed raw pixel counts. Existing atlas assertions were updated
+to the measured dimensions; old pose/splash frames retain their order/artwork.
+
+An active campfire uses **2–3 gnome Sprites + one flame Sprite + at most one
+char Sprite**, inside the existing transient gnome group. Existing puddle
+reactions can additionally use their own bounded splash Sprites. Idle campfires
+retain no display objects. Borrowed log textures survive effect destruction and
+all atlas sources are released only at normal page teardown.
+
+In Chrome **156.0.8078.48**, full-garden campfire animation averaged roughly
+**0.004–0.008ms** per sampled frame, versus **0.008–0.011ms** for the four-gnome
+dispute; renderer submission averaged **0.047–0.052ms** versus idle
+**0.023–0.025ms**. Each mode used 120 local samples. These short native-clock
+probes exclude GPU completion and do not establish cross-device FPS or long-term
+memory behavior. In 20 full-garden logical probes per page, selection averaged
+**0.115–0.120ms** (max 0.30ms) and authoritative burnout averaged **0.010ms**
+(max 0.10ms). Raw samples and resource totals are in `review.json`.
+
+Repeated browser tests release **360 effect/actor Sprites across 80 cycles**;
+the bake count remains five and Graphics-context count remains constant. No
+recurring geometry, cached-texture destruction, fabricated SSE/growth activity,
+Recent activity changes or score changes were observed. Node also runs 60
+entry-point fire/char cleanup cycles covering interruption and consumption.
+
+## Verification and limits
+
+New tests cover exact `.02`, `.30` and `.40` boundaries; unchanged heist draws;
+no eligible log; two/three actors; single-incident exclusion; every identity
+field and map/list membership; natural expiry before ignition/during burning;
+failed and reentrant removal; full occupancy, genuine freed-cell regrowth;
+external removal/same-cell replacement; hidden/logical/render gaps and backwards
+clocks; reduced motion; actual click/underpants priority; diagnostic isolation;
+repeated Sprite/atlas cleanup and page teardown. Existing garden, terrain,
+competition, mutation, heist, SSE and visit suites remain in the full runners.
+
+Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds,
+`dotnet run --project tests/PacketGarden.Checks --no-restore`, and
+`node tests/weather-sse.cjs --run <built PacketGarden.dll>`. Chrome uses the
+installed Chrome/Playwright runtime through `NODE_PATH`; no downloads or new
+dependencies are needed. **All 68 Node suites passed** (20 optional entries
+skipped by that runner), **all 26 Chrome jobs passed**, Debug/Release builds
+passed with **zero warnings/errors**, backend integration checks passed, and
+the actual ASP.NET polling/SSE integration passed. Final branch/status/diff
+checks confirm uncommitted work on `dev`; no main or remote changes were made.
+
+There is no session persistence, fire spread, weather-dependent extinguishing,
+grass damage, reward or special regrowth. A small garden below the existing
+30-specimen threshold cannot start this event. Mobile captures emulate viewport
+size in desktop Chrome; physical-device GPU/soak testing remains unmeasured.
+
 # Exact-specimen inspection preview (2026-10-28)
 
 The existing card on `/` and `/pixi-live.html` now shows the exact selected

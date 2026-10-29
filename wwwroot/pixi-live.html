@@ -14,7 +14,7 @@
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
   <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
-  <script src="garden-gnomes.js?v=fallen-logs-1" defer></script>
+  <script src="garden-gnomes.js?v=campfire-1" defer></script>
   <script src="garden-mutations.js?v=opium-pods-1" defer></script>
   <script src="garden-grass.js?v=grass-lush-1" defer></script>
   <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
@@ -28,15 +28,15 @@
   <script src="pixi-specimen-preview.js?v=specimen-preview-1" defer></script>
   <script src="pixi-live-ui.js?v=specimen-preview-1" defer></script>
   <script src="pixi-live-ambient.js?v=opium-pods-1" defer></script>
-  <script src="pixi-live-gnomes.js?v=mushroom-heist-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=campfire-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
-  <script src="pixi-live-core.js?v=inverse-vigor-1" defer></script>
+  <script src="pixi-live-core.js?v=campfire-1" defer></script>
   <script src="garden-visits.js?v=garden-visits-1" defer></script>
-  <script src="pixi-live.js?v=garden-visits-1" defer></script>
+  <script src="pixi-live.js?v=campfire-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -126,6 +126,15 @@
       <button id="suspend-heist" type="button">Simulate heist hide/resume</button>
       <label><input id="heist-reduced-motion" type="checkbox"> Preview heist reduced motion</label>
       <span id="heist-status" role="status">Pickup after 3s really frees the original cell; the two thieves leave at 14s. Seed/trigger again for sequential tests. Hide the tab during any phase to cancel safely. System reduced motion always applies.</span>
+      <button id="seed-campfire" type="button">Seed campfire log (simulated)</button>
+      <button id="trigger-campfire" type="button">Trigger campfire (simulated log only)</button>
+      <button id="remove-campfire-before" type="button">Remove log before ignition</button>
+      <button id="remove-campfire-during" type="button">Remove burning log</button>
+      <label><input id="campfire-reduced-motion" type="checkbox"> Preview campfire reduced motion</label>
+      <button id="cancel-campfire-hidden" type="button">Test campfire hidden cancellation</button>
+      <button id="cancel-campfire-stalled" type="button">Test campfire stalled cancellation</button>
+      <button id="check-campfire-cell" type="button">Verify campfire cell occupancy</button>
+      <span id="campfire-status" role="status">Actual log terrain stays blocked while burning; burnout at 17s frees it through the terrain API. Only one incident can run. Hidden/stalled sequences cancel without replay; system reduced motion always applies.</span>
       <button id="trigger-frog" type="button">Trigger frog (simulated)</button>
       <button id="trigger-gnome-puddle" type="button">Trigger gnome puddle mishap</button>
       <span id="gnome-puddle-status" role="status">Local simulated water and gnomes; ordinary water entries retain their 20% chance.</span>

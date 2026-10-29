@@ -49,21 +49,42 @@
     const splash=new P.Graphics(),art=(common?require('./garden-gnome-puddles.js'):window.PacketGardenGnomePuddles).splashArt;
     for(const [x,y,endX,endY] of art.lines)splash.moveTo(x+16,y+18).lineTo(endX+16,endY+18);
     splash.stroke({color:art.color,width:art.width});splash.position.set(keys.length*40,0);sheet.addChild(splash);keys.push('puddle:splash');
+    // Three tiny whole-fire frames: restrained flames and two baked embers, no particles.
+    for(let i=0;i<3;i++){
+      const fire=new P.Graphics(),lean=[-1,1,0][i];
+      fire.ellipse(16,27,10,2).fill({color:0xce6b31,alpha:.15});
+      fire.poly([8,27,10,21,11,17,14,21,16+lean,10,19,17,20,21,23,18,24,24,22,28]).fill(0xc96838);
+      fire.poly([11,27,12,21,15,24,17+lean,16,19,22,22,25,20,28]).fill(0xeaa34b);
+      fire.poly([14,27,16,22,18,25,19,28]).fill(0xf2cf7e);
+      fire.rect(12+i,8-i,1,1).rect(21-i,11+i,1,1).fill({color:0xf0b76a,alpha:.65});
+      fire.position.set(keys.length*40,0);sheet.addChild(fire);keys.push(`campfire:${i}`);
+    }
     const atlas = renderer.generateTexture({target:sheet,frame:new P.Rectangle(0,0,keys.length*40,32),resolution:2});
     for(const patch of [...sheet.children])patch.destroy(); // Release owned construction contexts, including the ripple.
     sheet.destroy({children:true});
     const frames = new Map(keys.map((key,i)=>[key,new P.Texture({source:atlas.source,frame:new P.Rectangle(i*40,0,40,32)})]));
     return {frames,atlas,destroy(){for(const frame of frames.values())frame.destroy(false);atlas.destroy(true);}};
   }
-  function createGnomeView(P, layer, frames, getReducedMotion = () => false, mushroomVisual = () => null) {
-    const views = new Map(),splashes=new Map();let group = null, incident = null, carried = null;
+  function createGnomeView(P, layer, frames, getReducedMotion = () => false, mushroomVisual = () => null, logVisual = () => null) {
+    const views = new Map(),splashes=new Map();let group = null, incident = null, carried = null,fire=null,char=null;
     function change({actors,incident:nextIncident=null}) {
       incident=nextIncident;
+      const burning=incident?.type==='gnome_campfire'&&incident.phase==='burning'&&incident.target;
+      if(fire&&!burning){fire.destroy();fire=null;}
+      if(char&&(!burning||!incident.charred)){char.destroy();char=null;}
       if(carried && !incident?.carried){carried.destroy();carried=null;}
       for (const [actor,sprite] of views) if (!actors.includes(actor)) { sprite.destroy();views.delete(actor); }
       for (const [actor,sprite] of splashes) if (!actors.includes(actor)||!actor.puddleMishap) { sprite.destroy();splashes.delete(actor); }
       if (!actors.length) { if(group)group.destroy();group=null;return; }
       if (!group) {group=new P.Container();group.eventMode='none';layer.addChild(group);}
+      if(burning&&!fire){fire=new P.Sprite(frames.get('campfire:0'));fire.anchor.set(16/40,29/32);fire.eventMode='none';
+        fire.position.set(incident.origin.x,incident.origin.y);group.addChildAt(fire,0);}
+      if(burning&&incident.charred&&!char){
+        const source=logVisual(incident.target.log);
+        if(source&&!source.destroyed){char=new P.Sprite(source.texture);char.anchor.set(source.anchor.x,source.anchor.y);
+          char.position.set(source.position.x,source.position.y);char.scale.set(source.scale.x,source.scale.y);char.rotation=source.rotation;
+          char.tint=0x312a25;char.eventMode='none';group.addChildAt(char,0);}
+      }
       if(incident?.carried && !carried){
         const art=mushroomVisual(incident.carried);
         if(art){carried=new P.Sprite(art.texture);carried.anchor.set(.5,.9);carried.scale.set(art.scale);
@@ -75,8 +96,12 @@
       }
     }
     function animate(at) {
+      const reduced=getReducedMotion();
+      if(fire){fire.texture=frames.get(`campfire:${reduced?0:Math.floor(Math.max(0,at-incident.createdAt-core.campfireConfig.igniteAfterMs)/160)%3}`);
+        fire.alpha=reduced?.95:.93+Math.sin(at/130)*.05;}
+      if(char)char.alpha=reduced?.7:Math.min(.85,Math.max(0,(at-incident.createdAt-core.campfireConfig.charAfterMs)/2000)*.85);
       for(const [actor,sprite] of views) {
-        const pose=core.presentation(actor,at,getReducedMotion()),step=pose.step<-.33?-1:pose.step>.33?1:0;
+        const pose=core.presentation(actor,at,reduced),step=pose.step<-.33?-1:pose.step>.33?1:0;
         const key=pose.surprised ? pose.mushroom ? `surprise:carry:${actor.side}` : pose.sack ? `surprise:sack:${actor.side}` : pose.clippers ? 'surprise:clippers' : `surprise:${actor.side}`
           : pose.mushroom ? `carry:${actor.side}` : pose.sack ? `sack:${actor.side}` : pose.clippers ? `clippers:${pose.closed}` : `${actor.side}:${pose.battle}:${step}`;
         sprite.texture=frames.get(key);
@@ -93,7 +118,7 @@
         carried.rotation=wobble*.035;
       }
     }
-    return {views,splashes,change,animate,get carried(){return carried;},snapshot(){return {sprites:views.size,carried:carried?1:0,splashes:splashes.size,containers:group?1:0,textures:frames.size};},
+    return {views,splashes,change,animate,get fire(){return fire;},get char(){return char;},get carried(){return carried;},snapshot(){return {sprites:views.size,carried:carried?1:0,splashes:splashes.size,fire:fire?1:0,char:char?1:0,containers:group?1:0,textures:frames.size};},
       destroy(){change({actors:[]});}};
   }
   const api={makeGnomeAtlas,createGnomeView};

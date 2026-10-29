@@ -173,9 +173,9 @@ async function run(){
           specimenFrames:f.view.snapshot().textures,gnomeSourceCount:new Set([...f.gnomeCache.frames.values()].map(t=>t.source)).size,
           gnomeBacking:[f.gnomeCache.atlas.source.pixelWidth,f.gnomeCache.atlas.source.pixelHeight],geometryDelta:f.geometry-geometry,
           layers:f.view.curiosityLayer.children.length};
-      });assert.equal(resources.frames,26);assert.equal(resources.specimenFrames,832);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);
+      });assert.equal(resources.frames,29);assert.equal(resources.specimenFrames,832);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);
       assert.equal(resources.contextsAfter,resources.contexts);assert.equal(resources.streams,1);assert.equal(resources.gnomeSourceCount,1);
-      assert.deepEqual(resources.gnomeBacking,[2080,64]);assert.equal(resources.layers,0);report.resources.push({page:name,...resources});
+      assert.deepEqual(resources.gnomeBacking,[2320,64]);assert.equal(resources.layers,0);report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
         await page.locator('#seed-heist').click();await page.locator('#trigger-heist').click();
         assert.equal(await page.evaluate(()=>__heist.gnomes.incident.type),'gnome_heist');await page.locator('#remove-heist-target').click();await step(3000);

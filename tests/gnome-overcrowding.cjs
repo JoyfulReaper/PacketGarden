@@ -141,7 +141,7 @@ async function adapters() {
     const sprites=[...view.views.values()];assert.equal(sprites.length,2);
     for(let frame=0;frame<200&&m.incident;frame++) {f.at+=250;m.tick(f.at);m.advance(f.at);view.animate(f.at);}
     assert.equal(m.incident,null);assert.equal(view.views.size,0);assert.equal(layer.children.length,0);
-    assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),baseline+26);assert.equal(h.generated(),built);
+    assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),baseline+29);assert.equal(h.generated(),built);
   }
   view.destroy();cache.destroy();layer.destroy();assert.equal(h.textureCount(),baseline);
   for(const page of ['index.html','pixi-live.html'])for(const reduced of [false,true]) {

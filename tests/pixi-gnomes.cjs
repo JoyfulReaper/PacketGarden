@@ -3,8 +3,8 @@ const G=require('../wwwroot/garden-gnomes.js'),V=require('../wwwroot/pixi-live-g
 const {start}=require('./pixi-default.cjs'),audio=require('./audio-context.cjs');
 let at=100000;
 const layer=new h.P.Container(),before=h.textureCount(),generated=h.generated(),cache=V.makeGnomeAtlas(h.P,h.renderer);
-assert.equal(cache.frames.size,26);assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
-assert.equal(h.textureCount(),before+26);assert.equal(h.generated(),generated+1);
+assert.equal(cache.frames.size,29);assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
+assert.equal(h.textureCount(),before+29);assert.equal(h.generated(),generated+1);
 const view=V.createGnomeView(h.P,layer,cache.frames),specimens=Array.from({length:30},()=>({type:'broadleaf',createdAt:at}));
 const model=G.createModel({now:()=>at,getSpecimens:()=>specimens,onChange:view.change});
 assert.equal(layer.children.length,0,'inactive incidents allocate no display objects');
@@ -15,7 +15,7 @@ for(let incident=0;incident<20;incident++) {
     assert([...view.views.values()].every(s=>sprites.includes(s)));assert([...view.views.values()].every(s=>Number.isFinite(s.position.x)&&Number.isFinite(s.position.y)));
   }
   model.advance(at+12000);assert.equal(view.views.size,0);assert.equal(layer.children.length,0);
-  assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),before+26);assert.equal(h.generated(),generated+1);
+  assert(sprites.every(s=>!h.live.has(s)));assert.equal(h.textureCount(),before+29);assert.equal(h.generated(),generated+1);
 }
 model.start(at,()=>.5);view.destroy();assert.equal(layer.children.length,0);model.clear();layer.destroy();cache.destroy();assert.equal(h.textureCount(),before);
 assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-live-gnomes.js','utf8'),/setTimeout|setInterval|requestAnimationFrame|EventSource|fetch\(/);
@@ -62,5 +62,5 @@ assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-live-gnomes.js','utf8'),/setTi
   assert.doesNotThrow(()=>failed.gnomes.advance(failed.context.Date.now()+7000));assert.equal(failed.gnomes.incident.phase,'result');
   assert.equal(failed.model.specimens.length,30);assert(failed.app.active);assert.equal(a.state.contexts.length,1);
   failed.winHandlers.get('pagehide')({persisted:false});
-  console.log('PASS: cached 26-frame gnome atlas/one source, 4 sprites + 1 transient group, 20 incidents without new textures/geometry, both Pixi pages/normal cadence, dev winners, cues, mute, resize, hidden completion, clear/teardown and garden independence.');
+  console.log('PASS: cached 29-frame gnome atlas/one source, 4 sprites + 1 transient group, 20 incidents without new textures/geometry, both Pixi pages/normal cadence, dev winners, cues, mute, resize, hidden completion, clear/teardown and garden independence.');
 })().catch(error=>{console.error(error);process.exitCode=1;});

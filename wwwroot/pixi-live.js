@@ -589,8 +589,10 @@
       onChange(change) { ambientView.change(change, Date.now()); } });
     own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
-    let ui, ecology = null;
-    const model = core.createModel(view, { onTerrainChange:change=>{if(change.kind==='terrain-added')ecology?.specimenAdded(change.terrain.column,change.terrain.row);},
+    let ui, ecology = null, gnomes = null;
+    const model = core.createModel(view, { onTerrainChange:change=>{
+      if(change.kind==='terrain-added')ecology?.specimenAdded(change.terrain.column,change.terrain.row);
+      else gnomes?.terrainRemoved(change.terrain);},
       onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
@@ -615,12 +617,12 @@
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
     own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
-    let heistPreviewReduced = false;
-    const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced);
-    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual);
+    let heistPreviewReduced = false, campfirePreviewReduced = false;
+    const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced || campfirePreviewReduced);
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual, log=>view.terrainViews.get(log));
     own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
-    const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
+    gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
       getPuddles: () => ecology?.puddles ?? [],
       hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
       hasPendingCollectible: specimen => ambient.pendingDrops.has(specimen),
@@ -679,6 +681,36 @@
       if(gnomes.incident?.type!=='gnome_heist'){heistStatus('Trigger a heist first; suspension can be tested in any phase.');return;}
       const removed=gnomes.incident.removals;gnomes.suspend(Date.now());gnomes.resetCadence(Date.now());gnomeView.animate(Date.now());
       heistStatus(`Heist-only hidden/resume path: views cleared, fresh 45s deadline. ${removed?'The stolen mushroom remains removed.':'Pickup had not occurred; the mushroom remains.'} Actual tab hiding also suspends the whole page.`);
+    });
+    const campfireStatus=text=>{const el=document.querySelector('#campfire-status');if(el)el.textContent=text;};
+    let campfireFixtureLog=null;
+    listen(document.querySelector('#seed-campfire'),'click',()=>{
+      gnomes.clear();ambient.clear();frogs?.clear();ecology?.clear();
+      const log=model.seedCampfire();campfireFixtureLog=log?{cell:log.cell,column:log.column,row:log.row}:null;gnomes.resetCadence();
+      campfireStatus('35 simulated plants and one actual naturally expired blackthorn log. Trigger campfire; ignite at 4s, remove terrain at 17s, depart by 21s.');
+    });
+    listen(document.querySelector('#trigger-campfire'),'click',()=>{
+      if(gnomes.incident){campfireStatus('An incident is already active.');return;}
+      campfireStatus(gnomes.startCampfire(Date.now(),undefined,true)?'Simulated campfire targets one real log. Click a gnome for its existing underpants attempt.':'Seed a suitable simulated log first; 30 living specimens are still required.');
+      gnomeView.animate(Date.now());
+    });
+    for(const phase of ['before','during'])listen(document.querySelector(`#remove-campfire-${phase}`),'click',()=>{
+      const current=gnomes.incident,target=current?.type==='gnome_campfire'?current.target?.log:null;
+      if(!target?.simulated||(phase==='during')!==(current.phase==='burning')){campfireStatus(`Trigger a simulated campfire and use this ${phase==='before'?'before ignition':'during burning'}.`);return;}
+      model.terrain.remove(target,'simulated-campfire-target-removal');campfireStatus('Exact simulated log removed through terrain API; incident cancelled without touching another cell.');
+    });
+    listen(document.querySelector('#campfire-reduced-motion'),'change',event=>{campfirePreviewReduced=event.target.checked;});
+    for(const mode of ['hidden','stalled'])listen(document.querySelector(`#cancel-campfire-${mode}`),'click',()=>{
+      if(gnomes.incident?.type!=='gnome_campfire'){campfireStatus('Trigger a campfire first.');return;}
+      if(mode==='hidden'){gnomes.suspend(Date.now());gnomes.resetCadence(Date.now());}
+      else{gnomes.advance(Date.now()+window.PacketGardenGnomes.campfireConfig.maxTickGapMs+1);gnomes.resetCadence(Date.now());}
+      campfireStatus('Campfire cancelled, presentation released, no delayed removal or replay. Existing log stays until normal decay.');
+    });
+    listen(document.querySelector('#check-campfire-cell'),'click',()=>{
+      if(!campfireFixtureLog){campfireStatus('Seed the campfire fixture first.');return;}
+      const {cell,column,row}=campfireFixtureLog,blocked=model.terrain.isBlocked(cell),occupied=model.byCell.has(cell);
+      campfireStatus(`Fixture cell ${cell}: blocked ${blocked}, occupied ${occupied}, free ${!model.isCellOccupied(column,row)}. Normal growth uses the actual occupancy model.`);
+      if(!blocked)campfireFixtureLog=null;
     });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
@@ -910,7 +942,7 @@
         `Full-garden competition · replacement cooldown ${(model.competitionSnapshot().remainingMs/1000).toFixed(1)}s · weaker newcomers favored`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + (gnomeView.fire?1:0) + (gnomeView.char?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
         `Wirefern sori ${counts.sporeViews}/640 · 3 cached layouts · 25% cosmetic selection`,
@@ -918,6 +950,7 @@
         `Opium poppies ${model.poppies.snapshot().active}/2 · pending ${model.poppies.snapshot().pending} · 2 cached frames · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Mushroom heist · carried view ${gnomeView.carried?1:0} · authoritative removals ${model.counts.heistRemovals}`,
+        `Campfire · flame ${gnomeView.fire?1:0} · char ${gnomeView.char?1:0} · log ${gnomes.incident?.type==='gnome_campfire'?(gnomes.incident.target?.id??'consumed'):'none'}`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,

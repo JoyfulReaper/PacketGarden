@@ -121,6 +121,14 @@
         // Explicit simulated fixture only; the normal expiry/occupancy/removal path still runs.
         const count=model.forceLogFixture();model.tick(at);return count;
       },
+      seedCampfire() {
+        const at=now(),thorn={type:'blackthorn',vigor:1,column:16,row:10,createdAt:at-garden.timings.blackthorn.expiredAfterMs,
+          origin:{kind:'simulated',eventType:'log-fixture'}};
+        model.seed([thorn,...Array.from({length:35},(_,i)=>({type:'broadleaf',vigor:i%4,column:5+i%22,row:13+Math.floor(i/22),
+          createdAt:at-65000,origin:{kind:'simulated',eventType:'campfire-fixture'}}))],at-1);
+        model.forceLogFixture();model.tick(at);
+        return model.terrain.logs[0]??null;
+      },
       seedHeist() {
         const at=now();
         model.seed(Array.from({length:35},(_,i)=>({type:i<4?'mushroom':'broadleaf',vigor:i%4,

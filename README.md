@@ -241,6 +241,17 @@ specimens are protected; hiding or stalls cancel without replay or restoration.
 Both thieves remain clickable for underpants. See the
 [heist review](docs/PIXI-LIVE.md#great-gnome-mushroom-heist-2026-10-27).
 
+The **Great Gnome Campfire Incident** gives an otherwise ordinary dispute a
+**40%** branch when an actual fallen log is available, after the unchanged heist
+selection. It uses the same **45-second / 2% / 30 living specimens** check. Two or
+three gnomes gather at the exact log, ignite at **4s**, char its appearance near
+**15s**, and consume it through `terrain.remove()` at **17s**. The log really
+blocks growth until removal; its cell then permits ordinary planting. Gnomes
+depart by **21s** and keep their existing underpants click behavior. Stale or
+naturally decayed targets, hidden tabs and stalls cancel without delayed removal
+or replay. Three cached flame frames add no renderer, scheduler or particles.
+See [campfire captures, probabilities and costs](docs/PIXI-LIVE.md#great-gnome-campfire-incident-2026-10-28).
+
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,
 gnome sounds and optional thunder share the same output controls and cleanup.

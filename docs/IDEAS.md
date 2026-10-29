@@ -916,6 +916,28 @@ terrain. Diagnostic controls preview simulated aging, success, cap, full/dense
 gardens, blocked growth and decay/regrowth. See
 [actual-scale evidence and validation](PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
 
+### Great Gnome Campfire Incident (implemented)
+
+Gnomes can now discover and consume an existing fallen blackthorn log. The
+shared 45-second/2% incident check first keeps the existing 30% mushroom-heist
+branch, then gives an ordinary-dispute outcome a 40% campfire branch if eligible
+terrain exists. There is no second scheduler or concurrent gnome incident.
+Two or three campers approach/gather, ignite after four seconds, burn the real
+blocking log and remove that exact object through `terrain.remove()` after
+17 seconds. Departure finishes by 21 seconds. No collectible, points, network
+event, plant replacement or special regrowth is invented; normal occupancy
+immediately makes the freed cell available.
+
+Object/id, cell/coordinates and original creation/expiry times are revalidated.
+Natural decay, stale/replaced targets, hiding and clock gaps over 1.5 seconds
+cancel safely without a later burn or removal. Already consumed wood stays gone.
+Existing gnome poses and underpants attempts remain; only three tiny cached
+fire/ember frames and a temporary borrowed-texture char overlay are new. Reduced
+motion uses a steady flame and restrained actor movement. Rain retains its
+existing presentation without introducing extinguishing or fire-spread rules.
+Diagnostics remain on `/pixi-live.html` only. See
+[the native-scale review and resource measurements](PIXI-LIVE.md#great-gnome-campfire-incident-2026-10-28).
+
 Simple persistence across browser/server restarts remains desirable. The goal is to
 preserve the feeling that the garden has history without turning PacketGarden into
 a telemetry database.

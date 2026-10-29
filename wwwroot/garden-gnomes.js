@@ -11,6 +11,8 @@
   const harvestConfig = Object.freeze({ minimumWeeds:3, incidentChance:.05, maxTargets:3 });
   const heistConfig = Object.freeze({ incidentShare:.3, pickupAfterMs:3000, pickupHoldMs:1000,
     finishedAfterMs:14000, abortExitMs:2000, maxTickGapMs:1500 });
+  const campfireConfig = Object.freeze({ incidentShare:.4, gatherAfterMs:2500, igniteAfterMs:4000,
+    charAfterMs:15000, consumeAfterMs:17000, finishedAfterMs:21000, maxTickGapMs:1500, maxActors:3 });
   const reactionMs = 600, presentations = new WeakMap();
   // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
   const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
@@ -111,6 +113,76 @@
           actor.y=incident.origin.y-4+(incident.exit.y-incident.origin.y)*progress;
         }
         actor.carryMushroom=Boolean(incident.carried);actor.state=incident.phase;
+      }
+    }
+    function eligibleLog(log,at) {
+      return log?.type==='fallen_log' && Number.isInteger(log.id) && log.id>0
+        && Number.isInteger(log.column) && log.column>=0 && log.column<garden.dimensions.columns
+        && Number.isInteger(log.row) && log.row>=0 && log.row<garden.dimensions.rows
+        && log.cell===log.row*garden.dimensions.columns+log.column
+        && Number.isFinite(log.createdAt) && Number.isFinite(log.expiresAt)
+        && at>=log.createdAt && at<log.expiresAt && source?.terrain?.byCell.get(log.cell)===log
+        && source.terrain.logs.includes(log) && !source.byCell.has(log.cell);
+    }
+    function campfireCandidates(at=now(),simulatedOnly=false) {
+      return (source?.terrain?.logs??[]).filter(log=>eligibleLog(log,at)&&(!simulatedOnly||log.simulated));
+    }
+    function startCampfire(at=now(),roll=random,simulatedOnly=false,candidates=null) {
+      if(suspended||incident||livingCount(at)<config.minimumSpecimens)return false;
+      candidates??=campfireCandidates(at,simulatedOnly);if(!candidates.length)return false;
+      const log=candidates[Math.floor(roll()*candidates.length)];
+      if(!eligibleLog(log,at)||simulatedOnly&&!log.simulated)return false;
+      const origin={x:(log.column+.5)*garden.dimensions.cellSize,y:(log.row+.5)*garden.dimensions.cellSize+6};
+      const exits=[{x:-36,y:origin.y},{x:996,y:origin.y},{x:origin.x,y:-36},{x:origin.x,y:636}];
+      const exit=exits.reduce((a,b)=>Math.hypot(b.x-origin.x,b.y-origin.y)<Math.hypot(a.x-origin.x,a.y-origin.y)?b:a);
+      incident={type:'gnome_campfire',phase:'approach',createdAt:at,lastTickAt:at,origin,exit,removals:0,
+        target:{log,id:log.id,cell:log.cell,column:log.column,row:log.row,createdAt:log.createdAt,expiresAt:log.expiresAt},
+        charred:false,consumed:false,consuming:false};
+      const count=roll()<.5?2:3;
+      actors=Array.from({length:count},(_,i)=>{
+        const dx=[-27,27,6][i],dy=[-7,-7,25][i],x=Math.max(7,Math.min(953,origin.x+(i===0?-115:115))),y=Math.max(18,Math.min(580,origin.y+(i===2?95:-20)));
+        return{type:'gnome',role:'camper',side:i===1?'red':'green',createdAt:at,state:'approach',x,y,startX:x,startY:y,
+          targetX:Math.max(7,Math.min(953,origin.x+dx)),targetY:Math.max(18,Math.min(580,origin.y+dy))};
+      });
+      puddles.tick(actors,at);onCue('arrival');changed();return true;
+    }
+    function validCampfireTarget(at) {
+      const t=incident?.target,log=t?.log;
+      return Boolean(log && ['id','cell','column','row','createdAt','expiresAt'].every(k=>log[k]===t[k]) && eligibleLog(log,at));
+    }
+    function cancelCampfire(at) {clear();resetCadence(at);}
+    function campfireClock(at) {
+      if(at<incident.lastTickAt || at-incident.lastTickAt>campfireConfig.maxTickGapMs){cancelCampfire(at);return false;}
+      if(at>=incident.createdAt+campfireConfig.finishedAfterMs){clear();return false;}
+      if(!incident.consumed && !validCampfireTarget(at)){cancelCampfire(at);return false;}
+      return true;
+    }
+    function tickCampfire(at) {
+      if(!campfireClock(at))return;
+      const current=incident,c=campfireConfig,age=at-current.createdAt;current.lastTickAt=at;
+      if(!current.consumed && age>=c.consumeAfterMs){
+        // Normal terrain notifications own occupancy/Sprite removal. Guard synchronous
+        // observers, then release the exact source before any later occupant can arrive.
+        current.consuming=true;
+        const removed=source.terrain.remove(current.target.log,'gnome-campfire');
+        if(incident!==current)return;
+        current.consuming=false;
+        if(!removed){cancelCampfire(at);return;}
+        current.target=null;current.consumed=true;current.removals=1;current.phase='departure';current.leaveAt=at;changed();
+      }else if(!current.consumed){
+        const phase=age<c.gatherAfterMs?'approach':age<c.igniteAfterMs?'gather':'burning',charred=age>=c.charAfterMs;
+        if(phase!==current.phase||charred!==current.charred){current.phase=phase;current.charred=charred;changed();}
+      }
+    }
+    function advanceCampfire(at) {
+      if(!campfireClock(at))return;
+      const c=campfireConfig,reduced=getReducedMotion(),age=at-incident.createdAt;
+      let progress=incident.consumed?Math.min(1,(at-incident.leaveAt)/(incident.createdAt+c.finishedAfterMs-incident.leaveAt)):Math.min(1,age/c.gatherAfterMs);
+      if(reduced)progress=incident.consumed?Math.floor(progress*4)/4:progress<1?0:1;
+      for(const actor of actors){
+        actor.x=incident.consumed?actor.targetX+(incident.exit.x-incident.origin.x)*progress:actor.startX+(actor.targetX-actor.startX)*progress;
+        actor.y=incident.consumed?actor.targetY+(incident.exit.y-incident.origin.y)*progress:actor.startY+(actor.targetY-actor.startY)*progress;
+        actor.state=incident.phase;
       }
     }
     function landscapingCandidates(at = now(), mode = 'vine') {
@@ -231,10 +303,11 @@
       }
       puddles.tick(actors,at); onCue('arrival'); changed(); return true;
     }
-    function clear() { puddles.clear(actors);actors = []; incident = null; changed(); }
+    function clear() { puddles.clear(actors);actors = [];if(incident?.type==='gnome_campfire')incident.target=null; incident = null; changed(); }
     function advance(at = now(), roll = random) {
       if (!incident) return;
       if (incident.type === 'gnome_heist') { advanceHeist(at); return; }
+      if (incident.type === 'gnome_campfire') { advanceCampfire(at); return; }
       if (incident.type === 'gnome_landscaping') { advanceLandscaping(at); return; }
       const age = Math.max(0, at - incident.createdAt);
       // Completion precedes phase/audio handling, including a suspended page.
@@ -269,7 +342,7 @@
     function suspend(at = now()) {
       resetCadence(at);
       suspended = true;
-      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist') clear();
+      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist' || incident?.type === 'gnome_campfire') clear();
       else changed(); // Release transient water presentation while a dispute is hidden.
     }
     function tick(at = now(), roll = random, hidden = false) {
@@ -277,6 +350,7 @@
       if (incident) {
         if (incident.type === 'gnome_landscaping') tickLandscaping(at);
         else if (incident.type === 'gnome_heist') tickHeist(at);
+        else if (incident.type === 'gnome_campfire') tickCampfire(at);
         advance(at, roll); if(!suspended)puddles.tick(actors,at);return;
       }
       if (at < nextCheckAt) return;
@@ -284,7 +358,11 @@
       if (livingCount(at) >= config.minimumSpecimens && roll() < config.incidentChance) {
         const mushrooms=heistCandidates(at);
         if(mushrooms.length && roll()<heistConfig.incidentShare) startHeist(at,roll,false,mushrooms);
-        else start(at,roll);
+        else {
+          const logs=campfireCandidates(at);
+          if(logs.length && roll()<campfireConfig.incidentShare)startCampfire(at,roll,false,logs);
+          else start(at,roll);
+        }
       }
       if (!incident && at >= lastLandscapingAt + landscapingConfig.cooldownMs) {
         if (source && freeCells() === 0) {
@@ -305,6 +383,8 @@
         || incident.phase === 'exit' && at >= incident.stepAt+landscapingConfig.exitMs)) return false;
       if (incident.type === 'gnome_heist' && (at<incident.lastTickAt || at-incident.lastTickAt>heistConfig.maxTickGapMs
         || at>=incident.createdAt+heistConfig.finishedAfterMs || incident.aborted && at>=incident.exitAt+heistConfig.abortExitMs)) return false;
+      if(incident.type==='gnome_campfire' && (at<incident.lastTickAt || at-incident.lastTickAt>campfireConfig.maxTickGapMs
+        || at>=incident.createdAt+campfireConfig.finishedAfterMs || !incident.consumed&&!validCampfireTarget(at)))return false;
       return (presentations.get(actor)?.alpha ?? 0) > 0;
     }
     function hitAt(point, at = now()) {
@@ -326,7 +406,8 @@
       }
       return true; // Repeated clicks still consume the click, never the plant underneath.
     }
-    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, startCampfire, campfireCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+      terrainRemoved(log,at=now()){if(incident?.type==='gnome_campfire'&&incident.target?.log===log&&!incident.consuming)cancelCampfire(at);},
       puddleRemoved(puddle){puddles.removed(puddle);if(actors.length)changed();},
       simulatePuddleEntry(actor){if(!actors.includes(actor))return false;puddles.armDemo(actor);return true;},
       get lastLandscapingAt() { return lastLandscapingAt; },
@@ -335,7 +416,8 @@
   function appearance(actor, at, reducedMotion = false) {
     const water = (typeof module !== 'undefined' && module.exports ? require('./garden-gnome-puddles.js') : window.PacketGardenGnomePuddles).reactionState(actor,at,reducedMotion);
     const surprised = at < (actor.surprisedUntil ?? -Infinity) || Boolean(water);
-    const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier';
+    const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier'
+      || actor.role==='camper'&&actor.state!=='approach'&&actor.state!=='departure';
     const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle' && !surprised;
     return { step, battle, surprised, water, mushroom:Boolean(actor.carryMushroom), sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
       bounce:water ? water.bounce : surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
@@ -355,6 +437,6 @@
     const spread = closed ? 1 : 5;
     return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
   }
-  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
+  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, campfireConfig, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();
