@@ -942,6 +942,27 @@ Simple persistence across browser/server restarts remains desirable. The goal is
 preserve the feeling that the garden has history without turning PacketGarden into
 a telemetry database.
 
+### Log-dwelling garden snails (implemented)
+
+Actual fallen logs now host an independent, bounded wildlife visit: **45s / 25% /
+one arrival per check / two active / 75s**. These are not first-seen collectible
+snails. Four precomputed neighboring waypoints provide slow crawling, pauses,
+directional facing and subtle cached body motion. Each visit selects at most
+two exact existing grass objects along that route and can consume them only
+through `garden-ecology.removeGrassCell()` at its two grazing slots. A stale or
+replaced patch is skipped without choosing another; no special regrowth occurs.
+
+Log object/id/cell/creation identity stays authoritative. Natural decay,
+campfire, clear and other source removal start departure and release source/
+grass references; hiding, long stalls and backwards clocks cancel without
+missed spawn or grazing replay. One acknowledgment per individual uses
+"The snail continues being a snail. +0 points". Repeated hits do not collect,
+remove or repeatedly announce it. Existing collectible-snail messages, frog/
+gnome priority, mutations, drops, garden activity and Score: 0 are preserved.
+Three shell palettes with crawl/nibble poses share the existing ambient atlas.
+Only `/pixi-live.html` has source/grass/spawn/graze/removal/motion/cancellation
+fixtures. See [the native-scale review and bounds](PIXI-LIVE.md#log-dwelling-garden-snails-2026-10-29).
+
 Longer-lived terrain/history ideas from the vision include:
 
 - rocks;

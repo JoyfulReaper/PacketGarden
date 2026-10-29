@@ -1,3 +1,164 @@
+# Log-dwelling garden snails (2026-10-29)
+
+Implemented on `dev` above **`0c317bf`**, preserving campfires, terrain,
+competition, collectible snails, frogs, inspections and visit notifications.
+The starting tree was clean, fetched `origin/dev` matched, and no applicable
+`AGENTS.md` was present. `main` is unchanged; no commit, push or deployment.
+
+## Wildlife, movement and grazing
+
+`garden-log-snails.js` owns a separate renderer-neutral wildlife model, with
+independent seeded entropy that never consumes `Math.random` or garden/ecology/
+frog/gnome randomness. It uses the existing logical tick and animation calls:
+**45-second checks**, strict **roll < .25**, **one arrival per check**, **two
+active visitors** and a **75-second lifetime**. No minimum specimen count is
+required. Checks without a valid log or at capacity consume no random draw.
+Deadlines advance once, without replaying missed opportunities.
+
+The source must be the exact actual fallen-log object in the terrain list and
+cell map, with matching id/cell/coordinates/creation/expiry timestamps and a
+currently living lifetime. Each visit captures that identity. Lookalike/new logs
+in the same cell never inherit a visitor. Snails are not specimens, curiosities,
+drops, occupancy blockers, vigor or network input.
+
+A small fixed eight-neighbor ring around the log supplies **four preplanned
+waypoints**. Invalid boundary points are excluded and a route reverses at an
+edge. Segments remain at least 30 logical pixels from the log center, inside
+the garden, without per-frame pathfinding/randomness. Heading follows movement
+including vertical travel. Maximum crawl speed is **1.875 logical pixels/sec**.
+
+| Visit age | Behavior |
+| --- | --- |
+| 0–2s | Fade in over 700ms and pause adjacent to log. |
+| 2–22s | Slowly crawl to first neighboring waypoint. |
+| 22–28s | Pause; grazing slot at **25s**. |
+| 28–50s | Crawl to second waypoint. |
+| 50–56s | Pause; grazing slot at **53s**. |
+| 56–72s | Final slow crawl. |
+| 72–75s | Short departure/fade, then remove visitor and Sprite. |
+
+Only the two future pause cells are considered for grazing at arrival. Each
+must contain a real, unexpired grass object within **1.5 cells** of the source
+(the log's own cell is excluded). At its slot, recheck active visitor membership,
+the complete original source identity, patch object membership and exact
+coordinate ownership, range, lifetime and remaining attempts. Then call the
+existing **`ecology.removeGrassCell(column,row)`**. Its normal notification
+removes the real patch/Sprite/contact shadow and closes exact grass inspection.
+There is no visual-only removal or new ecology rule.
+
+A missing, expired, moved or replaced patch consumes/skips that slot. A visit
+never selects a replacement or eats newly arrived grass. No available grass
+simply means wandering without nibbling. At most two attempts and two successful
+removals occur per visit. The tiny nibble frame appears only after actual
+successful consumption. Ordinary spreading, maintenance, weather and under-
+plants policies are unchanged; wildlife never refills a grazed cell.
+
+## Source lifecycle and interactions
+
+The existing terrain-removal notification starts a **three-second fade** when
+the exact source decays, is consumed by campfire, is cleared or otherwise
+removed. Source and pending grass references are released immediately, with no
+further grazing. Departure retains only preplanned coordinate data. An early
+source loss preserves the current entrance opacity instead of flashing into
+full visibility. The original 75s deadline still bounds the departure.
+
+Hidden/resumed pages, backwards clocks and gaps **greater than 1500ms** clear
+visits, Sprites and references and set a fresh 45s deadline. An exact 1500ms gap
+remains allowed. The animation-side guard also prevents a stalled logical model
+from displaying/grazing stale visitors. Grazing happens only on logical ticks.
+Whole-garden Clear explicitly clears wildlife; individual log removal uses the
+short fade. Clear, departure and teardown release all owned resources. IDs stay
+monotonic across clears; click acknowledgments use weak ownership.
+
+Click priority is **gnomes → curiosities → loose drops → frogs → active
+mutations → log snails → ordinary plant/grass inspection**. This keeps all
+existing priorities, puts wildlife after frogs and before ordinary inspection,
+and retains active-mutation protection. The first hit acknowledges the exact
+visitor with **The snail continues being a snail. +0 points**. Later hits still
+consume the click without another message or deadline extension. Clicks never
+collect/remove it, change its route, trigger collection audio or add points.
+
+The existing first-seen curiosity remains type `snail`, with its original art,
+movement, collection and **You collected a snail. It seems annoyed. +0 points**
+message. New wildlife uses `log-snail` and separate event/frame names. No SSE,
+provenance, Recent activity, rarity, competition or Score: 0 changes are added.
+
+## Artwork, diagnostics and browser review
+
+Three brown/olive/russet spiral-shell palettes each have two restrained crawl
+frames and one lowered-head nibble pose, with pale bodies and tiny feelers.
+The nine finite frames append to the existing ambient atlas; old curiosity,
+drop and frog frames retain their positions/artwork. One Sprite per visitor is
+inserted at the bottom of the existing drop/wildlife layer, above grass/plants
+and below frogs/drops/curiosities/gnomes, without new idle containers. Existing
+interaction priority gives active mutations precedence when overlapping.
+
+Reduced motion uses quarter-segment discrete positions and static poses,
+without shell/body bob or stretching; departure fades in place. No per-frame
+Graphics, texture creation, particles, additional renderer/ticker or timer.
+
+`garden-log-snails-dev.js` loads **only on `/pixi-live.html`**. Controls seed a
+real simulated fallen log via natural blackthorn expiry, seed actual neighboring
+grass through ecology, spawn one/two visitors, preview grazing, remove the actual
+source, preview reduced motion, exercise hidden/stalled cancellation and clear
+wildlife. Forced arrivals/removals are restricted to simulated logs. Grazing
+preview constructs an actual 30-second-old log and ages one simulated visit with
+98 bounded 250ms fixture ticks; the first real nibble is then due in 0.5s. This
+explicit local fixture does not change ordinary hidden/resume behavior, publish
+fake TCPNoise, bypass grass identity checks or add a periodic scheduler.
+
+`artifacts/log-snails/index.html` contains the actual browser gallery; both
+`homepage-` and `diagnostic-` captures show crawling, paused, grazing, second
+graze, departure, departed, night, olive/russet palettes, reduced motion,
+no-grass wandering and mobile. Desktop garden crops are **960×600 at CSS scale
+1**, mobile is **390×844** without enlarged artwork. The grazing sequence
+records real grass counts **8 → 7 → 6**, unchanged network/garden statistics
+and Score: 0. `review.json` contains state, resource and timing evidence.
+
+## Costs, verification and limitations
+
+Ambient atlas frames grow **14 → 23**, backing **896×64 → 1472×64** physical
+pixels: **+147,456 bytes (144KiB) raw RGBA**, from 224KiB to 368KiB. GPU driver
+allocation can exceed raw pixels. There is still one ambient source/bake and
+**five whole-page atlas bakes**, one Application, one SSE stream, **832 specimen
+frames** and **29 gnome frames**. Two active wildlife visitors add at most two
+Sprites; no persistent display objects remain after departure. The repeated
+browser test releases **160 visits/Sprites**, with stable Graphics-context and
+bake counts, intact borrowed textures during play and all atlas sources released
+only at page teardown.
+
+Local Chrome **156.0.8078.48** probes with a fully occupied garden measured roughly
+**0.0033ms** to update two snails per sampled frame (max 0.20ms), and renderer submission
+**0.029–0.036ms**, versus idle submission **0.016–0.018ms**. Each mode used 180
+samples. These short native-clock measurements exclude GPU completion and are
+not a cross-device FPS or long-duration heap guarantee. Final raw results are
+stored in `review.json`; no new dependency or session persistence was added.
+
+Tests cover strict probability/deadline/cap/lifetime boundaries, real-log/list/
+map/identity validation, corners and slow walking/pauses/facing, two actual
+authoritative grazes, absent/expired/moved/replaced grass, missing source and
+same-cell replacement, real campfire consumption and natural decay, hidden/
+logical/render stalls/backwards clocks, reentrant removal observers, reduced
+motion, real scaled clicks/one-time messages, collectible-snail coexistence,
+existing frog/gnome/drop/mutation priority, exact grass-inspection closure,
+diagnostic-only controls and repeated Sprite/texture ownership cleanup.
+
+Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds, backend checks
+and the existing actual ASP.NET polling/SSE integration. Node completed with
+**69 passed / 21 optional entries skipped / zero failures**. Debug/Release builds
+completed with **zero warnings/errors**; backend checks and actual ASP.NET
+polling/SSE integration passed. **All 27 Chrome jobs passed** after the
+opium-pod browser atlas-size assertion was
+updated to the appended-frame dimensions while retaining its frozen historical
+baseline. Test artifacts/builds/logs remain ignored by Git.
+
+There is no persistence, breeding, extra food search, terrain collision
+pathfinding or wildlife collection. Each visit can miss grass elsewhere around
+the log because only its two preplanned pause cells are selected. Two snails may
+choose the same original patch; the later attempt skips instead of substituting.
+Small mobile art remains deliberately tiny. Captures emulate mobile viewports
+in desktop Chrome; physical-device GPU and long-duration soak remain unmeasured.
+
 # Great Gnome Campfire Incident (2026-10-28)
 
 Implemented on `dev` above `1f2d3bf`, preserving the existing terrain,

@@ -22,12 +22,14 @@
   <script src="garden-gnome-puddles.js?v=gnome-puddles-1" defer></script>
   <script src="garden-gnome-puddles-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-frogs.js?v=frog-gnome-ack-1" defer></script>
+  <script src="garden-log-snails.js?v=log-snails-1" defer></script>
+  <script src="garden-log-snails-dev.js?v=log-snails-1" defer></script>
   <script src="garden-ambient.js?v=opium-pods-1" defer></script>
-  <script src="garden-interaction.js?v=frog-gnome-ack-1" defer></script>
-  <script src="garden-ui-core.js?v=opium-pods-1" defer></script>
+  <script src="garden-interaction.js?v=log-snails-1" defer></script>
+  <script src="garden-ui-core.js?v=log-snails-1" defer></script>
   <script src="pixi-specimen-preview.js?v=specimen-preview-1" defer></script>
-  <script src="pixi-live-ui.js?v=specimen-preview-1" defer></script>
-  <script src="pixi-live-ambient.js?v=opium-pods-1" defer></script>
+  <script src="pixi-live-ui.js?v=log-snails-1" defer></script>
+  <script src="pixi-live-ambient.js?v=log-snails-1" defer></script>
   <script src="pixi-live-gnomes.js?v=campfire-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
@@ -36,7 +38,7 @@
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
   <script src="pixi-live-core.js?v=campfire-1" defer></script>
   <script src="garden-visits.js?v=garden-visits-1" defer></script>
-  <script src="pixi-live.js?v=campfire-1" defer></script>
+  <script src="pixi-live.js?v=log-snails-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -135,6 +137,17 @@
       <button id="cancel-campfire-stalled" type="button">Test campfire stalled cancellation</button>
       <button id="check-campfire-cell" type="button">Verify campfire cell occupancy</button>
       <span id="campfire-status" role="status">Actual log terrain stays blocked while burning; burnout at 17s frees it through the terrain API. Only one incident can run. Hidden/stalled sequences cancel without replay; system reduced motion always applies.</span>
+      <button id="seed-log-snails" type="button">Seed log-snail terrain (simulated)</button>
+      <button id="seed-log-snail-grass" type="button">Seed actual grass around log</button>
+      <button id="spawn-log-snails-1" type="button">Spawn one log snail (simulated)</button>
+      <button id="spawn-log-snails-2" type="button">Spawn two log snails (simulated)</button>
+      <button id="preview-log-snail-graze" type="button">Preview real grass grazing</button>
+      <button id="remove-log-snail-source" type="button">Remove actual snail source log</button>
+      <label><input id="log-snail-reduced-motion" type="checkbox"> Preview log-snail reduced motion</label>
+      <button id="cancel-log-snails-hidden" type="button">Test snail hidden cancellation</button>
+      <button id="cancel-log-snails-stalled" type="button">Test snail stalled cancellation</button>
+      <button id="clear-log-snails" type="button">Clear log-snail wildlife</button>
+      <span id="log-snail-status" role="status">Independent wildlife, not the collectible snail. 45s checks / 25% / two active / 75s visits. At most two actual grass patches per visit; ordinary ecology alone regrows grass.</span>
       <button id="trigger-frog" type="button">Trigger frog (simulated)</button>
       <button id="trigger-gnome-puddle" type="button">Trigger gnome puddle mishap</button>
       <span id="gnome-puddle-status" role="status">Local simulated water and gnomes; ordinary water entries retain their 20% chance.</span>

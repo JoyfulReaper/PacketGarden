@@ -90,13 +90,13 @@ const state={specimens:[],curiosities:[],drops:[],frogs:null};assert.equal(I.res
   const baseline=h.textureCount(),live=h.live.size,bakes=h.generated(),atlas=V.makeAmbientAtlas(h.P,h.renderer),layer=new h.P.Container();
   const view=V.createFrogView(h.P,layer,atlas.frames),f=fixture(F.seededRandom(111));
   const model=F.createModel({now:()=>f.at,random:()=>.5,getPuddles:()=>f.puddles,onChange:c=>view.change(c,f.at)});
-  assert.equal(atlas.frames.size,14);
+  assert.equal(atlas.frames.size,23);
   for(let cycle=0;cycle<30;cycle++){
     f.puddles[0].lastRefreshedAt=f.at;const frogs=[model.spawnSimulated(),model.spawnSimulated()];assert(frogs.every(Boolean));
     const sprites=[...view.views.values()];assert.equal(view.views.size,2);assert.deepEqual(layer.children,sprites,'stable frog draw order');
     for(let age=0;age<60000;age+=250){f.at+=250;model.tick(f.at);view.animate(f.at);assert.equal(h.generated(),bakes+1);}
     assert.equal(view.views.size,0);assert.equal(layer.children.length,0);assert(sprites.every(s=>!h.live.has(s)));
-    assert.equal(h.textureCount(),baseline+14);
+    assert.equal(h.textureCount(),baseline+23);
   }
   model.clear();view.destroy();layer.destroy();atlas.destroy();assert.equal(h.textureCount(),baseline);assert.equal(h.live.size,live);
   const dev=await start(false,{captureModel:true,pageHtml:fs.readFileSync('wwwroot/pixi-live.html','utf8')});

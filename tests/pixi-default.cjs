@@ -7,7 +7,7 @@ const html = read('index.html');
 const scripts = [...html.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const diagnosticScripts = [...read('pixi-live.html').matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const assetPath = url => url.split('?')[0];
-assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>!['garden-stillbloom-dev.js','garden-gnome-puddles-dev.js'].includes(name)), 'both pages use the same renderer and model order; simulations are diagnostic-only');
+assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>!['garden-stillbloom-dev.js','garden-gnome-puddles-dev.js','garden-log-snails-dev.js'].includes(name)), 'both pages use the same renderer and model order; simulations are diagnostic-only');
 assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
 assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
 assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather normalizer must bypass cached code that drops hourly data');
@@ -24,10 +24,10 @@ for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includ
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, hidden = false, fetch: fetchVisit = () => Promise.resolve(), random = () => 0, competitionRandom = () => .99, terrainRandom = () => .99, frogRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9, emissionRandom = () => .99 } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, hidden = false, fetch: fetchVisit = () => Promise.resolve(), random = () => 0, competitionRandom = () => .99, terrainRandom = () => .99, frogRandom = () => .99, snailRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9, emissionRandom = () => .99 } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
-  let model, garden, ambient, frogs, gnomes, storm, ecology, lighting, lightingSurface, gardenView, emissions;
+  let model, garden, ambient, frogs, logSnails, gnomes, storm, ecology, lighting, lightingSurface, gardenView, emissions;
   const media={matches:reduced,handlers:new Map(),addEventListener:(name,fn)=>media.handlers.set(name,fn),removeEventListener:name=>media.handlers.delete(name)};
   const elements = new Map(), docHandlers = new Map(), winHandlers = new Map(), sources = [], errors = [];
   for (const [, id] of pageHtml.matchAll(/id="([^"]+)"/g)) elements.set(`#${id}`, {
@@ -96,6 +96,10 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
       const create=context.window.PacketGardenFrogs.createModel;
       context.window.PacketGardenFrogs.createModel=options=>(frogs=create({...options,random:frogRandom}));
     }
+    if(assetPath(script)==='garden-log-snails.js'){
+      const create=context.window.PacketGardenLogSnails.createModel;
+      context.window.PacketGardenLogSnails.createModel=options=>(logSnails=create({...options,random:snailRandom}));
+    }
     if(assetPath(script)==='garden-stillbloom.js'&&captureModel){
       const create=context.window.PacketGardenStillbloom.createModel;
       context.window.PacketGardenStillbloom.createModel=(...args)=>{const model=create(...args);stillbloom??=model;return model;};
@@ -119,7 +123,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
   }
   await new Promise(resolve => setImmediate(resolve));
   return {app,doc,context,sources,errors,element,docHandlers,winHandlers,get observer(){return observer;},
-    get model(){return model;},get garden(){return garden;},get ambient(){return ambient;},get frogs(){return frogs;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},get emissions(){return emissions;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
+    get model(){return model;},get garden(){return garden;},get ambient(){return ambient;},get frogs(){return frogs;},get logSnails(){return logSnails;},get stillbloom(){return stillbloom;},get gnomes(){return gnomes;},get storm(){return storm;},get ecology(){return ecology;},get lighting(){return lighting;},get lightingSurface(){return lightingSurface;},get view(){return gardenView;},get emissions(){return emissions;},media, advance(ms) { now += ms; }, frame(ms) { now += ms; app.frame({lastTime:now}); }};
 }
 
 async function checkDefault() {

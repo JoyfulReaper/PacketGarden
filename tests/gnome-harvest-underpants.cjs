@@ -137,7 +137,7 @@ assert.equal(T.collectionMessage('ditch_weed_bud',()=>{throw Error('unexpected r
   }
   const layer=new h.P.Container(),cl=new h.P.Container(),dl=new h.P.Container(),base=h.live.size,tex=h.textureCount();
   const gc=GV.makeGnomeAtlas(h.P,h.renderer),ac=AV.makeAmbientAtlas(h.P,h.renderer),gv=GV.createGnomeView(h.P,layer,gc.frames),av=AV.createAmbientView(h.P,cl,dl,ac.frames);
-  assert.equal(gc.frames.size,29);assert.equal(ac.frames.size,14);const bakes=h.generated(),f=fixture(),m=G.createModel({garden:f.garden,getSpecimens:()=>f.garden.specimens,now:()=>f.at,onChange:gv.change,
+  assert.equal(gc.frames.size,29);assert.equal(ac.frames.size,23);const bakes=h.generated(),f=fixture(),m=G.createModel({garden:f.garden,getSpecimens:()=>f.garden.specimens,now:()=>f.at,onChange:gv.change,
     onUnderpantsAttempt:(point,at)=>ambient.dropGnomeUnderpants(point,at)}),ambient=A.createAmbientModel({onChange:c=>av.change(c,f.at)});
   for(let n=0;n<25;n++){
     f.fill();f.at+=420000;f.fill();assert(m.startLandscaping(f.at,()=>.5,'weed_harvest'));gv.animate(f.at);

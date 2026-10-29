@@ -866,7 +866,7 @@ async function run() {
       const atlas=__gardenTestAmbientAtlas;
       return {states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],
         sources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
-    });assert(resources.states.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,14);assert.equal(resources.bakes,1);assert.equal(resources.sources,1);
+    });assert(resources.states.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,23);assert.equal(resources.bakes,1);assert.equal(resources.sources,1);
     assert.deepEqual(errors,[]);await page.close();
     // CPU/ticker probes use fresh native clocks, separate from deterministic screenshot clocks.
     const perf=await newPage({viewport:{width:1280,height:900},deviceScaleFactor:2});await perf.goto(origin+'/pixi-live.html');await perf.waitForFunction(()=>window.__gardenTestFrogs);
@@ -928,7 +928,7 @@ async function run() {
         gnomeBakes:__gardenGnomeBakes,ambientBakes:__gardenAmbientBakes,
         gnomeBacking:[__gardenTestGnomeAtlas.atlas.source.pixelWidth,__gardenTestGnomeAtlas.atlas.source.pixelHeight]};
     });
-    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,29);assert.equal(resources.ambientFrames,14);
+    assert(resources.states.every(s=>s.gnomes===0&&s.drops===0&&s.destroyed));assert.equal(resources.gnomeFrames,29);assert.equal(resources.ambientFrames,23);
     assert.equal(resources.gnomeBakes,1);assert.equal(resources.ambientBakes,1);
     assert.deepEqual(errors,[]);await page.close();await fs.writeFile(path.join(output,'gnome-harvest-resources.json'),JSON.stringify(resources,null,2));
     console.log('PASS: Chrome weed-harvest trigger/cuts/sacks, actual gnome clicks/one attempt, independent underpants, both 80/20 messages, day/night Pixi captures and 20 cleanup cycles:',JSON.stringify(resources));
@@ -976,7 +976,7 @@ async function run() {
       return {cycles:states,frames:atlas.frames.size,bakes:__gardenAmbientBakes,
         backing:[atlas.atlas.source.pixelWidth,atlas.atlas.source.pixelHeight],gpuSources:new Set([...atlas.frames.values()].map(t=>t.source)).size};
     });
-    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,14);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
+    assert(resources.cycles.every(s=>s.views===0&&s.destroyed));assert.equal(resources.frames,23);assert.equal(resources.bakes,1);assert.equal(resources.gpuSources,1);
     await page.emulateMedia({reducedMotion:'reduce'});await page.locator('#seed-weed-buds').click();
     const positions=await page.evaluate(()=>{const v=__gardenTestAmbientView;v.animate(Date.now());const a=[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y]);
       v.animate(Date.now()+10000);return [a,[...v.dropViews.values()].filter(v=>v.item.type==='ditch_weed_bud').map(v=>[v.sprite.x,v.sprite.y])];});

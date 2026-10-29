@@ -589,10 +589,11 @@
       onChange(change) { ambientView.change(change, Date.now()); } });
     own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
-    let ui, ecology = null, gnomes = null;
+    let ui, ecology = null, gnomes = null, logSnails = null, snailView = null, snailPreviewReduced = false;
+    const snailReducedMotion=()=>Boolean(reducedMotion?.matches||snailPreviewReduced);
     const model = core.createModel(view, { onTerrainChange:change=>{
       if(change.kind==='terrain-added')ecology?.specimenAdded(change.terrain.column,change.terrain.row);
-      else gnomes?.terrainRemoved(change.terrain);},
+      else {gnomes?.terrainRemoved(change.terrain);logSnails?.sourceRemoved(change.terrain);}},
       onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
@@ -609,6 +610,7 @@
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,preview,
       getGnomes: () => gnomes,
       getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
+      getLogSnails:()=>logSnails,getSnailReducedMotion:snailReducedMotion,
       collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
       getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
@@ -733,6 +735,17 @@
         if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
     own(()=>ecology.clear());
+    const snailCore=window.PacketGardenLogSnails;
+    if(snailCore){
+      snailView=ambientPresentation.createLogSnailView(P,view.dropLayer,ambientCache.frames,snailReducedMotion);
+      own(()=>snailView.destroy());
+      logSnails=snailCore.createModel({getTerrain:()=>model.terrain,getEcology:()=>ecology,getReducedMotion:snailReducedMotion,
+        onChange:change=>snailView.change(change,Date.now())});
+      logSnails.setHidden(document.hidden);own(()=>logSnails.clear());
+    }
+    const snailDiagnostics=window.PacketGardenLogSnailsDev?.bind({document,garden:model,ecology,snails:logSnails,gnomes,frogs,ambient,
+      setReducedMotion:value=>{snailPreviewReduced=value;}});
+    own(()=>snailDiagnostics?.destroy());
     const logStatus=text=>{const el=document.querySelector('#log-status');if(el)el.textContent=text;};
     const competitionStatus=text=>{const el=document.querySelector('#competition-status');if(el)el.textContent=text;};
     listen(document.querySelector('#seed-competition'),'click',()=>{
@@ -906,7 +919,7 @@
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    listen(document.querySelector('#clear'),'click', () => { model.clear(); emissions.clear(); emissions.resetCadence(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    listen(document.querySelector('#clear'),'click', () => { model.clear();logSnails?.clear(); emissions.clear(); emissions.resetCadence(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
     listen(document.querySelector('#trigger-frog'),'click',()=>{
       const at=Date.now();
       if(!frogs.eligiblePuddles(at).length){
@@ -955,6 +968,7 @@
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Frogs ${frogs?.frogs.length??0}/2 · views ${frogView?.views.size??0} · independent wildlife · 6 cached frames`,
+        `Log snails ${logSnails?.snails.length??0}/2 · views ${snailView?.views.size??0} · grazed ${logSnails?.counts.grazed??0} · 9 cached frames · separate from collectible snail`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Loose drops ${ambient.drops.length}/${ambientCore.dropConfig.maxActiveDrops} · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
@@ -975,6 +989,7 @@
         updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
         frogs?.tick(at,{hidden:document.hidden});
+        logSnails?.tick(at);
         gnomes.tick(at, undefined, document.hidden);
         storm.tick(at);
         ui.tick(at);
@@ -986,6 +1001,7 @@
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
       frogView?.animate(Date.now());
+      logSnails?.advance(Date.now());snailView?.animate(Date.now());
       if (gnomes.incident) { gnomes.advance(Date.now());gnomeView.animate(Date.now()); }
       if (storm.active) stormView.animate(storm.active,Date.now());
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
@@ -994,6 +1010,7 @@
     listen(document,'visibilitychange', () => {
       ui.setHidden(document.hidden);
       frogs?.setHidden(document.hidden);
+      logSnails?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
       emissions.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);

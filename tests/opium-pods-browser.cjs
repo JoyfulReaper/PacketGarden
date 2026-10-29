@@ -101,8 +101,8 @@ async function run() {
         dimensions: __pods.bakes.map(b=>[b.width,b.height]), bakes: __pods.bakes.length, streams: __pods.streams,
         podSprites: [...__pods.av.dropViews.values()].filter(r=>r.item.type==='opium_pod').length, dropSprites: __pods.av.dropViews.size,
         constructionContextsReleased: __pods.contexts.every(c=>c.destroyed) }));
-      assert.equal(resources.frames, baseline ? 13 : 14); assert.equal(resources.bakes, 5); assert.equal(resources.streams, 1); assert.equal(resources.sourceCount, 1);
-      assert.deepEqual(resources.dimensions[2], [baseline ? 416 : 448, 32]); if (!baseline) assert(resources.constructionContextsReleased);
+      assert.equal(resources.frames, baseline ? 13 : 23); assert.equal(resources.bakes, 5); assert.equal(resources.streams, 1); assert.equal(resources.sourceCount, 1);
+      assert.deepEqual(resources.dimensions[2], [baseline ? 416 : 736, 32]); if (!baseline) assert(resources.constructionContextsReleased);
       report.resources.push({ page: name, ...resources });
       report.timing.push({ page: name, ...await page.evaluate(async () => {
         const times = [], intervals = []; let last; const geometry=__pods.geometry;

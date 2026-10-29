@@ -252,6 +252,17 @@ naturally decayed targets, hidden tabs and stalls cancel without delayed removal
 or replay. Three cached flame frames add no renderer, scheduler or particles.
 See [campfire captures, probabilities and costs](docs/PIXI-LIVE.md#great-gnome-campfire-incident-2026-10-28).
 
+**Log-dwelling snails** are separate, noncollectible wildlife. With an actual
+living fallen log, an independent **25%** check every **45s** can admit one
+visitor, capped at **two**, for **75s**. They crawl slowly along four preplanned
+points, pause and may eat two originally selected nearby grass patches through
+`removeGrassCell()`. Missing/replaced patches consume their attempt; ordinary
+ecology alone regrows grass. Losing the exact source log—including to campfire—
+starts a short fade and disables grazing. Hiding or clock gaps cancel without
+replay. Their first click says **The snail continues being a snail. +0 points**;
+later clicks still consume the hit. The existing collectible snail and its
+message remain unchanged. See [wildlife captures, ownership and costs](docs/PIXI-LIVE.md#log-dwelling-garden-snails-2026-10-29).
+
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,
 gnome sounds and optional thunder share the same output controls and cleanup.

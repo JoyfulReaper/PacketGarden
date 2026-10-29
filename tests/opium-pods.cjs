@@ -129,7 +129,7 @@ for (const [column, row] of [[0, 0], [31, 0], [0, 19], [31, 19]]) {
   const textures = h.textureCount(), bakes = h.generated(), objects = h.live.size;
   const cache = V.makeAmbientAtlas(h.P, h.renderer), cl = new h.P.Container(), dl = new h.P.Container();
   const view = V.createAmbientView(h.P, cl, dl, cache.frames), a = A.createAmbientModel({ onChange: c => view.change(c, 100000) });
-  assert.equal(cache.frames.size, 14); assert(cache.frames.has('opium_pod'));
+  assert.equal(cache.frames.size, 23); assert(cache.frames.has('opium_pod'));
   for (let i = 0; i < 25; i++) {
     a.seed({ drops: ['amanita_muscaria', 'ditch_weed_bud', 'gnome_underpants', 'opium_pod'].map((t, n) => entry(t, 100000, n)) });
     const pod = a.drops[3], sprite = view.dropViews.get(a.idFor(pod)).sprite;
