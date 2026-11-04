@@ -147,6 +147,18 @@
           origin:{kind:'simulated',eventType:'heist-fixture'}})),at);
         for(const p of model.specimens){p.colorVariant=p.vigor;view.update(p,model.byCell);}
       },
+      seedWizard(several=false){
+        const at=now(),types=several?['ghostbloom','crystalfungus','blackthorn','stillbloom']:['ghostbloom'];
+        const entries=types.map((type,i)=>({type,vigor:1,column:16+i*3,row:10,createdAt:at-90000,origin:{kind:'simulated',eventType:'wizard-fixture'}}));
+        for(let i=0;i<35;i++)entries.push({type:'broadleaf',vigor:i%4,column:5+i%22,row:14+Math.floor(i/22),createdAt:at-65000,origin:{kind:'simulated',eventType:'wizard-fixture'}});
+        model.seed(entries,at);return model.specimens[0];
+      },
+      replaceWizardFixture(p){
+        if(p?.origin?.kind!=='simulated'||p.origin.eventType!=='wizard-fixture'||model.byCell.get(p.cell)!==p
+          ||!model.specimens.every(q=>q.origin?.kind==='simulated'&&q.origin.eventType==='wizard-fixture'))return null;
+        const replacement={type:p.type,vigor:p.vigor,column:p.column,row:p.row,createdAt:now()-90000,origin:{kind:'simulated',eventType:'wizard-fixture'}};
+        model.seed([...model.specimens.filter(q=>q!==p),replacement],now());return replacement;
+      },
       replaceHeistTarget(target) {
         // Explicit all-simulated dev fixture only. Reimport through normal lifecycle notifications.
         if(!model.specimens.includes(target) || !model.specimens.every(p=>p.origin?.kind==='simulated' && p.origin.eventType==='heist-fixture'))return null;

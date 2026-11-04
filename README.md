@@ -261,6 +261,16 @@ naturally decayed targets, hidden tabs and stalls cancel without delayed removal
 or replay. Three cached flame frames add no renderer, scheduler or particles.
 See [campfire captures, probabilities and costs](docs/PIXI-LIVE.md#great-gnome-campfire-incident-2026-10-28).
 
+The **Wandering Wizard Gnome** takes **25% of otherwise ordinary disputes**
+when a mature ghostbloom, crystal fungus, blackthorn or Stillbloom is present.
+The existing **45s / 2% / 30 living specimens** check and heist/campfire priority
+still apply. One purple-hatted visitor examines the exact plant, raises a tiny
+staff, casts once at **5s**, then leaves by **14s**. Its spell may add or refresh
+**one originally selected neighboring grass cell** through ordinary ecology,
+respecting the current under-plants setting. Lost targets and blocked or changed
+grass skip safely without retries. The rare plant keeps its traits and lifespan;
+the wizard shares ordinary underpants clicks. See [wizard lifecycle and review](docs/WIZARD-GNOME.md).
+
 **Log-dwelling snails** are separate, noncollectible wildlife. With an actual
 living fallen log, an independent **25%** check every **45s** can admit one
 visitor, capped at **two**, for **75s**. They crawl slowly along four preplanned

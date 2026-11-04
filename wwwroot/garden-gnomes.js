@@ -13,6 +13,9 @@
     finishedAfterMs:14000, abortExitMs:2000, maxTickGapMs:1500 });
   const campfireConfig = Object.freeze({ incidentShare:.4, gatherAfterMs:2500, igniteAfterMs:4000,
     charAfterMs:15000, consumeAfterMs:17000, finishedAfterMs:21000, maxTickGapMs:1500, maxActors:3 });
+  const wizardConfig = Object.freeze({incidentShare:.25,inspectAfterMs:3000,raiseAfterMs:4000,
+    castAfterMs:5000,leaveAfterMs:8000,finishedAfterMs:14000,maxTickGapMs:1500});
+  const wizardSpecies=Object.freeze(['ghostbloom','crystalfungus','blackthorn','stillbloom']);
   const reactionMs = 600, presentations = new WeakMap();
   // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
   const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
@@ -21,7 +24,7 @@
     && !(p.type === 'broadleaf' && p.broadleafVariant === 'rainbow')
     && at >= p.createdAt && garden.lifecycleStage(p, at) !== 'expired';
   function createModel({ getSpecimens, garden: source, now = Date.now, random = Math.random,
-    getPuddles = () => [], puddleRandom,
+    getPuddles = () => [], puddleRandom, getEcology = () => null,
     getReducedMotion = () => false, hasPendingBud = () => false, hasPendingCollectible = () => false,
     getHeistPosition = p => ({x:(p.column+.5)*garden.dimensions.cellSize,y:(p.row+.5)*garden.dimensions.cellSize+12}),
     onUnderpantsAttempt = () => {},
@@ -185,6 +188,75 @@
         actor.state=incident.phase;
       }
     }
+    function eligibleWizardTarget(p,at){
+      return Boolean(Number.isFinite(at)&&p&&wizardSpecies.includes(p.type)&&Number.isInteger(p.id)&&p.id>0
+        &&Number.isInteger(p.column)&&p.column>=0&&p.column<garden.dimensions.columns
+        &&Number.isInteger(p.row)&&p.row>=0&&p.row<garden.dimensions.rows&&p.cell===p.row*garden.dimensions.columns+p.column
+        &&Number.isFinite(p.createdAt)&&at>=p.createdAt&&garden.lifecycleStage(p,at)==='mature'
+        &&getSpecimens().includes(p)&&source?.specimens?.includes(p)&&occupiedBy(p)&&!source.terrain?.isBlocked(p.cell));
+    }
+    function wizardCandidates(at=now(),simulatedOnly=false){
+      return getSpecimens().filter(p=>eligibleWizardTarget(p,at)&&(!simulatedOnly||p.origin?.kind==='simulated'));
+    }
+    function validWizardTarget(current,at){
+      const t=current.target,p=t?.specimen;
+      return Boolean(p&&['id','type','cell','column','row','createdAt'].every(k=>p[k]===t[k])&&eligibleWizardTarget(p,at));
+    }
+    const grassCellAllowed=(ecology,column,row)=>Boolean(ecology&&typeof source?.isCellOccupied==='function'&&Number.isInteger(column)&&column>=0&&column<garden.dimensions.columns
+      &&Number.isInteger(row)&&row>=0&&row<garden.dimensions.rows
+      &&(ecology.allowGrassUnderPlants||!source.isCellOccupied(column,row)));
+    function startWizard(at=now(),roll=random,simulatedOnly=false,candidates=null){
+      if(suspended||incident||!Number.isFinite(at)||livingCount(at)<config.minimumSpecimens)return false;
+      candidates??=wizardCandidates(at,simulatedOnly);if(!candidates.length)return false;
+      const p=candidates[Math.floor(roll()*candidates.length)];
+      if(!eligibleWizardTarget(p,at)||simulatedOnly&&p.origin?.kind!=='simulated')return false;
+      const ecology=getEcology(),cells=[];
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++)if((dx||dy)&&grassCellAllowed(ecology,p.column+dx,p.row+dy))cells.push({column:p.column+dx,row:p.row+dy});
+      const selected=cells.length?cells[Math.floor(roll()*cells.length)]:null;
+      const grass=selected?{...selected,patch:ecology.grassCells.find(g=>g.column===selected.column&&g.row===selected.row)??null}:null;
+      const origin={x:(p.column+.5)*30,y:(p.row+.5)*30},side=p.column===0?1:-1;
+      const targetX=origin.x+side*22,targetY=Math.max(18,Math.min(580,origin.y+4));
+      incident={type:'gnome_wizard',phase:'approach',createdAt:at,lastTickAt:at,origin,
+        target:{specimen:p,id:p.id,type:p.type,cell:p.cell,column:p.column,row:p.row,createdAt:p.createdAt},
+        grass,ecology,attempted:false,influenced:false,castAt:null};
+      actors=[{type:'gnome',role:'wizard',side:'wizard',createdAt:at,state:'approach',
+        x:Math.max(7,Math.min(953,targetX+side*100)),y:Math.max(18,Math.min(580,targetY+25)),
+        startX:Math.max(7,Math.min(953,targetX+side*100)),startY:Math.max(18,Math.min(580,targetY+25)),
+        targetX,targetY,exitX:Math.max(7,Math.min(953,targetX+side*90)),exitY:Math.max(18,Math.min(580,targetY+55))}];
+      puddles.tick(actors,at);onCue('arrival');changed();return true;
+    }
+    function cancelWizard(at){const clock=now(),safe=Number.isFinite(at)?at:Number.isFinite(clock)?clock:incident?.lastTickAt??0;clear();resetCadence(safe);}
+    function wizardClock(at){
+      if(!Number.isFinite(at)||at<incident.lastTickAt||at-incident.lastTickAt>wizardConfig.maxTickGapMs){cancelWizard(at);return false;}
+      if(at>=incident.createdAt+wizardConfig.finishedAfterMs){clear();return false;}
+      if(!validWizardTarget(incident,at)){cancelWizard(at);return false;}return true;
+    }
+    function tickWizard(at){
+      if(!wizardClock(at))return;
+      const current=incident,c=wizardConfig,age=at-current.createdAt;current.lastTickAt=at;
+      if(age>=c.castAfterMs&&!current.attempted){
+        // Consume/release before the authoritative callback, including failed casts.
+        const target=current.grass,ecology=current.ecology;current.attempted=true;current.castAt=at;current.grass=null;current.ecology=null;
+        if(target&&getEcology()===ecology&&grassCellAllowed(ecology,target.column,target.row)
+          &&Math.max(Math.abs(target.column-current.target.column),Math.abs(target.row-current.target.row))===1
+          &&(ecology.grassCells.find(g=>g.column===target.column&&g.row===target.row)??null)===target.patch
+          &&validWizardTarget(current,at)&&incident===current){
+          const patch=ecology.influenceGrassCell(target.column,target.row,at);
+          if(incident!==current)return;current.influenced=Boolean(patch);
+        }
+      }
+      const phase=age<c.inspectAfterMs?'approach':age<c.raiseAfterMs?'inspect':age<c.castAfterMs?'raise':age<c.leaveAfterMs?'cast':'departure';
+      if(phase!==current.phase){current.phase=phase;changed();}
+    }
+    function advanceWizard(at){
+      if(!wizardClock(at))return;
+      const c=wizardConfig,actor=actors[0],age=at-incident.createdAt,reduced=getReducedMotion(),leaving=age>=c.leaveAfterMs;
+      let progress=Math.max(0,Math.min(1,leaving?(age-c.leaveAfterMs)/(c.finishedAfterMs-c.leaveAfterMs):age/c.inspectAfterMs));
+      if(reduced)progress=Math.floor(progress*4)/4;
+      actor.x=leaving?actor.targetX+(actor.exitX-actor.targetX)*progress:actor.startX+(actor.targetX-actor.startX)*progress;
+      actor.y=leaving?actor.targetY+(actor.exitY-actor.targetY)*progress:actor.startY+(actor.targetY-actor.startY)*progress;
+      actor.state=leaving?'departure':age<c.inspectAfterMs?'approach':age<c.raiseAfterMs?'inspect':age<c.castAfterMs?'raise':incident.attempted?'cast':'raise';
+    }
     function landscapingCandidates(at = now(), mode = 'vine') {
       return getSpecimens().filter(p => eligibleTarget(p, at, mode) && occupiedBy(p));
     }
@@ -303,11 +375,13 @@
       }
       puddles.tick(actors,at); onCue('arrival'); changed(); return true;
     }
-    function clear() { puddles.clear(actors);actors = [];if(incident?.type==='gnome_campfire')incident.target=null; incident = null; changed(); }
+    function clear() { puddles.clear(actors);actors = [];if(incident?.type==='gnome_campfire'||incident?.type==='gnome_wizard')incident.target=null;
+      if(incident?.type==='gnome_wizard'){incident.grass=null;incident.ecology=null;}incident = null; changed(); }
     function advance(at = now(), roll = random) {
       if (!incident) return;
       if (incident.type === 'gnome_heist') { advanceHeist(at); return; }
       if (incident.type === 'gnome_campfire') { advanceCampfire(at); return; }
+      if (incident.type === 'gnome_wizard') { advanceWizard(at); return; }
       if (incident.type === 'gnome_landscaping') { advanceLandscaping(at); return; }
       const age = Math.max(0, at - incident.createdAt);
       // Completion precedes phase/audio handling, including a suspended page.
@@ -342,7 +416,7 @@
     function suspend(at = now()) {
       resetCadence(at);
       suspended = true;
-      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist' || incident?.type === 'gnome_campfire') clear();
+      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist' || incident?.type === 'gnome_campfire' || incident?.type === 'gnome_wizard') clear();
       else changed(); // Release transient water presentation while a dispute is hidden.
     }
     function tick(at = now(), roll = random, hidden = false) {
@@ -351,6 +425,7 @@
         if (incident.type === 'gnome_landscaping') tickLandscaping(at);
         else if (incident.type === 'gnome_heist') tickHeist(at);
         else if (incident.type === 'gnome_campfire') tickCampfire(at);
+        else if (incident.type === 'gnome_wizard') tickWizard(at);
         advance(at, roll); if(!suspended)puddles.tick(actors,at);return;
       }
       if (at < nextCheckAt) return;
@@ -361,7 +436,11 @@
         else {
           const logs=campfireCandidates(at);
           if(logs.length && roll()<campfireConfig.incidentShare)startCampfire(at,roll,false,logs);
-          else start(at,roll);
+          else {
+            const rare=wizardCandidates(at);
+            if(rare.length&&roll()<wizardConfig.incidentShare)startWizard(at,roll,false,rare);
+            else start(at,roll);
+          }
         }
       }
       if (!incident && at >= lastLandscapingAt + landscapingConfig.cooldownMs) {
@@ -385,6 +464,8 @@
         || at>=incident.createdAt+heistConfig.finishedAfterMs || incident.aborted && at>=incident.exitAt+heistConfig.abortExitMs)) return false;
       if(incident.type==='gnome_campfire' && (at<incident.lastTickAt || at-incident.lastTickAt>campfireConfig.maxTickGapMs
         || at>=incident.createdAt+campfireConfig.finishedAfterMs || !incident.consumed&&!validCampfireTarget(at)))return false;
+      if(incident.type==='gnome_wizard'&&(!Number.isFinite(at)||at<incident.lastTickAt||at-incident.lastTickAt>wizardConfig.maxTickGapMs
+        ||at>=incident.createdAt+wizardConfig.finishedAfterMs||!validWizardTarget(incident,at)))return false;
       return (presentations.get(actor)?.alpha ?? 0) > 0;
     }
     function hitAt(point, at = now()) {
@@ -406,7 +487,8 @@
       }
       return true; // Repeated clicks still consume the click, never the plant underneath.
     }
-    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, startCampfire, campfireCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, startCampfire, campfireCandidates, startWizard, wizardCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+      specimenRemoved(specimen,at=now()){if(incident?.type==='gnome_wizard'&&incident.target?.specimen===specimen)cancelWizard(at);},
       terrainRemoved(log,at=now()){if(incident?.type==='gnome_campfire'&&incident.target?.log===log&&!incident.consuming)cancelCampfire(at);},
       puddleRemoved(puddle){puddles.removed(puddle);if(actors.length)changed();},
       simulatePuddleEntry(actor){if(!actors.includes(actor))return false;puddles.armDemo(actor);return true;},
@@ -417,8 +499,9 @@
     const water = (typeof module !== 'undefined' && module.exports ? require('./garden-gnome-puddles.js') : window.PacketGardenGnomePuddles).reactionState(actor,at,reducedMotion);
     const surprised = at < (actor.surprisedUntil ?? -Infinity) || Boolean(water);
     const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier'
+      || actor.role==='wizard'&&actor.state!=='approach'&&actor.state!=='departure'
       || actor.role==='camper'&&actor.state!=='approach'&&actor.state!=='departure';
-    const step = still ? 0 : Math.sin((at - actor.createdAt) / 90), battle = actor.state === 'battle' && !surprised;
+    const step = still ? 0 : Math.sin((at - actor.createdAt) / (actor.role==='wizard'?240:90)), battle = actor.state === 'battle' && !surprised;
     return { step, battle, surprised, water, mushroom:Boolean(actor.carryMushroom), sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
       bounce:water ? water.bounce : surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
       clippers:actor.role === 'worker' && !actor.carrySack, closed:surprised || actor.state === 'snip' && (reducedMotion || step > 0),
@@ -437,6 +520,6 @@
     const spread = closed ? 1 : 5;
     return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
   }
-  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, campfireConfig, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
+  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, campfireConfig, wizardConfig, wizardSpecies, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();

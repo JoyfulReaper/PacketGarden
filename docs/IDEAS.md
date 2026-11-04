@@ -959,6 +959,31 @@ Simple persistence across browser/server restarts remains desirable. The goal is
 preserve the feeling that the garden has history without turning PacketGarden into
 a telemetry database.
 
+### Wandering Wizard Gnome (implemented)
+
+One faintly ridiculous, purple-hatted wizard can visit a mature ghostbloom,
+crystal fungus, blackthorn or Stillbloom. The shared 45-second/2% incident check
+retains its 30-living-specimen requirement, mushroom heist first and eligible
+campfire second. **25% of the remaining ordinary-dispute outcomes** become
+wizard visits when a valid protected target exists; no target consumes no wizard
+branch draw. Incidents remain mutually exclusive.
+
+The wizard approaches for three seconds, inspects, raises its staff, casts once
+at five seconds, shows two restrained cached spell Sprites through eight seconds,
+then wanders away by fourteen. It preserves the exact protected plant's identity,
+vigor, rarity, appearance and lifetime. At creation it chooses at most one
+adjacent cell allowed by normal grass rules; at casting it rechecks that cell
+and the original patch/empty state before one authoritative influence. Ordinary
+ecology owns the resulting grass. A missing/replaced patch, new occupant,
+disallowed under-plant cell or lost specimen consumes/skips the attempt without
+another selection. Hidden/stalled/backwards time cancels without a missed cast.
+
+The existing underpants attempt applies once per appearance. The wizard stands
+beside its target so plant inspection remains accessible. Eight appended frames
+share the gnome atlas; there is no new renderer, ticker, particle system,
+collectible, scoring or network event. Controls remain on `/pixi-live.html`.
+See [lifecycle, screenshots and measurements](WIZARD-GNOME.md).
+
 ### Log-dwelling garden snails (implemented)
 
 Actual fallen logs now host an independent, bounded wildlife visit: **45s / 25% /

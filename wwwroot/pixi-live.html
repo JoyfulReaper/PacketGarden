@@ -15,7 +15,7 @@
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
   <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
-  <script src="garden-gnomes.js?v=campfire-1" defer></script>
+  <script src="garden-gnomes.js?v=wizard-1" defer></script>
   <script src="garden-mutations.js?v=opium-pods-1" defer></script>
   <script src="garden-grass.js?v=grass-lush-1" defer></script>
   <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
@@ -24,6 +24,7 @@
   <script src="garden-gnome-puddles-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-frogs.js?v=frog-gnome-ack-1" defer></script>
   <script src="garden-log-snails.js?v=log-snails-1" defer></script>
+  <script src="garden-wizard-dev.js?v=wizard-1" defer></script>
   <script src="garden-log-fungi-dev.js?v=log-fungi-1" defer></script>
   <script src="garden-log-snails-dev.js?v=log-snails-1" defer></script>
   <script src="garden-ambient.js?v=opium-pods-1" defer></script>
@@ -32,21 +33,36 @@
   <script src="pixi-specimen-preview.js?v=specimen-preview-1" defer></script>
   <script src="pixi-live-ui.js?v=log-snails-1" defer></script>
   <script src="pixi-live-ambient.js?v=log-snails-1" defer></script>
-  <script src="pixi-live-gnomes.js?v=campfire-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=wizard-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
-  <script src="pixi-live-core.js?v=log-fungi-1" defer></script>
+  <script src="pixi-live-core.js?v=wizard-1" defer></script>
   <script src="garden-visits.js?v=garden-visits-1" defer></script>
-  <script src="pixi-live.js?v=log-fungi-1" defer></script>
+  <script src="pixi-live.js?v=wizard-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <main>
     <header><a href="/">← Production garden</a><a href="pixi-stress.html">Synthetic stress test</a>
       <h1>Pixi live soak</h1><p id="connection" role="status">connecting</p></header>
+    <section class="controls" aria-label="Simulated Wandering Wizard Gnome">
+      <button id="seed-wizard" type="button">Seed one simulated rare wizard target</button>
+      <button id="seed-wizards" type="button">Seed four simulated rare targets</button>
+      <button id="trigger-wizard" type="button">Trigger wizard visit (simulated)</button>
+      <button id="preview-wizard-cast" type="button">Preview wizard casting / actual grass</button>
+      <button id="inspect-wizard-grass" type="button">Inspect original spell grass cell</button>
+      <button id="remove-wizard-target" type="button">Remove exact wizard target</button>
+      <button id="replace-wizard-target" type="button">Replace exact wizard target</button>
+      <button id="block-wizard-grass" type="button">Occupy selected grass cell</button>
+      <button id="cancel-wizard-hidden" type="button">Test hidden wizard cancellation</button>
+      <button id="cancel-wizard-stalled" type="button">Test stalled wizard cancellation</button>
+      <label><input id="wizard-reduced-motion" type="checkbox"> Wizard reduced motion preview</label>
+      <button id="clear-wizard" type="button">Clear wizard fixture</button>
+      <span id="wizard-status" role="status">One rare visitor; 25% of otherwise ordinary disputes with a mature protected target. One neighboring grass attempt, no telemetry or points.</span>
+    </section>
     <section class="controls" aria-label="Simulated attached shelf fungi">
       <button id="seed-log-fungi-none" type="button">Seed ordinary log (simulated)</button>
       <button id="seed-log-fungi" type="button">Seed colonized log (simulated)</button>

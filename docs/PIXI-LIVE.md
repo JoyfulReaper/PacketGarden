@@ -1,3 +1,46 @@
+# Wandering Wizard Gnome (2026-11-03)
+
+Implemented on `dev` from clean `dc8c6ac`, including campfires, snails and fungal
+logs; no applicable `AGENTS.md` was present. `garden-gnomes.js` extends the existing
+45-second/2% incident scheduler after the unchanged 30% heist and eligible 40%
+campfire branches. With a living, mature protected specimen, **25% of otherwise
+ordinary disputes** become one wizard visit. The single active incident retains
+the exact source object/id/type/cell/coordinates/createdAt. It never changes a
+protected plant or selects a replacement source.
+
+Approach/inspect/staff raise/cast/departure use the existing logical and visual
+paths at **0–3s / 3–4s / 4–5s / 5–8s / 8–14s**. At 5s one consumed attempt can
+call `ecology.influenceGrassCell()` on the original neighboring cell, checking
+current occupancy/under-plants rules and patch identity. Empty cells can acquire
+grass; exact existing patches can refresh. Stale or blocked plans skip without
+retry. Only logical ticks cast. Removal notifications cancel immediately;
+hidden tabs, gaps over 1500ms, invalid/backwards clocks, Clear and teardown
+release targets/effects without catch-up.
+
+Eight appended gnome-atlas frames give a purple hat, blue robe, small staff,
+slow walk/inspect/raise/cast/surprise poses and pale stars/shimmer. The atlas grows
+from **29 to 37 frames**, physical **2320×64 to 2960×64**, on the same source:
+**40,960 added physical pixels / 160 KiB RGBA8 base-level estimate**. Existing
+frames stay in their original slots. An active visit uses one existing transient
+group, one wizard Sprite and at most two spell Sprites; idle allocation is zero.
+Reduced motion uses discrete travel and steady effects. Underpants attempts and
+separate protected-plant inspection share existing input paths.
+
+`garden-wizard-dev.js` and controls load only on `/pixi-live.html`. Fixtures use
+real simulated plants, ordinary occupancy and actual ecology. The gallery at
+`artifacts/gnome-wizard/index.html` contains **22 actual-scale Chrome captures**
+covering arrival, inspection, staff raised, casting, grass, cancellation,
+night/mobile/reduced motion and multiple eligible species. Raw performance and
+resource assertions are in `artifacts/gnome-wizard/review.json`.
+See [wizard lifecycle and validation](WIZARD-GNOME.md).
+
+Validation: **71 Node suites passed** (23 optional Chrome/SSE entry points
+skipped in that runner), **29 Chrome jobs passed**, Debug/Release and backend-
+check builds passed with zero warnings/errors, backend assertions and actual
+ASP.NET polling → SSE integration passed. The stale homepage gnome-atlas count
+was updated for eight appended frames and its full job rerun successfully.
+`git diff --check` passed. Changes remain uncommitted on `dev`; no push or deploy.
+
 # Attached shelf fungi (2026-11-03)
 
 Implemented on `dev` above `657d319`, with a clean starting tree and no applicable

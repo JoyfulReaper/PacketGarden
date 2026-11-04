@@ -59,6 +59,25 @@
       fire.rect(12+i,8-i,1,1).rect(21-i,11+i,1,1).fill({color:0xf0b76a,alpha:.65});
       fire.position.set(keys.length*40,0);sheet.addChild(fire);keys.push(`campfire:${i}`);
     }
+    // Append only: every ordinary gnome/fire slot retains its original artwork.
+    for(const pose of ['walk0','walk1','inspect','raise','cast','surprise']){
+      const g=new P.Graphics(),step=pose==='walk1'?1:0,raised=['raise','cast'].includes(pose),tipY=raised?3:10;
+      g.moveTo(14,24).lineTo(12+step,29).moveTo(18,24).lineTo(20-step,29).stroke({color:0x403647,width:2});
+      g.ellipse(16,21,5,5).fill(0x626e9b);g.circle(16,15,3.2).fill(0xe0bd92);
+      g.poly([13,17,20,17,17,24]).fill(0xe2ddce);
+      g.poly([10,12,16,1,19,5,21,12]).fill(0x8572ab);g.moveTo(11,12).lineTo(21,12).stroke({color:0xb8a8cf,width:1});
+      g.moveTo(25,27).lineTo(25,tipY).stroke({color:0x957b59,width:1.4});g.circle(25,tipY,1.8).fill(0xb3c6d2);
+      g.moveTo(19,20).lineTo(24,raised?14:21).stroke({color:0x626e9b,width:2});g.circle(24,raised?14:21,1.2).fill(0xe0bd92);
+      if(pose==='cast')g.moveTo(12,20).lineTo(8,17).stroke({color:0x626e9b,width:2});
+      if(pose==='inspect')g.rect(15,14,1,1).rect(19,14,1,1).fill(0x433c32);
+      if(pose==='surprise'){g.moveTo(30,3).lineTo(30,8).stroke({color:0xf2efe3,width:1});g.circle(30,10,.6).fill(0xf2efe3);}
+      g.position.set(keys.length*40,0);sheet.addChild(g);keys.push(`wizard:${pose}`);
+    }
+    const stars=new P.Graphics();
+    for(const [x,y,r] of [[16,12,3],[7,20,1.8],[25,23,2.2]])stars.poly([x,y-r,x+.65,y-.65,x+r,y,x+.65,y+.65,x,y+r,x-.65,y+.65,x-r,y,x-.65,y-.65]).fill(0xc9c7e1);
+    stars.position.set(keys.length*40,0);sheet.addChild(stars);keys.push('wizard:stars');
+    const shimmer=new P.Graphics().ellipse(16,18,8,3).stroke({color:0xa7c7d3,width:.8,alpha:.65});
+    shimmer.position.set(keys.length*40,0);sheet.addChild(shimmer);keys.push('wizard:shimmer');
     const atlas = renderer.generateTexture({target:sheet,frame:new P.Rectangle(0,0,keys.length*40,32),resolution:2});
     for(const patch of [...sheet.children])patch.destroy(); // Release owned construction contexts, including the ripple.
     sheet.destroy({children:true});
@@ -66,9 +85,12 @@
     return {frames,atlas,destroy(){for(const frame of frames.values())frame.destroy(false);atlas.destroy(true);}};
   }
   function createGnomeView(P, layer, frames, getReducedMotion = () => false, mushroomVisual = () => null, logVisual = () => null) {
-    const views = new Map(),splashes=new Map();let group = null, incident = null, carried = null,fire=null,char=null;
+    const views = new Map(),splashes=new Map(),spells=[];let group = null, incident = null, carried = null,fire=null,char=null;
+    function clearSpell(){for(const sprite of spells.splice(0))sprite.destroy();}
     function change({actors,incident:nextIncident=null}) {
       incident=nextIncident;
+      const casting=incident?.type==='gnome_wizard'&&incident.phase==='cast'&&incident.attempted;
+      if(!casting)clearSpell();
       const burning=incident?.type==='gnome_campfire'&&incident.phase==='burning'&&incident.target;
       if(fire&&!burning){fire.destroy();fire=null;}
       if(char&&(!burning||!incident.charred)){char.destroy();char=null;}
@@ -77,6 +99,9 @@
       for (const [actor,sprite] of splashes) if (!actors.includes(actor)||!actor.puddleMishap) { sprite.destroy();splashes.delete(actor); }
       if (!actors.length) { if(group)group.destroy();group=null;return; }
       if (!group) {group=new P.Container();group.eventMode='none';layer.addChild(group);}
+      if(casting&&!spells.length)for(const key of ['stars','shimmer']){
+        const sprite=new P.Sprite(frames.get(`wizard:${key}`));sprite.anchor.set(16/40,18/32);sprite.eventMode='none';group.addChild(sprite);spells.push(sprite);
+      }
       if(burning&&!fire){fire=new P.Sprite(frames.get('campfire:0'));fire.anchor.set(16/40,29/32);fire.eventMode='none';
         fire.position.set(incident.origin.x,incident.origin.y);group.addChildAt(fire,0);}
       if(burning&&incident.charred&&!char){
@@ -91,7 +116,7 @@
           carried.eventMode='none';group.addChild(carried);}
       }
       for (const actor of actors) if(!views.has(actor)) {
-        const sprite=new P.Sprite(frames.get(`${actor.side}:false:0`));sprite.anchor.set(16/40,18/32);
+        const sprite=new P.Sprite(frames.get(actor.role==='wizard'?'wizard:walk0':`${actor.side}:false:0`));sprite.anchor.set(16/40,18/32);
         group.addChild(sprite);views.set(actor,sprite);
       }
     }
@@ -102,7 +127,8 @@
       if(char)char.alpha=reduced?.7:Math.min(.85,Math.max(0,(at-incident.createdAt-core.campfireConfig.charAfterMs)/2000)*.85);
       for(const [actor,sprite] of views) {
         const pose=core.presentation(actor,at,reduced),step=pose.step<-.33?-1:pose.step>.33?1:0;
-        const key=pose.surprised ? pose.mushroom ? `surprise:carry:${actor.side}` : pose.sack ? `surprise:sack:${actor.side}` : pose.clippers ? 'surprise:clippers' : `surprise:${actor.side}`
+        const key=actor.role==='wizard'?`wizard:${pose.surprised?'surprise':['approach','departure'].includes(actor.state)?step>0?'walk1':'walk0':actor.state==='cast'?'cast':actor.state==='raise'?'raise':'inspect'}`
+          : pose.surprised ? pose.mushroom ? `surprise:carry:${actor.side}` : pose.sack ? `surprise:sack:${actor.side}` : pose.clippers ? 'surprise:clippers' : `surprise:${actor.side}`
           : pose.mushroom ? `carry:${actor.side}` : pose.sack ? `sack:${actor.side}` : pose.clippers ? `clippers:${pose.closed}` : `${actor.side}:${pose.battle}:${step}`;
         sprite.texture=frames.get(key);
         sprite.position.set(pose.x,pose.y);sprite.rotation=pose.rotation;sprite.alpha=pose.alpha;
@@ -112,13 +138,22 @@
           const splash=splashes.get(actor);splash.position.set(actor.x,actor.y);splash.alpha=pose.water.alpha*pose.alpha;
         }else if(splashes.has(actor)){splashes.get(actor).destroy();splashes.delete(actor);}
       }
+      if(spells.length){
+        const age=at-incident.createdAt,progress=Math.max(0,Math.min(1,(age-core.wizardConfig.castAfterMs)/(core.wizardConfig.leaveAfterMs-core.wizardConfig.castAfterMs)));
+        if(age>=core.wizardConfig.leaveAfterMs)clearSpell();
+        else{const actor=views.keys().next().value;
+          spells[0].position.set(actor.x+10,actor.y-12-(reduced?0:progress*2));
+          spells[1].position.set(incident.origin.x,incident.origin.y-12);
+          for(const sprite of spells)sprite.alpha=reduced?.6:(1-progress)*.8;
+        }
+      }
       if(carried && views.size===2){
         const actors=[...views.keys()],wobble=getReducedMotion()?0:Math.sin((at-incident.pickupAt)/170);
         carried.position.set((actors[0].x+actors[1].x)/2,(actors[0].y+actors[1].y)/2+4+wobble*.6);
         carried.rotation=wobble*.035;
       }
     }
-    return {views,splashes,change,animate,get fire(){return fire;},get char(){return char;},get carried(){return carried;},snapshot(){return {sprites:views.size,carried:carried?1:0,splashes:splashes.size,fire:fire?1:0,char:char?1:0,containers:group?1:0,textures:frames.size};},
+    return {views,splashes,spells,change,animate,get fire(){return fire;},get char(){return char;},get carried(){return carried;},snapshot(){return {sprites:views.size,spells:spells.length,carried:carried?1:0,splashes:splashes.size,fire:fire?1:0,char:char?1:0,containers:group?1:0,textures:frames.size};},
       destroy(){change({actors:[]});}};
   }
   const api={makeGnomeAtlas,createGnomeView};
