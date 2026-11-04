@@ -1,3 +1,426 @@
+# Great Gnome Funeral Procession (2026-11-03)
+
+Implemented on clean `dev` at `9aeeca4`; no applicable `AGENTS.md` was present.
+The existing 45-second/2%/30-living-specimen scheduler keeps heist → campfire →
+wizard priority, then makes one **20%** funeral roll before ordinary dispute
+fallback. Landscaping probabilities and mutual exclusion remain intact.
+
+Four gnomes enter from either horizontal edge, march together, pause solemnly
+at **13–16s**, then fade by **18s**. Two reuse carrying poses; two reuse walking
+poses, with one new bowed head. A single new cached prop frame combines the
+wooden stretcher and curled brown leaf. The formation has no garden-object
+targets or physics; no specimen, terrain, grass, event, activity or score change
+comes from the funeral. Ordinary underpants clicks apply once per gnome; clicking
+the leaf creates no collectible. Audio is the existing opt-in arrival cue only.
+
+Two appended frames grow the gnome atlas from **37 to 39**, physical **2960×64
+to 3120×64**, on the same source: **10,240 additional physical pixels / 40 KiB
+RGBA8 base-level estimate**. An active dry procession owns **four actor Sprites,
+one prop Sprite and the existing transient Container**; idle allocation is zero.
+No extra bake, renderer, ticker, WebGL context or per-frame Graphics is added.
+
+Logical ticks and visual advances share clock validation. Hidden/stalled/
+backwards clocks clear without catch-up, including reversal inside one logical
+interval. Normal cleared-specimen notifications propagate the removal reason so
+reset/reseed cancels a funeral; explicit Clear/Seed actions handle empty gardens
+as well. Completion and teardown release the route and destroy every transient
+Sprite while retaining shared textures until atlas teardown.
+
+`garden-funeral-dev.js` loads only on `/pixi-live.html`. Its controls trigger,
+preview normal/reduced motion, exercise hidden/stalled cancellation, and verify
+actual Sprite/prop cleanup. They require the ordinary eligibility count and do
+not seed or remove plants. `artifacts/gnome-funeral/index.html` contains **20
+actual-scale screenshots** across homepage/diagnostic pages; raw checks and
+timings are in `artifacts/gnome-funeral/review.json`. See
+[full lifecycle, measurements and validation](GNOME-FUNERAL.md).
+
+Validation: **72 Node suites passed** (24 optional Chrome/SSE entries skipped
+in that runner), **30 Chrome jobs passed**, Debug/Release and backend-check
+builds passed with zero warnings/errors, backend assertions and actual ASP.NET
+polling → SSE integration passed. `git diff --check` passed. Changes remain
+uncommitted on `dev`; nothing was pushed or deployed.
+
+# Wandering Wizard Gnome (2026-11-03)
+
+Implemented on `dev` from clean `dc8c6ac`, including campfires, snails and fungal
+logs; no applicable `AGENTS.md` was present. `garden-gnomes.js` extends the existing
+45-second/2% incident scheduler after the unchanged 30% heist and eligible 40%
+campfire branches. With a living, mature protected specimen, **25% of otherwise
+ordinary disputes** become one wizard visit. The single active incident retains
+the exact source object/id/type/cell/coordinates/createdAt. It never changes a
+protected plant or selects a replacement source.
+
+Approach/inspect/staff raise/cast/departure use the existing logical and visual
+paths at **0–3s / 3–4s / 4–5s / 5–8s / 8–14s**. At 5s one consumed attempt can
+call `ecology.influenceGrassCell()` on the original neighboring cell, checking
+current occupancy/under-plants rules and patch identity. Empty cells can acquire
+grass; exact existing patches can refresh. Stale or blocked plans skip without
+retry. Only logical ticks cast. Removal notifications cancel immediately;
+hidden tabs, gaps over 1500ms, invalid/backwards clocks, Clear and teardown
+release targets/effects without catch-up.
+
+Eight appended gnome-atlas frames give a purple hat, blue robe, small staff,
+slow walk/inspect/raise/cast/surprise poses and pale stars/shimmer. The atlas grows
+from **29 to 37 frames**, physical **2320×64 to 2960×64**, on the same source:
+**40,960 added physical pixels / 160 KiB RGBA8 base-level estimate**. Existing
+frames stay in their original slots. An active visit uses one existing transient
+group, one wizard Sprite and at most two spell Sprites; idle allocation is zero.
+Reduced motion uses discrete travel and steady effects. Underpants attempts and
+separate protected-plant inspection share existing input paths.
+
+`garden-wizard-dev.js` and controls load only on `/pixi-live.html`. Fixtures use
+real simulated plants, ordinary occupancy and actual ecology. The gallery at
+`artifacts/gnome-wizard/index.html` contains **22 actual-scale Chrome captures**
+covering arrival, inspection, staff raised, casting, grass, cancellation,
+night/mobile/reduced motion and multiple eligible species. Raw performance and
+resource assertions are in `artifacts/gnome-wizard/review.json`.
+See [wizard lifecycle and validation](WIZARD-GNOME.md).
+
+Validation: **71 Node suites passed** (23 optional Chrome/SSE entry points
+skipped in that runner), **29 Chrome jobs passed**, Debug/Release and backend-
+check builds passed with zero warnings/errors, backend assertions and actual
+ASP.NET polling → SSE integration passed. The stale homepage gnome-atlas count
+was updated for eight appended frames and its full job rerun successfully.
+`git diff --check` passed. Changes remain uncommitted on `dev`; no push or deploy.
+
+# Attached shelf fungi (2026-11-03)
+
+Implemented on `dev` above `657d319`, with a clean starting tree and no applicable
+`AGENTS.md`. Actual log creation makes one independent **35%** colonization
+decision. Attached brackets become visible at **10m**, mature at **20m**, and
+weathered at **40m**. Colonized logs are removed at the first logical tick at or
+after **50m**; ordinary terrain retains its original **60m** expiry. Exact
+object/id/cell/coordinates/timestamps and list/map ownership are checked before
+changes or accelerated removal. Existing gnome and snail removal notifications
+remain authoritative. No plant, event, rarity, competition or score change.
+
+`garden-log-fungi.js` owns bounded per-log decisions/stages and finite artwork.
+The shared garden model owns creation, ticks, source removal and cleanup. Pixi
+uses one child Sprite per visible colony, changing textures only at boundaries.
+Nine frames expand the existing 832-frame atlas to **841**, with one additional
+32px row on the same source; at 2x resolution the allocation grows by **131,072
+physical pixels / 512 KiB RGBA8**. There is no extra renderer, ticker, animation,
+particle system or per-frame fungal work.
+
+`garden-log-fungi-dev.js` and its controls load only on `/pixi-live.html`.
+Fixtures create actual simulated terrain through natural blackthorn expiry,
+force only simulated colonization, and exercise stages, decay, campfire,
+source loss, real occupancy and reset without fake telemetry. The browser
+gallery is `artifacts/log-fungi/index.html`, with 22 actual-scale captures across
+both pages; the raw timing/resource report is `artifacts/log-fungi/review.json`.
+
+See [the complete lifecycle, clock policy, measurements and validation](LOG-FUNGI.md).
+Validation: **70 Node suites passed** (22 optional Chrome/SSE entry points
+skipped there), **28 Chrome jobs passed**, Debug/Release and backend-check builds
+passed with zero warnings/errors, backend assertions and actual ASP.NET
+polling → SSE integration passed. Final `git diff --check` passed; no commit,
+push, merge or deployment was made.
+
+# Log-dwelling garden snails (2026-10-29)
+
+Implemented on `dev` above **`0c317bf`**, preserving campfires, terrain,
+competition, collectible snails, frogs, inspections and visit notifications.
+The starting tree was clean, fetched `origin/dev` matched, and no applicable
+`AGENTS.md` was present. `main` is unchanged; no commit, push or deployment.
+
+## Wildlife, movement and grazing
+
+`garden-log-snails.js` owns a separate renderer-neutral wildlife model, with
+independent seeded entropy that never consumes `Math.random` or garden/ecology/
+frog/gnome randomness. It uses the existing logical tick and animation calls:
+**45-second checks**, strict **roll < .25**, **one arrival per check**, **two
+active visitors** and a **75-second lifetime**. No minimum specimen count is
+required. Checks without a valid log or at capacity consume no random draw.
+Deadlines advance once, without replaying missed opportunities.
+
+The source must be the exact actual fallen-log object in the terrain list and
+cell map, with matching id/cell/coordinates/creation/expiry timestamps and a
+currently living lifetime. Each visit captures that identity. Lookalike/new logs
+in the same cell never inherit a visitor. Snails are not specimens, curiosities,
+drops, occupancy blockers, vigor or network input.
+
+A small fixed eight-neighbor ring around the log supplies **four preplanned
+waypoints**. Invalid boundary points are excluded and a route reverses at an
+edge. Segments remain at least 30 logical pixels from the log center, inside
+the garden, without per-frame pathfinding/randomness. Heading follows movement
+including vertical travel. Maximum crawl speed is **1.875 logical pixels/sec**.
+
+| Visit age | Behavior |
+| --- | --- |
+| 0–2s | Fade in over 700ms and pause adjacent to log. |
+| 2–22s | Slowly crawl to first neighboring waypoint. |
+| 22–28s | Pause; grazing slot at **25s**. |
+| 28–50s | Crawl to second waypoint. |
+| 50–56s | Pause; grazing slot at **53s**. |
+| 56–72s | Final slow crawl. |
+| 72–75s | Short departure/fade, then remove visitor and Sprite. |
+
+Only the two future pause cells are considered for grazing at arrival. Each
+must contain a real, unexpired grass object within **1.5 cells** of the source
+(the log's own cell is excluded). At its slot, recheck active visitor membership,
+the complete original source identity, patch object membership and exact
+coordinate ownership, range, lifetime and remaining attempts. Then call the
+existing **`ecology.removeGrassCell(column,row)`**. Its normal notification
+removes the real patch/Sprite/contact shadow and closes exact grass inspection.
+There is no visual-only removal or new ecology rule.
+
+A missing, expired, moved or replaced patch consumes/skips that slot. A visit
+never selects a replacement or eats newly arrived grass. No available grass
+simply means wandering without nibbling. At most two attempts and two successful
+removals occur per visit. The tiny nibble frame appears only after actual
+successful consumption. Ordinary spreading, maintenance, weather and under-
+plants policies are unchanged; wildlife never refills a grazed cell.
+
+## Source lifecycle and interactions
+
+The existing terrain-removal notification starts a **three-second fade** when
+the exact source decays, is consumed by campfire, is cleared or otherwise
+removed. Source and pending grass references are released immediately, with no
+further grazing. Departure retains only preplanned coordinate data. An early
+source loss preserves the current entrance opacity instead of flashing into
+full visibility. The original 75s deadline still bounds the departure.
+
+Hidden/resumed pages, backwards clocks and gaps **greater than 1500ms** clear
+visits, Sprites and references and set a fresh 45s deadline. An exact 1500ms gap
+remains allowed. The animation-side guard also prevents a stalled logical model
+from displaying/grazing stale visitors. Grazing happens only on logical ticks.
+Whole-garden Clear explicitly clears wildlife; individual log removal uses the
+short fade. Clear, departure and teardown release all owned resources. IDs stay
+monotonic across clears; click acknowledgments use weak ownership.
+
+Click priority is **gnomes → curiosities → loose drops → frogs → active
+mutations → log snails → ordinary plant/grass inspection**. This keeps all
+existing priorities, puts wildlife after frogs and before ordinary inspection,
+and retains active-mutation protection. The first hit acknowledges the exact
+visitor with **The snail continues being a snail. +0 points**. Later hits still
+consume the click without another message or deadline extension. Clicks never
+collect/remove it, change its route, trigger collection audio or add points.
+
+The existing first-seen curiosity remains type `snail`, with its original art,
+movement, collection and **You collected a snail. It seems annoyed. +0 points**
+message. New wildlife uses `log-snail` and separate event/frame names. No SSE,
+provenance, Recent activity, rarity, competition or Score: 0 changes are added.
+
+## Artwork, diagnostics and browser review
+
+Three brown/olive/russet spiral-shell palettes each have two restrained crawl
+frames and one lowered-head nibble pose, with pale bodies and tiny feelers.
+The nine finite frames append to the existing ambient atlas; old curiosity,
+drop and frog frames retain their positions/artwork. One Sprite per visitor is
+inserted at the bottom of the existing drop/wildlife layer, above grass/plants
+and below frogs/drops/curiosities/gnomes, without new idle containers. Existing
+interaction priority gives active mutations precedence when overlapping.
+
+Reduced motion uses quarter-segment discrete positions and static poses,
+without shell/body bob or stretching; departure fades in place. No per-frame
+Graphics, texture creation, particles, additional renderer/ticker or timer.
+
+`garden-log-snails-dev.js` loads **only on `/pixi-live.html`**. Controls seed a
+real simulated fallen log via natural blackthorn expiry, seed actual neighboring
+grass through ecology, spawn one/two visitors, preview grazing, remove the actual
+source, preview reduced motion, exercise hidden/stalled cancellation and clear
+wildlife. Forced arrivals/removals are restricted to simulated logs. Grazing
+preview constructs an actual 30-second-old log and ages one simulated visit with
+98 bounded 250ms fixture ticks; the first real nibble is then due in 0.5s. This
+explicit local fixture does not change ordinary hidden/resume behavior, publish
+fake TCPNoise, bypass grass identity checks or add a periodic scheduler.
+
+`artifacts/log-snails/index.html` contains the actual browser gallery; both
+`homepage-` and `diagnostic-` captures show crawling, paused, grazing, second
+graze, departure, departed, night, olive/russet palettes, reduced motion,
+no-grass wandering and mobile. Desktop garden crops are **960×600 at CSS scale
+1**, mobile is **390×844** without enlarged artwork. The grazing sequence
+records real grass counts **8 → 7 → 6**, unchanged network/garden statistics
+and Score: 0. `review.json` contains state, resource and timing evidence.
+
+## Costs, verification and limitations
+
+Ambient atlas frames grow **14 → 23**, backing **896×64 → 1472×64** physical
+pixels: **+147,456 bytes (144KiB) raw RGBA**, from 224KiB to 368KiB. GPU driver
+allocation can exceed raw pixels. There is still one ambient source/bake and
+**five whole-page atlas bakes**, one Application, one SSE stream, **832 specimen
+frames** and **29 gnome frames**. Two active wildlife visitors add at most two
+Sprites; no persistent display objects remain after departure. The repeated
+browser test releases **160 visits/Sprites**, with stable Graphics-context and
+bake counts, intact borrowed textures during play and all atlas sources released
+only at page teardown.
+
+Local Chrome **156.0.8078.48** probes with a fully occupied garden measured roughly
+**0.0033ms** to update two snails per sampled frame (max 0.20ms), and renderer submission
+**0.029–0.036ms**, versus idle submission **0.016–0.018ms**. Each mode used 180
+samples. These short native-clock measurements exclude GPU completion and are
+not a cross-device FPS or long-duration heap guarantee. Final raw results are
+stored in `review.json`; no new dependency or session persistence was added.
+
+Tests cover strict probability/deadline/cap/lifetime boundaries, real-log/list/
+map/identity validation, corners and slow walking/pauses/facing, two actual
+authoritative grazes, absent/expired/moved/replaced grass, missing source and
+same-cell replacement, real campfire consumption and natural decay, hidden/
+logical/render stalls/backwards clocks, reentrant removal observers, reduced
+motion, real scaled clicks/one-time messages, collectible-snail coexistence,
+existing frog/gnome/drop/mutation priority, exact grass-inspection closure,
+diagnostic-only controls and repeated Sprite/texture ownership cleanup.
+
+Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds, backend checks
+and the existing actual ASP.NET polling/SSE integration. Node completed with
+**69 passed / 21 optional entries skipped / zero failures**. Debug/Release builds
+completed with **zero warnings/errors**; backend checks and actual ASP.NET
+polling/SSE integration passed. **All 27 Chrome jobs passed** after the
+opium-pod browser atlas-size assertion was
+updated to the appended-frame dimensions while retaining its frozen historical
+baseline. Test artifacts/builds/logs remain ignored by Git.
+
+There is no persistence, breeding, extra food search, terrain collision
+pathfinding or wildlife collection. Each visit can miss grass elsewhere around
+the log because only its two preplanned pause cells are selected. Two snails may
+choose the same original patch; the later attempt skips instead of substituting.
+Small mobile art remains deliberately tiny. Captures emulate mobile viewports
+in desktop Chrome; physical-device GPU and long-duration soak remain unmeasured.
+
+# Great Gnome Campfire Incident (2026-10-28)
+
+Implemented on `dev` above `1f2d3bf`, preserving the existing terrain,
+inverse-vigor competition, specimen previews and visit integration. The initial
+tree was clean, fetched `origin/dev` matched, and no applicable `AGENTS.md` was
+present. `main` is untouched. No commit, push, merge, reset, rebase or deployment
+is part of this work.
+
+## Selection and authoritative lifecycle
+
+The existing gnome **45-second check**, **30 living specimens** threshold and
+strict **roll < 0.02** base chance remain. Existing eligible-mushroom selection
+and its **roll < 0.30** heist branch execute first, unchanged. Only an otherwise
+ordinary dispute checks actual fallen-log candidates and tries **roll < 0.40**.
+No log means no extra branch draw. One candidate is selected uniformly, followed
+by a 50/50 choice of two or three gnomes. Only one incident may be active.
+
+| Eligible resources | Heist per qualifying check | Campfire per qualifying check |
+| --- | --- | --- |
+| Mushrooms and logs | 0.6% | 0.56% (`.02 × .70 × .40`) |
+| Logs, no mushrooms | 0 | 0.8% (`.02 × .40`) |
+| Mushrooms, no logs | 0.6% | 0 |
+| Neither | 0 | 0 |
+
+These are per eligible check, not per second or guaranteed visit frequencies.
+Existing dispute outcomes and landscaping fallbacks retain their order. Failed
+base checks never independently try campfires.
+
+An eligible log must be the same live object in both the terrain list and cell
+map, with valid id/cell/coordinates, finite creation/expiry times, no plant in its
+cell, and `createdAt <= now < expiresAt`. Selection snapshots the object, id,
+cell, column, row, creation time and expiry time. Logical ticks and presentation
+advances revalidate them, including immediately before ignition and consumption.
+A replacement in the same cell is never inherited or retried.
+
+Timeline, relative to incident start:
+
+- **0–2.5s:** two/three campers approach using existing cached gnome poses.
+- **2.5–4s:** gather around the actual log.
+- **4–17s:** small flames and two baked ember marks flicker above the real wood.
+  Terrain remains blocked. A darkened borrowed-texture overlay appears from 15s.
+- **17s:** revalidate, then call **`terrain.remove(exactLog, 'gnome-campfire')`**
+  once. The existing notification removes occupancy and destroys its real log
+  Sprite. Fire/char Sprites are destroyed and the target reference is released.
+  This does not increment specimen-removal or network-event statistics.
+- **17–21s:** gnomes depart; the cell is genuinely free for ordinary placement.
+- **21s:** remaining actor Sprites and their transient group are destroyed.
+
+The source log Sprite's texture/tint/alpha/transform are not mutated. Char uses
+an independent Sprite borrowing its exact cached texture, with no texture/source
+ownership. Existing gnome click priority, one underpants attempt and shared drop
+cap remain; there is no fire collection mechanic or new audio cue. The existing
+arrival cue still plays once when enabled.
+
+Natural expiry and external terrain removal cancel immediately through the
+normal terrain notification. Missing/stale/changed identity cancels on validation.
+Hidden tabs, backwards clocks or **gaps greater than 1500ms** cancel the whole
+sequence and establish a fresh 45s deadline. An exact 1500ms gap remains allowed.
+No fire/removal step is replayed after a gap; consumed wood is never restored.
+Normal completion keeps the existing incident cadence. Clear, reseed and page
+teardown release all owned effects and source references. Score stays zero.
+
+## Presentation, diagnostics and evidence
+
+Three 40×32 logical fire tiles are baked once into the existing gnome atlas at
+2× resolution. Flame frames switch every 160ms via the existing animation call;
+no new timer, ticker, renderer, particle system or per-frame geometry is used.
+Embers are part of the tile. Smoke is omitted. Reduced motion fixes the flame
+frame/alpha, suppresses flicker and uses snapped approach / four-step departure.
+Existing hidden-tab and puddle-reaction paths apply. Fire inherits world lighting;
+rain adds no extinguishing, spread, damage or lifetime rules.
+
+Only `/pixi-live.html` has Seed campfire log, Trigger campfire, Remove before
+ignition/during burning, reduced-motion preview, hidden/stalled cancellation and
+cell-occupancy controls. The seed creates 35 simulated plants plus an actual log
+through a forced **natural blackthorn expiry**, not a fake TCPNoise event or
+direct terrain-array insertion. Its one-millisecond fixture boundary avoids
+trying to render an already expired specimen. Forced triggers/removals are
+limited to simulated logs; ordinary runtime incidents can select real logs.
+
+`artifacts/gnome-campfire/index.html` is the generated native-scale gallery.
+For both `homepage-` and `diagnostic-`, captures include `approach`, `gathered`,
+`burning`, `charred`, `burned-out-empty`, `departure`, `finished`, `night`, `rain`,
+`night-rain-grass`, `reduced-motion` and `mobile`. Desktop captures are the actual
+**960×600** garden at CSS scale 1; mobile uses a **390×844** viewport without
+enlarging garden art. `review.json` records state, timings and cleanup. Generated
+captures/builds/logs remain ignored by Git.
+
+## Resource and performance bounds
+
+The gnome atlas grows **26 → 29 frames**, **2080×64 → 2320×64** physical pixels:
+**+61,440 bytes (60KiB) raw RGBA**, from 520KiB to 580KiB. There is still one
+gnome GPU source/bake; the whole live page retains **five atlas bakes**, one
+Application, one SSE stream and the unchanged **832 specimen frames**. Driver
+allocations can exceed raw pixel counts. Existing atlas assertions were updated
+to the measured dimensions; old pose/splash frames retain their order/artwork.
+
+An active campfire uses **2–3 gnome Sprites + one flame Sprite + at most one
+char Sprite**, inside the existing transient gnome group. Existing puddle
+reactions can additionally use their own bounded splash Sprites. Idle campfires
+retain no display objects. Borrowed log textures survive effect destruction and
+all atlas sources are released only at normal page teardown.
+
+In Chrome **156.0.8078.48**, full-garden campfire animation averaged roughly
+**0.004–0.008ms** per sampled frame, versus **0.008–0.011ms** for the four-gnome
+dispute; renderer submission averaged **0.047–0.052ms** versus idle
+**0.023–0.025ms**. Each mode used 120 local samples. These short native-clock
+probes exclude GPU completion and do not establish cross-device FPS or long-term
+memory behavior. In 20 full-garden logical probes per page, selection averaged
+**0.115–0.120ms** (max 0.30ms) and authoritative burnout averaged **0.010ms**
+(max 0.10ms). Raw samples and resource totals are in `review.json`.
+
+Repeated browser tests release **360 effect/actor Sprites across 80 cycles**;
+the bake count remains five and Graphics-context count remains constant. No
+recurring geometry, cached-texture destruction, fabricated SSE/growth activity,
+Recent activity changes or score changes were observed. Node also runs 60
+entry-point fire/char cleanup cycles covering interruption and consumption.
+
+## Verification and limits
+
+New tests cover exact `.02`, `.30` and `.40` boundaries; unchanged heist draws;
+no eligible log; two/three actors; single-incident exclusion; every identity
+field and map/list membership; natural expiry before ignition/during burning;
+failed and reentrant removal; full occupancy, genuine freed-cell regrowth;
+external removal/same-cell replacement; hidden/logical/render gaps and backwards
+clocks; reduced motion; actual click/underpants priority; diagnostic isolation;
+repeated Sprite/atlas cleanup and page teardown. Existing garden, terrain,
+competition, mutation, heist, SSE and visit suites remain in the full runners.
+
+Run `npm test`, `npm run test:chrome`, Debug/Release .NET builds,
+`dotnet run --project tests/PacketGarden.Checks --no-restore`, and
+`node tests/weather-sse.cjs --run <built PacketGarden.dll>`. Chrome uses the
+installed Chrome/Playwright runtime through `NODE_PATH`; no downloads or new
+dependencies are needed. **All 68 Node suites passed** (20 optional entries
+skipped by that runner), **all 26 Chrome jobs passed**, Debug/Release builds
+passed with **zero warnings/errors**, backend integration checks passed, and
+the actual ASP.NET polling/SSE integration passed. Final branch/status/diff
+checks confirm uncommitted work on `dev`; no main or remote changes were made.
+
+There is no session persistence, fire spread, weather-dependent extinguishing,
+grass damage, reward or special regrowth. A small garden below the existing
+30-specimen threshold cannot start this event. Mobile captures emulate viewport
+size in desktop Chrome; physical-device GPU/soak testing remains unmeasured.
+
 # Exact-specimen inspection preview (2026-10-28)
 
 The existing card on `/` and `/pixi-live.html` now shows the exact selected

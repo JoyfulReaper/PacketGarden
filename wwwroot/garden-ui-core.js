@@ -53,6 +53,7 @@
       age: formatAge(at - specimen.createdAt), mutation: mutations.mutationLabel(specimen, at) };
   }
   const frogMessage = 'The frog ignores you +0 points';
-  const api = { fakeSourceNames, vigorNames, messages, collectionMessage, frogMessage, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
+  const logSnailMessage = 'The snail continues being a snail. +0 points';
+  const api = { fakeSourceNames, vigorNames, messages, collectionMessage, frogMessage, logSnailMessage, messageDurationMs, capitalize, formatAge, recentEventAge, recentEventText, appendRecent, inspection };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenUiCore = api;
 })();

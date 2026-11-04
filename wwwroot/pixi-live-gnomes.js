@@ -49,35 +49,109 @@
     const splash=new P.Graphics(),art=(common?require('./garden-gnome-puddles.js'):window.PacketGardenGnomePuddles).splashArt;
     for(const [x,y,endX,endY] of art.lines)splash.moveTo(x+16,y+18).lineTo(endX+16,endY+18);
     splash.stroke({color:art.color,width:art.width});splash.position.set(keys.length*40,0);sheet.addChild(splash);keys.push('puddle:splash');
+    // Three tiny whole-fire frames: restrained flames and two baked embers, no particles.
+    for(let i=0;i<3;i++){
+      const fire=new P.Graphics(),lean=[-1,1,0][i];
+      fire.ellipse(16,27,10,2).fill({color:0xce6b31,alpha:.15});
+      fire.poly([8,27,10,21,11,17,14,21,16+lean,10,19,17,20,21,23,18,24,24,22,28]).fill(0xc96838);
+      fire.poly([11,27,12,21,15,24,17+lean,16,19,22,22,25,20,28]).fill(0xeaa34b);
+      fire.poly([14,27,16,22,18,25,19,28]).fill(0xf2cf7e);
+      fire.rect(12+i,8-i,1,1).rect(21-i,11+i,1,1).fill({color:0xf0b76a,alpha:.65});
+      fire.position.set(keys.length*40,0);sheet.addChild(fire);keys.push(`campfire:${i}`);
+    }
+    // Append only: every ordinary gnome/fire slot retains its original artwork.
+    for(const pose of ['walk0','walk1','inspect','raise','cast','surprise']){
+      const g=new P.Graphics(),step=pose==='walk1'?1:0,raised=['raise','cast'].includes(pose),tipY=raised?3:10;
+      g.moveTo(14,24).lineTo(12+step,29).moveTo(18,24).lineTo(20-step,29).stroke({color:0x403647,width:2});
+      g.ellipse(16,21,5,5).fill(0x626e9b);g.circle(16,15,3.2).fill(0xe0bd92);
+      g.poly([13,17,20,17,17,24]).fill(0xe2ddce);
+      g.poly([10,12,16,1,19,5,21,12]).fill(0x8572ab);g.moveTo(11,12).lineTo(21,12).stroke({color:0xb8a8cf,width:1});
+      g.moveTo(25,27).lineTo(25,tipY).stroke({color:0x957b59,width:1.4});g.circle(25,tipY,1.8).fill(0xb3c6d2);
+      g.moveTo(19,20).lineTo(24,raised?14:21).stroke({color:0x626e9b,width:2});g.circle(24,raised?14:21,1.2).fill(0xe0bd92);
+      if(pose==='cast')g.moveTo(12,20).lineTo(8,17).stroke({color:0x626e9b,width:2});
+      if(pose==='inspect')g.rect(15,14,1,1).rect(19,14,1,1).fill(0x433c32);
+      if(pose==='surprise'){g.moveTo(30,3).lineTo(30,8).stroke({color:0xf2efe3,width:1});g.circle(30,10,.6).fill(0xf2efe3);}
+      g.position.set(keys.length*40,0);sheet.addChild(g);keys.push(`wizard:${pose}`);
+    }
+    const stars=new P.Graphics();
+    for(const [x,y,r] of [[16,12,3],[7,20,1.8],[25,23,2.2]])stars.poly([x,y-r,x+.65,y-.65,x+r,y,x+.65,y+.65,x,y+r,x-.65,y+.65,x-r,y,x-.65,y-.65]).fill(0xc9c7e1);
+    stars.position.set(keys.length*40,0);sheet.addChild(stars);keys.push('wizard:stars');
+    const shimmer=new P.Graphics().ellipse(16,18,8,3).stroke({color:0xa7c7d3,width:.8,alpha:.65});
+    shimmer.position.set(keys.length*40,0);sheet.addChild(shimmer);keys.push('wizard:shimmer');
+    // Walk/carry poses reuse existing frames; only a bow and one combined prop are new.
+    const bow=new P.Graphics();
+    bow.moveTo(14,24).lineTo(13,29).moveTo(18,24).lineTo(19,29).stroke({color:0x433c32,width:2});
+    bow.ellipse(16,21,5,5).fill(0x73805b);bow.circle(18,17,3.2).fill(0xe0bd92);
+    bow.poly([14,19,21,19,18,25]).fill(0xe6e1cf);bow.poly([11,14,20,5,23,15]).fill(0x4b9554);
+    bow.moveTo(17,17).lineTo(20,18).stroke({color:0x574936,width:.7});
+    bow.position.set(keys.length*40,0);sheet.addChild(bow);keys.push('funeral:bow');
+    const stretcher=new P.Graphics();
+    stretcher.moveTo(0,25).lineTo(36,25).stroke({color:0x775533,width:2});
+    stretcher.poly([5,21,28,20,32,24,7,25]).fill(0x98744b);
+    stretcher.moveTo(9,21).lineTo(11,24).moveTo(16,21).lineTo(18,24).moveTo(23,21).lineTo(25,24).stroke({color:0x5c442d,width:.7});
+    // One curled leaf: continuous brown blade, central vein and a turned pale tip.
+    stretcher.moveTo(5,20).bezierCurveTo(8,11,21,7,30,11).quadraticCurveTo(34,7,33,5)
+      .quadraticCurveTo(38,12,30,16).bezierCurveTo(23,23,12,23,5,20).fill(0x916238);
+    stretcher.moveTo(3,22).quadraticCurveTo(17,18,31,11).stroke({color:0xc39b5f,width:.85});
+    stretcher.moveTo(12,19).lineTo(13,14).moveTo(19,16).lineTo(22,11).moveTo(19,17).lineTo(25,18).stroke({color:0x65482e,width:.6});
+    stretcher.moveTo(30,11).quadraticCurveTo(35,13,33,5).stroke({color:0xc3a16d,width:.9});
+    stretcher.position.set(keys.length*40,0);sheet.addChild(stretcher);keys.push('funeral:stretcher');
     const atlas = renderer.generateTexture({target:sheet,frame:new P.Rectangle(0,0,keys.length*40,32),resolution:2});
     for(const patch of [...sheet.children])patch.destroy(); // Release owned construction contexts, including the ripple.
     sheet.destroy({children:true});
     const frames = new Map(keys.map((key,i)=>[key,new P.Texture({source:atlas.source,frame:new P.Rectangle(i*40,0,40,32)})]));
     return {frames,atlas,destroy(){for(const frame of frames.values())frame.destroy(false);atlas.destroy(true);}};
   }
-  function createGnomeView(P, layer, frames, getReducedMotion = () => false, mushroomVisual = () => null) {
-    const views = new Map(),splashes=new Map();let group = null, incident = null, carried = null;
+  function createGnomeView(P, layer, frames, getReducedMotion = () => false, mushroomVisual = () => null, logVisual = () => null) {
+    const views = new Map(),splashes=new Map(),spells=[];let group = null, incident = null, carried = null,fire=null,char=null,stretcher=null;
+    function clearSpell(){for(const sprite of spells.splice(0))sprite.destroy();}
     function change({actors,incident:nextIncident=null}) {
       incident=nextIncident;
+      const procession=incident?.type==='gnome_funeral';
+      if(stretcher&&!procession){stretcher.destroy();stretcher=null;}
+      const casting=incident?.type==='gnome_wizard'&&incident.phase==='cast'&&incident.attempted;
+      if(!casting)clearSpell();
+      const burning=incident?.type==='gnome_campfire'&&incident.phase==='burning'&&incident.target;
+      if(fire&&!burning){fire.destroy();fire=null;}
+      if(char&&(!burning||!incident.charred)){char.destroy();char=null;}
       if(carried && !incident?.carried){carried.destroy();carried=null;}
       for (const [actor,sprite] of views) if (!actors.includes(actor)) { sprite.destroy();views.delete(actor); }
       for (const [actor,sprite] of splashes) if (!actors.includes(actor)||!actor.puddleMishap) { sprite.destroy();splashes.delete(actor); }
       if (!actors.length) { if(group)group.destroy();group=null;return; }
       if (!group) {group=new P.Container();group.eventMode='none';layer.addChild(group);}
+      if(casting&&!spells.length)for(const key of ['stars','shimmer']){
+        const sprite=new P.Sprite(frames.get(`wizard:${key}`));sprite.anchor.set(16/40,18/32);sprite.eventMode='none';group.addChild(sprite);spells.push(sprite);
+      }
+      if(burning&&!fire){fire=new P.Sprite(frames.get('campfire:0'));fire.anchor.set(16/40,29/32);fire.eventMode='none';
+        fire.position.set(incident.origin.x,incident.origin.y);group.addChildAt(fire,0);}
+      if(burning&&incident.charred&&!char){
+        const source=logVisual(incident.target.log);
+        if(source&&!source.destroyed){char=new P.Sprite(source.texture);char.anchor.set(source.anchor.x,source.anchor.y);
+          char.position.set(source.position.x,source.position.y);char.scale.set(source.scale.x,source.scale.y);char.rotation=source.rotation;
+          char.tint=0x312a25;char.eventMode='none';group.addChildAt(char,0);}
+      }
       if(incident?.carried && !carried){
         const art=mushroomVisual(incident.carried);
         if(art){carried=new P.Sprite(art.texture);carried.anchor.set(.5,.9);carried.scale.set(art.scale);
           carried.eventMode='none';group.addChild(carried);}
       }
       for (const actor of actors) if(!views.has(actor)) {
-        const sprite=new P.Sprite(frames.get(`${actor.side}:false:0`));sprite.anchor.set(16/40,18/32);
+        const sprite=new P.Sprite(frames.get(actor.role==='wizard'?'wizard:walk0':`${actor.side}:false:0`));sprite.anchor.set(16/40,18/32);
         group.addChild(sprite);views.set(actor,sprite);
       }
+      if(procession&&!stretcher){stretcher=new P.Sprite(frames.get('funeral:stretcher'));stretcher.anchor.set(16/40,18/32);stretcher.eventMode='none';group.addChild(stretcher);}
     }
     function animate(at) {
+      const reduced=getReducedMotion();
+      if(fire){fire.texture=frames.get(`campfire:${reduced?0:Math.floor(Math.max(0,at-incident.createdAt-core.campfireConfig.igniteAfterMs)/160)%3}`);
+        fire.alpha=reduced?.95:.93+Math.sin(at/130)*.05;}
+      if(char)char.alpha=reduced?.7:Math.min(.85,Math.max(0,(at-incident.createdAt-core.campfireConfig.charAfterMs)/2000)*.85);
       for(const [actor,sprite] of views) {
-        const pose=core.presentation(actor,at,getReducedMotion()),step=pose.step<-.33?-1:pose.step>.33?1:0;
-        const key=pose.surprised ? pose.mushroom ? `surprise:carry:${actor.side}` : pose.sack ? `surprise:sack:${actor.side}` : pose.clippers ? 'surprise:clippers' : `surprise:${actor.side}`
+        const pose=core.presentation(actor,at,reduced),step=pose.step<-.33?-1:pose.step>.33?1:0;
+        const key=actor.role==='pallbearer'?`${pose.surprised?'surprise:':''}carry:${actor.side}`
+          :actor.role==='mourner'&&actor.state==='bow'&&!pose.surprised?'funeral:bow'
+          :actor.role==='wizard'?`wizard:${pose.surprised?'surprise':['approach','departure'].includes(actor.state)?step>0?'walk1':'walk0':actor.state==='cast'?'cast':actor.state==='raise'?'raise':'inspect'}`
+          : pose.surprised ? pose.mushroom ? `surprise:carry:${actor.side}` : pose.sack ? `surprise:sack:${actor.side}` : pose.clippers ? 'surprise:clippers' : `surprise:${actor.side}`
           : pose.mushroom ? `carry:${actor.side}` : pose.sack ? `sack:${actor.side}` : pose.clippers ? `clippers:${pose.closed}` : `${actor.side}:${pose.battle}:${step}`;
         sprite.texture=frames.get(key);
         sprite.position.set(pose.x,pose.y);sprite.rotation=pose.rotation;sprite.alpha=pose.alpha;
@@ -87,13 +161,32 @@
           const splash=splashes.get(actor);splash.position.set(actor.x,actor.y);splash.alpha=pose.water.alpha*pose.alpha;
         }else if(splashes.has(actor)){splashes.get(actor).destroy();splashes.delete(actor);}
       }
+      if(stretcher){
+        let left=null,right=null;
+        for(const [actor,sprite] of views)if(actor.role==='pallbearer'){if(!left)left=sprite;else right=sprite;}
+        if(left&&right){if(left.position.x>right.position.x){const swap=left;left=right;right=swap;}
+          // Follow the rendered bearers, including the existing click reaction.
+          stretcher.position.set((left.position.x+right.position.x)/2,(left.position.y+right.position.y)/2-7);
+          stretcher.rotation=reduced?0:Math.atan2(right.position.y-left.position.y,right.position.x-left.position.x);
+          stretcher.alpha=Math.min(left.alpha,right.alpha);
+        }
+      }
+      if(spells.length){
+        const age=at-incident.createdAt,progress=Math.max(0,Math.min(1,(age-core.wizardConfig.castAfterMs)/(core.wizardConfig.leaveAfterMs-core.wizardConfig.castAfterMs)));
+        if(age>=core.wizardConfig.leaveAfterMs)clearSpell();
+        else{const actor=views.keys().next().value;
+          spells[0].position.set(actor.x+10,actor.y-12-(reduced?0:progress*2));
+          spells[1].position.set(incident.origin.x,incident.origin.y-12);
+          for(const sprite of spells)sprite.alpha=reduced?.6:(1-progress)*.8;
+        }
+      }
       if(carried && views.size===2){
         const actors=[...views.keys()],wobble=getReducedMotion()?0:Math.sin((at-incident.pickupAt)/170);
         carried.position.set((actors[0].x+actors[1].x)/2,(actors[0].y+actors[1].y)/2+4+wobble*.6);
         carried.rotation=wobble*.035;
       }
     }
-    return {views,splashes,change,animate,get carried(){return carried;},snapshot(){return {sprites:views.size,carried:carried?1:0,splashes:splashes.size,containers:group?1:0,textures:frames.size};},
+    return {views,splashes,spells,change,animate,get fire(){return fire;},get char(){return char;},get carried(){return carried;},get stretcher(){return stretcher;},snapshot(){return {sprites:views.size,spells:spells.length,carried:carried?1:0,stretcher:stretcher?1:0,splashes:splashes.size,fire:fire?1:0,char:char?1:0,containers:group?1:0,textures:frames.size};},
       destroy(){change({actors:[]});}};
   }
   const api={makeGnomeAtlas,createGnomeView};

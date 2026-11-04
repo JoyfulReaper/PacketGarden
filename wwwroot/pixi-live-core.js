@@ -65,6 +65,7 @@
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0, heistRemovals: 0 };
     const model = garden.createGardenModel({ now, random, competitionRandom, terrainRandom, onChange(change) {
       const { kind, specimen, reason } = change;
+      if(kind==='terrain-fungi'){view.fungalChange?.(change);return;}
       if(kind==='terrain-added'||kind==='terrain-removed'){view.terrainChange?.(change);onTerrainChange(change);return;}
       if (kind === 'added') {
         onAdded(specimen); // Placement succeeded; clear its soil before presenting the plant.
@@ -75,7 +76,7 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
+      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen,reason); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });
@@ -99,7 +100,17 @@
       if (result) { counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); poppies.consider(result.specimen); onLive(result.specimen); }
       return { outcome, specimen: result?.specimen ?? null };
     }
-    return { specimens: model.specimens, byCell: model.byCell, terrain:model.terrain, freeCellCount:model.freeCellCount,
+    return { specimens: model.specimens, byCell: model.byCell, terrain:model.terrain, fungi:model.fungi, freeCellCount:model.freeCellCount,
+      seedFungi(ageMs=0,colonized=true,count=1,dense=false){
+        const at=now(),age=Math.max(0,Math.min(3600000,ageMs)),n=Math.max(1,Math.min(6,count));
+        const entries=Array.from({length:n},(_,i)=>({type:'blackthorn',vigor:i%3,column:10+i*2,row:10,
+          createdAt:at-age-garden.timings.blackthorn.expiredAfterMs,origin:{kind:'simulated',eventType:'log-fixture'}}));
+        if(dense){for(let cell=0;cell<640;cell++)if(!entries.some(p=>p.row*32+p.column===cell))entries.push({type:'broadleaf',vigor:cell%4,column:cell%32,row:Math.floor(cell/32),createdAt:at-65000,origin:{kind:'simulated',eventType:'fungal-fixture'}});}
+        else for(let i=0;i<35;i++)entries.push({type:'broadleaf',vigor:i%4,column:5+i%22,row:13+Math.floor(i/22),createdAt:at-65000,origin:{kind:'simulated',eventType:'fungal-fixture'}});
+        model.seed(entries,at-age-1);model.forceFungalFixture(colonized);model.forceLogFixture();
+        try{model.tick(at);}finally{model.forceFungalFixture();}
+        return model.terrain.logs[0]??null;
+      },
       isCellOccupied:model.isCellOccupied,competitionSnapshot:model.competitionSnapshot, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
@@ -121,12 +132,32 @@
         // Explicit simulated fixture only; the normal expiry/occupancy/removal path still runs.
         const count=model.forceLogFixture();model.tick(at);return count;
       },
+      seedCampfire(logAgeMs=0) {
+        const at=now(),bornAt=at-(Number.isFinite(logAgeMs)?Math.max(0,Math.min(60000,logAgeMs)):0),thorn={type:'blackthorn',vigor:1,column:16,row:10,createdAt:bornAt-garden.timings.blackthorn.expiredAfterMs,
+          origin:{kind:'simulated',eventType:'log-fixture'}};
+        model.seed([thorn,...Array.from({length:35},(_,i)=>({type:'broadleaf',vigor:i%4,column:5+i%22,row:13+Math.floor(i/22),
+          createdAt:at-65000,origin:{kind:'simulated',eventType:'campfire-fixture'}}))],bornAt-1);
+        model.forceLogFixture();model.tick(at);
+        return model.terrain.logs[0]??null;
+      },
       seedHeist() {
         const at=now();
         model.seed(Array.from({length:35},(_,i)=>({type:i<4?'mushroom':'broadleaf',vigor:i%4,
           column:i<4?12+i*2:7+(i-4)%18,row:i<4?10:13+Math.floor((i-4)/18),createdAt:at-65000,
           origin:{kind:'simulated',eventType:'heist-fixture'}})),at);
         for(const p of model.specimens){p.colorVariant=p.vigor;view.update(p,model.byCell);}
+      },
+      seedWizard(several=false){
+        const at=now(),types=several?['ghostbloom','crystalfungus','blackthorn','stillbloom']:['ghostbloom'];
+        const entries=types.map((type,i)=>({type,vigor:1,column:16+i*3,row:10,createdAt:at-90000,origin:{kind:'simulated',eventType:'wizard-fixture'}}));
+        for(let i=0;i<35;i++)entries.push({type:'broadleaf',vigor:i%4,column:5+i%22,row:14+Math.floor(i/22),createdAt:at-65000,origin:{kind:'simulated',eventType:'wizard-fixture'}});
+        model.seed(entries,at);return model.specimens[0];
+      },
+      replaceWizardFixture(p){
+        if(p?.origin?.kind!=='simulated'||p.origin.eventType!=='wizard-fixture'||model.byCell.get(p.cell)!==p
+          ||!model.specimens.every(q=>q.origin?.kind==='simulated'&&q.origin.eventType==='wizard-fixture'))return null;
+        const replacement={type:p.type,vigor:p.vigor,column:p.column,row:p.row,createdAt:now()-90000,origin:{kind:'simulated',eventType:'wizard-fixture'}};
+        model.seed([...model.specimens.filter(q=>q!==p),replacement],now());return replacement;
       },
       replaceHeistTarget(target) {
         // Explicit all-simulated dev fixture only. Reimport through normal lifecycle notifications.

@@ -7,7 +7,7 @@ async function run() {
   const root = path.resolve(__dirname, '..'), assets = path.join(root, 'wwwroot'), baseline = process.argv.includes('--baseline'), checkpoint = '0719608';
   const output = path.join(root, 'artifacts/wirefern-spores', baseline ? 'before' : 'after'); await fs.mkdir(output, { recursive: true });
   const old = new Map();
-  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'pixi-live-core.js', 'pixi-live.js'])
+  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-core.js', 'pixi-live-core.js', 'pixi-live.js'])
     old.set(file, execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], { cwd: root }));
   const capture = `{
     const f=window.__sori={bakes:[],contexts:[],geometry:0,streams:0};
@@ -85,8 +85,8 @@ async function run() {
       const resources=await page.evaluate(()=>({frames:__sori.view.snapshot().textures,overlays:__sori.view.sporeViews?.size??0,
         displayObjects:__sori.view.snapshot().displayObjects,specimenSprites:__sori.view.byId.size,streams:__sori.streams,bakes:__sori.bakes.length,
         dimensions:__sori.bakes.map(b=>[b.width,b.height]),constructionContextsReleased:__sori.contexts.every(c=>c.destroyed)}));
-      assert.equal(resources.frames,baseline?825:832);assert.equal(resources.specimenSprites,640);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);
-      assert.deepEqual(resources.dimensions[1],[1024,832]);assert(resources.constructionContextsReleased);report.resources.push({page:name,...resources});
+      assert.equal(resources.frames,baseline?825:841);assert.equal(resources.specimenSprites,640);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);
+      assert.deepEqual(resources.dimensions[1],[1024,baseline?832:864]);assert(resources.constructionContextsReleased);report.resources.push({page:name,...resources});
       const fadeMs=await page.evaluate(()=>{const start=performance.now();__soriNow+=249000;__sori.model.tick(Date.now());return performance.now()-start;});
       report.timing.at(-1).fullFadeTransitionMs=fadeMs;
       if(!baseline){

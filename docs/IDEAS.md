@@ -160,7 +160,7 @@ Possible gnome incidents:
 - a lone gnome walks across the garden carrying something it apparently stole;
 - two gnomes drag a mushroom somewhere for reasons never explained — implemented as the Great Gnome Mushroom Heist below;
 - one gnome chases another across the garden;
-- a tiny gnome funeral procession;
+- a tiny gnome funeral procession — implemented as the Great Gnome Funeral Procession below;
 - one gnome appears, looks around, and immediately leaves;
 - a wizard gnome briefly interacts with a rare specimen and vanishes;
 - a few gnomes build a tiny temporary campfire;
@@ -890,7 +890,7 @@ a deliberate reason to combine them.
 
 Fallen blackthorn logs are the first implemented **long-lived blocking terrain**
 slice. Each naturally expired blackthorn gets one dedicated **30%** decision;
-at most **six** logs last **60 minutes** from the tree's natural 12-minute expiry.
+at most **six** logs ordinarily last **60 minutes** from the tree's natural 12-minute expiry.
 The source must still match its original object/id/cell/coordinates/time at
 natural removal and its cell must actually be empty afterward. Forced removal,
 gnome actions, special mutations, Clear and reseeding never generate logs.
@@ -916,9 +916,118 @@ terrain. Diagnostic controls preview simulated aging, success, cap, full/dense
 gardens, blocked growth and decay/regrowth. See
 [actual-scale evidence and validation](PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
 
+### Attached shelf fungi (implemented)
+
+Actual fallen logs receive one independent **35%** colonization roll when created.
+This decision belongs to that exact frozen log. It never consumes placement,
+rarity or competition randomness or rerolls on later ticks. Shelf fungi remain
+hidden for ten minutes, then progress through small **10–20m**, mature **20–40m**
+and weathered **40–50m** stages. Colonized wood decays through authoritative
+terrain removal at **50m**; ordinary logs retain **60m**. Absolute creation times
+govern hidden/resumed and stalled gardens without refreshing a log's lifetime.
+
+Small cream/ochre brackets attach to the existing wood Sprite. Nine cached frames
+share the specimen atlas; at most six additional child Sprites exist. They add
+no specimen, occupancy, collectible, network event or points. Burning removes
+the fungi; fungal decay preserves gnome cancellation and snail source departure.
+The freed cell becomes available to ordinary growth without automatic planting.
+Diagnostic fixtures and [lifecycle evidence](LOG-FUNGI.md) cover both paths.
+
+### Great Gnome Campfire Incident (implemented)
+
+Gnomes can now discover and consume an existing fallen blackthorn log. The
+shared 45-second/2% incident check first keeps the existing 30% mushroom-heist
+branch, then gives an ordinary-dispute outcome a 40% campfire branch if eligible
+terrain exists. There is no second scheduler or concurrent gnome incident.
+Two or three campers approach/gather, ignite after four seconds, burn the real
+blocking log and remove that exact object through `terrain.remove()` after
+17 seconds. Departure finishes by 21 seconds. No collectible, points, network
+event, plant replacement or special regrowth is invented; normal occupancy
+immediately makes the freed cell available.
+
+Object/id, cell/coordinates and original creation/expiry times are revalidated.
+Natural decay, stale/replaced targets, hiding and clock gaps over 1.5 seconds
+cancel safely without a later burn or removal. Already consumed wood stays gone.
+Existing gnome poses and underpants attempts remain; only three tiny cached
+fire/ember frames and a temporary borrowed-texture char overlay are new. Reduced
+motion uses a steady flame and restrained actor movement. Rain retains its
+existing presentation without introducing extinguishing or fire-spread rules.
+Diagnostics remain on `/pixi-live.html` only. See
+[the native-scale review and resource measurements](PIXI-LIVE.md#great-gnome-campfire-incident-2026-10-28).
+
 Simple persistence across browser/server restarts remains desirable. The goal is to
 preserve the feeling that the garden has history without turning PacketGarden into
 a telemetry database.
+
+### Great Gnome Funeral Procession (implemented)
+
+Four tiny gnomes carry one curled brown leaf on a miniature wooden stretcher.
+Nobody knows whose funeral it is. No actual plant death is required, and the
+procession changes no specimen, terrain, wildlife or ecology state.
+
+The existing **45s / 2% / 30 living specimens** incident scheduler retains heist,
+campfire and wizard priority, then gives **20% of remaining ordinary-dispute
+outcomes** to the funeral. Other gnome incidents remain mutually exclusive;
+ordinary disputes and landscaping retain their existing behavior/probabilities.
+
+Two bearers and two followers enter from either side, march together, pause at
+13–16 seconds with one follower bowing, then fade together by 18 seconds. The
+fixed horizontal route needs no pathfinding or displacement. Existing cached
+walking/carrying poses do most of the work: only one bowed-head frame and one
+combined stretcher/leaf frame are new. One shared prop follows the rendered
+bearers. There is no additional renderer, ticker, particle effect or music.
+
+Each actor retains one ordinary underpants attempt; the leaf cannot be collected.
+Reduced motion uses discrete travel and static carrying artwork. Hidden tabs,
+large tick gaps, backwards clocks, resets and teardown destroy actors and prop
+without replay. Diagnostic-only controls preview both motion modes and verify
+cleanup. See [actual-scale screenshots and measurements](GNOME-FUNERAL.md).
+
+### Wandering Wizard Gnome (implemented)
+
+One faintly ridiculous, purple-hatted wizard can visit a mature ghostbloom,
+crystal fungus, blackthorn or Stillbloom. The shared 45-second/2% incident check
+retains its 30-living-specimen requirement, mushroom heist first and eligible
+campfire second. **25% of the remaining ordinary-dispute outcomes** become
+wizard visits when a valid protected target exists; no target consumes no wizard
+branch draw. Incidents remain mutually exclusive.
+
+The wizard approaches for three seconds, inspects, raises its staff, casts once
+at five seconds, shows two restrained cached spell Sprites through eight seconds,
+then wanders away by fourteen. It preserves the exact protected plant's identity,
+vigor, rarity, appearance and lifetime. At creation it chooses at most one
+adjacent cell allowed by normal grass rules; at casting it rechecks that cell
+and the original patch/empty state before one authoritative influence. Ordinary
+ecology owns the resulting grass. A missing/replaced patch, new occupant,
+disallowed under-plant cell or lost specimen consumes/skips the attempt without
+another selection. Hidden/stalled/backwards time cancels without a missed cast.
+
+The existing underpants attempt applies once per appearance. The wizard stands
+beside its target so plant inspection remains accessible. Eight appended frames
+share the gnome atlas; there is no new renderer, ticker, particle system,
+collectible, scoring or network event. Controls remain on `/pixi-live.html`.
+See [lifecycle, screenshots and measurements](WIZARD-GNOME.md).
+
+### Log-dwelling garden snails (implemented)
+
+Actual fallen logs now host an independent, bounded wildlife visit: **45s / 25% /
+one arrival per check / two active / 75s**. These are not first-seen collectible
+snails. Four precomputed neighboring waypoints provide slow crawling, pauses,
+directional facing and subtle cached body motion. Each visit selects at most
+two exact existing grass objects along that route and can consume them only
+through `garden-ecology.removeGrassCell()` at its two grazing slots. A stale or
+replaced patch is skipped without choosing another; no special regrowth occurs.
+
+Log object/id/cell/creation identity stays authoritative. Natural decay,
+campfire, clear and other source removal start departure and release source/
+grass references; hiding, long stalls and backwards clocks cancel without
+missed spawn or grazing replay. One acknowledgment per individual uses
+"The snail continues being a snail. +0 points". Repeated hits do not collect,
+remove or repeatedly announce it. Existing collectible-snail messages, frog/
+gnome priority, mutations, drops, garden activity and Score: 0 are preserved.
+Three shell palettes with crawl/nibble poses share the existing ambient atlas.
+Only `/pixi-live.html` has source/grass/spawn/graze/removal/motion/cancellation
+fixtures. See [the native-scale review and bounds](PIXI-LIVE.md#log-dwelling-garden-snails-2026-10-29).
 
 Longer-lived terrain/history ideas from the vision include:
 

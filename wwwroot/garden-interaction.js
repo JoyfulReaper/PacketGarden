@@ -28,7 +28,7 @@
     const column = Math.floor(point.x / cellSize), row = Math.floor(point.y / cellSize);
     return specimens.find(p => p.column === column && p.row === row) ?? null;
   }
-  function resolve(point, { specimens = [], curiosities = [], drops = [], gnomes = null, frogs = null, reducedMotion = false }, at = Date.now()) {
+  function resolve(point, { specimens = [], curiosities = [], drops = [], gnomes = null, frogs = null, logSnails = null, reducedMotion = false, snailReducedMotion = reducedMotion }, at = Date.now()) {
     if (!validPoint(point)) return null;
     const gnome = gnomes?.hitAt(point,at);
     if (gnome) return {kind:'gnome',object:gnome};
@@ -39,7 +39,10 @@
     const frog = frogs?.hitAt?.(point, at, reducedMotion);
     if (frog) return { kind: 'frog', object: frog };
     const specimen = specimenAt(point, specimens);
-    return specimen ? { kind: mutationHit(specimen, point, at) ? 'mutation' : 'specimen', specimen } : null;
+    if(specimen&&mutationHit(specimen,point,at))return {kind:'mutation',specimen};
+    const snail=logSnails?.hitAt(point,at,snailReducedMotion);
+    if(snail)return {kind:'log-snail',object:snail};
+    return specimen ? { kind:'specimen', specimen } : null;
   }
   // CSS client -> renderer presentation -> root-local coordinates. Backing/DPR never enters this calculation.
   function pointFromClient(clientX, clientY, rect, presentation, fit) {

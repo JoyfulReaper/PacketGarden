@@ -3,11 +3,13 @@
   'use strict';
   const ambientCore = typeof module !== 'undefined' && module.exports ? require('./garden-ambient.js') : window.PacketGardenAmbient;
   const frogCore = typeof module !== 'undefined' && module.exports ? require('./garden-frogs.js') : window.PacketGardenFrogs;
+  const snailCore = typeof module !== 'undefined' && module.exports ? require('./garden-log-snails.js') : window.PacketGardenLogSnails;
   function makeAmbientAtlas(P, renderer) {
-    const sheet = new P.Container(), keys = [...ambientCore.curiosityTypes, ...Object.keys(ambientCore.dropTypes), ...(frogCore?.frames.keys()??[])];
+    const sheet = new P.Container(), keys = [...ambientCore.curiosityTypes, ...Object.keys(ambientCore.dropTypes), ...(frogCore?.frames.keys()??[]),...(snailCore?.frameKeys??[])];
     for (const [i, type] of keys.entries()) {
       const g = new P.Graphics();
-      if (type.startsWith('frog:')) {
+      if(type.startsWith('log-snail:'))snailCore.draw(P,type,g);
+      else if (type.startsWith('frog:')) {
         for(const [shape,x,y,a,b,color,width] of frogCore.frames.get(type)) {
           if(shape==='line')g.moveTo(x+16,y+16).lineTo(a+16,b+16).stroke({color,width});
           else if(shape==='circle')g.circle(x+16,y+16,a).fill(b);
@@ -121,6 +123,17 @@
     },animate(at){for(const [frog,sprite] of views)transform(frog,sprite,at);},
     destroy(){for(const sprite of views.values())sprite.destroy();views.clear();}};
   }
-  const api={makeAmbientAtlas,createAmbientView,createFrogView,seedAmbient,seedWeedBuds};
+  function createLogSnailView(P,layer,frames,getReducedMotion=()=>false){
+    const views=new Map();
+    function transform(snail,sprite,at){const p=snailCore.visualState(snail,at,getReducedMotion());
+      sprite.texture=frames.get(p.frame);sprite.position.set(p.x,p.y+p.bodyY);sprite.scale.set(p.direction*p.stretch,1);sprite.rotation=p.rotation;sprite.alpha=p.alpha;}
+    return{views,change({kind,item},at){
+      if(kind==='log-snail-added'){const sprite=new P.Sprite(frames.get(`log-snail:${item.variant}:crawl0`));sprite.anchor.set(.5);sprite.eventMode='none';layer.addChildAt(sprite,0);views.set(item,sprite);transform(item,sprite,at);}
+      else if(kind==='log-snail-removed'){views.get(item)?.destroy();views.delete(item);}
+      else if(views.has(item))transform(item,views.get(item),at);
+    },animate(at){for(const [snail,sprite] of views)transform(snail,sprite,at);},
+      destroy(){for(const sprite of views.values())sprite.destroy();views.clear();}};
+  }
+  const api={makeAmbientAtlas,createAmbientView,createFrogView,createLogSnailView,seedAmbient,seedWeedBuds};
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else window.PacketGardenPixiAmbient=api;
 })();

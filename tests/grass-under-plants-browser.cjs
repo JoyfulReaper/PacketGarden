@@ -8,7 +8,7 @@ async function run() {
   const baseline=process.argv.includes('--baseline'), root=path.resolve(__dirname,'..'), assets=path.join(root,'wwwroot');
   const output=path.join(root,'artifacts/grass-under-plants',baseline?'before':'after');await fs.mkdir(output,{recursive:true});
   const checkpoint=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(), old=new Map();
-  if(baseline)for(const name of ['index.html','pixi-live.html','garden-ecology.js','pixi-live.js'])
+  if(baseline)for(const name of ['index.html','pixi-live.html','garden-core.js','garden-ecology.js','pixi-live.js'])
     old.set(name,execFileSync('git',['show',`${checkpoint}:wwwroot/${name}`],{cwd:root}));
   const capture=`{
     const f=window.__under={bakes:0,geometry:0};

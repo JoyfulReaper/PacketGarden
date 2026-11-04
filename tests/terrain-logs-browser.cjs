@@ -11,6 +11,7 @@ async function run(){
       ['PacketGardenEcology','ecology','createEcologyModel'],['PacketGardenPixiEcology','ecologyView','createEcologyView'],
       ['PacketGardenLighting','light','createModel'],['PacketGardenLightingView','surface','createSurface'],['PacketGardenGnomes','gnomes','createModel']]){
       const create=window[global][method];window[global][method]=(...args)=>{
+        if(key==='garden')args[0]={...args[0],fungalRandom:()=>.99};
         if(key==='model'){f.view=args[0];args[1]={...args[1],competitionRandom:()=>.99,terrainRandom:()=>f.terrainRoll,sporeRandom:()=>.9};}
         if(key==='gnomes')args[0]={...args[0],random:()=>.99};
         const value=create(...args);f[key]??=value;return value;
@@ -121,8 +122,8 @@ async function run(){
           if(f.view.terrainViews.size||f.model.terrain.byCell.size||!sprites.every(s=>s.destroyed))throw Error('Log ownership');}
         return{bakes,bakesAfter:f.bakes.length,frames,streams:f.streams,geometryDelta:f.geometry-geometry,
           backing:[f.bakes[1].source.pixelWidth,f.bakes[1].source.pixelHeight],active:f.view.terrainViews.size};});
-      assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,832);assert.equal(resources.streams,1);
-      assert.equal(resources.geometryDelta,0);assert.equal(resources.active,0);assert.deepEqual(resources.backing,[2048,1664]);Object.assign(report.resources.at(-1),resources);
+      assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,841);assert.equal(resources.streams,1);
+      assert.equal(resources.geometryDelta,0);assert.equal(resources.active,0);assert.deepEqual(resources.backing,[2048,1728]);Object.assign(report.resources.at(-1),resources);
       if(name==='diagnostic'){
         await page.locator('#seed-logs-full').click();await page.locator('#force-log').click();await jump(2000);
         await page.locator('#test-log-growth').click();assert(await page.evaluate(()=>!__logs.model.byCell.has(__logs.model.terrain.logs[0].cell)));

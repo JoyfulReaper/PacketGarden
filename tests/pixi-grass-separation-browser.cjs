@@ -7,7 +7,7 @@ async function run() {
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline');
   const output=path.join(root,'artifacts/grass-separation',baseline?'before':'after');await fs.mkdir(output,{recursive:true});
   const checkpoint=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),old=new Map();
-  if(baseline)for(const file of ['index.html','pixi-live.html','pixi-live-core.js','pixi-live.js','pixi-live-ecology.js'])old.set(file,execFileSync('git',['show',`${checkpoint}:wwwroot/${file}`],{cwd:root}));
+  if(baseline)for(const file of ['index.html','pixi-live.html','garden-core.js','pixi-live-core.js','pixi-live.js','pixi-live-ecology.js'])old.set(file,execFileSync('git',['show',`${checkpoint}:wwwroot/${file}`],{cwd:root}));
   const capture=`{
     const f=window.__separation={bakes:[],geometry:0,streams:0,contexts:[]};
     const NativeSource=EventSource;window.EventSource=class extends NativeSource{constructor(...args){super(...args);f.streams++;}};

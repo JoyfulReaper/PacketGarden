@@ -104,13 +104,22 @@ and pending mutations/poppies are protected, as are the rare species above.
 See [the competition policy](docs/EVENT-MAPPINGS.md#inverse-vigor-competition).
 
 Naturally expired blackthorns can leave **fallen logs**: one independent **30%**
-decision per expiry, at most **six**, each lasting **60 minutes** from the tree's
+decision per expiry, at most **six**, ordinarily lasting **60 minutes** from the tree's
 natural expiry. A log is separate terrain that blocks its exact vacated cell;
 plants cannot grow there or replace it. A full garden can therefore contain
 634 plants plus six logs. Logs add no network events, specimen counts, vigor,
 activity or points. Forced removals and Clear never produce them. Decay frees
 the cell for normal growth, including after hidden time; reload clears this
 session-only terrain. See [fallen-log validation](docs/PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
+
+Each actual log also gets one independent **35% fungal colonization** decision.
+Attached shelf fungi appear at **10 minutes**, mature at **20**, and weather at
+**40**. Colonized logs decay at **50 minutes**; uncolonized logs keep their
+**60-minute** lifetime. Gnomes can burn either, and source removal starts the
+existing snail departure. Logs block their cells until authoritative removal;
+ordinary growth can then reclaim them. These fungi add no species, specimens,
+network activity or points. See [fungal lifecycle and validation](docs/LOG-FUNGI.md)
+and the simulated controls on `/pixi-live.html`.
 
 All state lives in browser memory. Reloading starts a new session. A single SSE
 connection supplies backend-normalized growth and aggregate weather. No replay
@@ -240,6 +249,46 @@ Its cell stays free for normal growth. Pending collectibles, mutations and rare
 specimens are protected; hiding or stalls cancel without replay or restoration.
 Both thieves remain clickable for underpants. See the
 [heist review](docs/PIXI-LIVE.md#great-gnome-mushroom-heist-2026-10-27).
+
+The **Great Gnome Campfire Incident** gives an otherwise ordinary dispute a
+**40%** branch when an actual fallen log is available, after the unchanged heist
+selection. It uses the same **45-second / 2% / 30 living specimens** check. Two or
+three gnomes gather at the exact log, ignite at **4s**, char its appearance near
+**15s**, and consume it through `terrain.remove()` at **17s**. The log really
+blocks growth until removal; its cell then permits ordinary planting. Gnomes
+depart by **21s** and keep their existing underpants click behavior. Stale or
+naturally decayed targets, hidden tabs and stalls cancel without delayed removal
+or replay. Three cached flame frames add no renderer, scheduler or particles.
+See [campfire captures, probabilities and costs](docs/PIXI-LIVE.md#great-gnome-campfire-incident-2026-10-28).
+
+The **Wandering Wizard Gnome** takes **25% of otherwise ordinary disputes**
+when a mature ghostbloom, crystal fungus, blackthorn or Stillbloom is present.
+The existing **45s / 2% / 30 living specimens** check and heist/campfire priority
+still apply. One purple-hatted visitor examines the exact plant, raises a tiny
+staff, casts once at **5s**, then leaves by **14s**. Its spell may add or refresh
+**one originally selected neighboring grass cell** through ordinary ecology,
+respecting the current under-plants setting. Lost targets and blocked or changed
+grass skip safely without retries. The rare plant keeps its traits and lifespan;
+the wizard shares ordinary underpants clicks. See [wizard lifecycle and review](docs/WIZARD-GNOME.md).
+
+The **Great Gnome Funeral Procession** takes **20% of the remaining ordinary-
+dispute outcomes**, after the heist, campfire and wizard branches. Four gnomes
+carry one brown leaf on a tiny wooden stretcher, march across the garden, pause
+solemnly at **13–16s**, then fade away by **18s**. Nobody needs to die: the
+procession changes no specimens, terrain or ecology. Each gnome keeps its one
+underpants attempt; the leaf is a noncollectible prop. Reduced motion and the
+existing arrival sound settings apply. See [funeral screenshots and lifecycle](docs/GNOME-FUNERAL.md).
+
+**Log-dwelling snails** are separate, noncollectible wildlife. With an actual
+living fallen log, an independent **25%** check every **45s** can admit one
+visitor, capped at **two**, for **75s**. They crawl slowly along four preplanned
+points, pause and may eat two originally selected nearby grass patches through
+`removeGrassCell()`. Missing/replaced patches consume their attempt; ordinary
+ecology alone regrows grass. Losing the exact source log—including to campfire—
+starts a short fade and disables grazing. Hiding or clock gaps cancel without
+replay. Their first click says **The snail continues being a snail. +0 points**;
+later clicks still consume the hit. The existing collectible snail and its
+message remain unchanged. See [wildlife captures, ownership and costs](docs/PIXI-LIVE.md#log-dwelling-garden-snails-2026-10-29).
 
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,

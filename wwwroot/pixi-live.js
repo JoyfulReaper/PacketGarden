@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const fungalArt=typeof module!=='undefined'&&module.exports?require('./garden-log-fungi.js'):window.PacketGardenLogFungi;
   const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
   const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
   const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
@@ -247,6 +248,11 @@
     }
     const cloudArt = spores.cloudTile(P); artTiles.push(cloudArt); tile('wirefern-cloud', cloudArt);
     for(let variant=0;variant<3;variant++){const g=logTile(P,variant);artTiles.push(g);tile(`fallen-log:${variant}`,g);}
+    // The original 832 slots fill 26 rows. Nine frames need one further row,
+    // on the same atlas source, with no additional GPU texture source.
+    for(const stage of ['early','mature','weathered'])for(let variant=0;variant<3;variant++){
+      const g=fungalArt.draw(P,variant,stage);artTiles.push(g);tile(`log-fungi:${variant}:${stage}`,g);
+    }
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -412,8 +418,13 @@
       sprite.scale.set(pose.scaleX, pose.scaleY); sprite.alpha = pose.alpha;
     }
     return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, sporeViews, cloudViews, cloudChange, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
-      terrainViews,terrainChange({kind,terrain:log}) {
-        if(kind==='terrain-removed'){const sprite=terrainViews.get(log);if(sprite){sprite.destroy();terrainViews.delete(log);}return;}
+      terrainViews,fungalChange({terrain:log,stage}){
+        const parent=terrainViews.get(log);if(!parent)return;
+        if(stage==='hidden'){parent.fungi?.destroy();parent.fungi=null;return;}
+        if(!parent.fungi){const sprite=new P.Sprite();sprite.anchor.set(.5,29/32);sprite.eventMode='none';parent.addChild(sprite);parent.fungi=sprite;}
+        parent.fungi.texture=frames.get(`log-fungi:${log.variant}:${stage}`);
+      },terrainChange({kind,terrain:log}) {
+        if(kind==='terrain-removed'){const sprite=terrainViews.get(log);if(sprite){sprite.destroy({children:true});terrainViews.delete(log);}return;}
         if(terrainViews.has(log))return;
         const sprite=new P.Sprite(frames.get(`fallen-log:${log.variant}`));sprite.anchor.set(.5,29/32);sprite.eventMode='none';
         sprite.position.set((log.column+.5)*cellSize,(log.row+.5)*cellSize+6);plants.addChild(sprite);terrainViews.set(log,sprite);
@@ -488,8 +499,9 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, terrainViews:terrainViews.size, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + terrainViews.size + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        const fungalViews=[...terrainViews.values()].filter(s=>s.fungi).length;
+        return { sprites: byId.size, terrainViews:terrainViews.size, fungalViews, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + terrainViews.size + fungalViews + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() {
         // Each link owns a Graphics context and may own a blossom child.
@@ -589,13 +601,16 @@
       onChange(change) { ambientView.change(change, Date.now()); } });
     own(()=>ambient.clear());
     // Both factories start empty. Bind ecology before startup grass or live input.
-    let ui, ecology = null;
-    const model = core.createModel(view, { onTerrainChange:change=>{if(change.kind==='terrain-added')ecology?.specimenAdded(change.terrain.column,change.terrain.row);},
+    let ui, ecology = null, gnomes = null, logSnails = null, snailView = null, snailPreviewReduced = false;
+    const snailReducedMotion=()=>Boolean(reducedMotion?.matches||snailPreviewReduced);
+    const model = core.createModel(view, { onTerrainChange:change=>{
+      if(change.kind==='terrain-added')ecology?.specimenAdded(change.terrain.column,change.terrain.row);
+      else {gnomes?.terrainRemoved(change.terrain);logSnails?.sourceRemoved(change.terrain);}},
       onAdded: source => ecology?.specimenAdded(source.column, source.row), onLive: source => {
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onPoppyActivated: (source, at) => ambient.acceptPoppyActivation(source, at),
-      onRemoved: source => { emissions?.removed(source); ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
+      onRemoved: (source,reason) => { gnomes?.specimenRemoved(source,Date.now(),reason);emissions?.removed(source); ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     own(() => model.clear());
     emissions = spores.createEmissionModel({ getSpecimens: () => model.specimens,
       hasSource: source => model.byCell.get(source.cell) === source,
@@ -607,6 +622,7 @@
     ui = window.PacketGardenPixiUi.createUi({ document, window, garden: model, ambient, colorName: core.colorName,preview,
       getGnomes: () => gnomes,
       getFrogs: () => frogs, getReducedMotion: () => reducedMotion?.matches ?? false,
+      getLogSnails:()=>logSnails,getSnailReducedMotion:snailReducedMotion,
       collectionRandom: () => { const choice=document.querySelector('#underpants-message-roll');return choice ? Number(choice.value) : Math.random(); },
       getGrassCells: () => ecology.grassCells,
       onCollected: () => sound?.maybePlayCollectionSound() });
@@ -615,13 +631,16 @@
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
     own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
-    let heistPreviewReduced = false;
-    const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced);
-    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual);
+    let heistPreviewReduced = false, campfirePreviewReduced = false, wizardPreviewReduced = false, funeralPreviewReduced = false;
+    const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced || campfirePreviewReduced
+      || wizardPreviewReduced&&gnomes?.incident?.type==='gnome_wizard'
+      || funeralPreviewReduced&&gnomes?.incident?.type==='gnome_funeral');
+    const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual, log=>view.terrainViews.get(log));
     own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
-    const gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
+    gnomes = window.PacketGardenGnomes.createModel({ garden:model, getSpecimens: () => model.specimens,
       getPuddles: () => ecology?.puddles ?? [],
+      getEcology: () => ecology,
       hasPendingBud: specimen => ambient.pendingDrops.get(specimen)?.type === 'ditch_weed_bud',
       hasPendingCollectible: specimen => ambient.pendingDrops.has(specimen),
       getHeistPosition: specimen => view.byId.get(specimen.id)?.position,
@@ -680,6 +699,36 @@
       const removed=gnomes.incident.removals;gnomes.suspend(Date.now());gnomes.resetCadence(Date.now());gnomeView.animate(Date.now());
       heistStatus(`Heist-only hidden/resume path: views cleared, fresh 45s deadline. ${removed?'The stolen mushroom remains removed.':'Pickup had not occurred; the mushroom remains.'} Actual tab hiding also suspends the whole page.`);
     });
+    const campfireStatus=text=>{const el=document.querySelector('#campfire-status');if(el)el.textContent=text;};
+    let campfireFixtureLog=null;
+    listen(document.querySelector('#seed-campfire'),'click',()=>{
+      gnomes.clear();ambient.clear();frogs?.clear();ecology?.clear();
+      const log=model.seedCampfire();campfireFixtureLog=log?{cell:log.cell,column:log.column,row:log.row}:null;gnomes.resetCadence();
+      campfireStatus('35 simulated plants and one actual naturally expired blackthorn log. Trigger campfire; ignite at 4s, remove terrain at 17s, depart by 21s.');
+    });
+    listen(document.querySelector('#trigger-campfire'),'click',()=>{
+      if(gnomes.incident){campfireStatus('An incident is already active.');return;}
+      campfireStatus(gnomes.startCampfire(Date.now(),undefined,true)?'Simulated campfire targets one real log. Click a gnome for its existing underpants attempt.':'Seed a suitable simulated log first; 30 living specimens are still required.');
+      gnomeView.animate(Date.now());
+    });
+    for(const phase of ['before','during'])listen(document.querySelector(`#remove-campfire-${phase}`),'click',()=>{
+      const current=gnomes.incident,target=current?.type==='gnome_campfire'?current.target?.log:null;
+      if(!target?.simulated||(phase==='during')!==(current.phase==='burning')){campfireStatus(`Trigger a simulated campfire and use this ${phase==='before'?'before ignition':'during burning'}.`);return;}
+      model.terrain.remove(target,'simulated-campfire-target-removal');campfireStatus('Exact simulated log removed through terrain API; incident cancelled without touching another cell.');
+    });
+    listen(document.querySelector('#campfire-reduced-motion'),'change',event=>{campfirePreviewReduced=event.target.checked;});
+    for(const mode of ['hidden','stalled'])listen(document.querySelector(`#cancel-campfire-${mode}`),'click',()=>{
+      if(gnomes.incident?.type!=='gnome_campfire'){campfireStatus('Trigger a campfire first.');return;}
+      if(mode==='hidden'){gnomes.suspend(Date.now());gnomes.resetCadence(Date.now());}
+      else{gnomes.advance(Date.now()+window.PacketGardenGnomes.campfireConfig.maxTickGapMs+1);gnomes.resetCadence(Date.now());}
+      campfireStatus('Campfire cancelled, presentation released, no delayed removal or replay. Existing log stays until normal decay.');
+    });
+    listen(document.querySelector('#check-campfire-cell'),'click',()=>{
+      if(!campfireFixtureLog){campfireStatus('Seed the campfire fixture first.');return;}
+      const {cell,column,row}=campfireFixtureLog,blocked=model.terrain.isBlocked(cell),occupied=model.byCell.has(cell);
+      campfireStatus(`Fixture cell ${cell}: blocked ${blocked}, occupied ${occupied}, free ${!model.isCellOccupied(column,row)}. Normal growth uses the actual occupancy model.`);
+      if(!blocked)campfireFixtureLog=null;
+    });
     const clickGarden = event => {
       const point = interaction.pointFromClient(event.clientX, event.clientY, app.canvas.getBoundingClientRect(), app.renderer.screen,
         { scale: view.root.scale.x, x: view.root.position.x, y: view.root.position.y });
@@ -701,6 +750,25 @@
         if (change.kind === 'puddle-removed') gnomes.puddleRemoved(change.item);
       } });
     own(()=>ecology.clear());
+    const snailCore=window.PacketGardenLogSnails;
+    if(snailCore){
+      snailView=ambientPresentation.createLogSnailView(P,view.dropLayer,ambientCache.frames,snailReducedMotion);
+      own(()=>snailView.destroy());
+      logSnails=snailCore.createModel({getTerrain:()=>model.terrain,getEcology:()=>ecology,getReducedMotion:snailReducedMotion,
+        onChange:change=>snailView.change(change,Date.now())});
+      logSnails.setHidden(document.hidden);own(()=>logSnails.clear());
+    }
+    const snailDiagnostics=window.PacketGardenLogSnailsDev?.bind({document,garden:model,ecology,snails:logSnails,gnomes,frogs,ambient,
+      setReducedMotion:value=>{snailPreviewReduced=value;}});
+    own(()=>snailDiagnostics?.destroy());
+    const fungalDiagnostics=window.PacketGardenLogFungiDev?.bind({document,garden:model,ecology,gnomes,snails:logSnails,ambient,frogs});
+    own(()=>fungalDiagnostics?.destroy());
+    const wizardDiagnostics=window.PacketGardenWizardDev?.bind({document,garden:model,ecology,gnomes,ambient,frogs,snails:logSnails,
+      setReducedMotion:value=>{wizardPreviewReduced=value;}});
+    own(()=>wizardDiagnostics?.destroy());
+    const funeralDiagnostics=window.PacketGardenFuneralDev?.bind({document,gnomes,view:gnomeView,
+      setReducedMotion:value=>{funeralPreviewReduced=value;}});
+    own(()=>funeralDiagnostics?.destroy());
     const logStatus=text=>{const el=document.querySelector('#log-status');if(el)el.textContent=text;};
     const competitionStatus=text=>{const el=document.querySelector('#competition-status');if(el)el.textContent=text;};
     listen(document.querySelector('#seed-competition'),'click',()=>{
@@ -874,7 +942,7 @@
       ambient.seed({ curiosities: [{ ...item, type: ambientCore.curiosityTypes[interactionSeedVariant++ % 4], origin: point, direction: 1 }],
         drops: [{ ...item, type: 'amanita_muscaria' }] });
     });
-    listen(document.querySelector('#clear'),'click', () => { model.clear(); emissions.clear(); emissions.resetCadence(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
+    listen(document.querySelector('#clear'),'click', () => { model.clear();logSnails?.clear(); emissions.clear(); emissions.resetCadence(); ecology.clear(); ambient.clear(); frogs?.clear(); gnomes.clear(); gnomes.resetCadence(); storm.reset(); });
     listen(document.querySelector('#trigger-frog'),'click',()=>{
       const at=Date.now();
       if(!frogs.eligiblePuddles(at).length){
@@ -886,6 +954,7 @@
       frogView.animate(at);
     });
     listen(document.querySelector('#seed'),'click', () => {
+      if(gnomes.incident?.type==='gnome_funeral'){gnomes.clear();gnomes.resetCadence();}
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
     });
@@ -906,11 +975,11 @@
         `Frame ms recent avg ${data.averageMs.toFixed(2)} / worst ${data.worstMs.toFixed(2)} · session worst ${data.sessionWorstMs.toFixed(2)}`,
         `Gaps >50ms ${data.over50} / >300ms ${data.over300} · frames ${data.frames} · measured ${(data.elapsedMs / 1000).toFixed(1)}s · samples ${data.size}/${data.capacity}`,
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
-        `Terrain logs ${model.terrain.logs.length}/6 · blocked ${model.terrain.byCell.size} · occupied by plants ${model.byCell.size} · free ${model.freeCellCount()} · 60m decay`,
+        `Terrain logs ${model.terrain.logs.length}/6 · blocked ${model.terrain.byCell.size} · occupied by plants ${model.byCell.size} · free ${model.freeCellCount()} · fungi ${counts.fungalViews} · colonized 50m / ordinary 60m decay`,
         `Full-garden competition · replacement cooldown ${(model.competitionSnapshot().remainingMs/1000).toFixed(1)}s · weaker newcomers favored`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + gnomeView.splashes.size + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + (gnomeView.stretcher?1:0) + (gnomeView.fire?1:0) + (gnomeView.char?1:0) + gnomeView.splashes.size + gnomeView.spells.length + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
         `Wirefern sori ${counts.sporeViews}/640 · 3 cached layouts · 25% cosmetic selection`,
@@ -918,10 +987,12 @@
         `Opium poppies ${model.poppies.snapshot().active}/2 · pending ${model.poppies.snapshot().pending} · 2 cached frames · cosmetic only`,
         `Gnomes ${gnomes.actors.length}/4 · ${gnomes.incident?.type ?? 'idle'} / ${gnomes.incident?.mode ?? ''} / ${gnomes.incident?.phase ?? 'idle'} · removals ${gnomes.incident?.removals ?? 0} · ${gnomeCache.frames.size} cached frames / 1 GPU source`,
         `Mushroom heist · carried view ${gnomeView.carried?1:0} · authoritative removals ${model.counts.heistRemovals}`,
+        `Campfire · flame ${gnomeView.fire?1:0} · char ${gnomeView.char?1:0} · log ${gnomes.incident?.type==='gnome_campfire'?(gnomes.incident.target?.id??'consumed'):'none'}`,
         `Lighting ${lighting.snapshot().mode} / ${lighting.state?.phase} · samples ${lighting.snapshot().samples} · surface updates ${lightingSurface.snapshot().updates}`,
         `Grass ${ecology.grassCells.length}/640 · views ${ec.grassViews} · contact shadows ${ec.shadowViews}/640 · added/removed/refreshed ${ec.ecologyCounters.grassAdded}/${ec.ecologyCounters.grassRemoved}/${ec.ecologyCounters.grassRefreshed} · transform updates ${ec.ecologyCounters.grassVisualUpdates}`,
         `Puddles ${ecology.puddles.length}/8 · views ${ec.puddleViews} · added/removed/refreshed ${ec.ecologyCounters.puddleAdded}/${ec.ecologyCounters.puddleRemoved}/${ec.ecologyCounters.puddleRefreshed}`,
         `Frogs ${frogs?.frogs.length??0}/2 · views ${frogView?.views.size??0} · independent wildlife · 6 cached frames`,
+        `Log snails ${logSnails?.snails.length??0}/2 · views ${snailView?.views.size??0} · grazed ${logSnails?.counts.grazed??0} · 9 cached frames · separate from collectible snail`,
         `Ecology atlas: grass ${ec.grassTextures} + puddle ${ec.puddleTextures} frames · 1 GPU source`,
         `Curiosities ${ambient.curiosities.length}/3 · views ${ac.curiosityViews} · created/expired ${ambient.counts.curiositiesCreated}/${ambient.counts.curiositiesExpired}`,
         `Loose drops ${ambient.drops.length}/${ambientCore.dropConfig.maxActiveDrops} · views ${ac.dropViews} · pending ${ambient.pendingDrops.size} · scheduled/activated/cancelled/expired ${ambient.counts.dropsScheduled}/${ambient.counts.dropsActivated}/${ambient.counts.dropsCancelled}/${ambient.counts.dropsExpired} · cap skips ${ambient.counts.dropsCapSkipped}`,
@@ -942,6 +1013,7 @@
         updateLighting(at);
         ambient.tick(at, { hidden: document.hidden });
         frogs?.tick(at,{hidden:document.hidden});
+        logSnails?.tick(at);
         gnomes.tick(at, undefined, document.hidden);
         storm.tick(at);
         ui.tick(at);
@@ -953,6 +1025,7 @@
       ecologyView.animate(Date.now());
       ambientView.animate(Date.now());
       frogView?.animate(Date.now());
+      logSnails?.advance(Date.now());snailView?.animate(Date.now());
       if (gnomes.incident) { gnomes.advance(Date.now());gnomeView.animate(Date.now()); }
       if (storm.active) stormView.animate(storm.active,Date.now());
       view.animate(seconds, elapsed / 1000); if (hud && now - lastHud >= 500) { lastHud = now; updateHud(); }
@@ -961,6 +1034,7 @@
     listen(document,'visibilitychange', () => {
       ui.setHidden(document.hidden);
       frogs?.setHidden(document.hidden);
+      logSnails?.setHidden(document.hidden);
       ambient.setHidden(document.hidden);
       emissions.setHidden(document.hidden);
       document.body.classList.toggle('page-hidden', document.hidden);

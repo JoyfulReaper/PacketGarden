@@ -7,7 +7,7 @@ async function run() {
   const root = path.resolve(__dirname, '..'), assets = path.join(root, 'wwwroot'), baseline = process.argv.includes('--baseline'), checkpoint = '5c5746c';
   const output = path.join(root, 'artifacts/wirefern-release', baseline ? 'before' : 'after'); await fs.mkdir(output, { recursive: true });
   const old = new Map();
-  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'pixi-live-core.js', 'pixi-live.js', 'pixi-wirefern-spores.js'])
+  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-core.js', 'pixi-live-core.js', 'pixi-live.js', 'pixi-wirefern-spores.js'])
     old.set(file, execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], { cwd: root }));
   const capture = `{
     const f=window.__release={bakes:[],contexts:[],geometry:0,streams:0};
@@ -90,8 +90,8 @@ async function run() {
       const resources=await page.evaluate(()=>({frames:__release.view.snapshot().textures,bakes:__release.bakes.length,
         dimensions:__release.bakes.map(b=>[b.width,b.height]),streams:__release.streams,sprites:__release.view.byId.size,
         clouds:__release.view.cloudViews?.size??0,contextsReleased:__release.contexts.every(c=>c.destroyed)}));
-      assert.equal(resources.frames,baseline?828:832);assert.equal(resources.bakes,5);assert.equal(resources.streams,1);assert.equal(resources.sprites,640);
-      assert.deepEqual(resources.dimensions[1],[1024,832]);assert(resources.contextsReleased);report.resources.push({page:name,...resources});
+      assert.equal(resources.frames,baseline?828:841);assert.equal(resources.bakes,5);assert.equal(resources.streams,1);assert.equal(resources.sprites,640);
+      assert.deepEqual(resources.dimensions[1],[1024,baseline?832:864]);assert(resources.contextsReleased);report.resources.push({page:name,...resources});
       for(const active of [0,1,2]){
         if(baseline&&active)continue;
         await page.evaluate(active=>{const f=__release;f.emissions?.clear();for(let i=0;i<active;i++)f.emissions.preview(f.source,Date.now());},active);

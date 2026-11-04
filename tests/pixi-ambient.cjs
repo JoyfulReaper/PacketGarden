@@ -3,7 +3,7 @@ const h=require('./pixi-live.cjs'),A=require('../wwwroot/garden-ambient.js');
 const V=require('../wwwroot/pixi-live-ambient.js'),C=require('../wwwroot/pixi-live-core.js');
 const {P,renderer}=h,textureBefore=h.textureCount(),generatedBefore=h.generated();
 const atlas=V.makeAmbientAtlas(P,renderer),curiosityLayer=new P.Container(),dropLayer=new P.Container();
-assert.equal(atlas.frames.size,14);assert.equal(new Set([...atlas.frames.values()].map(t=>t.source)).size,1);
+assert.equal(atlas.frames.size,23);assert.equal(new Set([...atlas.frames.values()].map(t=>t.source)).size,1);
 const view=V.createAmbientView(P,curiosityLayer,dropLayer,atlas.frames);let now=100000;
 let model;const ambient=A.createAmbientModel({now:()=>now,random:()=>0,getSpecimens:()=>model.specimens,onChange:c=>view.change(c,now)});
 model=C.createModel({add(){},update(){},remove(){}},{now:()=>now,random:()=>.5,competitionRandom:()=>0,onLive:s=>ambient.acceptLiveSpecimen(s),onRemoved:s=>ambient.cancelSource(s)});
@@ -19,7 +19,7 @@ for(let cycle=0;cycle<10;cycle++){
   const views=[...view.curiosityViews.values(),...view.dropViews.values()];
   for(let frame=0;frame<120;frame++)view.animate(now+frame*1000/60);
   assert.deepEqual([...view.curiosityViews.values(),...view.dropViews.values()],views);
-  assert.equal(h.textureCount(),textureBefore+14);assert.equal(h.generated(),generatedBefore+1);
+  assert.equal(h.textureCount(),textureBefore+23);assert.equal(h.generated(),generatedBefore+1);
   const pebble=ambient.curiosities.find(c=>c.type==='shiny_pebble');
   if(pebble){const s=view.curiosityViews.get(ambient.idFor(pebble)).sprite;assert.equal(s.position.x,pebble.x);assert.equal(s.position.y,pebble.y);}
   ambient.clear();assert.equal(view.curiosityViews.size,0);assert.equal(view.dropViews.size,0);
@@ -31,7 +31,7 @@ for(let cycle=0;cycle<10;cycle++){
   assert.throws(()=>ambient.seed({drops:Array(6).fill(ambient.drops[0])}),/Invalid ambient seed/);
   assert.equal(view.dropViews.size,5,'invalid six-drop seed leaves existing five intact');
   ambient.tick(now+20000);assert.equal(view.dropViews.size,0);assert.equal(dropLayer.children.length,0);
-  assert.equal(h.textureCount(),textureBefore+14);assert.equal(h.generated(),generatedBefore+1);
+  assert.equal(h.textureCount(),textureBefore+23);assert.equal(h.generated(),generatedBefore+1);
 }
 V.seedAmbient(ambient,now);const last=ambient.drops[2];ambient.drops[0].expiresAt=now;ambient.tick(now);
 assert.equal(view.dropViews.size,2);assert(view.dropViews.has(ambient.idFor(last)));
@@ -46,4 +46,4 @@ ambient.maybeScheduleAmanita(model.accept(event('mushroom','2',3)),0,()=>.5,now)
 view.destroy();curiosityLayer.destroy();dropLayer.destroy();atlas.destroy();assert.equal(h.textureCount(),textureBefore);
 const sourceCode=fs.readFileSync('wwwroot/pixi-live-ambient.js','utf8');assert.doesNotMatch(sourceCode,/setTimeout|setInterval|EventSource|fetch\(|localStorage|sessionStorage/);
 assert.doesNotMatch(fs.readFileSync('wwwroot/pixi-stress.html','utf8'),/ambient/);
-console.log('PASS: persistent visitor/drop views, movement identity/exact removal, 3 visitor/5 drop caps, fourteen fixed frames across repeated seed/expiry/clear, pebble static, exact-source replacement cancellation, teardown and page isolation.');
+console.log('PASS: persistent visitor/drop views, movement identity/exact removal, 3 visitor/5 drop caps, 23 fixed frames across repeated seed/expiry/clear, pebble static, exact-source replacement cancellation, teardown and page isolation.');

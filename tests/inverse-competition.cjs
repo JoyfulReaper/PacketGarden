@@ -88,7 +88,7 @@ for(const invalidate of [(p,g)=>p.id++,(p,g)=>p.cell++,(p,g)=>p.column++,(p,g)=>
 }
 // Competition entropy is separate from placement, terrain and all visual streams.
 {
-  const context={module:{exports:{}},require,Uint32Array,Date,performance,Math:Object.create(Math),crypto:{getRandomValues:a=>{a[0]=42;return a;}}};
+  const context={module:{exports:{}},require:name=>require("../wwwroot/"+name),Uint32Array,Date,performance,Math:Object.create(Math),crypto:{getRandomValues:a=>{a[0]=42;return a;}}};
   context.Math.random=()=>{throw Error('shared randomness consumed')};vm.runInNewContext(fs.readFileSync('wwwroot/garden-core.js','utf8'),context);
   const draw=context.module.exports.createCompetitionRandom();for(let i=0;i<100;i++){const x=draw();assert(x>=0&&x<1);}
 }

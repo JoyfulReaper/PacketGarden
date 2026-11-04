@@ -7,7 +7,7 @@ async function run() {
   const root = path.resolve(__dirname, '..'), assets = path.join(root, 'wwwroot'), baseline = process.argv.includes('--baseline');
   const output = path.join(root, 'artifacts/opium-pods', baseline ? 'before' : 'after'); await fs.mkdir(output, { recursive: true });
   const checkpoint = '0e691c3', old = new Map();
-  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-ambient.js', 'garden-mutations.js', 'garden-ui-core.js', 'pixi-live-ambient.js', 'pixi-live-core.js', 'pixi-live.js'])
+  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-core.js', 'garden-ambient.js', 'garden-mutations.js', 'garden-ui-core.js', 'pixi-live-ambient.js', 'pixi-live-core.js', 'pixi-live.js'])
     old.set(file, execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], { cwd: root }));
   const capture = `{
     const f=window.__pods={bakes:[],contexts:[],geometry:0,streams:0};
@@ -101,8 +101,8 @@ async function run() {
         dimensions: __pods.bakes.map(b=>[b.width,b.height]), bakes: __pods.bakes.length, streams: __pods.streams,
         podSprites: [...__pods.av.dropViews.values()].filter(r=>r.item.type==='opium_pod').length, dropSprites: __pods.av.dropViews.size,
         constructionContextsReleased: __pods.contexts.every(c=>c.destroyed) }));
-      assert.equal(resources.frames, baseline ? 13 : 14); assert.equal(resources.bakes, 5); assert.equal(resources.streams, 1); assert.equal(resources.sourceCount, 1);
-      assert.deepEqual(resources.dimensions[2], [baseline ? 416 : 448, 32]); if (!baseline) assert(resources.constructionContextsReleased);
+      assert.equal(resources.frames, baseline ? 13 : 23); assert.equal(resources.bakes, 5); assert.equal(resources.streams, 1); assert.equal(resources.sourceCount, 1);
+      assert.deepEqual(resources.dimensions[2], [baseline ? 416 : 736, 32]); if (!baseline) assert(resources.constructionContextsReleased);
       report.resources.push({ page: name, ...resources });
       report.timing.push({ page: name, ...await page.evaluate(async () => {
         const times = [], intervals = []; let last; const geometry=__pods.geometry;

@@ -3,7 +3,7 @@ const Core=require('../wwwroot/garden-core.js'),G=require('../wwwroot/garden-gno
 const C=Core.terrainConfig;
 function fixture({roll=0,count=1,full=false,age=719000,competitionRandom=()=>.99,origin={kind:'tcpnoise',listenPort:22,sensor:'safe'},onChange=()=>{}}={}){
   let at=1000000,rolls=0;const changes=[];
-  const garden=Core.createGardenModel({now:()=>at,random:()=>.5,competitionRandom,terrainRandom:()=>{rolls++;return roll;},onChange:c=>{changes.push(c);onChange(c,garden);}});
+  const garden=Core.createGardenModel({now:()=>at,random:()=>.5,competitionRandom,fungalRandom:()=>.99,terrainRandom:()=>{rolls++;return roll;},onChange:c=>{changes.push(c);onChange(c,garden);}});
   const entries=Array.from({length:full?640:count},(_,i)=>({type:i<count?'blackthorn':'broadleaf',vigor:1,colorVariant:0,
     column:i%32,row:Math.floor(i/32),createdAt:at-(i<count?age:65000),origin:{...origin}}));
   garden.seed(entries);changes.length=0;
@@ -100,7 +100,7 @@ for(const under of [false,true]){
 }
 // Dedicated randomness is crypto/clock seeded, never the placement/garden stream.
 {
-  const context={module:{exports:{}},require,Uint32Array,Date,performance,Math:Object.create(Math),crypto:{getRandomValues:a=>{a[0]=123;return a;}}};
+  const context={module:{exports:{}},require:name=>require("../wwwroot/"+name),Uint32Array,Date,performance,Math:Object.create(Math),crypto:{getRandomValues:a=>{a[0]=123;return a;}}};
   context.Math.random=()=>{throw Error('shared random draw')};vm.runInNewContext(fs.readFileSync('wwwroot/garden-core.js','utf8'),context);
   const draw=context.module.exports.createTerrainRandom();for(let i=0;i<20;i++)assert(draw()>=0&&draw()<1);
 }
@@ -109,7 +109,7 @@ console.log('PASS: exact 30%/six logs/one hour, natural-only original identity/c
 (async()=>{
   const {start}=require('./pixi-default.cjs'),h=require('./pixi-live.cjs');
   for(const page of ['index.html','pixi-live.html']){
-    const f=await start(false,{captureModel:true,random:()=>.5,terrainRandom:()=>0,pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8')});
+    const f=await start(false,{captureModel:true,random:()=>.5,fungalRandom:()=>.99,terrainRandom:()=>0,pageHtml:fs.readFileSync(`wwwroot/${page}`,'utf8')});
     const beforeTextures=h.textureCount(),beforeBakes=h.generated();
     f.sources[0].handlers.get('garden')({data:JSON.stringify({specimenType:'blackthorn',vigor:2,listenPort:22,sensor:'test',seenCount:'1'})});
     const source=f.model.specimens[0],cell=source.cell,sprite=f.view.byId.get(source.id),accepted=f.model.counts.acceptedLive,recent=JSON.stringify(f.model.recentEvents);

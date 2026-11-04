@@ -9,12 +9,13 @@
   <script src="garden-audio.js?v=gnome-arrival-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js?v=canvas-retired-1" defer data-pixi-library></script>
-  <script src="garden-core.js?v=inverse-vigor-1" defer></script>
+  <script src="garden-log-fungi.js?v=log-fungi-1" defer></script>
+  <script src="garden-core.js?v=log-fungi-1" defer></script>
   <script src="garden-stillbloom.js?v=fallen-logs-1" defer></script>
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
   <script src="garden-lighting-view.js?v=page-lifecycle-1" defer></script>
-  <script src="garden-gnomes.js?v=fallen-logs-1" defer></script>
+  <script src="garden-gnomes.js?v=funeral-1" defer></script>
   <script src="garden-mutations.js?v=opium-pods-1" defer></script>
   <script src="garden-grass.js?v=grass-lush-1" defer></script>
   <script src="garden-ecology.js?v=grass-under-plants-1" defer></script>
@@ -22,27 +23,69 @@
   <script src="garden-gnome-puddles.js?v=gnome-puddles-1" defer></script>
   <script src="garden-gnome-puddles-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-frogs.js?v=frog-gnome-ack-1" defer></script>
+  <script src="garden-log-snails.js?v=log-snails-1" defer></script>
+  <script src="garden-funeral-dev.js?v=funeral-1" defer></script>
+  <script src="garden-wizard-dev.js?v=wizard-1" defer></script>
+  <script src="garden-log-fungi-dev.js?v=log-fungi-1" defer></script>
+  <script src="garden-log-snails-dev.js?v=log-snails-1" defer></script>
   <script src="garden-ambient.js?v=opium-pods-1" defer></script>
-  <script src="garden-interaction.js?v=frog-gnome-ack-1" defer></script>
-  <script src="garden-ui-core.js?v=opium-pods-1" defer></script>
+  <script src="garden-interaction.js?v=log-snails-1" defer></script>
+  <script src="garden-ui-core.js?v=log-snails-1" defer></script>
   <script src="pixi-specimen-preview.js?v=specimen-preview-1" defer></script>
-  <script src="pixi-live-ui.js?v=specimen-preview-1" defer></script>
-  <script src="pixi-live-ambient.js?v=opium-pods-1" defer></script>
-  <script src="pixi-live-gnomes.js?v=mushroom-heist-1" defer></script>
+  <script src="pixi-live-ui.js?v=log-snails-1" defer></script>
+  <script src="pixi-live-ambient.js?v=log-snails-1" defer></script>
+  <script src="pixi-live-gnomes.js?v=funeral-1" defer></script>
   <script src="pixi-live-storm.js?v=storm-bolt-2" defer></script>
   <script src="pixi-live-ecology.js?v=grass-separation-1" defer></script>
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
-  <script src="pixi-live-core.js?v=inverse-vigor-1" defer></script>
+  <script src="pixi-live-core.js?v=funeral-1" defer></script>
   <script src="garden-visits.js?v=garden-visits-1" defer></script>
-  <script src="pixi-live.js?v=garden-visits-1" defer></script>
+  <script src="pixi-live.js?v=funeral-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
   <main>
     <header><a href="/">← Production garden</a><a href="pixi-stress.html">Synthetic stress test</a>
       <h1>Pixi live soak</h1><p id="connection" role="status">connecting</p></header>
+    <section class="controls" aria-label="Great Gnome Funeral Procession previews">
+      <button id="trigger-funeral" type="button">Trigger funeral procession</button>
+      <button id="preview-funeral-normal" type="button">Preview normal funeral</button>
+      <button id="preview-funeral-reduced" type="button">Preview reduced-motion funeral</button>
+      <button id="cancel-funeral-hidden" type="button">Test hidden funeral cancellation</button>
+      <button id="cancel-funeral-stalled" type="button">Test funeral tick-gap cancellation</button>
+      <button id="cleanup-funeral" type="button">Verify funeral prop / Sprite cleanup</button>
+      <span id="funeral-status" role="status">Four solemn gnomes carry one dead leaf. Requires 30 living specimens; 20% of remaining ordinary disputes. No specimen needs to die.</span>
+    </section>
+    <section class="controls" aria-label="Simulated Wandering Wizard Gnome">
+      <button id="seed-wizard" type="button">Seed one simulated rare wizard target</button>
+      <button id="seed-wizards" type="button">Seed four simulated rare targets</button>
+      <button id="trigger-wizard" type="button">Trigger wizard visit (simulated)</button>
+      <button id="preview-wizard-cast" type="button">Preview wizard casting / actual grass</button>
+      <button id="inspect-wizard-grass" type="button">Inspect original spell grass cell</button>
+      <button id="remove-wizard-target" type="button">Remove exact wizard target</button>
+      <button id="replace-wizard-target" type="button">Replace exact wizard target</button>
+      <button id="block-wizard-grass" type="button">Occupy selected grass cell</button>
+      <button id="cancel-wizard-hidden" type="button">Test hidden wizard cancellation</button>
+      <button id="cancel-wizard-stalled" type="button">Test stalled wizard cancellation</button>
+      <label><input id="wizard-reduced-motion" type="checkbox"> Wizard reduced motion preview</label>
+      <button id="clear-wizard" type="button">Clear wizard fixture</button>
+      <span id="wizard-status" role="status">One rare visitor; 25% of otherwise ordinary disputes with a mature protected target. One neighboring grass attempt, no telemetry or points.</span>
+    </section>
+    <section class="controls" aria-label="Simulated attached shelf fungi">
+      <button id="seed-log-fungi-none" type="button">Seed ordinary log (simulated)</button>
+      <button id="seed-log-fungi" type="button">Seed colonized log (simulated)</button>
+      <button id="preview-log-fungi-early" type="button">Early shelf fungi / 10m</button>
+      <button id="preview-log-fungi-mature" type="button">Mature brackets / 20m</button>
+      <button id="preview-log-fungi-weathered" type="button">Weathered fungi / 40m</button>
+      <button id="decay-log-fungi" type="button">Advance simulated terrain to 50m</button>
+      <button id="burn-log-fungi" type="button">Campfire on colonized log (simulated)</button>
+      <button id="remove-log-fungi" type="button">Remove exact fungal source</button>
+      <button id="occupancy-log-fungi" type="button">Check actual occupancy / grass</button>
+      <button id="clear-log-fungi" type="button">Clear/reset fungal fixture</button>
+      <span id="log-fungi-status" role="status">Attached wood fungi: independent 35% at creation, visible at 10m, decay at 50m; ordinary logs 60m. Simulated controls generate no telemetry.</span>
+    </section>
     <section class="controls" aria-label="Live soak controls">
       <label>Lighting <select id="lighting-mode" aria-label="Lighting"><option value="live">Live local time</option><option value="dawn">Dawn</option><option value="day">Day</option><option value="golden">Golden hour</option><option value="dusk">Dusk</option><option value="night">Night</option><option value="hour">Simulated hour</option></select></label>
       <label>Local hour <input id="lighting-hour" type="range" min="0" max="24" step="0.05" value="12" aria-label="Simulated local hour"></label>
@@ -126,6 +169,26 @@
       <button id="suspend-heist" type="button">Simulate heist hide/resume</button>
       <label><input id="heist-reduced-motion" type="checkbox"> Preview heist reduced motion</label>
       <span id="heist-status" role="status">Pickup after 3s really frees the original cell; the two thieves leave at 14s. Seed/trigger again for sequential tests. Hide the tab during any phase to cancel safely. System reduced motion always applies.</span>
+      <button id="seed-campfire" type="button">Seed campfire log (simulated)</button>
+      <button id="trigger-campfire" type="button">Trigger campfire (simulated log only)</button>
+      <button id="remove-campfire-before" type="button">Remove log before ignition</button>
+      <button id="remove-campfire-during" type="button">Remove burning log</button>
+      <label><input id="campfire-reduced-motion" type="checkbox"> Preview campfire reduced motion</label>
+      <button id="cancel-campfire-hidden" type="button">Test campfire hidden cancellation</button>
+      <button id="cancel-campfire-stalled" type="button">Test campfire stalled cancellation</button>
+      <button id="check-campfire-cell" type="button">Verify campfire cell occupancy</button>
+      <span id="campfire-status" role="status">Actual log terrain stays blocked while burning; burnout at 17s frees it through the terrain API. Only one incident can run. Hidden/stalled sequences cancel without replay; system reduced motion always applies.</span>
+      <button id="seed-log-snails" type="button">Seed log-snail terrain (simulated)</button>
+      <button id="seed-log-snail-grass" type="button">Seed actual grass around log</button>
+      <button id="spawn-log-snails-1" type="button">Spawn one log snail (simulated)</button>
+      <button id="spawn-log-snails-2" type="button">Spawn two log snails (simulated)</button>
+      <button id="preview-log-snail-graze" type="button">Preview real grass grazing</button>
+      <button id="remove-log-snail-source" type="button">Remove actual snail source log</button>
+      <label><input id="log-snail-reduced-motion" type="checkbox"> Preview log-snail reduced motion</label>
+      <button id="cancel-log-snails-hidden" type="button">Test snail hidden cancellation</button>
+      <button id="cancel-log-snails-stalled" type="button">Test snail stalled cancellation</button>
+      <button id="clear-log-snails" type="button">Clear log-snail wildlife</button>
+      <span id="log-snail-status" role="status">Independent wildlife, not the collectible snail. 45s checks / 25% / two active / 75s visits. At most two actual grass patches per visit; ordinary ecology alone regrows grass.</span>
       <button id="trigger-frog" type="button">Trigger frog (simulated)</button>
       <button id="trigger-gnome-puddle" type="button">Trigger gnome puddle mishap</button>
       <span id="gnome-puddle-status" role="status">Local simulated water and gnomes; ordinary water entries retain their 20% chance.</span>
