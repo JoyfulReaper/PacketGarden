@@ -1,5 +1,6 @@
 (function () {
   'use strict';
+  const fungalArt=typeof module!=='undefined'&&module.exports?require('./garden-log-fungi.js'):window.PacketGardenLogFungi;
   const stillbloomCore=typeof module!=='undefined'&&module.exports?require('./garden-stillbloom.js'):window.PacketGardenStillbloom;
   const blooms=typeof module!=='undefined'&&module.exports?require('./pixi-broadleaf-blooms.js'):window.PacketGardenBroadleafBlooms;
   const vineBlooms=typeof module!=='undefined'&&module.exports?require('./pixi-vine-blooms.js'):window.PacketGardenVineBlooms;
@@ -247,6 +248,11 @@
     }
     const cloudArt = spores.cloudTile(P); artTiles.push(cloudArt); tile('wirefern-cloud', cloudArt);
     for(let variant=0;variant<3;variant++){const g=logTile(P,variant);artTiles.push(g);tile(`fallen-log:${variant}`,g);}
+    // The original 832 slots fill 26 rows. Nine frames need one further row,
+    // on the same atlas source, with no additional GPU texture source.
+    for(const stage of ['early','mature','weathered'])for(let variant=0;variant<3;variant++){
+      const g=fungalArt.draw(P,variant,stage);artTiles.push(g);tile(`log-fungi:${variant}:${stage}`,g);
+    }
     const atlas = renderer.generateTexture({ target: sheet, frame: new P.Rectangle(0, 0, 1024, Math.ceil(keys.length / 32) * 32), resolution: 2 });
     // Pixi's destroy({children:true}) does not destroy a child's owned Graphics
     // context. Release these one-time artwork paths explicitly after rasterization.
@@ -412,8 +418,13 @@
       sprite.scale.set(pose.scaleX, pose.scaleY); sprite.alpha = pose.alpha;
     }
     return { root, byId, vineLinks, mutationViews, bloomViews, vineBloomViews, vineBloomLinks, sporeViews, cloudViews, cloudChange, counters, grassLayer, puddleLayer, dropLayer, curiosityLayer,
-      terrainViews,terrainChange({kind,terrain:log}) {
-        if(kind==='terrain-removed'){const sprite=terrainViews.get(log);if(sprite){sprite.destroy();terrainViews.delete(log);}return;}
+      terrainViews,fungalChange({terrain:log,stage}){
+        const parent=terrainViews.get(log);if(!parent)return;
+        if(stage==='hidden'){parent.fungi?.destroy();parent.fungi=null;return;}
+        if(!parent.fungi){const sprite=new P.Sprite();sprite.anchor.set(.5,29/32);sprite.eventMode='none';parent.addChild(sprite);parent.fungi=sprite;}
+        parent.fungi.texture=frames.get(`log-fungi:${log.variant}:${stage}`);
+      },terrainChange({kind,terrain:log}) {
+        if(kind==='terrain-removed'){const sprite=terrainViews.get(log);if(sprite){sprite.destroy({children:true});terrainViews.delete(log);}return;}
         if(terrainViews.has(log))return;
         const sprite=new P.Sprite(frames.get(`fallen-log:${log.variant}`));sprite.anchor.set(.5,29/32);sprite.eventMode='none';
         sprite.position.set((log.column+.5)*cellSize,(log.row+.5)*cellSize+6);plants.addChild(sprite);terrainViews.set(log,sprite);
@@ -488,8 +499,9 @@
       },
       setProbes(value) { probe.visible = value; },
       snapshot() {
-        return { sprites: byId.size, terrainViews:terrainViews.size, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
-          displayObjects: 14 + byId.size + terrainViews.size + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
+        const fungalViews=[...terrainViews.values()].filter(s=>s.fungi).length;
+        return { sprites: byId.size, terrainViews:terrainViews.size, fungalViews, sporeViews: sporeViews.size, cloudViews: cloudViews.size, contactShadows: groundCover?.shadowViews.size ?? 0, bloomViews: bloomViews.size, vineBloomViews:vineBloomViews.size,vineBloomLinks:vineBloomLinks.size,mutationViews: mutationViews.size, vineViews: vineLinks.size, connectionHalves, particles: particles.length,
+          displayObjects: 14 + byId.size + terrainViews.size + fungalViews + sporeViews.size + cloudViews.size + (groundCover?.shadowViews.size ?? 0) + bloomViews.size + vineBloomViews.size+vineBloomLinks.size+vineLinks.size + grassLayer.children.length + puddleLayer.children.length
             + dropLayer.children.length + curiosityLayer.children.length, textures: frames.size, counters: { ...counters } }; },
       destroy() {
         // Each link owns a Graphics context and may own a blossom child.
@@ -746,6 +758,8 @@
     const snailDiagnostics=window.PacketGardenLogSnailsDev?.bind({document,garden:model,ecology,snails:logSnails,gnomes,frogs,ambient,
       setReducedMotion:value=>{snailPreviewReduced=value;}});
     own(()=>snailDiagnostics?.destroy());
+    const fungalDiagnostics=window.PacketGardenLogFungiDev?.bind({document,garden:model,ecology,gnomes,snails:logSnails,ambient,frogs});
+    own(()=>fungalDiagnostics?.destroy());
     const logStatus=text=>{const el=document.querySelector('#log-status');if(el)el.textContent=text;};
     const competitionStatus=text=>{const el=document.querySelector('#competition-status');if(el)el.textContent=text;};
     listen(document.querySelector('#seed-competition'),'click',()=>{
@@ -951,7 +965,7 @@
         `Frame ms recent avg ${data.averageMs.toFixed(2)} / worst ${data.worstMs.toFixed(2)} · session worst ${data.sessionWorstMs.toFixed(2)}`,
         `Gaps >50ms ${data.over50} / >300ms ${data.over300} · frames ${data.frames} · measured ${(data.elapsedMs / 1000).toFixed(1)}s · samples ${data.size}/${data.capacity}`,
         `Specimens ${model.specimens.length}/640 · simulated/test ${simulated} · live ${model.specimens.length - simulated}`,
-        `Terrain logs ${model.terrain.logs.length}/6 · blocked ${model.terrain.byCell.size} · occupied by plants ${model.byCell.size} · free ${model.freeCellCount()} · 60m decay`,
+        `Terrain logs ${model.terrain.logs.length}/6 · blocked ${model.terrain.byCell.size} · occupied by plants ${model.byCell.size} · free ${model.freeCellCount()} · fungi ${counts.fungalViews} · colonized 50m / ordinary 60m decay`,
         `Full-garden competition · replacement cooldown ${(model.competitionSnapshot().remainingMs/1000).toFixed(1)}s · weaker newcomers favored`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,

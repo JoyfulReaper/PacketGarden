@@ -7,7 +7,7 @@ async function run(){
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline');
   const output=path.join(root,'artifacts/broadleaf-blooms',baseline?'before':'after');await fs.mkdir(output,{recursive:true});
   const checkpoint=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),old=new Map();
-  if(baseline)for(const file of ['index.html','pixi-live.html','pixi-live-core.js','pixi-live.js'])old.set(file,execFileSync('git',['show',`${checkpoint}:wwwroot/${file}`],{cwd:root}));
+  if(baseline)for(const file of ['index.html','pixi-live.html','garden-core.js','pixi-live-core.js','pixi-live.js'])old.set(file,execFileSync('git',['show',`${checkpoint}:wwwroot/${file}`],{cwd:root}));
   const capture=`{
     const f=window.__bloom={bakes:[],geometry:0};
     const create=PacketGardenCore.createGardenModel;PacketGardenCore.createGardenModel=(...args)=>{const m=create(...args);f.garden??=m;return m;};
@@ -83,7 +83,7 @@ async function run(){
       }
       const resources=await page.evaluate(()=>({geometry:__bloom.geometry,bakes:__bloom.bakes.length,timers:__bloomTimers,
         dimensions:__bloom.bakes.map(b=>[b.width,b.height]),frames:__bloom.view.snapshot().textures,overlays:__bloom.view.bloomViews?.size??0}));
-      if(!baseline){assert.equal(resources.frames,832);assert.equal(resources.overlays,640);assert.deepEqual(resources.dimensions[1],[1024,832]);}
+      if(!baseline){assert.equal(resources.frames,841);assert.equal(resources.overlays,640);assert.deepEqual(resources.dimensions[1],[1024,864]);}
       for(let i=0;i<5;i++)await seed(B.fixtureEntries(at,true));
       assert.deepEqual(await page.evaluate(()=>({geometry:__bloom.geometry,bakes:__bloom.bakes.length,timers:__bloomTimers})),
         {geometry:resources.geometry,bakes:resources.bakes,timers:resources.timers},'fixtures never rebuild artwork');

@@ -1,6 +1,7 @@
 // Authoritative renderer-neutral browser garden rules. No scheduler or presentation dependencies.
 (function () {
   'use strict';
+  const fungalCore=typeof module!=='undefined'&&module.exports?require('./garden-log-fungi.js'):window.PacketGardenLogFungi;
   const dimensions = Object.freeze({ width: 960, height: 600, cellSize: 30, columns: 32, rows: 20, capacity: 640 });
   const timings = Object.freeze({
     flower: { growingAfterMs: 15000, matureAfterMs: 45000, wiltingAfterMs: 180000, expiredAfterMs: 240000 },
@@ -101,16 +102,22 @@
       if(logs.length>=terrainConfig.maxLogs){counts.capSkipped++;return null;}
       const log=Object.freeze({type:'fallen_log',id:++nextId,cell:original.cell,column:original.column,row:original.row,
         createdAt,expiresAt,simulated:source.origin?.kind==='simulated',variant:Math.min(terrainConfig.variants-1,Math.floor(roll/terrainConfig.chance*terrainConfig.variants))});
-      logs.push(log);byCell.set(log.cell,log);counts.created++;onChange({kind:'terrain-added',terrain:log,reason:'natural-blackthorn-expiry'});return log;
+      logs.push(log);byCell.set(log.cell,log);counts.created++;onChange({kind:'terrain-added',terrain:log,at,reason:'natural-blackthorn-expiry'});return log;
     }
     function clear(){while(logs.length)remove(logs.at(-1),'cleared');}
     return {logs,byCell,counts,naturalExpiry,tick,clear,remove,isBlocked:cell=>byCell.has(cell),
       snapshot(){return{...counts,active:logs.length,blockedCells:byCell.size};},destroy(){disposed=true;clear();}};
   }
-  function createGardenModel({ now = Date.now, random = Math.random, competitionRandom=createCompetitionRandom(), terrainRandom, onChange = () => {} } = {}) {
+  function createGardenModel({ now = Date.now, random = Math.random, competitionRandom=createCompetitionRandom(), terrainRandom, fungalRandom, onChange = () => {} } = {}) {
     const specimens = [], byCell = new Map(),reservedCells=new Set(); let nextId = 0,nextReplacementAt=-Infinity,lastAttempt=null,lastCompetitionOutcome=null;
     const identities = new WeakMap(), visualTimes = new WeakMap(), originals=new WeakMap(),forcedLogFixtures=new WeakSet();
-    const terrain=createTerrainModel({now,random:terrainRandom,isCellOccupied:cell=>byCell.has(cell)||reservedCells.has(cell),onChange});
+    let fixtureColonization;
+    const terrain=createTerrainModel({now,random:terrainRandom,isCellOccupied:cell=>byCell.has(cell)||reservedCells.has(cell),onChange(change){
+      if(change.kind==='terrain-removed')fungi.sourceRemoved(change.terrain);
+      onChange(change);
+      if(change.kind==='terrain-added')fungi.sourceAdded(change.terrain,change.at,fixtureColonization);
+    }});
+    const fungi=fungalCore.createModel({now,random:fungalRandom,getTerrain:()=>terrain,onChange});
     function identify(specimen) {
       if (!identities.has(specimen)) identities.set(specimen, ++nextId);
       specimen.id = identities.get(specimen);
@@ -130,6 +137,7 @@
     }
     function tick(at = now()) {
       terrain.tick(at);
+      fungi.tick(at);
       let removed = 0, updated = 0;
       for (let i = specimens.length - 1; i >= 0; i--) {
         const specimen = specimens[i], stage = lifecycleStage(specimen, at);
@@ -226,6 +234,7 @@
     function clear() {
       for (let i = specimens.length - 1; i >= 0; i--) remove(specimens[i], 'cleared');
       terrain.clear();
+      fungi.clear();fixtureColonization=undefined;
       // Ids are monotonic across clear so stale UI references cannot alias a new specimen.
     }
     function seed(entries, at = now()) {
@@ -260,13 +269,14 @@
       }
       return neighbors;
     }
-    const model = { specimens, byCell, terrain, addSpecimen, addEvent, tick, clear, seed, remove, getCell, getNeighbors,replacementCandidates,
+    const model = { specimens, byCell, terrain, fungi, addSpecimen, addEvent, tick, clear, seed, remove, getCell, getNeighbors,replacementCandidates,
+      forceFungalFixture(value){fixtureColonization=typeof value==='boolean'?value:undefined;},
       competitionSnapshot(at=now()){return{cooldownUntil:Number.isFinite(nextReplacementAt)?nextReplacementAt:null,
         remainingMs:Math.max(0,nextReplacementAt-at),outcome:lastCompetitionOutcome,lastAttempt};},
       forceLogFixture(){let count=0;for(const p of specimens)if(p.type==='blackthorn'&&p.origin?.kind==='simulated'&&p.origin.eventType==='log-fixture'){forcedLogFixtures.add(p);count++;}return count;},
       freeCellCount:()=>dimensions.capacity-byCell.size-terrain.byCell.size-reservedCells.size,
       isCellOccupied:(column,row)=>byCell.has(row*dimensions.columns+column)||terrain.isBlocked(row*dimensions.columns+column)||reservedCells.has(row*dimensions.columns+column),
-      destroy(){clear();terrain.destroy();} };
+      destroy(){clear();fungi.destroy();terrain.destroy();} };
     return model;
   }
   const api = { dimensions, timings, species, eventSpecies, isProtected: type => protectedTypes.has(type), normalizeGarden, stageAt, lifecycleStage, nextChangeAt,

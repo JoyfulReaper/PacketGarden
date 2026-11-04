@@ -1,3 +1,36 @@
+# Attached shelf fungi (2026-11-03)
+
+Implemented on `dev` above `657d319`, with a clean starting tree and no applicable
+`AGENTS.md`. Actual log creation makes one independent **35%** colonization
+decision. Attached brackets become visible at **10m**, mature at **20m**, and
+weathered at **40m**. Colonized logs are removed at the first logical tick at or
+after **50m**; ordinary terrain retains its original **60m** expiry. Exact
+object/id/cell/coordinates/timestamps and list/map ownership are checked before
+changes or accelerated removal. Existing gnome and snail removal notifications
+remain authoritative. No plant, event, rarity, competition or score change.
+
+`garden-log-fungi.js` owns bounded per-log decisions/stages and finite artwork.
+The shared garden model owns creation, ticks, source removal and cleanup. Pixi
+uses one child Sprite per visible colony, changing textures only at boundaries.
+Nine frames expand the existing 832-frame atlas to **841**, with one additional
+32px row on the same source; at 2x resolution the allocation grows by **131,072
+physical pixels / 512 KiB RGBA8**. There is no extra renderer, ticker, animation,
+particle system or per-frame fungal work.
+
+`garden-log-fungi-dev.js` and its controls load only on `/pixi-live.html`.
+Fixtures create actual simulated terrain through natural blackthorn expiry,
+force only simulated colonization, and exercise stages, decay, campfire,
+source loss, real occupancy and reset without fake telemetry. The browser
+gallery is `artifacts/log-fungi/index.html`, with 22 actual-scale captures across
+both pages; the raw timing/resource report is `artifacts/log-fungi/review.json`.
+
+See [the complete lifecycle, clock policy, measurements and validation](LOG-FUNGI.md).
+Validation: **70 Node suites passed** (22 optional Chrome/SSE entry points
+skipped there), **28 Chrome jobs passed**, Debug/Release and backend-check builds
+passed with zero warnings/errors, backend assertions and actual ASP.NET
+polling → SSE integration passed. Final `git diff --check` passed; no commit,
+push, merge or deployment was made.
+
 # Log-dwelling garden snails (2026-10-29)
 
 Implemented on `dev` above **`0c317bf`**, preserving campfires, terrain,

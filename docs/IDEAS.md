@@ -890,7 +890,7 @@ a deliberate reason to combine them.
 
 Fallen blackthorn logs are the first implemented **long-lived blocking terrain**
 slice. Each naturally expired blackthorn gets one dedicated **30%** decision;
-at most **six** logs last **60 minutes** from the tree's natural 12-minute expiry.
+at most **six** logs ordinarily last **60 minutes** from the tree's natural 12-minute expiry.
 The source must still match its original object/id/cell/coordinates/time at
 natural removal and its cell must actually be empty afterward. Forced removal,
 gnome actions, special mutations, Clear and reseeding never generate logs.
@@ -915,6 +915,23 @@ and changing a removed tree cannot change its log. Clear/reload/teardown remove
 terrain. Diagnostic controls preview simulated aging, success, cap, full/dense
 gardens, blocked growth and decay/regrowth. See
 [actual-scale evidence and validation](PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
+
+### Attached shelf fungi (implemented)
+
+Actual fallen logs receive one independent **35%** colonization roll when created.
+This decision belongs to that exact frozen log. It never consumes placement,
+rarity or competition randomness or rerolls on later ticks. Shelf fungi remain
+hidden for ten minutes, then progress through small **10–20m**, mature **20–40m**
+and weathered **40–50m** stages. Colonized wood decays through authoritative
+terrain removal at **50m**; ordinary logs retain **60m**. Absolute creation times
+govern hidden/resumed and stalled gardens without refreshing a log's lifetime.
+
+Small cream/ochre brackets attach to the existing wood Sprite. Nine cached frames
+share the specimen atlas; at most six additional child Sprites exist. They add
+no specimen, occupancy, collectible, network event or points. Burning removes
+the fungi; fungal decay preserves gnome cancellation and snail source departure.
+The freed cell becomes available to ordinary growth without automatic planting.
+Diagnostic fixtures and [lifecycle evidence](LOG-FUNGI.md) cover both paths.
 
 ### Great Gnome Campfire Incident (implemented)
 

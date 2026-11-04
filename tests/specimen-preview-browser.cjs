@@ -4,7 +4,7 @@ else run().catch(e=>{console.error(e);process.exitCode=1;});
 async function run(){
   const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path'),{execFileSync}=require('node:child_process'),{chromium}=require('playwright');
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),baseline=process.argv.includes('--baseline'),out=path.join(root,'artifacts/specimen-preview',baseline?'before':'after');await fs.mkdir(out,{recursive:true});
-  const old=new Map();if(baseline)for(const file of ['index.html','pixi-live.html','garden-ui.css','pixi-live-ui.js','pixi-live.js'])old.set(file,execFileSync('git',['show',`84693b8:wwwroot/${file}`],{cwd:root}));
+  const old=new Map();if(baseline)for(const file of ['index.html','pixi-live.html','garden-core.js','garden-ui.css','pixi-live-ui.js','pixi-live.js'])old.set(file,execFileSync('git',['show',`84693b8:wwwroot/${file}`],{cwd:root}));
   const capture=`{
     const f=window.__preview={apps:0,streams:0,bakes:[],outputs:[],targets:[],copies:[],extractMs:[],renderMs:[],maxCopySprites:0,delay:false,pending:[]};
     const Source=EventSource;window.EventSource=class extends Source{constructor(...args){super(...args);f.streams++;}};
@@ -172,7 +172,7 @@ async function run(){
           canvasesReleased:f.outputs.every(c=>c.width===0&&c.height===0),maxTargetPixels:Math.max(...f.targets.map(t=>t.width*t.height)),
           maxCopySprites:f.maxCopySprites,meanRenderMs:f.renderMs.reduce((s,n)=>s+n,0)/f.renderMs.length,maxRenderMs:Math.max(...f.renderMs),
           meanExtractMs:f.extractMs.reduce((s,n)=>s+n,0)/f.extractMs.length,maxExtractMs:Math.max(...f.extractMs),score:document.querySelector('#garden-score').textContent};});
-        assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.frames,832);
+        assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.frames,841);
         assert(resources.targetsReleased&&resources.copiesReleased&&resources.canvasesReleased);assert.equal(resources.preview.active,0);assert(resources.maxTargetPixels<=264*264);report.resources.push({page:name,...resources});
         await select();
       }

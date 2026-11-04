@@ -104,13 +104,22 @@ and pending mutations/poppies are protected, as are the rare species above.
 See [the competition policy](docs/EVENT-MAPPINGS.md#inverse-vigor-competition).
 
 Naturally expired blackthorns can leave **fallen logs**: one independent **30%**
-decision per expiry, at most **six**, each lasting **60 minutes** from the tree's
+decision per expiry, at most **six**, ordinarily lasting **60 minutes** from the tree's
 natural expiry. A log is separate terrain that blocks its exact vacated cell;
 plants cannot grow there or replace it. A full garden can therefore contain
 634 plants plus six logs. Logs add no network events, specimen counts, vigor,
 activity or points. Forced removals and Clear never produce them. Decay frees
 the cell for normal growth, including after hidden time; reload clears this
 session-only terrain. See [fallen-log validation](docs/PIXI-LIVE.md#fallen-blackthorn-logs-2026-10-28).
+
+Each actual log also gets one independent **35% fungal colonization** decision.
+Attached shelf fungi appear at **10 minutes**, mature at **20**, and weather at
+**40**. Colonized logs decay at **50 minutes**; uncolonized logs keep their
+**60-minute** lifetime. Gnomes can burn either, and source removal starts the
+existing snail departure. Logs block their cells until authoritative removal;
+ordinary growth can then reclaim them. These fungi add no species, specimens,
+network activity or points. See [fungal lifecycle and validation](docs/LOG-FUNGI.md)
+and the simulated controls on `/pixi-live.html`.
 
 All state lives in browser memory. Reloading starts a new session. A single SSE
 connection supplies backend-normalized growth and aggregate weather. No replay

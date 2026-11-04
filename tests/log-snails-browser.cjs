@@ -12,6 +12,7 @@ async function run(){
       ['PacketGardenGnomes','gnomes','createModel'],['PacketGardenPixiGnomes','gnomeView','createGnomeView'],['PacketGardenFrogs','frogs','createModel'],
       ['PacketGardenAmbient','ambient','createAmbientModel'],['PacketGardenPixiUi','ui','createUi'],['PacketGardenLighting','light','createModel'],['PacketGardenLightingView','surface','createSurface']]){
       const create=window[global][method];window[global][method]=(...args)=>{
+        if(key==='garden')args[0]={...args[0],fungalRandom:()=>.99};
         if(key==='model'){f.view=args[0];args[1]={...args[1],competitionRandom:()=>.99,sporeRandom:()=>.9,bloomRandom:()=>.9};}
         if(key==='ecology'){const change=args[0].onChange;args[0]={...args[0],onChange(c){if(c.kind==='grass-removed')f.grassRemoved.push(c.item);change(c);}};}
         if(key==='gnomes')args[0]={...args[0],random:()=>.99,puddleRandom:()=>.99};
@@ -120,7 +121,7 @@ async function run(){
           frames:f.cache.frames.size,backing:[f.cache.atlas.source.pixelWidth,f.cache.atlas.source.pixelHeight],sources:new Set([...f.cache.frames.values()].map(t=>t.source)).size,
           specimenFrames:f.view.snapshot().textures,views:f.snailView.views.size,accepted:f.model.counts.acceptedLive,recent:f.model.recentEvents.length,score:document.querySelector('#garden-score').textContent};
       });assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.contextsAfter,resources.contexts);
-      assert.equal(resources.frames,23);assert.deepEqual(resources.backing,[1472,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,832);assert.equal(resources.views,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
+      assert.equal(resources.frames,23);assert.deepEqual(resources.backing,[1472,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,841);assert.equal(resources.views,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
         await page.locator('#seed-log-snails').click();await page.locator('#seed-log-snail-grass').click();await page.locator('#spawn-log-snails-2').click();assert.equal(await page.evaluate(()=>__snail.snails.snails.length),2);
         await page.locator('#clear-log-snails').click();assert.equal(await page.evaluate(()=>__snail.snailView.views.size),0);

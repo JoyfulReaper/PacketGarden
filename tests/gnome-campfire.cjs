@@ -3,7 +3,7 @@ const Core=require('../wwwroot/garden-core.js'),G=require('../wwwroot/garden-gno
 const C=G.campfireConfig;
 function fixture({count=35,logs=1,mushrooms=0,remaining=3600000,reduced=false,simulated=true,full=false}={}){
   let at=5000000,gnomes,onBurn=()=>{};const changes=[],cues=[],pants=[];
-  const garden=Core.createGardenModel({now:()=>at,random:()=>0,terrainRandom:()=>0,competitionRandom:()=>.99,onChange:c=>{
+  const garden=Core.createGardenModel({now:()=>at,random:()=>0,fungalRandom:()=>.99,terrainRandom:()=>0,competitionRandom:()=>.99,onChange:c=>{
     changes.push(c);if(c.kind==='terrain-removed'){gnomes?.terrainRemoved(c.terrain,at);if(c.reason==='gnome-campfire')onBurn();}
   }});
   const logCells=Array.from({length:logs},(_,i)=>330+i*2),used=new Set(logCells);

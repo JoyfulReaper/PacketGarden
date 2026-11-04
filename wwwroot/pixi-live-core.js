@@ -65,6 +65,7 @@
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0, heistRemovals: 0 };
     const model = garden.createGardenModel({ now, random, competitionRandom, terrainRandom, onChange(change) {
       const { kind, specimen, reason } = change;
+      if(kind==='terrain-fungi'){view.fungalChange?.(change);return;}
       if(kind==='terrain-added'||kind==='terrain-removed'){view.terrainChange?.(change);onTerrainChange(change);return;}
       if (kind === 'added') {
         onAdded(specimen); // Placement succeeded; clear its soil before presenting the plant.
@@ -99,7 +100,17 @@
       if (result) { counts.acceptedLive++; mutations.maybeSchedulePort22Mutation(result.specimen); poppies.consider(result.specimen); onLive(result.specimen); }
       return { outcome, specimen: result?.specimen ?? null };
     }
-    return { specimens: model.specimens, byCell: model.byCell, terrain:model.terrain, freeCellCount:model.freeCellCount,
+    return { specimens: model.specimens, byCell: model.byCell, terrain:model.terrain, fungi:model.fungi, freeCellCount:model.freeCellCount,
+      seedFungi(ageMs=0,colonized=true,count=1,dense=false){
+        const at=now(),age=Math.max(0,Math.min(3600000,ageMs)),n=Math.max(1,Math.min(6,count));
+        const entries=Array.from({length:n},(_,i)=>({type:'blackthorn',vigor:i%3,column:10+i*2,row:10,
+          createdAt:at-age-garden.timings.blackthorn.expiredAfterMs,origin:{kind:'simulated',eventType:'log-fixture'}}));
+        if(dense){for(let cell=0;cell<640;cell++)if(!entries.some(p=>p.row*32+p.column===cell))entries.push({type:'broadleaf',vigor:cell%4,column:cell%32,row:Math.floor(cell/32),createdAt:at-65000,origin:{kind:'simulated',eventType:'fungal-fixture'}});}
+        else for(let i=0;i<35;i++)entries.push({type:'broadleaf',vigor:i%4,column:5+i%22,row:13+Math.floor(i/22),createdAt:at-65000,origin:{kind:'simulated',eventType:'fungal-fixture'}});
+        model.seed(entries,at-age-1);model.forceFungalFixture(colonized);model.forceLogFixture();
+        try{model.tick(at);}finally{model.forceFungalFixture();}
+        return model.terrain.logs[0]??null;
+      },
       isCellOccupied:model.isCellOccupied,competitionSnapshot:model.competitionSnapshot, counts, mutations, poppies, recentEvents, tick,
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },

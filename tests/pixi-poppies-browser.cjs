@@ -7,7 +7,7 @@ async function run() {
   const root = path.resolve(__dirname, '..'), assets = path.join(root, 'wwwroot'), baseline = process.argv.includes('--baseline');
   const output = path.join(root, 'artifacts/poppies', baseline ? 'before' : 'after'); await fs.mkdir(output, { recursive: true });
   const old = new Map(), checkpoint = '32e987c4b21265a066843f73cbba6f9b54a3dcbe';
-  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-mutations.js', 'garden-gnomes.js', 'garden-ui-core.js', 'pixi-live-core.js', 'pixi-live.js', 'pixi-vine-blooms.js'])
+  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-core.js', 'garden-mutations.js', 'garden-gnomes.js', 'garden-ui-core.js', 'pixi-live-core.js', 'pixi-live.js', 'pixi-vine-blooms.js'])
     old.set(file, execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], { cwd: root }));
   const capture = `{
     const f=window.__poppy={bakes:[],geometry:0,streams:0,contexts:[]};
@@ -88,8 +88,8 @@ async function run() {
       const resources = await page.evaluate(() => ({ frames: __poppy.view.snapshot().textures, sprites: __poppy.view.byId.size,
         displayObjects: __poppy.view.snapshot().displayObjects, streams: __poppy.streams, bakes: __poppy.bakes.length,
         dimensions: __poppy.bakes.map(b => [b.width, b.height]), bakeMs: __poppy.bakes.map(b => b.ms) }));
-      assert.equal(resources.frames, baseline ? 823 : 832); assert.equal(resources.sprites, 640); assert.equal(resources.streams, 1);
-      assert.deepEqual(resources.dimensions[1], [1024, 832]); report.resources.push({ page: name, ...resources });
+      assert.equal(resources.frames, baseline ? 823 : 841); assert.equal(resources.sprites, 640); assert.equal(resources.streams, 1);
+      assert.deepEqual(resources.dimensions[1], [1024, baseline?832:864]); report.resources.push({ page: name, ...resources });
       report.timing.push({ page: name, ...await page.evaluate(async () => {
         const submit = [], intervals = []; let last; const geometry = __poppy.geometry;
         for (let i = 0; i < 90; i++) { await new Promise(resolve => requestAnimationFrame(resolve)); const start = performance.now();

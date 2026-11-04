@@ -3,7 +3,7 @@ const S=require('../wwwroot/garden-log-snails.js'),Core=require('../wwwroot/gard
 const I=require('../wwwroot/garden-interaction.js'),T=require('../wwwroot/garden-ui-core.js'),A=require('../wwwroot/garden-ambient.js'),C=S.config;
 function fixture({column=16,row=10,remaining=3600000,grass=true,logs=1}={}){
   let at=5000000,snails,draw=()=>.99,afterGrass=()=>{};const changes=[],removed=[];
-  const garden=Core.createGardenModel({now:()=>at,random:()=>.5,terrainRandom:()=>0,onChange:c=>{changes.push(c);if(c.kind==='terrain-removed')snails?.sourceRemoved(c.terrain,at);}});
+  const garden=Core.createGardenModel({now:()=>at,random:()=>.5,fungalRandom:()=>.99,terrainRandom:()=>0,onChange:c=>{changes.push(c);if(c.kind==='terrain-removed')snails?.sourceRemoved(c.terrain,at);}});
   garden.seed(Array.from({length:logs},(_,i)=>({type:'blackthorn',vigor:1,column:column-i,row,createdAt:at-Core.timings.blackthorn.expiredAfterMs-Core.terrainConfig.lifetimeMs+remaining,origin:{kind:'simulated',eventType:'log-fixture'}})));
   garden.forceLogFixture();garden.tick(at);
   const ecology=E.createEcologyModel({now:()=>at,isCellOccupied:garden.isCellOccupied,random:()=>.99,onChange:c=>{if(c.kind==='grass-removed'){removed.push(c.item);afterGrass();}}});

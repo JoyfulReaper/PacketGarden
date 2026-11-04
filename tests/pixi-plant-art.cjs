@@ -28,13 +28,13 @@ function capture(make,legacy=false) {
       position:[object.position.x,object.position.y], anchor:object.anchor?[object.anchor.x,object.anchor.y]:undefined, tint:object.tint, alpha:object.alpha }));
     return { source:{}, destroy(){} };
   } }, shared,legacy?{...core,species:core.eventSpecies}:core);
-  assert.equal(cache.frames.size,legacy?763:832); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
+  assert.equal(cache.frames.size,legacy?763:841); assert.equal(new Set([...cache.frames.values()].map(t=>t.source)).size,1);
   for (const frame of cache.frames.values()) frame.destroy(false); cache.atlas.destroy(true);
   return { tiles, dimensions };
 }
 const before = capture(previous.exports.makeLiveAtlas,true), after = capture(current.makeLiveAtlas);
 assert.deepEqual(before.dimensions, [[512,448,2],[1024,768,2]]);
-assert.deepEqual(after.dimensions, [[512,448,2],[1024,832,2]]);
+assert.deepEqual(after.dimensions, [[512,448,2],[1024,864,2]]);
 const redesigned = new Set(['broadleaf','blackthorn','weed']);
 const enlargement = { flower:1.12, mushroom:1.16, wirefern:1.16, crystalfungus:1.12, ghostbloom:1.10 };
 const protectedTypes = new Set(['vine','redbloom','rain','probe','collectible_weed']);
@@ -84,6 +84,6 @@ for (let i=0; i<keys.length; i++) {
     assert.deepEqual(a.anchor,type==='mushroom'?[.5,.94]:b.anchor,'mushroom bake origin preserves bottom margin');
   }
 }
-assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,389);
+assert.equal(after.tiles.filter(t=>t.graphic&&t.key!=='collectible_weed').length,398);
 assert.equal(h.textureCount(),countBefore); assert.equal(h.live.size,objectsBefore,'construction display objects released');
 console.log('PASS: bounded Phase 2B artwork/leaflets/thorns, exact scale factors and stage differences, unchanged vine/redbloom/collectible commands, atlas cardinality/dimensions/ownership.');

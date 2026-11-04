@@ -13,6 +13,7 @@ async function run(){
       ['PacketGardenAmbient','ambient','createAmbientModel'],['PacketGardenPixiUi','ui','createUi'],
       ['PacketGardenLighting','light','createModel'],['PacketGardenLightingView','surface','createSurface']]){
       const create=window[global][method];window[global][method]=(...args)=>{
+        if(key==='garden')args[0]={...args[0],fungalRandom:()=>.99};
         if(key==='model'){
           f.view=args[0];const change=f.view.terrainChange;f.view.terrainChange=function(c){if(c.kind==='terrain-removed')f.removed.push({log:c.terrain,reason:c.reason,sprite:f.view.terrainViews.get(c.terrain)});return change.call(this,c);};
           args[1]={...args[1],competitionRandom:()=>.99,sporeRandom:()=>.9,bloomRandom:()=>.9};
@@ -152,7 +153,7 @@ async function run(){
           backing:[f.cache.atlas.source.pixelWidth,f.cache.atlas.source.pixelHeight],sources:new Set([...f.cache.frames.values()].map(t=>t.source)).size,specimenFrames:f.view.snapshot().textures,
           layers:f.view.curiosityLayer.children.length,score:document.querySelector('#garden-score').textContent,accepted:f.model.counts.acceptedLive,recent:f.model.recentEvents.length};
       });assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,29);
-      assert.equal(resources.contextsAfter,resources.contexts);assert.deepEqual(resources.backing,[2320,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,832);
+      assert.equal(resources.contextsAfter,resources.contexts);assert.deepEqual(resources.backing,[2320,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,841);
       assert.equal(resources.layers,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
         await page.locator('#seed-campfire').click();await page.locator('#trigger-campfire').click();await step(4500);await page.locator('#remove-campfire-during').click();assert(await page.evaluate(()=>!__fire.gnomes.incident));

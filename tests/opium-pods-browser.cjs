@@ -7,7 +7,7 @@ async function run() {
   const root = path.resolve(__dirname, '..'), assets = path.join(root, 'wwwroot'), baseline = process.argv.includes('--baseline');
   const output = path.join(root, 'artifacts/opium-pods', baseline ? 'before' : 'after'); await fs.mkdir(output, { recursive: true });
   const checkpoint = '0e691c3', old = new Map();
-  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-ambient.js', 'garden-mutations.js', 'garden-ui-core.js', 'pixi-live-ambient.js', 'pixi-live-core.js', 'pixi-live.js'])
+  if (baseline) for (const file of ['index.html', 'pixi-live.html', 'garden-core.js', 'garden-ambient.js', 'garden-mutations.js', 'garden-ui-core.js', 'pixi-live-ambient.js', 'pixi-live-core.js', 'pixi-live.js'])
     old.set(file, execFileSync('git', ['show', `${checkpoint}:wwwroot/${file}`], { cwd: root }));
   const capture = `{
     const f=window.__pods={bakes:[],contexts:[],geometry:0,streams:0};
