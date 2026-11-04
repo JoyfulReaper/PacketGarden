@@ -19,13 +19,13 @@ assert.equal(G.config.incidentChance,.02);assert.equal(G.heistConfig.incidentSha
 for(const [draws,type] of [
   [[.02],null],[[.019999,.299999,0],'gnome_heist'],
   [[.019999,.3,.399999,0,0],'gnome_campfire'],
-  [[.019999,.3,.4,.249999,0,0],'gnome_wizard'],[[.019999,.3,.4,.25,.5,.5],'gnome_incident']
+  [[.019999,.3,.4,.249999,0,0],'gnome_wizard'],[[.019999,.3,.4,.25,.5,.5,.5],'gnome_incident']
 ]){
   const f=fixture({mushrooms:3,logs:1});f.at+=45000;let n=0;
   f.gnomes.tick(f.at,()=>{assert(n<draws.length);return draws[n++];});assert.equal(f.gnomes.incident?.type??null,type);assert.equal(n,draws.length);
   assert.equal(f.gnomes.nextCheckAt,f.at+45000);f.gnomes.tick(f.at,()=>{throw Error('duplicate check')});
 }
-for(const [rare,draws,type] of [[0,[.019999,.5,.5],'gnome_incident'],[1,[.019999,.249999,0,0],'gnome_wizard'],[1,[.019999,.25,.5,.5],'gnome_incident']]){
+for(const [rare,draws,type] of [[0,[.019999,.5,.5,.5],'gnome_incident'],[1,[.019999,.249999,0,0],'gnome_wizard'],[1,[.019999,.25,.5,.5,.5],'gnome_incident']]){
   const f=fixture({rare});f.at+=45000;let n=0;f.gnomes.tick(f.at,()=>draws[n++]);assert.equal(n,draws.length);assert.equal(f.gnomes.incident.type,type);
 }
 for(const type of Core.species){const f=fixture({type});assert.equal(f.gnomes.wizardCandidates().length,G.wizardSpecies.includes(type)?1:0,type);}

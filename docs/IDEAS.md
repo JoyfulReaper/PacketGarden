@@ -160,7 +160,7 @@ Possible gnome incidents:
 - a lone gnome walks across the garden carrying something it apparently stole;
 - two gnomes drag a mushroom somewhere for reasons never explained — implemented as the Great Gnome Mushroom Heist below;
 - one gnome chases another across the garden;
-- a tiny gnome funeral procession;
+- a tiny gnome funeral procession — implemented as the Great Gnome Funeral Procession below;
 - one gnome appears, looks around, and immediately leaves;
 - a wizard gnome briefly interacts with a rare specimen and vanishes;
 - a few gnomes build a tiny temporary campfire;
@@ -958,6 +958,30 @@ Diagnostics remain on `/pixi-live.html` only. See
 Simple persistence across browser/server restarts remains desirable. The goal is to
 preserve the feeling that the garden has history without turning PacketGarden into
 a telemetry database.
+
+### Great Gnome Funeral Procession (implemented)
+
+Four tiny gnomes carry one curled brown leaf on a miniature wooden stretcher.
+Nobody knows whose funeral it is. No actual plant death is required, and the
+procession changes no specimen, terrain, wildlife or ecology state.
+
+The existing **45s / 2% / 30 living specimens** incident scheduler retains heist,
+campfire and wizard priority, then gives **20% of remaining ordinary-dispute
+outcomes** to the funeral. Other gnome incidents remain mutually exclusive;
+ordinary disputes and landscaping retain their existing behavior/probabilities.
+
+Two bearers and two followers enter from either side, march together, pause at
+13–16 seconds with one follower bowing, then fade together by 18 seconds. The
+fixed horizontal route needs no pathfinding or displacement. Existing cached
+walking/carrying poses do most of the work: only one bowed-head frame and one
+combined stretcher/leaf frame are new. One shared prop follows the rendered
+bearers. There is no additional renderer, ticker, particle effect or music.
+
+Each actor retains one ordinary underpants attempt; the leaf cannot be collected.
+Reduced motion uses discrete travel and static carrying artwork. Hidden tabs,
+large tick gaps, backwards clocks, resets and teardown destroy actors and prop
+without replay. Diagnostic-only controls preview both motion modes and verify
+cleanup. See [actual-scale screenshots and measurements](GNOME-FUNERAL.md).
 
 ### Wandering Wizard Gnome (implemented)
 

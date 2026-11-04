@@ -25,14 +25,14 @@ assert.deepEqual(C,{incidentShare:.4,gatherAfterMs:2500,igniteAfterMs:4000,charA
 // Existing base/heist draws stay first and unchanged. Campfire only takes ordinary-dispute outcomes.
 for(const [rolls,expected,draws] of [
   [[.02],'idle',1],[[.019999,.299999,0],'gnome_heist',3],
-  [[.019999,.3,.399999,0,0],'gnome_campfire',5],[[.019999,.3,.4,0,0],'gnome_incident',5]
+  [[.019999,.3,.399999,0,0],'gnome_campfire',5],[[.019999,.3,.4,.5,0,0],'gnome_incident',6]
 ]){
   const f=fixture({mushrooms:4});let index=0;f.jump(45000);f.gnomes.tick(f.at,()=>{assert(index<rolls.length);return rolls[index++];});
   assert.equal(f.gnomes.incident?.type??'idle',expected);assert.equal(index,draws);assert.equal(f.gnomes.nextCheckAt,f.at+45000);
 }
 {
-  const f=fixture({mushrooms:4,logs:0});let n=0;f.jump(45000);f.gnomes.tick(f.at,()=>[.019999,.3,.5,.5][n++]);
-  assert.equal(f.gnomes.incident.type,'gnome_incident');assert.equal(n,4,'no log branch draw without a candidate');
+  const f=fixture({mushrooms:4,logs:0});let n=0;f.jump(45000);f.gnomes.tick(f.at,()=>[.019999,.3,.5,.5,.5][n++]);
+  assert.equal(f.gnomes.incident.type,'gnome_incident');assert.equal(n,5,'no log branch draw without a candidate; one funeral rejection');
 }
 {
   const f=fixture();let n=0;f.jump(45000);f.gnomes.tick(f.at,()=>[.019999,.399999,0,.5][n++]);

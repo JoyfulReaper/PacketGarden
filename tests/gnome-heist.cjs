@@ -29,15 +29,15 @@ for(const invalidate of [p=>p.type='crystalfungus',p=>p.type='ghostbloom',p=>p.t
 }
 for(const ordinary of [.019999,.02,.99])for(const selection of [.299999,.3,.99]){
   const f=fixture();let calls=0;f.at+=44999;f.model.tick(f.at,()=>{throw Error('early check')});f.at++;
-  f.model.tick(f.at,()=>[ordinary,selection,0,.5][calls++]??.5);
+  f.model.tick(f.at,()=>[ordinary,selection,selection<.3?0:.5,0,.5][calls++]??.5);
   assert.equal(f.model.incident?.type??null,ordinary<.02?(selection<.3?'gnome_heist':'gnome_incident'):null);
-  assert.equal(calls,ordinary<.02?(selection<.3?3:4):1);
+  assert.equal(calls,ordinary<.02?(selection<.3?3:5):1);
   f.model.tick(f.at,()=>{throw Error('duplicate check')});
   assert.equal(f.model.nextCheckAt,f.at+45000);assert.equal(f.model.lastLandscapingAt,-Infinity);
 }
 {
   const f=fixture();f.garden.specimens.forEach(p=>p.type='broadleaf');f.at+=45000;let rolls=0;
-  f.model.tick(f.at,()=>{rolls++;return 0});assert.equal(f.model.incident.type,'gnome_incident');assert.equal(rolls,3,'no mushroom means no extra roll');
+  f.model.tick(f.at,()=>[.019999,.5,.5,.5][rolls++]);assert.equal(f.model.incident.type,'gnome_incident');assert.equal(rolls,4,'no mushroom draw; one funeral rejection');
 }
 for(const n of [29,30]){const f=fixture({count:n});assert.equal(f.model.startHeist(),n>=30);}
 for(const roll of [0,.249999,.25,.5,.999999]){

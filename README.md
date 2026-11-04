@@ -271,6 +271,14 @@ respecting the current under-plants setting. Lost targets and blocked or changed
 grass skip safely without retries. The rare plant keeps its traits and lifespan;
 the wizard shares ordinary underpants clicks. See [wizard lifecycle and review](docs/WIZARD-GNOME.md).
 
+The **Great Gnome Funeral Procession** takes **20% of the remaining ordinary-
+dispute outcomes**, after the heist, campfire and wizard branches. Four gnomes
+carry one brown leaf on a tiny wooden stretcher, march across the garden, pause
+solemnly at **13–16s**, then fade away by **18s**. Nobody needs to die: the
+procession changes no specimens, terrain or ecology. Each gnome keeps its one
+underpants attempt; the leaf is a noncollectible prop. Reduced motion and the
+existing arrival sound settings apply. See [funeral screenshots and lifecycle](docs/GNOME-FUNERAL.md).
+
 **Log-dwelling snails** are separate, noncollectible wildlife. With an actual
 living fallen log, an independent **25%** check every **45s** can admit one
 visitor, capped at **two**, for **75s**. They crawl slowly along four preplanned

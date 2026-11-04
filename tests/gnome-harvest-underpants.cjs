@@ -37,8 +37,8 @@ for(const roll of [0,.049999,.05,.050001,.99]){
 }
 // Priority: fight, full-capacity check without fallthrough, vine success, then harvest.
 {
-  const f=fixture(30);f.at+=45000;let calls=0;f.g.tick(f.at,()=>{calls++;return 0});
-  assert.equal(f.g.incident.type,'gnome_incident');assert.equal(calls,3);
+  const f=fixture(30);f.at+=45000;let calls=0;f.g.tick(f.at,()=>calls++===0?0:.5);
+  assert.equal(f.g.incident.type,'gnome_incident');assert.equal(calls,4);
 }
 {
   const f=fixture();f.full();f.at+=45000;let calls=0;f.g.tick(f.at,()=>++calls===1?.5:.25);
@@ -137,7 +137,7 @@ assert.equal(T.collectionMessage('ditch_weed_bud',()=>{throw Error('unexpected r
   }
   const layer=new h.P.Container(),cl=new h.P.Container(),dl=new h.P.Container(),base=h.live.size,tex=h.textureCount();
   const gc=GV.makeGnomeAtlas(h.P,h.renderer),ac=AV.makeAmbientAtlas(h.P,h.renderer),gv=GV.createGnomeView(h.P,layer,gc.frames),av=AV.createAmbientView(h.P,cl,dl,ac.frames);
-  assert.equal(gc.frames.size,37);assert.equal(ac.frames.size,23);const bakes=h.generated(),f=fixture(),m=G.createModel({garden:f.garden,getSpecimens:()=>f.garden.specimens,now:()=>f.at,onChange:gv.change,
+  assert.equal(gc.frames.size,39);assert.equal(ac.frames.size,23);const bakes=h.generated(),f=fixture(),m=G.createModel({garden:f.garden,getSpecimens:()=>f.garden.specimens,now:()=>f.at,onChange:gv.change,
     onUnderpantsAttempt:(point,at)=>ambient.dropGnomeUnderpants(point,at)}),ambient=A.createAmbientModel({onChange:c=>av.change(c,f.at)});
   for(let n=0;n<25;n++){
     f.fill();f.at+=420000;f.fill();assert(m.startLandscaping(f.at,()=>.5,'weed_harvest'));gv.animate(f.at);

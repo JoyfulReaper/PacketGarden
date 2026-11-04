@@ -76,7 +76,7 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
+      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen,reason); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });

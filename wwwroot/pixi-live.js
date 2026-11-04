@@ -610,7 +610,7 @@
       ambient.acceptLiveSpecimen(source); sound?.maybePlayGrowthSound(source.type);
     },
       onPoppyActivated: (source, at) => ambient.acceptPoppyActivation(source, at),
-      onRemoved: source => { gnomes?.specimenRemoved(source);emissions?.removed(source); ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
+      onRemoved: (source,reason) => { gnomes?.specimenRemoved(source,Date.now(),reason);emissions?.removed(source); ambient.cancelSource(source); ui?.removed(source); }, onActivity: () => ui?.activity() });
     own(() => model.clear());
     emissions = spores.createEmissionModel({ getSpecimens: () => model.specimens,
       hasSource: source => model.byCell.get(source.cell) === source,
@@ -631,9 +631,10 @@
     const gnomeCache = gnomePresentation.makeGnomeAtlas(P, app.renderer);
     own(()=>gnomeCache.destroy());
     // This existing world layer is above specimens and below rain. No idle group.
-    let heistPreviewReduced = false, campfirePreviewReduced = false, wizardPreviewReduced = false;
+    let heistPreviewReduced = false, campfirePreviewReduced = false, wizardPreviewReduced = false, funeralPreviewReduced = false;
     const gnomeReducedMotion = () => Boolean(reducedMotion?.matches || heistPreviewReduced || campfirePreviewReduced
-      || wizardPreviewReduced&&gnomes?.incident?.type==='gnome_wizard');
+      || wizardPreviewReduced&&gnomes?.incident?.type==='gnome_wizard'
+      || funeralPreviewReduced&&gnomes?.incident?.type==='gnome_funeral');
     const gnomeView = gnomePresentation.createGnomeView(P, view.curiosityLayer, gnomeCache.frames, gnomeReducedMotion, view.mushroomVisual, log=>view.terrainViews.get(log));
     own(()=>gnomeView.destroy());
     let simulatedWinner = null, nextSimulatedWinner = 'green';
@@ -765,6 +766,9 @@
     const wizardDiagnostics=window.PacketGardenWizardDev?.bind({document,garden:model,ecology,gnomes,ambient,frogs,snails:logSnails,
       setReducedMotion:value=>{wizardPreviewReduced=value;}});
     own(()=>wizardDiagnostics?.destroy());
+    const funeralDiagnostics=window.PacketGardenFuneralDev?.bind({document,gnomes,view:gnomeView,
+      setReducedMotion:value=>{funeralPreviewReduced=value;}});
+    own(()=>funeralDiagnostics?.destroy());
     const logStatus=text=>{const el=document.querySelector('#log-status');if(el)el.textContent=text;};
     const competitionStatus=text=>{const el=document.querySelector('#competition-status');if(el)el.textContent=text;};
     listen(document.querySelector('#seed-competition'),'click',()=>{
@@ -950,6 +954,7 @@
       frogView.animate(at);
     });
     listen(document.querySelector('#seed'),'click', () => {
+      if(gnomes.incident?.type==='gnome_funeral'){gnomes.clear();gnomes.resetCadence();}
       model.seed(); ecologyPresentation.seedDenseEcology(ecology, Date.now(), document.querySelector('#seed-puddles').checked);
       seedAmbient();
     });
@@ -974,7 +979,7 @@
         `Full-garden competition · replacement cooldown ${(model.competitionSnapshot().remainingMs/1000).toFixed(1)}s · weaker newcomers favored`,
         `Accepted live ${model.counts.acceptedLive} · saturated drops ${model.counts.droppedSaturated} · replacements ${model.counts.replacements} · lifecycle removals ${model.counts.lifecycleRemovals} · paused callbacks ${model.counts.pausedEvents}`,
         `Vine half-curves ${counts.connectionHalves} · vine views ${counts.vineViews} · rain particles ${counts.particles} · ${currentWeather.level} / ${currentWeather.eventsPerMinute} events/min`,
-        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + (gnomeView.fire?1:0) + (gnomeView.char?1:0) + gnomeView.splashes.size + gnomeView.spells.length + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
+        `Display objects ${counts.displayObjects + gnomeView.views.size + (gnomeView.carried?1:0) + (gnomeView.stretcher?1:0) + (gnomeView.fire?1:0) + (gnomeView.char?1:0) + gnomeView.splashes.size + gnomeView.spells.length + 3} · sprite views ${counts.sprites} · atlas frames ${counts.textures} · created/destroyed ${counts.counters.created}/${counts.counters.destroyed} · stage updates ${counts.counters.stageUpdates}`,
         `Broadleaf blossom overlays ${counts.bloomViews}/640 · 15 cached frames in specimen atlas · cosmetic only`,
         `Vine blossom groups ${counts.vineBloomViews}/640 · connection blossoms ${counts.vineBloomLinks}/640 · 41 cached frames in specimen atlas`,
         `Wirefern sori ${counts.sporeViews}/640 · 3 cached layouts · 25% cosmetic selection`,

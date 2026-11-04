@@ -152,8 +152,8 @@ async function run(){
         return{apps:f.apps,streams:f.streams,bakes,bakesAfter:f.bakes.length,contexts,contextsAfter:f.contexts.length,released,frames:f.cache.frames.size,
           backing:[f.cache.atlas.source.pixelWidth,f.cache.atlas.source.pixelHeight],sources:new Set([...f.cache.frames.values()].map(t=>t.source)).size,specimenFrames:f.view.snapshot().textures,
           layers:f.view.curiosityLayer.children.length,score:document.querySelector('#garden-score').textContent,accepted:f.model.counts.acceptedLive,recent:f.model.recentEvents.length};
-      });assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,37);
-      assert.equal(resources.contextsAfter,resources.contexts);assert.deepEqual(resources.backing,[2960,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,841);
+      });assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,39);
+      assert.equal(resources.contextsAfter,resources.contexts);assert.deepEqual(resources.backing,[3120,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,841);
       assert.equal(resources.layers,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
         await page.locator('#seed-campfire').click();await page.locator('#trigger-campfire').click();await step(4500);await page.locator('#remove-campfire-during').click();assert(await page.evaluate(()=>!__fire.gnomes.incident));

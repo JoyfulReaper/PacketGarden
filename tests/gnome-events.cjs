@@ -1,6 +1,6 @@
 // Supported Pixi page tick/input ownership around the shared incident model.
 const assert=require('node:assert/strict'),page=require('./pixi-page.cjs');
-(async()=>{for(const reduced of [false,true]){const g=await page({reduced,random:()=>0});
+(async()=>{for(const reduced of [false,true]){let draws=0;const g=await page({reduced,random:()=>0,gnomeRandom:original=>++draws===2?.5:original()});
   g.garden.seed(Array.from({length:30},(_,i)=>({type:'broadleaf',column:i%32,row:Math.floor(i/32),vigor:0,createdAt:g.now()})));
   const before=JSON.stringify([g.model.counts,g.model.recentEvents]),cells=[...g.model.byCell.keys()];
   for(let i=0;i<179;i++)g.frame(250);assert.equal(g.gnomes.actors.length,0);g.frame(250);assert.equal(g.gnomes.actors.length,4);

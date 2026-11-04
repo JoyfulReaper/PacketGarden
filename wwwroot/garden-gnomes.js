@@ -16,6 +16,10 @@
   const wizardConfig = Object.freeze({incidentShare:.25,inspectAfterMs:3000,raiseAfterMs:4000,
     castAfterMs:5000,leaveAfterMs:8000,finishedAfterMs:14000,maxTickGapMs:1500});
   const wizardSpecies=Object.freeze(['ghostbloom','crystalfungus','blackthorn','stillbloom']);
+  const funeralConfig=Object.freeze({incidentShare:.2,enterAfterMs:3000,pauseAfterMs:13000,
+    leaveAfterMs:16000,finishedAfterMs:18000,maxTickGapMs:1500,maxActors:4});
+  // Two bearers around the shared prop, then two followers in a single file.
+  const funeralOffsets=Object.freeze([22,-22,-50,-76]);
   const reactionMs = 600, presentations = new WeakMap();
   // Canvas uses palette names (and a separate broadleaf field); Pixi uses index 4.
   const rareColors = new Set(['moonflower','bioluminescent','silvervine','afterglow','solar','toxic','rainbow']);
@@ -360,6 +364,40 @@
       worker.targetX = Math.max(6,worker.x-30); worker.targetY = worker.y;
       if (incident.mode === 'weed_harvest') { worker.carrySack = true; actors[1].handedOff = true; }
     }
+    function startFuneral(at=now(),roll=random){
+      if(suspended||incident||!Number.isFinite(at)||livingCount(at)<config.minimumSpecimens)return false;
+      const direction=roll()<.5?1:-1,y=180+roll()*210;
+      if(!Number.isFinite(y)||y<180||y>390)return false;
+      incident={type:'gnome_funeral',phase:'entering',createdAt:at,lastTickAt:at,lastObservedAt:at,
+        route:{direction,y},alpha:1};
+      actors=funeralOffsets.map((offset,i)=>({type:'gnome',role:i<2?'pallbearer':'mourner',
+        side:i<2?(offset*direction>0?'red':'green'):i===2?'red':'green',
+        createdAt:at,state:'entering',offset,x:0,y:0,alpha:1,bows:i===3}));
+      advanceFuneral(at);puddles.tick(actors,at);onCue('arrival');changed();return true;
+    }
+    function cancelFuneral(at){const clock=now(),safe=Number.isFinite(at)?at:Number.isFinite(clock)?clock:incident?.lastTickAt??0;clear();resetCadence(safe);}
+    function funeralClock(at){
+      if(!Number.isFinite(at)||at<incident.lastObservedAt||at-incident.lastTickAt>funeralConfig.maxTickGapMs){cancelFuneral(at);return false;}
+      if(at>=incident.createdAt+funeralConfig.finishedAfterMs){clear();return false;}
+      incident.lastObservedAt=at;return true;
+    }
+    function advanceFuneral(at){
+      if(!funeralClock(at))return;
+      const c=funeralConfig,age=at-incident.createdAt,reduced=getReducedMotion();
+      let progress,center;
+      if(age<c.enterAfterMs){progress=age/c.enterAfterMs;center=-36+(116+36)*(reduced?Math.floor(progress*4)/4:progress);}
+      else if(age<c.pauseAfterMs){progress=(age-c.enterAfterMs)/(c.pauseAfterMs-c.enterAfterMs);center=116+(740-116)*(reduced?Math.floor(progress*12)/12:progress);}
+      else if(age<c.leaveAfterMs)center=740;
+      else{progress=(age-c.leaveAfterMs)/(c.finishedAfterMs-c.leaveAfterMs);center=740+72*(reduced?Math.floor(progress*4)/4:progress);}
+      const phase=age<c.enterAfterMs?'entering':age<c.pauseAfterMs?'marching':age<c.leaveAfterMs?'ceremony':'departure';
+      // Fade together rather than rushing the entire formation off the far edge.
+      incident.alpha=age<c.leaveAfterMs?1:Math.max(0,1-(age-c.leaveAfterMs)/(c.finishedAfterMs-c.leaveAfterMs));
+      const {direction,y}=incident.route,origin=direction===1?center:garden.dimensions.width-center;
+      for(const actor of actors){actor.x=origin+actor.offset*direction;actor.y=y+7;actor.alpha=incident.alpha;
+        actor.state=phase==='ceremony'?(actor.bows?'bow':'pause'):phase;}
+      if(phase!==incident.phase){incident.phase=phase;changed();}
+    }
+    function tickFuneral(at){if(!funeralClock(at))return;incident.lastTickAt=at;advanceFuneral(at);}
     function start(at = now(), roll = random) {
       if (incident || livingCount(at) < config.minimumSpecimens) return false;
       const centerX = garden.dimensions.width * (.4 + roll() * .2);
@@ -376,12 +414,14 @@
       puddles.tick(actors,at); onCue('arrival'); changed(); return true;
     }
     function clear() { puddles.clear(actors);actors = [];if(incident?.type==='gnome_campfire'||incident?.type==='gnome_wizard')incident.target=null;
-      if(incident?.type==='gnome_wizard'){incident.grass=null;incident.ecology=null;}incident = null; changed(); }
+      if(incident?.type==='gnome_wizard'){incident.grass=null;incident.ecology=null;}
+      if(incident?.type==='gnome_funeral')incident.route=null;incident = null; changed(); }
     function advance(at = now(), roll = random) {
       if (!incident) return;
       if (incident.type === 'gnome_heist') { advanceHeist(at); return; }
       if (incident.type === 'gnome_campfire') { advanceCampfire(at); return; }
       if (incident.type === 'gnome_wizard') { advanceWizard(at); return; }
+      if (incident.type === 'gnome_funeral') { advanceFuneral(at); return; }
       if (incident.type === 'gnome_landscaping') { advanceLandscaping(at); return; }
       const age = Math.max(0, at - incident.createdAt);
       // Completion precedes phase/audio handling, including a suspended page.
@@ -416,7 +456,7 @@
     function suspend(at = now()) {
       resetCadence(at);
       suspended = true;
-      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist' || incident?.type === 'gnome_campfire' || incident?.type === 'gnome_wizard') clear();
+      if (incident?.type === 'gnome_landscaping' || incident?.type === 'gnome_heist' || incident?.type === 'gnome_campfire' || incident?.type === 'gnome_wizard' || incident?.type === 'gnome_funeral') clear();
       else changed(); // Release transient water presentation while a dispute is hidden.
     }
     function tick(at = now(), roll = random, hidden = false) {
@@ -426,6 +466,7 @@
         else if (incident.type === 'gnome_heist') tickHeist(at);
         else if (incident.type === 'gnome_campfire') tickCampfire(at);
         else if (incident.type === 'gnome_wizard') tickWizard(at);
+        else if (incident.type === 'gnome_funeral') tickFuneral(at);
         advance(at, roll); if(!suspended)puddles.tick(actors,at);return;
       }
       if (at < nextCheckAt) return;
@@ -439,6 +480,7 @@
           else {
             const rare=wizardCandidates(at);
             if(rare.length&&roll()<wizardConfig.incidentShare)startWizard(at,roll,false,rare);
+            else if(roll()<funeralConfig.incidentShare)startFuneral(at,roll);
             else start(at,roll);
           }
         }
@@ -466,6 +508,8 @@
         || at>=incident.createdAt+campfireConfig.finishedAfterMs || !incident.consumed&&!validCampfireTarget(at)))return false;
       if(incident.type==='gnome_wizard'&&(!Number.isFinite(at)||at<incident.lastTickAt||at-incident.lastTickAt>wizardConfig.maxTickGapMs
         ||at>=incident.createdAt+wizardConfig.finishedAfterMs||!validWizardTarget(incident,at)))return false;
+      if(incident.type==='gnome_funeral'&&(!Number.isFinite(at)||at<incident.lastObservedAt||at-incident.lastTickAt>funeralConfig.maxTickGapMs
+        ||at>=incident.createdAt+funeralConfig.finishedAfterMs))return false;
       return (presentations.get(actor)?.alpha ?? 0) > 0;
     }
     function hitAt(point, at = now()) {
@@ -487,8 +531,8 @@
       }
       return true; // Repeated clicks still consume the click, never the plant underneath.
     }
-    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, startCampfire, campfireCandidates, startWizard, wizardCandidates, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
-      specimenRemoved(specimen,at=now()){if(incident?.type==='gnome_wizard'&&incident.target?.specimen===specimen)cancelWizard(at);},
+    return { start, startLandscaping, landscapingEligible, landscapingCandidates, startHeist, heistCandidates, startCampfire, campfireCandidates, startWizard, wizardCandidates, startFuneral, advance, tick, clear, resetCadence, suspend, livingCount, hitAt, click,
+      specimenRemoved(specimen,at=now(),reason){if(incident?.type==='gnome_funeral'&&reason==='cleared')cancelFuneral(at);else if(incident?.type==='gnome_wizard'&&incident.target?.specimen===specimen)cancelWizard(at);},
       terrainRemoved(log,at=now()){if(incident?.type==='gnome_campfire'&&incident.target?.log===log&&!incident.consuming)cancelCampfire(at);},
       puddleRemoved(puddle){puddles.removed(puddle);if(actors.length)changed();},
       simulatePuddleEntry(actor){if(!actors.includes(actor))return false;puddles.armDemo(actor);return true;},
@@ -500,13 +544,15 @@
     const surprised = at < (actor.surprisedUntil ?? -Infinity) || Boolean(water);
     const still = reducedMotion || surprised || actor.carrySack || actor.role === 'supervisor' || actor.role === 'carrier'
       || actor.role==='wizard'&&actor.state!=='approach'&&actor.state!=='departure'
+      || (actor.role==='pallbearer'||actor.role==='mourner')&&(actor.state==='bow'||actor.state==='pause')
       || actor.role==='camper'&&actor.state!=='approach'&&actor.state!=='departure';
-    const step = still ? 0 : Math.sin((at - actor.createdAt) / (actor.role==='wizard'?240:90)), battle = actor.state === 'battle' && !surprised;
+    const procession=actor.role==='pallbearer'||actor.role==='mourner';
+    const step = still ? 0 : Math.sin((at - actor.createdAt) / (procession?330:actor.role==='wizard'?240:90)), battle = actor.state === 'battle' && !surprised;
     return { step, battle, surprised, water, mushroom:Boolean(actor.carryMushroom), sack:actor.role === 'carrier' && !actor.handedOff || Boolean(actor.carrySack),
       bounce:water ? water.bounce : surprised && !reducedMotion ? -3 : actor.state === 'celebrate' ? -Math.abs(step) * 4 : 0,
       clippers:actor.role === 'worker' && !actor.carrySack, closed:surprised || actor.state === 'snip' && (reducedMotion || step > 0),
       shove:battle ? step * (actor.side === 'green' ? 2 : -2) : 0, rotation:water ? water.rotation : battle ? step * .12 : 0,
-      alpha:actor.state === 'flee' ? Math.max(0,1-(at-actor.createdAt-config.resultAfterMs)/(config.losersGoneAfterMs-config.resultAfterMs)) : 1 };
+      alpha:procession?actor.alpha:actor.state === 'flee' ? Math.max(0,1-(at-actor.createdAt-config.resultAfterMs)/(config.losersGoneAfterMs-config.resultAfterMs)) : 1 };
   }
   function presentation(actor, at, reducedMotion = false) {
     const pose=appearance(actor,at,reducedMotion);
@@ -520,6 +566,6 @@
     const spread = closed ? 1 : 5;
     return [[3,4,10,-1],[3,-3,10,-1],[10,-1,19,-1-spread],[10,-1,19,-1+spread]];
   }
-  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, campfireConfig, wizardConfig, wizardSpecies, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
+  const api = { config, landscapingConfig, overcrowdingConfig, harvestConfig, heistConfig, campfireConfig, wizardConfig, wizardSpecies, funeralConfig, funeralOffsets, reactionMs, createModel, appearance, presentation, sackArt, clipperLines };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenGnomes = api;
 })();

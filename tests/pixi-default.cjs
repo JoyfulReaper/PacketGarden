@@ -7,7 +7,7 @@ const html = read('index.html');
 const scripts = [...html.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const diagnosticScripts = [...read('pixi-live.html').matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
 const assetPath = url => url.split('?')[0];
-assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>!['garden-stillbloom-dev.js','garden-gnome-puddles-dev.js','garden-log-snails-dev.js','garden-log-fungi-dev.js','garden-wizard-dev.js'].includes(name)), 'both pages use the same renderer and model order; simulations are diagnostic-only');
+assert.deepEqual(scripts.map(assetPath), diagnosticScripts.map(assetPath).filter(name=>!['garden-stillbloom-dev.js','garden-gnome-puddles-dev.js','garden-log-snails-dev.js','garden-log-fungi-dev.js','garden-wizard-dev.js','garden-funeral-dev.js'].includes(name)), 'both pages use the same renderer and model order; simulations are diagnostic-only');
 assert.match(html, /href="pixi-live\.css\?v=[^"]+"/, 'new homepage must bypass cached pre-promotion layout');
 assert(scripts.some(url => /^pixi-live\.js\?v=.+/.test(url)), 'new homepage must bypass cached diagnostic-only startup');
 assert(scripts.some(url => /^pixi-live-core\.js\?v=.+/.test(url)), 'weather normalizer must bypass cached code that drops hourly data');
@@ -24,7 +24,7 @@ for(const id of ['preview-gnome-sound','gnome-sound-status'])assert(!html.includ
 for (const pageScripts of [scripts, diagnosticScripts]) for (const file of ['garden-audio','pixi-live-ui','pixi-live'])
   assert(pageScripts.some(url => new RegExp(`^${file}\\.js\\?v=.+`).test(url)),`${file} integration must bypass stale cached scripts`);
 
-async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, reduced = false, hidden = false, fetch: fetchVisit = () => Promise.resolve(), random = () => 0, competitionRandom = () => .99, terrainRandom = () => .99, fungalRandom = () => .99, frogRandom = () => .99, snailRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9, emissionRandom = () => .99 } = {}) {
+async function start(failInit = false, { pageHtml = html, AudioContext, captureModel = false, gnomeRandom, reduced = false, hidden = false, fetch: fetchVisit = () => Promise.resolve(), random = () => 0, competitionRandom = () => .99, terrainRandom = () => .99, fungalRandom = () => .99, frogRandom = () => .99, snailRandom = () => .99, poppyRandom, podRandom, sporeRandom = () => .9, emissionRandom = () => .99 } = {}) {
   let now = 100000, app, observer,stillbloom;
   const pageScripts = [...pageHtml.matchAll(/<script src="([^"]+)" defer(?: data-pixi-library)?><\/script>/g)].map(match => match[1]);
   let model, garden, ambient, frogs, logSnails, gnomes, storm, ecology, lighting, lightingSurface, gardenView, emissions;
@@ -106,7 +106,7 @@ async function start(failInit = false, { pageHtml = html, AudioContext, captureM
     }
     if (assetPath(script) === 'garden-gnomes.js' && captureModel) {
       const create = context.window.PacketGardenGnomes.createModel;
-      context.window.PacketGardenGnomes.createModel = (...args) => { gnomes = create(...args); return gnomes; };
+      context.window.PacketGardenGnomes.createModel = (...args) => { if(gnomeRandom){const original=args[0].random;args[0]={...args[0],random:()=>gnomeRandom(original)};} gnomes = create(...args); return gnomes; };
     }
     if (assetPath(script) === 'garden-lighting.js' && captureModel) {
       const create=context.window.PacketGardenLighting.createModel;

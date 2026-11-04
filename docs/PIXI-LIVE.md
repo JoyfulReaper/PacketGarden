@@ -1,3 +1,45 @@
+# Great Gnome Funeral Procession (2026-11-03)
+
+Implemented on clean `dev` at `9aeeca4`; no applicable `AGENTS.md` was present.
+The existing 45-second/2%/30-living-specimen scheduler keeps heist → campfire →
+wizard priority, then makes one **20%** funeral roll before ordinary dispute
+fallback. Landscaping probabilities and mutual exclusion remain intact.
+
+Four gnomes enter from either horizontal edge, march together, pause solemnly
+at **13–16s**, then fade by **18s**. Two reuse carrying poses; two reuse walking
+poses, with one new bowed head. A single new cached prop frame combines the
+wooden stretcher and curled brown leaf. The formation has no garden-object
+targets or physics; no specimen, terrain, grass, event, activity or score change
+comes from the funeral. Ordinary underpants clicks apply once per gnome; clicking
+the leaf creates no collectible. Audio is the existing opt-in arrival cue only.
+
+Two appended frames grow the gnome atlas from **37 to 39**, physical **2960×64
+to 3120×64**, on the same source: **10,240 additional physical pixels / 40 KiB
+RGBA8 base-level estimate**. An active dry procession owns **four actor Sprites,
+one prop Sprite and the existing transient Container**; idle allocation is zero.
+No extra bake, renderer, ticker, WebGL context or per-frame Graphics is added.
+
+Logical ticks and visual advances share clock validation. Hidden/stalled/
+backwards clocks clear without catch-up, including reversal inside one logical
+interval. Normal cleared-specimen notifications propagate the removal reason so
+reset/reseed cancels a funeral; explicit Clear/Seed actions handle empty gardens
+as well. Completion and teardown release the route and destroy every transient
+Sprite while retaining shared textures until atlas teardown.
+
+`garden-funeral-dev.js` loads only on `/pixi-live.html`. Its controls trigger,
+preview normal/reduced motion, exercise hidden/stalled cancellation, and verify
+actual Sprite/prop cleanup. They require the ordinary eligibility count and do
+not seed or remove plants. `artifacts/gnome-funeral/index.html` contains **20
+actual-scale screenshots** across homepage/diagnostic pages; raw checks and
+timings are in `artifacts/gnome-funeral/review.json`. See
+[full lifecycle, measurements and validation](GNOME-FUNERAL.md).
+
+Validation: **72 Node suites passed** (24 optional Chrome/SSE entries skipped
+in that runner), **30 Chrome jobs passed**, Debug/Release and backend-check
+builds passed with zero warnings/errors, backend assertions and actual ASP.NET
+polling → SSE integration passed. `git diff --check` passed. Changes remain
+uncommitted on `dev`; nothing was pushed or deployed.
+
 # Wandering Wizard Gnome (2026-11-03)
 
 Implemented on `dev` from clean `dc8c6ac`, including campfires, snails and fungal

@@ -8,8 +8,8 @@ at=45000;fill(29);model.tick(at);assert.equal(rolls,0);assert.equal(model.incide
 at=90000;fill(30);specimens[0].createdAt=at-360000;model.tick(at);assert.equal(rolls,0,'expired specimen cannot make thirty');
 at=135000;fill(30);model.tick(at);assert.equal(rolls,1);assert.equal(model.incident,null,'.02 is excluded');
 model.tick(++at);assert.equal(rolls,1);
-at=180000;value=.019999;const state=JSON.stringify(specimens);model.tick(at);assert.equal(rolls,4,'one chance and two position draws');
-assert.equal(model.actors.length,4);assert.equal(model.start(at),false);assert.equal(rolls,4);
+at=180000;value=.019999;const state=JSON.stringify(specimens);let disputeDraw=0;model.tick(at,()=>{rolls++;return disputeDraw++===0?value:.5;});assert.equal(rolls,5,'one chance, funeral rejection and two position draws');
+assert.equal(model.actors.length,4);assert.equal(model.start(at),false);assert.equal(rolls,5);
 assert(model.actors.filter(a=>a.side==='green').every(a=>a.x<model.actors.find(a=>a.side==='red').x));
 for(const age of [0,1500,2999]){model.advance(at+age);assert(model.actors.every(a=>a.state==='approach'));}
 model.advance(at+3000);assert.deepEqual(cues,['arrival','battle']);model.advance(at+6999);assert.deepEqual(cues,['arrival','battle']);
