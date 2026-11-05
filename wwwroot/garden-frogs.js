@@ -12,12 +12,7 @@
     return ()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/4294967296);
   }
   const clampPoint=(x,y)=>({x:Math.max(config.padding,Math.min(width-config.padding,x)),y:Math.max(config.padding,Math.min(height-config.padding,y))});
-  function waterVisible(puddle,at) {
-    if(!puddle || !['x','y','createdAt','lastRefreshedAt','size','maxSize'].every(k=>Number.isFinite(puddle[k]))
-      || puddle.createdAt>at || puddle.lastRefreshedAt>at || puddle.x<0 || puddle.x>width || puddle.y<0 || puddle.y>height) return null;
-    const state=ecology.puddleVisualState(puddle,at);
-    return Number.isFinite(state.size)&&state.size>0&&Number.isFinite(state.opacity)&&state.opacity>0?state:null;
-  }
+  const waterVisible=ecology.visiblePuddleState;
   function usableWater(puddle,at) {
     const state=waterVisible(puddle,at);
     return Boolean(state&&state.size>=config.minWaterSize&&state.opacity>=config.minWaterOpacity);

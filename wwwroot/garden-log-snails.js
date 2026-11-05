@@ -4,7 +4,7 @@
   const common=typeof module!=='undefined'&&module.exports;
   const core=common?require('./garden-core.js'):window.PacketGardenCore;
   const ecologyCore=common?require('./garden-ecology.js'):window.PacketGardenEcology;
-  const config=Object.freeze({checkEveryMs:45000,chance:.25,maxActive:2,lifetimeMs:75000,departureMs:3000,
+  const config=Object.freeze({checkEveryMs:45000,chance:.25,wetChance:.50,wetRadius:100,minWaterSize:8,minWaterOpacity:.12,maxActive:2,lifetimeMs:75000,departureMs:3000,
     maxTickGapMs:1500,maxGrazes:2,grazeAges:Object.freeze([25000,53000]),radiusCells:1.5,padding:12});
   const ring=Object.freeze([[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]].map(Object.freeze));
   const walks=Object.freeze([[2000,22000],[28000,50000],[56000,72000]].map(Object.freeze));
@@ -41,7 +41,7 @@
   }
   function createModel({now=Date.now,random=seededRandom(),getTerrain=()=>null,getEcology=()=>null,
     getReducedMotion=()=>false,onChange=()=>{}}={}){
-    const snails=[],acknowledged=new WeakSet();let nextId=0,lastTickAt=now(),nextCheckAt=now()+config.checkEveryMs,hidden=false;
+    const snails=[],acknowledged=new WeakSet();let nextId=0,lastTickAt=now(),nextCheckAt=now()+config.checkEveryMs,hidden=false,lastCheck=null,generation=0;
     const counts={checks:0,spawned:0,removed:0,attempts:0,grazed:0,skipped:0};
     const notify=(kind,item,reason)=>onChange({kind,item,reason});
     function eligibleLog(log,at){
@@ -53,10 +53,24 @@
         &&terrain?.byCell.get(log.cell)===log&&terrain.logs.includes(log));
     }
     const eligibleLogs=(at=now(),simulatedOnly=false)=>(getTerrain()?.logs??[]).filter(log=>eligibleLog(log,at)&&(!simulatedOnly||log.simulated));
-    function validSource(snail,at){const t=snail.source,log=t?.log;return Boolean(log&&['id','cell','column','row','createdAt','expiresAt'].every(k=>t[k]===log[k])&&eligibleLog(log,at));}
+    const identityKeys=['id','cell','column','row','createdAt','expiresAt'];
+    const capture=log=>({log,...Object.fromEntries(identityKeys.map(k=>[k,log[k]]))});
+    function exactSource(t,at){const log=t?.log;return Boolean(log&&identityKeys.every(k=>t[k]===log[k])&&eligibleLog(log,at));}
+    function validSource(snail,at){return exactSource(snail.source,at);}
+    function wetPuddle(p,log,at){
+      if(!p||!getEcology()?.puddles?.includes(p)||p.createdAt>p.lastRefreshedAt||p.size<0||p.maxSize<0)return false;
+      const state=ecologyCore.visiblePuddleState(p,at);
+      return Boolean(state&&state.size>=config.minWaterSize&&state.opacity>=config.minWaterOpacity
+        &&Math.hypot(p.x-(log.column+.5)*core.dimensions.cellSize,p.y-(log.row+.5)*core.dimensions.cellSize)<=config.wetRadius);
+    }
+    function wetness(log,at=now()){
+      if(!eligibleLog(log,at))return {wet:false,reason:'invalid-log',chance:config.chance};
+      const puddle=(getEcology()?.puddles??[]).find(p=>wetPuddle(p,log,at));
+      return {wet:Boolean(puddle),puddle,reason:puddle?'nearby-visible-water':'no-nearby-qualifying-water',chance:puddle?config.wetChance:config.chance};
+    }
     const release=snail=>{snail.source=null;snail.grazes.fill(null);};
     function remove(snail,reason){const index=snails.indexOf(snail);if(index<0)return false;snails.splice(index,1);release(snail);counts.removed++;notify('log-snail-removed',snail,reason);return true;}
-    function clear(at=now(),reason='cleared'){while(snails.length)remove(snails.at(-1),reason);lastTickAt=at;nextCheckAt=at+config.checkEveryMs;}
+    function clear(at=now(),reason='cleared'){generation++;lastCheck=null;while(snails.length)remove(snails.at(-1),reason);lastTickAt=at;nextCheckAt=at+config.checkEveryMs;}
     function safeClock(at){if(at<lastTickAt||at-lastTickAt>config.maxTickGapMs){clear(at,'suspended');return false;}return true;}
     function depart(snail,at,reason){
       if(snail.leaveAt!==null)return;
@@ -70,13 +84,19 @@
         &&Math.hypot(column-origin.column,row-origin.row)<=config.radiusCells
         &&ecologyCore.grassVisualState(p,at).stage!=='expired';
     }
-    function spawn(at=now(),simulatedOnly=false,candidates=eligibleLogs(at,simulatedOnly)){
-      if(hidden||snails.length>=config.maxActive||!candidates.length)return null;
-      const log=candidates[Math.floor(random()*candidates.length)];if(!eligibleLog(log,at)||simulatedOnly&&!log.simulated)return null;
+    function selectLog(at,simulatedOnly,draw){
+      const candidates=eligibleLogs(at,simulatedOnly).map(capture);if(!candidates.length)return null;
+      const roll=draw();return Number.isFinite(roll)&&roll>=0&&roll<1?candidates[Math.floor(roll*candidates.length)]:null;
+    }
+    function spawn(at=now(),simulatedOnly=false,target=null,draw=random,water=null){
+      if(hidden||snails.length>=config.maxActive)return null;
+      const originalGeneration=generation;
+      target??=selectLog(at,simulatedOnly,draw);
+      const log=target?.log;if(!exactSource(target,at)||simulatedOnly&&!log.simulated)return null;
       const origin={column:log.column,row:log.row},valid=ring.map(([dx,dy],index)=>({index,column:log.column+dx,row:log.row+dy}))
         .filter(p=>p.column>=0&&p.column<32&&p.row>=0&&p.row<20);
-      let index=valid[Math.floor(random()*valid.length)]?.index;if(index===undefined)return null;
-      let direction=random()<.5?-1:1;const points=[];
+      let index=valid[Math.floor(draw()*valid.length)]?.index;if(index===undefined)return null;
+      let direction=draw()<.5?-1:1;const points=[];
       for(let i=0;i<4;i++){
         const p=valid.find(p=>p.index===index);points.push({x:(p.column+.5)*30,y:(p.row+.5)*30,column:p.column,row:p.row});
         let next=(index+direction+8)%8;if(!valid.some(p=>p.index===next)){direction=-direction;next=(index+direction+8)%8;}
@@ -88,10 +108,21 @@
         return grassEligible(patch,p.column,p.row,at,origin)?{patch,column:p.column,row:p.row}:null;
       });
       const snail={id:++nextId,type:'log-snail',source:{log,id:log.id,cell:log.cell,column:log.column,row:log.row,createdAt:log.createdAt,expiresAt:log.expiresAt},
-        origin,points,grazes,nextGraze:0,attempts:0,grazed:0,nibbledAt:null,variant:Math.min(2,Math.floor(random()*3)),
+        origin,points,grazes,nextGraze:0,attempts:0,grazed:0,nibbledAt:null,variant:Math.min(2,Math.floor(draw()*3)),
         heading:Math.atan2(points[1].y-points[0].y,points[1].x-points[0].x),direction:Math.sign(points[1].x-points[0].x)||1,
         createdAt:at,expiresAt:at+config.lifetimeMs,leaveAt:null,leaveFrom:null,leaveAlpha:null,simulated:simulatedOnly};
+      // Route RNG may invoke observers in deterministic fixtures. Never substitute a replacement log or stale water.
+      if(hidden||generation!==originalGeneration||snails.length>=config.maxActive||!exactSource(target,at)||water&&!wetPuddle(water,log,at))return null;
       snails.push(snail);counts.spawned++;notify('log-snail-added',snail,simulatedOnly?'simulated':'log-wildlife');return snail;
+    }
+    function check(at,simulatedOnly=false,draw=random){
+      if(hidden||snails.length>=config.maxActive||!eligibleLogs(at,simulatedOnly).length)return null;
+      counts.checks++;const originalGeneration=generation,target=selectLog(at,simulatedOnly,draw);
+      if(generation!==originalGeneration||!exactSource(target,at)){lastCheck=Object.freeze({at,chance:null,reason:'invalid-selected-log',outcome:'skipped'});return null;}
+      const water=wetness(target.log,at),roll=draw();
+      const snail=generation===originalGeneration&&Number.isFinite(roll)&&roll>=0&&roll<water.chance?spawn(at,simulatedOnly,target,draw,water.puddle):null;
+      lastCheck=Object.freeze({at,logId:target.id,cell:target.cell,wet:water.wet,chance:water.chance,reason:water.reason,
+        roll:Number.isFinite(roll)?roll:null,outcome:snail?'spawned':'skipped'});return snail;
     }
     function graze(snail,at){
       if(!snails.includes(snail)||snail.leaveAt!==null||!validSource(snail,at))return;
@@ -119,12 +150,16 @@
       if(hidden||!safeClock(at))return;lastTickAt=at;advance(at);
       for(const snail of [...snails])graze(snail,at);
       if(at<nextCheckAt)return;nextCheckAt=at+config.checkEveryMs;
-      if(snails.length>=config.maxActive)return;const candidates=eligibleLogs(at);if(!candidates.length)return;
-      counts.checks++;if(random()<config.chance)spawn(at,false,candidates);
+      check(at);
     }
     function clickable(snail,at){return !hidden&&at>=lastTickAt&&at-lastTickAt<=config.maxTickGapMs&&snails.includes(snail)
       &&at>=snail.createdAt&&at<snail.expiresAt&&(snail.leaveAt!==null||validSource(snail,at))&&visualState(snail,at).alpha>0;}
-    return{snails,counts,eligibleLogs,sourceRemoved,tick,advance,clear,
+    return{snails,counts,eligibleLogs,wetness,sourceRemoved,tick,advance,clear,
+      get lastCheck(){return lastCheck;},
+      checkSimulated(at=now(),draw=random){
+        if(!getTerrain()?.logs.length||!getTerrain().logs.every(log=>log.simulated)||!safeClock(at))return null;
+        nextCheckAt=at+config.checkEveryMs;return check(at,true,draw);
+      },
       setHidden(value,at=now()){hidden=value;clear(at,value?'hidden':'resumed');},
       spawnSimulated(at=now()){if(!safeClock(at))lastTickAt=at;return spawn(at,true);},
       hitAt(point,at=now(),reduced=false){if(!point||!Number.isFinite(point.x)||!Number.isFinite(point.y))return null;

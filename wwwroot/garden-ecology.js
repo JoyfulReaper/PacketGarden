@@ -93,6 +93,14 @@
       opacity: 0.38 * wetness
     };
   }
+  // Shared visibility validation, extracted unchanged from puddle-dwelling frogs.
+  // Callers still own collection membership and their particular wetness thresholds.
+  function visiblePuddleState(puddle,at) {
+    if(!puddle || !['x','y','createdAt','lastRefreshedAt','size','maxSize'].every(k=>Number.isFinite(puddle[k]))
+      || puddle.createdAt>at || puddle.lastRefreshedAt>at || puddle.x<0 || puddle.x>gardenWidth || puddle.y<0 || puddle.y>gardenHeight)return null;
+    const state=puddleVisualState(puddle,at);
+    return Number.isFinite(state.size)&&state.size>0&&Number.isFinite(state.opacity)&&state.opacity>0?state:null;
+  }
 
 
   function createEcologyModel({ now: clock = Date.now, random: defaultRandom = Math.random, onChange = () => {}, weather = 'quiet', isCellOccupied = () => false } = {}) {
@@ -447,7 +455,7 @@
       tick(at = clock(), { hidden = false } = {}) { tickGrass(at, hidden); return tickPuddles(at, defaultRandom, hidden); }
     };
   }
-  const api = { grassConfig, puddleConfig, puddleFormationChances, grassVisualState, puddleVisualState,
+  const api = { grassConfig, puddleConfig, puddleFormationChances, grassVisualState, puddleVisualState, visiblePuddleState,
     nextGrassVisualChangeAt, createEcologyModel };
   if (typeof module !== 'undefined' && module.exports) module.exports = api; else window.PacketGardenEcology = api;
 })();

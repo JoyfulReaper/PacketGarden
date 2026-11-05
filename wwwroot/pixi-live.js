@@ -1002,6 +1002,7 @@
     let lastTick = null, nextLogicalAt = 0, lastHud = -Infinity, seconds = 0;
     listen(document.querySelector('#reset'),'click', () => { measurements?.reset(); lastTick = null; lastHud = -Infinity; });
     function updateHud() {
+      snailDiagnostics?.refresh();
       stillbloomDiagnostics?.refresh();
       const influenceStatus=document.querySelector('#traffic-bloom-status');if(influenceStatus){
         const state=model.influences.snapshot();

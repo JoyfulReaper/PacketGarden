@@ -13,7 +13,7 @@ function fixture({column=16,row=10,remaining=3600000,grass=true,logs=1}={}){
   return{garden,ecology,snails,changes,removed,get at(){return at},step,jump(ms){at+=ms;},setDraw(fn){draw=fn;},afterGrass(fn){afterGrass=fn;},
     spawn(fn=()=>0){const before=draw;draw=fn;const snail=snails.spawnSimulated(at);draw=before;return snail;}};
 }
-assert.deepEqual(C,{checkEveryMs:45000,chance:.25,maxActive:2,lifetimeMs:75000,departureMs:3000,maxTickGapMs:1500,maxGrazes:2,grazeAges:[25000,53000],radiusCells:1.5,padding:12});
+assert.deepEqual(C,{checkEveryMs:45000,chance:.25,wetChance:.50,wetRadius:100,minWaterSize:8,minWaterOpacity:.12,maxActive:2,lifetimeMs:75000,departureMs:3000,maxTickGapMs:1500,maxGrazes:2,grazeAges:[25000,53000],radiusCells:1.5,padding:12});
 assert.equal(T.logSnailMessage,'The snail continues being a snail. +0 points');assert.equal(T.messages.snail,'You collected a snail. It seems annoyed. +0 points');
 assert(!Core.species.includes('log-snail'));assert(!A.curiosityTypes.includes('log-snail'));assert(!Object.hasOwn(A.dropTypes,'log-snail'));
 for(const roll of [0,.249999999,.25,.999999]){

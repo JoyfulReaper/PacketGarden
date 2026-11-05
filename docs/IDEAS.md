@@ -1025,7 +1025,7 @@ See [lifecycle, screenshots and measurements](WIZARD-GNOME.md).
 
 ### Log-dwelling garden snails (implemented)
 
-Actual fallen logs now host an independent, bounded wildlife visit: **45s / 25% /
+Actual fallen logs now host an independent, bounded wildlife visit: **45s / dry 25%, wet 50% /
 one arrival per check / two active / 75s**. These are not first-seen collectible
 snails. Four precomputed neighboring waypoints provide slow crawling, pauses,
 directional facing and subtle cached body motion. Each visit selects at most
@@ -1042,7 +1042,13 @@ remove or repeatedly announce it. Existing collectible-snail messages, frog/
 gnome priority, mutations, drops, garden activity and Score: 0 are preserved.
 Three shell palettes with crawl/nibble poses share the existing ambient atlas.
 Only `/pixi-live.html` has source/grass/spawn/graze/removal/motion/cancellation
-fixtures. See [the native-scale review and bounds](PIXI-LIVE.md#log-dwelling-garden-snails-2026-10-29).
+fixtures. Rain responsiveness is now implemented through actual ecology water:
+one uniformly selected log gains the 50% chance only when a current visible puddle
+has size ≥8, opacity ≥0.12 and lies within 100 logical pixels. Water can qualify
+while draining after severe weather ends. There is no rain-memory timer or
+weather-label shortcut; when water drains, only future appearance odds return to
+25%. Existing snails keep their routes and grazing. See
+[the rain-response review and bounds](PIXI-LIVE.md#rain-responsive-log-snails-2026-11-05).
 
 Longer-lived terrain/history ideas from the vision include:
 

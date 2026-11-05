@@ -289,7 +289,7 @@ underpants attempt; the leaf is a noncollectible prop. Reduced motion and the
 existing arrival sound settings apply. See [funeral screenshots and lifecycle](docs/GNOME-FUNERAL.md).
 
 **Log-dwelling snails** are separate, noncollectible wildlife. With an actual
-living fallen log, an independent **25%** check every **45s** can admit one
+living fallen log, an independent check every **45s** can admit one
 visitor, capped at **two**, for **75s**. They crawl slowly along four preplanned
 points, pause and may eat two originally selected nearby grass patches through
 `removeGrassCell()`. Missing/replaced patches consume their attempt; ordinary
@@ -297,7 +297,11 @@ ecology alone regrows grass. Losing the exact source log—including to campfire
 starts a short fade and disables grazing. Hiding or clock gaps cancel without
 replay. Their first click says **The snail continues being a snail. +0 points**;
 later clicks still consume the hit. The existing collectible snail and its
-message remain unchanged. See [wildlife captures, ownership and costs](docs/PIXI-LIVE.md#log-dwelling-garden-snails-2026-10-29).
+message remain unchanged. The selected log has a **25% dry** or **50% wet** chance:
+current visible puddle water must have size ≥8 and opacity ≥0.12 within 100 logical
+pixels of that log. Draining water can still qualify after the weather clears;
+drying never cancels an existing snail. No weather label or traffic event supplies
+wetness. See [rain response, captures and costs](docs/PIXI-LIVE.md#rain-responsive-log-snails-2026-11-05).
 
 Sound is **Off** initially, with volume at **12%**. An explicit Sound On gesture
 enables the existing local Web Audio implementation. Growth/collection cues,

@@ -4,7 +4,8 @@ async function run(){
   const assert=require('node:assert/strict'),http=require('node:http'),fs=require('node:fs/promises'),path=require('node:path'),{chromium}=require('playwright');
   const root=path.resolve(__dirname,'..'),assets=path.join(root,'wwwroot'),out=path.join(root,'artifacts/log-snails');await fs.mkdir(out,{recursive:true});
   const capture=`{
-    const f=window.__snail={apps:0,streams:0,bakes:[],contexts:[],geometry:0,rolls:[],rngCalls:0,reduced:false,grassRemoved:[]};
+    const f=window.__snail={apps:0,streams:0,bakes:[],contexts:[],geometry:0,rolls:[],rngCalls:0,reduced:false,grassRemoved:[],waterReads:0};
+    const readWater=PacketGardenEcology.visiblePuddleState;PacketGardenEcology.visiblePuddleState=(...a)=>{f.waterReads++;return readWater(...a);};
     const Source=EventSource;window.EventSource=class extends Source{constructor(...args){super(...args);f.streams++;}};
     for(const [global,key,method] of [['PacketGardenCore','garden','createGardenModel'],['PacketGardenPixiLiveCore','model','createModel'],
       ['PacketGardenEcology','ecology','createEcologyModel'],['PacketGardenPixiEcology','ground','createEcologyView'],
@@ -55,7 +56,7 @@ async function run(){
       },{night,reduced,grass,full});
       const spawn=async(variant=0,second=false)=>page.evaluate(({variant,second})=>{const f=__snail;f.rolls=[0,second?.25:0,.75,variant/3+.01];const s=f.snails.spawnSimulated();if(!s)throw Error('Spawn rejected');if(!second)f.focus=s;f.snailView.animate(Date.now());f.app.render();return s.id;},{variant,second});
       const step=ms=>page.evaluate(ms=>{const f=__snail,end=Date.now()+ms;while(Date.now()<end){__snailNow=Math.min(end,__snailNow+250);f.model.tick(Date.now());f.snails.tick(Date.now());f.gnomes.tick(Date.now(),()=>.99);f.gnomeView.animate(Date.now());f.snails.advance(Date.now());f.snailView.animate(Date.now());f.ground.tick(Date.now());f.ui.tick(Date.now());}f.app.render();},ms);
-      const shot=async scene=>{const state=await page.evaluate(()=>{const f=__snail,s=f.focus;return{active:f.snails.snails.length,views:f.snailView.views.size,grass:f.ecology.grassCells.length,beforeGrass:f.beforeGrass,
+      const shot=async scene=>{await page.evaluate(()=>__snail.app.render());const state=await page.evaluate(()=>{const f=__snail,s=f.focus;return{active:f.snails.snails.length,views:f.snailView.views.size,grass:f.ecology.grassCells.length,beforeGrass:f.beforeGrass,
         attempts:s.attempts,grazed:s.grazed,departing:s.leaveAt!==null,sourceReleased:s.source===null,frame:PacketGardenLogSnails.visualState(s,Date.now(),f.reduced).frame,
         countsStable:JSON.stringify(f.model.counts)===f.beforeCounts,recentStable:JSON.stringify(f.model.recentEvents)===f.beforeRecent,score:document.querySelector('#garden-score').textContent};});
         assert(state.countsStable&&state.recentStable);assert.equal(state.score,'Score: 0');assert(state.attempts<=2&&state.grazed<=2);await page.locator('#view').screenshot({path:path.join(out,`${name}-${scene}.png`)});report.scenes.push({page:name,scene,...state});};
@@ -71,6 +72,45 @@ async function run(){
       await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{const el=document.querySelector('#view');el.style.width='';el.style.height='';});
       await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await seed();await spawn();await step(12000);await page.locator('#view').scrollIntoViewIfNeeded();await page.screenshot({path:path.join(out,`${name}-mobile.png`)});
       await page.setViewportSize({width:1280,height:960});await page.evaluate(()=>{const el=document.querySelector('#view');el.style.width='960px';el.style.height='600px';});await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      // Scheduled checks select the log first, then use that log's current local water.
+      const water=async({distance=50,size=20,maxSize=size,opacity=.38,removed=false}={})=>page.evaluate(options=>{
+        const f=__snail,end=Date.now()+45000,elapsed=30000+480000*(1-options.opacity/.38);
+        f.ecology.seed({grassCells:f.ecology.grassCells,puddles:[{x:(f.log.column+.5)*30+options.distance,y:(f.log.row+.5)*30,
+          size:options.size,maxSize:options.maxSize,seed:.719,createdAt:end-elapsed-1000000,lastRefreshedAt:end-elapsed,simulated:true}]});
+        if(options.removed)f.ecology.clearPuddles();
+      },{distance,size,maxSize,opacity,removed});
+      for(const wet of [false,true])for(const roll of [0,.249999,.25,.499999,.5]){
+        await seed();if(wet)await water();await page.evaluate(roll=>__snail.rolls=[0,roll,0,.75,0],roll);
+        await step(44999);assert.equal(await page.evaluate(()=>__snail.snails.snails.length),0);await step(1);
+        const check=await page.evaluate(()=>({last:__snail.snails.lastCheck,active:__snail.snails.snails.length}));
+        assert.equal(check.last.chance,wet?.5:.25);assert.equal(check.active,roll<(wet?.5:.25)?1:0);
+      }
+      for(const [options,wet] of [[{distance:100},true],[{distance:100.001},false],[{size:8},true],[{size:7.999},false],[{size:0,maxSize:20},true],
+        [{opacity:.120001},true],[{opacity:.119999},false],[{opacity:0},false],[{removed:true},false]]){
+        await seed();await water(options);await page.evaluate(()=>__snail.rolls=[0,.375,0,.75,0]);await step(45000);
+        assert.equal(await page.evaluate(()=>__snail.snails.lastCheck.wet),wet);
+      }
+      await seed();await page.evaluate(()=>__snail.rolls=[0,0,0,.75,0]);await step(45000);
+      await page.evaluate(()=>{__snail.focus=__snail.snails.snails[0];});await step(1000);await shot('dry-log');
+      await seed();await water();await page.evaluate(()=>__snail.rolls=[0,.375,0,.75,0]);await step(45000);
+      await page.evaluate(()=>{__snail.focus=__snail.snails.snails[0];__snail.ecology.updateWeatherEligibility('quiet',Date.now());});await step(1000);await shot('wet-log');
+      const wetCpu=await page.evaluate(()=>{
+        const f=__snail,reads=f.waterReads,geometry=f.geometry,start=performance.now();for(let i=0;i<1000;i++)f.snails.wetness(f.log,Date.now());
+        const wetnessMs=(performance.now()-start)/1000,after=f.waterReads,tickStart=performance.now();for(let i=0;i<2000;i++)f.snails.tick(Date.now());
+        const logicalTickMs=(performance.now()-tickStart)/2000;
+        for(let i=0;i<500;i++){f.snails.advance(Date.now());f.snailView.animate(Date.now());}
+        if(f.waterReads!==after||f.geometry!==geometry)throw Error('Per-frame or unscheduled water scanning/geometry');
+        return {wetnessMs,logicalTickMs,measuredWaterReads:after-reads,unscheduledWaterReads:f.waterReads-after,sprites:f.snailView.views.size};
+      });report.cpu.push({page:name,wetness:wetCpu});
+      await page.evaluate(()=>{const f=__snail,p=f.ecology.puddles[0];p.createdAt=Date.now()-400000;p.lastRefreshedAt=Date.now()-250000;f.ground.tick(Date.now());});await shot('draining-water');
+      await spawn(1,true);await step(1000);await shot('two-wet-log');
+      await page.evaluate(()=>{const f=__snail;f.light.setMode('night');f.light.tick(Date.now(),{force:true});f.surface.apply(f.light.state,0);});await shot('wet-night');
+      await page.evaluate(()=>{__snail.reduced=true;__snail.snailView.animate(Date.now());});await shot('wet-reduced-motion');
+      await page.setViewportSize({width:390,height:844});await page.evaluate(()=>{const el=document.querySelector('#view');el.style.width='';el.style.height='';});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await page.locator('#view').scrollIntoViewIfNeeded();
+      await page.evaluate(()=>__snail.app.render());await page.screenshot({path:path.join(out,`${name}-wet-mobile.png`)});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await page.setViewportSize({width:1280,height:960});await page.evaluate(()=>{const el=document.querySelector('#view');el.style.width='960px';el.style.height='600px';});
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
       // Real canvas input, one acknowledgment and no collection or message extension.
       await seed();await spawn();await step(1000);await page.locator('#view').scrollIntoViewIfNeeded();
       const click=async()=>{const point=await page.evaluate(()=>{const f=__snail,p=PacketGardenLogSnails.visualState(f.focus,Date.now(),f.reduced),r=f.app.canvas.getBoundingClientRect();return{x:r.left+(f.view.root.position.x+p.x*f.view.root.scale.x)*r.width/f.app.renderer.screen.width,y:r.top+(f.view.root.position.y+p.y*f.view.root.scale.y)*r.height/f.app.renderer.screen.height};});await page.mouse.click(point.x,point.y);};
@@ -123,6 +163,13 @@ async function run(){
       });assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.contextsAfter,resources.contexts);
       assert.equal(resources.frames,23);assert.deepEqual(resources.backing,[1472,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,844);assert.equal(resources.views,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
+        for(const [scenario,chance,active] of [['dry',.25,0],['wet',.5,1],['far',.25,0],['barely',.5,1],['drained',.25,0],['removed',.25,0],['mixed',.5,1],['removed-log',.5,0],['reduced',.5,1]]){
+          await page.locator('#snail-rain-scenario').selectOption(scenario);await page.locator('#seed-snail-rain').click();await page.locator('#check-snail-rain').click();
+          assert.equal(await page.evaluate(()=>__snail.snails.lastCheck.chance),chance,scenario);assert.equal(await page.evaluate(()=>__snail.snails.snails.length),active,scenario);
+        }
+        await page.locator('#snail-rain-scenario').selectOption('mixed');await page.locator('#seed-snail-rain').click();await page.locator('#snail-rain-log').selectOption('0.999999');await page.locator('#check-snail-rain').click();
+        assert.equal(await page.evaluate(()=>__snail.snails.lastCheck.chance),.25);assert.equal(await page.evaluate(()=>__snail.snails.snails.length),0);await page.locator('#snail-rain-log').selectOption('0');
+        await page.locator('#snail-rain-scenario').selectOption('hidden');await page.locator('#seed-snail-rain').click();await page.locator('#check-snail-rain').click();assert.equal(await page.evaluate(()=>__snail.snails.snails.length),0);
         await page.locator('#seed-log-snails').click();await page.locator('#seed-log-snail-grass').click();await page.locator('#spawn-log-snails-2').click();assert.equal(await page.evaluate(()=>__snail.snails.snails.length),2);
         await page.locator('#clear-log-snails').click();assert.equal(await page.evaluate(()=>__snail.snailView.views.size),0);
         await page.locator('#preview-log-snail-graze').click();await step(500);assert(await page.evaluate(()=>__snail.snails.snails[0].grazed===1));
@@ -133,7 +180,7 @@ async function run(){
       assert(await page.evaluate(()=>!__snail.snailView.views.size&&!__snail.snails.snails.length&&__snail.bakes.every(s=>s.destroyed)));await page.close();
     }
     assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'review.json'),JSON.stringify(report,null,2));
-    const scenes=['crawling','paused','grazing','second-graze','departure','departed','night','olive','russet','reduced-motion','no-grass','mobile'];
+    const scenes=['dry-log','wet-log','draining-water','two-wet-log','wet-night','wet-reduced-motion','wet-mobile','crawling','paused','grazing','second-graze','departure','departed','night','olive','russet','reduced-motion','no-grass','mobile'];
     await fs.writeFile(path.join(out,'index.html'),`<!doctype html><meta charset="utf-8"><title>Log-dwelling garden snails</title><style>body{font:16px system-ui;background:#182219;color:#eee;margin:24px}a{color:#e2d39b}img{max-width:none}figure{overflow:auto;margin:12px 0}summary{cursor:pointer;padding:12px}</style><h1>Log-dwelling garden snails</h1><p>Actual 960×600 garden captures; 390×844 mobile viewport. <a href="review.json">Timing, grazing and ownership</a></p>${['homepage','diagnostic'].map(name=>`<h2>${name}</h2>${scenes.map(scene=>`<details ${scene==='grazing'?'open':''}><summary>${scene}</summary><figure><img src="${name}-${scene}.png" alt="${scene}"></figure></details>`).join('')}`).join('')}`);
     console.log('PASS: real Pixi snail crawl/pause/graze/departure/night/mobile/reduced captures; exact ecology removals/stale skips, campfire/expiry/new-log identity, hidden/stall safety, real one-time clicks and unchanged collectible snail, diagnostics, 160 Sprite/visit cleanup cycles, no bakes/geometry/activity/SSE/score changes:',JSON.stringify(report));
   }finally{await browser?.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}

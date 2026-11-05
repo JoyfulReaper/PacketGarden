@@ -128,7 +128,8 @@ The starting tree was clean, fetched `origin/dev` matched, and no applicable
 `garden-log-snails.js` owns a separate renderer-neutral wildlife model, with
 independent seeded entropy that never consumes `Math.random` or garden/ecology/
 frog/gnome randomness. It uses the existing logical tick and animation calls:
-**45-second checks**, strict **roll < .25**, **one arrival per check**, **two
+**45-second checks**, strict **roll < .25** when dry (**< .50** with qualifying
+local water; see [the rain-response update](#rain-responsive-log-snails-2026-11-05)), **one arrival per check**, **two
 active visitors** and a **75-second lifetime**. No minimum specimen count is
 required. Checks without a valid log or at capacity consume no random draw.
 Deadlines advance once, without replaying missed opportunities.
@@ -5534,3 +5535,99 @@ Verification and actual-scale screenshots:
 This verifies Chrome on this machine and deterministic backend/SSE fixtures.
 A live collector soak, other browsers/devices, subjective long-term presentation
 and GPU/heap profiling remain outside these checks.
+
+
+## Rain-Responsive Log Snails (2026-11-05)
+
+The existing log wildlife now uses local authoritative water when choosing its
+appearance probability. Each eligible 45-second check uniformly selects one real
+fallen log first, then makes exactly one chance roll: **25% dry, 50% wet**. A failed
+choice/roll never substitutes another log, retries, queues a visit or catches up.
+The two-snail cap, 75-second lifetime, four positions, two original grass targets,
+click acknowledgment, reduced motion and all existing snail artwork are retained.
+The snail's own injectable RNG is still independent of garden and wildlife RNGs.
+Selection now precedes chance; dry probability and uniform log selection are
+preserved, while exact historical seeded draw traces can differ.
+
+A log is wet only if a puddle still in ecology.puddles has finite coordinates and
+timestamps, creation no later than refresh, refresh no later than the check,
+nonnegative stored sizes, and current puddleVisualState() **size ≥8, opacity ≥0.12**.
+Distance is Euclidean, at most **100 logical pixels**, measured from the grid cell
+center ((column + .5) ×30, (row + .5) ×30) to the puddle center. Covering the log is
+unnecessary. Far-away water never makes all logs wet.
+
+The small visiblePuddleState() validator was extracted unchanged from frogs into
+garden-ecology.js; frogs retain the same API, visibility semantics and behavior.
+Snails add their own current collection membership, local distance and threshold
+checks. Weather labels, traffic and new timestamps do not enter the decision.
+Visible draining water therefore still raises the chance after weather clears.
+Below either threshold, the next check returns to 25%. Active snails hold no water
+reference and continue visiting when it dries or is removed.
+
+Before RNG, candidate log snapshots capture the object, ID, cell, column, row,
+createdAt and expiresAt. The selected snapshot is validated again after the
+chance and route draws, including authoritative list/map occupancy. A removed or
+replaced source consumes the attempt. A successful wet attempt also revalidates
+the original water object before creating its visit. Reentrant clear/hide/resume
+invalidates pending work. Existing hidden, >1500ms logical gaps, backwards clocks,
+source departure, garden clear/reseed and teardown cleanup remain in force.
+
+Only scheduled checks scan water (plus immediate success validation), at most the
+existing eight puddles for the selected log. The ordinary 250ms tick and render
+updates add no distance scan. No new scheduler, weather state, water mutation,
+grass influence, provenance, activity, SSE frame, sound, score or collectible is
+introduced. Nine existing snail frames in the ambient atlas are reused; atlas
+sizes and sources are unchanged. There are still zero idle / at most two active
+snail Sprites and no additional persistent Pixi objects. Latest-check diagnostics
+retain only scalar data, without log or puddle references.
+
+The existing /pixi-live.html controls now include dry, nearby wet, far, barely wet,
+drained, removed water, two logs with only one wet, removed log, hidden/stalled and
+reduced-motion scenarios. They create real simulated terrain through blackthorn
+expiry and real ecology puddles. A single simulated-check control selects first
+or last log and offers rolls 0, 0.375 (wet only), or 0.5 (both fail). It displays the
+chosen probability, wetness reason and outcome. The explicit fixture check uses
+the same selection/validation/roll path and never fabricates SSE or TCPNoise.
+Homepage controls remain absent.
+
+Deterministic coverage:
+
+- rain-log-snails.cjs covers exact chance intervals; inclusive distance/size
+  boundaries; opacity thresholds; malformed, drained and detached puddles; quiet
+  weather with residual water; no-log exclusion; uniform mixed-log choices;
+  reentrant selected-log replacement/removal/clear/hide and stale-water attempts;
+  one consumed attempt, cap, source departure and no replay.
+- Existing log-snails.cjs retains original lifetime, four-position routes, grass
+  identity/two-graze limits, clicks, collectible coexistence, clock and teardown
+  assertions. Frog, puddle and weather suites retain their original expectations.
+- log-snails-browser.cjs exercises scheduled chance thresholds and diagnostic
+  scenarios on both real pages, source ownership, native clicks, two grazing
+  slots, Score: 0, one EventSource, unchanged activity, mobile layout, hidden and
+  stalled cleanup. Forty two-visit cleanup cycles per page release all **160**
+  source/grass records and Sprites with no extra Graphics contexts or atlas bakes.
+
+Native Chrome 156 measurements and screenshots are saved locally (ignored) in
+artifacts/log-snails/review.json and artifacts/log-snails/index.html. The measured
+single-puddle wetness lookup was about **0.0012–0.0020ms** and a non-due logical tick with
+one visitor about **0.0006–0.0007ms**. Five hundred render/advance calls and 2,000
+non-due ticks caused **zero** additional water reads. Two existing snail views
+still use the same nine frames; the ambient atlas remains 23 frames / 1472×64
+backing and the specimen atlas 844 frames. These CPU microbenchmarks are sensitive
+to timer resolution and do not establish GPU or long-run heap behavior.
+
+Actual-scale 960×600 captures (both homepage and diagnostic), plus 390×844 mobile:
+
+- [Dry log with snail](../artifacts/log-snails/homepage-dry-log.png)
+- [Wet log and nearby water](../artifacts/log-snails/homepage-wet-log.png)
+- [Draining water](../artifacts/log-snails/homepage-draining-water.png)
+- [Two snails](../artifacts/log-snails/homepage-two-wet-log.png)
+- [Night](../artifacts/log-snails/homepage-wet-night.png)
+- [Mobile](../artifacts/log-snails/homepage-wet-mobile.png)
+- [Reduced motion](../artifacts/log-snails/homepage-wet-reduced-motion.png)
+
+Final verification: **74 Node suites passed** (25 opt-in suites skipped by that
+runner), and **all 31 Chrome jobs passed** through npm run test:chrome.
+Debug and Release builds, backend checks and actual ASP.NET polling-to-SSE
+integration passed. NuGet audit metadata remained unavailable (NU1900 warnings).
+No backend contract changed. Other browser/device/GPU combinations, a live NATS
+collector soak and long-run GPU/heap profiling remain unverified.
