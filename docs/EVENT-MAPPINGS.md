@@ -367,6 +367,26 @@ provenance, or persistence. Frog/snail/gnome water interactions remain future wo
 
 ## Ambient events
 
+### Traffic-fed blooms
+
+A valid, unpaused TCPNoise event still reconciles lifecycle, attempts normal
+placement and runs existing competition first. Only a rejected **flower** event
+with every real specimen/terrain cell occupied can attempt a secondary bloom.
+One separate RNG roll must be below **0.20**; a second independent draw from that
+feature's stream uniformly selects an eligible mature `flower`. A failed roll
+has no alternate behavior or retry. Selection never consumes placement, rarity,
+competition, mutation, drop or cosmetic randomness.
+
+The event's placement/drop accounting and single Recent activity entry retain
+their actual outcome. The selected flower does not represent the rejected
+connection: its original object, ID, position, vigor, creation time, provenance,
+variant and natural lifetime remain unchanged. Protected/special states,
+mutations, pending mutations and other temporary blooms are excluded. The
+secondary blossom lasts 12 seconds, with a 15-second global success cooldown and
+at most three active effects. No transport messages, fabricated activity,
+sounds, collectibles or score changes result. See [cleanup and development
+fixtures](PIXI-LIVE.md#traffic-fed-blooms-2026-11-05).
+
 The Gnome Incident and future wildlife/actor ideas are intentionally outside the
 network mapping table unless an incident is explicitly tied to trustworthy source
 data. They exist in a separate browser actor layer and do not consume specimen

@@ -121,7 +121,7 @@ async function run(){
           frames:f.cache.frames.size,backing:[f.cache.atlas.source.pixelWidth,f.cache.atlas.source.pixelHeight],sources:new Set([...f.cache.frames.values()].map(t=>t.source)).size,
           specimenFrames:f.view.snapshot().textures,views:f.snailView.views.size,accepted:f.model.counts.acceptedLive,recent:f.model.recentEvents.length,score:document.querySelector('#garden-score').textContent};
       });assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.contextsAfter,resources.contexts);
-      assert.equal(resources.frames,23);assert.deepEqual(resources.backing,[1472,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,841);assert.equal(resources.views,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
+      assert.equal(resources.frames,23);assert.deepEqual(resources.backing,[1472,64]);assert.equal(resources.sources,1);assert.equal(resources.specimenFrames,844);assert.equal(resources.views,0);assert.equal(resources.accepted,0);assert.equal(resources.recent,0);assert.equal(resources.score,'Score: 0');report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
         await page.locator('#seed-log-snails').click();await page.locator('#seed-log-snail-grass').click();await page.locator('#spawn-log-snails-2').click();assert.equal(await page.evaluate(()=>__snail.snails.snails.length),2);
         await page.locator('#clear-log-snails').click();assert.equal(await page.evaluate(()=>__snail.snailView.views.size),0);

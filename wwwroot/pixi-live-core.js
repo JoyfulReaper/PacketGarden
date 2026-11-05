@@ -7,6 +7,7 @@
   const blooms = typeof module !== 'undefined' && module.exports ? require('./pixi-broadleaf-blooms.js') : window.PacketGardenBroadleafBlooms;
   const vineBlooms = typeof module !== 'undefined' && module.exports ? require('./pixi-vine-blooms.js') : window.PacketGardenVineBlooms;
   const spores = typeof module !== 'undefined' && module.exports ? require('./pixi-wirefern-spores.js') : window.PacketGardenWirefernSpores;
+  const trafficBlooms = typeof module !== 'undefined' && module.exports ? require('./garden-traffic-blooms.js') : window.PacketGardenTrafficBlooms;
   const { dimensions, timings, species, eventSpecies, normalizeGarden, stageAt } = garden;
   const weatherLevels = Object.freeze({
     quiet: { count: 0, speed: 0, darkening: 0, length: 0, opacity: 0, drift: 0, slant: 2 },
@@ -59,11 +60,11 @@
       opacity: base.opacity, length: base.length, slant: base.slant,
       darkening: intensity === 0 ? 0 : base.darkening * (.5 + .5 * intensity) };
   }
-  function createModel(view, { now = Date.now, random = Math.random, competitionRandom, terrainRandom, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onTerrainChange = () => {}, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
-    let paused = false;
+  function createModel(view, { now = Date.now, random = Math.random, competitionRandom = garden.createCompetitionRandom(), influenceRandom, terrainRandom, bloomRandom = blooms.random, vineBloomRandom = vineBlooms.random, sporeRandom = spores.random, poppyRandom, onTerrainChange = () => {}, onPoppyActivated = () => {}, onAdded = () => {}, onLive = () => {}, onRemoved = () => {}, onActivity = () => {} } = {}) {
+    let paused = false, simulatedRejection = false;
     const recentEvents = [];
     const counts = { acceptedLive: 0, droppedSaturated: 0, lifecycleRemovals: 0, replacements: 0, pausedEvents: 0, heistRemovals: 0 };
-    const model = garden.createGardenModel({ now, random, competitionRandom, terrainRandom, onChange(change) {
+    const model = garden.createGardenModel({ now, random, competitionRandom:()=>simulatedRejection ? .999999 : competitionRandom(), terrainRandom, onChange(change) {
       const { kind, specimen, reason } = change;
       if(kind==='terrain-fungi'){view.fungalChange?.(change);return;}
       if(kind==='terrain-added'||kind==='terrain-removed'){view.terrainChange?.(change);onTerrainChange(change);return;}
@@ -76,9 +77,10 @@
         view.add(specimen, model.byCell);
         if (reason === 'replaced') counts.replacements++;
       } else if (kind === 'updated') view.update(specimen, model.byCell);
-      else if (kind === 'removed') { mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen,reason); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
+      else if (kind === 'removed') { influences.remove(specimen, reason); mutations.removed(specimen, reason); poppies.removed(specimen); view.remove(specimen, model.byCell); onRemoved(specimen,reason); if (reason === 'expired') counts.lifecycleRemovals++; if(reason==='gnome-heist')counts.heistRemovals++; }
       else if (kind === 'dropped') counts.droppedSaturated++;
     }});
+    const influences = trafficBlooms.createModel({garden:model,now,random:influenceRandom,onChange:change=>view.influenceChange?.(change)});
     const mutations = mutationCore.createMutationModel({ garden: model, now, random });
     const poppies = mutationCore.createPoppyModel({ garden: model, now, random: poppyRandom,
       onChange(specimen, at) { view.update(specimen, model.byCell); onPoppyActivated(specimen, at); } });
@@ -86,6 +88,7 @@
       model.tick(at);
       if (mutations.tick(at)) model.tick(at); // Publish the mutation stage on the existing specimen view.
       poppies.tick(at);
+      influences.tick(at);
     }
     function acceptEvent(raw) {
       const event = normalizeGarden(raw); if (!event) return { outcome: 'invalid', specimen: null };
@@ -94,6 +97,7 @@
       // Already normalized once; construct the safe provenance without retaining the raw frame.
       const result = model.addSpecimen(event.specimenType, event.vigor, at,
         { kind: 'tcpnoise', sensor: event.sensor, listenPort: event.listenPort, seenCount: event.seenCount });
+      if (!result) influences.consider(event,at);
       const outcome = result ? result.replaced ? 'replaced' : 'spawned' : 'dropped';
       const entry = uiCore.appendRecent(recentEvents, { kind: 'tcpnoise', ...event, receivedAt: at, outcome });
       onActivity(entry);
@@ -111,7 +115,28 @@
         try{model.tick(at);}finally{model.forceFungalFixture();}
         return model.terrain.logs[0]??null;
       },
-      isCellOccupied:model.isCellOccupied,competitionSnapshot:model.competitionSnapshot, counts, mutations, poppies, recentEvents, tick,
+      isCellOccupied:model.isCellOccupied,competitionSnapshot:model.competitionSnapshot, counts, mutations, poppies, influences, recentEvents, tick,
+      seedTrafficBlooms(full=true) {
+        const at=now(),cells=full?Array.from({length:640},(_,cell)=>cell):[333,337,341];
+        model.seed(cells.map(cell=>({type:'flower',vigor:cell%4,column:cell%32,row:Math.floor(cell/32),createdAt:at-65000,
+          origin:{kind:'simulated',eventType:'traffic-bloom-fixture'}})),at);
+      },
+      tryTrafficBloom(draw) {
+        // Local model event only: no SSE, activity, sound or accepted-live callback.
+        if(!model.specimens.length||!model.specimens.every(p=>p.origin?.kind==='simulated'&&p.origin.eventType==='traffic-bloom-fixture'))return null;
+        const at=now();tick(at);let result;
+        simulatedRejection=true;
+        try{result=model.addSpecimen('flower',3,at,{kind:'simulated',eventType:'traffic-bloom-fixture'});}finally{simulatedRejection=false;}
+        return result?null:influences.consider({specimenType:'flower'},at,draw);
+      },
+      replaceTrafficBloom(p) {
+        if(!model.specimens.includes(p)||!model.specimens.every(q=>q.origin?.kind==='simulated'&&q.origin.eventType==='traffic-bloom-fixture'))return null;
+        const replacement={type:'flower',vigor:p.vigor,column:p.column,row:p.row,createdAt:now()-65000,
+          origin:{kind:'simulated',eventType:'traffic-bloom-fixture'}};
+        // Reimport fixture state through authoritative removal/add notifications, retaining the target cell.
+        model.seed(model.specimens.map(q=>q===p?replacement:q),now());return replacement;
+      },
+      destroy(){influences.destroy();model.destroy();},
       clear: model.clear, remove: model.remove, addSpecimen:model.addSpecimen, acceptEvent, accept: raw => acceptEvent(raw).specimen,
       setPaused(value) { paused = value; },
       seedCompetition(mode='mixed',old=false){

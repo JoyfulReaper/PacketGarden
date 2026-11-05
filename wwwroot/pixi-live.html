@@ -5,12 +5,12 @@
   <title>PacketGarden · Pixi live soak</title>
   <link rel="stylesheet" href="pixi-stress.css">
   <link rel="stylesheet" href="garden-ui.css?v=specimen-preview-1">
-  <link rel="stylesheet" href="pixi-live.css?v=gnome-arrival-2">
+  <link rel="stylesheet" href="pixi-live.css?v=traffic-blooms-1">
   <script src="garden-audio.js?v=gnome-arrival-2" defer></script>
   <script src="vendor/pixi/pixi.min.js" defer></script>
   <script src="pixi-stress.js?v=canvas-retired-1" defer data-pixi-library></script>
   <script src="garden-log-fungi.js?v=log-fungi-1" defer></script>
-  <script src="garden-core.js?v=log-fungi-1" defer></script>
+  <script src="garden-core.js?v=traffic-blooms-1" defer></script>
   <script src="garden-stillbloom.js?v=fallen-logs-1" defer></script>
   <script src="garden-stillbloom-dev.js?v=pixi-lifecycle-1" defer></script>
   <script src="garden-lighting.js?v=light-toggle-1" defer></script>
@@ -40,9 +40,10 @@
   <script src="pixi-broadleaf-blooms.js?v=broadleaf-blooms-1" defer></script>
   <script src="pixi-vine-blooms.js?v=poppy-1" defer></script>
   <script src="pixi-wirefern-spores.js?v=wirefern-release-1" defer></script>
-  <script src="pixi-live-core.js?v=funeral-1" defer></script>
+  <script src="garden-traffic-blooms.js?v=traffic-blooms-1" defer></script>
+  <script src="pixi-live-core.js?v=traffic-blooms-1" defer></script>
   <script src="garden-visits.js?v=garden-visits-1" defer></script>
-  <script src="pixi-live.js?v=funeral-1" defer></script>
+  <script src="pixi-live.js?v=traffic-blooms-1" defer></script>
 </head>
 <body>
   <svg aria-hidden="true" style="position:absolute;width:0;height:0;pointer-events:none"><defs><filter id="garden-local-light" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix id="garden-light-matrix" type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 1 0"/></filter></defs></svg>
@@ -149,6 +150,22 @@
       <button id="trigger-overcrowding" type="button">Trigger overcrowding relief (simulated)</button>
       <button id="trigger-weed-harvest" type="button">Trigger weed harvest (simulated)</button>
       <button id="seed-heist" type="button">Seed mature mushrooms (simulated)</button>
+      <fieldset class="traffic-bloom-controls"><legend>Traffic-fed blooms (simulated)</legend>
+        <button id="seed-traffic-blooms" type="button">Seed full mature flower garden</button>
+        <button id="try-traffic-bloom" type="button">Try rejected flower event (20%)</button>
+        <button id="pass-traffic-bloom" type="button">Force influence success</button>
+        <button id="fail-traffic-bloom" type="button">Force influence failure</button>
+        <button id="preview-traffic-blooms" type="button">Preview bud, open and fading stages</button>
+        <button id="remove-traffic-bloom" type="button">Remove influenced flower</button>
+        <button id="replace-traffic-bloom" type="button">Replace influenced flower</button>
+        <button id="cap-traffic-blooms" type="button">Test three-bloom cap</button>
+        <button id="cooldown-traffic-blooms" type="button">Test global cooldown (two attempts)</button>
+        <button id="stall-traffic-blooms" type="button">Test stalled cleanup</button>
+        <button id="hide-traffic-blooms" type="button">Test hidden cleanup</button>
+        <label><input id="traffic-bloom-reduced" type="checkbox"> Reduced motion (discrete states)</label>
+        <span id="traffic-bloom-status" role="status">No active influences.</span>
+        <span>One independent 20% roll after rejected full-garden placement; 12s blossom, 15s cooldown. Preview bypasses timing only for simulated fixtures.</span>
+      </fieldset>
       <label>Competition residents <select id="competition-residents"><option value="mixed">All vigor levels 0–3</option><option value="0">Vigor 0</option><option value="1">Vigor 1</option><option value="2">Vigor 2</option><option value="3">Vigor 3</option></select></label>
       <label><input id="competition-old" type="checkbox"> Older residents (80% lifespan; otherwise 10%)</label>
       <button id="seed-competition" type="button">Seed full competition garden (simulated)</button>

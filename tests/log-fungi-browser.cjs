@@ -119,7 +119,7 @@ async function run(){
           frames:f.view.snapshot().textures,atlas:[bake.width,bake.height,bake.source.pixelWidth,bake.source.pixelHeight],sources:new Set(f.bakes.map(b=>b.source)).size,records:f.model.fungi.records.size};
       });
       assert.equal(resources.apps,1);assert.equal(resources.streams,1);assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.geometryDelta,0);
-      assert.equal(resources.objectsBefore,resources.objectsAfter);assert(resources.released);assert.equal(resources.records,0);assert.equal(resources.frames,841);assert.deepEqual(resources.atlas,[1024,864,2048,1728]);report.resources.push({page:name,...resources});
+      assert.equal(resources.objectsBefore,resources.objectsAfter);assert(resources.released);assert.equal(resources.records,0);assert.equal(resources.frames,844);assert.deepEqual(resources.atlas,[1024,864,2048,1728]);report.resources.push({page:name,...resources});
       if(name==='diagnostic'){
         for(const [id,views] of [['seed-log-fungi-none',0],['seed-log-fungi',0],['preview-log-fungi-early',1],['preview-log-fungi-mature',1],['preview-log-fungi-weathered',1]]){
           await page.locator('#'+id).click();assert.equal((await state()).views,views);

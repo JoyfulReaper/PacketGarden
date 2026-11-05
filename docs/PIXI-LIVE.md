@@ -5431,3 +5431,106 @@ Local ignored artifacts: `artifacts/pixi-live-observations.json` and
 `artifacts/pixi-live-preview.png`. Verification: normal `dotnet build` (zero
 warnings/errors), `dotnet run --project tests/PacketGarden.Checks`, all 19 browser
 suites (including `pixi-stress.cjs` and `pixi-live.cjs`), and `git diff --check` passed.
+
+
+## Traffic-Fed Blooms (2026-11-05)
+
+Living Ecology's first slice reacts only after normal validated, unpaused
+TCPNoise flower placement has failed. Lifecycle reconciliation and inverse-vigor
+competition retain their existing order and independent RNG; a successful
+placement stops there. Genuine saturation checks every real cell against
+specimen or fallen-log occupancy, excluding mere reservations and phantom map
+entries. An independent injectable influence RNG makes one roll below 0.20 and,
+only on success, one uniform eligible-target selection. There is no fallback,
+queue, reroll or missed-event replay.
+
+Only living mature ordinary flowers in their authoritative cells qualify.
+Mutation/pending mutation, poppy, protected/special flags and conflicting
+secondary blooms exclude them. A rare cosmetic flower color alone adds no
+protection. Each influence captures the exact object reference, ID, type, cell,
+column, row and original createdAt before randomness; all are checked again
+before presentation and on the existing logical tick. A new occupant never
+inherits an overlay. No authoritative specimen fields are written.
+
+The 12-second absolute schedule uses a tiny side bud at 0–2s, three pastel petals
+at 2–8s and a blossom fading out at 8–12s. Normal opacity advances only on the
+existing logical tick; reduced motion uses a discrete low-opacity fading pose.
+Neither mode moves the blossom. Natural fading cancels immediately on
+reconciliation, without restarting lifecycle or extending expiry. Source
+removal/replacement, clear/reseed, hidden tabs, logical gaps over 5s, backwards
+clocks and page teardown destroy the child Sprite and release the source record.
+Clock discontinuities also defer fresh influence for 15s. Hidden callbacks never
+queue work. The existing ticker/logical cadence is reused, with no new scheduler.
+
+A successful influence starts its own 15-second global cooldown; failure does
+not start one. A specimen has at most one effect and the defensive active cap is
+three. With a 12-second duration and 15-second cooldown, ordinary incoming events
+naturally produce at most one simultaneous bloom. Simulated diagnostic previews
+alone bypass probability/cooldown to exercise the three-effect ceiling.
+
+Production accounting is unchanged: a rejected event still increments its
+original saturation drop and produces exactly its original dropped activity
+entry. No acceptedLive, created specimen, replacement, lifecycle removal,
+provenance, audio, network message, drop, collection or score is added. Separate
+safe-integer-clamped successful/cancelled/completed counters and active count are
+local diagnostics only. No backend or SSE contracts changed.
+
+Only /pixi-live.html exposes full mature flower seeding, an ordinary simulated
+rejected placement, forced influence pass/fail, all stages, exact-cell fixture
+replacement/removal, cap/cooldown, hidden/stalled cleanup and reduced-motion
+controls. Fixture input uses explicitly simulated model events and never
+fabricates production SSE or Recent activity. Replacement reimports the fixture
+through normal authoritative cleanup and therefore clears other preview effects.
+
+Resource ownership:
+
+- Three additional cached 32×32 atlas frame references: 841 → 844 frames. Their
+  nominal tile area is 49,152 RGBA bytes at resolution 2; existing unused slots
+  absorb them, so the 1024×864 logical / 2048×1728 backing atlas stays unchanged
+  (14,155,776 uncompressed RGBA bytes). No extra GPU texture source or bake.
+- Zero idle child Sprites; one child per active source, capped at three. Normal
+  event timing permits only one. Repeated updates create no Graphics or textures.
+- Influence state is checked on the existing 250ms logical cadence. There is no
+  influence animation loop or added per-frame traversal.
+- Chrome benchmarks and 200 repeated three-Sprite cleanup cycles per page are in
+  the local ignored artifacts/traffic-blooms/review.json. Timing is local CPU
+  microbenchmark evidence, not GPU completion or a long-run memory profile.
+  Chrome 156 measured full-640-cell eligibility/selection at 0.57–0.68ms per
+  successful attempt, three-source logical checks at 0.0012–0.0013ms, and
+  three-Sprite create/clear cycles at 0.016–0.021ms. The existing view animation
+  call measured 0.0003–0.0004ms with no added bloom work or geometry/texture
+  creation. These small timings are sensitive to measurement resolution and JIT.
+
+Verification and actual-scale screenshots:
+
+- Final results: 73 Node suites passed (25 opt-in suites skipped by the Node
+  runner), all 31 Chrome jobs passed after targeted reruns, Debug and Release
+  builds passed, backend checks and actual ASP.NET SSE integration passed.
+  The browser regressions found and verified a diagnostic fieldset mobile-width
+  fix; the frozen preview baseline now also freezes its matching model script.
+- npm test runs deterministic probability boundary, stream independence,
+  placement/competition precedence, saturation, eligible stages/states, uniform
+  selection, exact identity before/after injected RNG, cooldown/cap, expiry,
+  fading, source cleanup, hidden/clock/no-replay and accounting assertions.
+- npm run test:chrome includes traffic-blooms-browser.cjs. Both real entry points
+  exercise the EventSource garden listener, dropped activity, source preservation,
+  finite atlas, Sprite cleanup, score zero, reduced motion and mobile layouts.
+- Debug/Release builds and PacketGarden.Checks validate the unchanged backend;
+  weather-sse.cjs --run bin/Debug/net10.0/PacketGarden.dll exercises actual ASP.NET
+  polling → SSE startup, reconnect, outage and freshness. NuGet audit metadata
+  remained unavailable (NU1900); builds completed without errors.
+- Local ignored screenshots in artifacts/traffic-blooms/ include each page's
+  ordinary-mature, dense-early-bud, dense-full-bloom, dense-fading,
+  several-stages-day, several-stages-night, reduced-motion, mobile and
+  after-cleanup PNGs. At desktop scale the garden is exactly 960×600; mobile uses
+  the normal responsive fit. Several simultaneous blooms are simulated previews.
+  Examples: [day stages](../artifacts/traffic-blooms/homepage-several-stages-day.png),
+  [night stages](../artifacts/traffic-blooms/homepage-several-stages-night.png),
+  [dense bloom](../artifacts/traffic-blooms/homepage-dense-full-bloom.png),
+  [mobile](../artifacts/traffic-blooms/homepage-mobile.png),
+  [reduced motion](../artifacts/traffic-blooms/homepage-reduced-motion.png),
+  [after cleanup](../artifacts/traffic-blooms/homepage-after-cleanup.png).
+
+This verifies Chrome on this machine and deterministic backend/SSE fixtures.
+A live collector soak, other browsers/devices, subjective long-term presentation
+and GPU/heap profiling remain outside these checks.

@@ -3,6 +3,9 @@
 #view[data-initialization-failed] { display: grid; place-content: center; padding: 24px; text-align: center; line-height: 1.6; color: #e1e6d7; }
 #view canvas { cursor: pointer; }
 .gnome-message-preview { flex-wrap: wrap; max-width: 100%; }
+.traffic-bloom-controls { display: flex; flex-wrap: wrap; gap: 6px; min-inline-size: 0; max-width: 100%; box-sizing: border-box; flex-basis: 100%; }
+.traffic-bloom-controls > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+#traffic-bloom-status { flex-basis: 100%; }
 #underpants-message-roll { min-width: 0; max-width: 100%; }
 .specimen-card { box-sizing: border-box; }
 .specimen-card-close { cursor: pointer; }

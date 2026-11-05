@@ -274,6 +274,16 @@
       competitionSnapshot(at=now()){return{cooldownUntil:Number.isFinite(nextReplacementAt)?nextReplacementAt:null,
         remainingMs:Math.max(0,nextReplacementAt-at),outcome:lastCompetitionOutcome,lastAttempt};},
       forceLogFixture(){let count=0;for(const p of specimens)if(p.type==='blackthorn'&&p.origin?.kind==='simulated'&&p.origin.eventType==='log-fixture'){forcedLogFixtures.add(p);count++;}return count;},
+      isSaturated:()=>{
+        // Reservations alone never count as genuine saturation.
+        const living=new Set(specimens);
+        for(let cell=0;cell<dimensions.capacity;cell++){
+          if(terrain.isBlocked(cell))continue;
+          const p=byCell.get(cell);
+          if(!living.has(p)||p.cell!==cell||p.column!==cell%dimensions.columns||p.row!==Math.floor(cell/dimensions.columns))return false;
+        }
+        return true;
+      },
       freeCellCount:()=>dimensions.capacity-byCell.size-terrain.byCell.size-reservedCells.size,
       isCellOccupied:(column,row)=>byCell.has(row*dimensions.columns+column)||terrain.isBlocked(row*dimensions.columns+column)||reservedCells.has(row*dimensions.columns+column),
       destroy(){clear();fungi.destroy();terrain.destroy();} };

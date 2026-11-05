@@ -53,7 +53,7 @@ async function run(){
         calls:f.calls,accepted:f.model.counts.acceptedLive,replacements:f.model.counts.replacements,lifecycle:f.model.counts.lifecycleRemovals,
         chance:f.chance,seenCount:f.model.byCell.get(0).origin.seenCount,bakes:f.bakes,frames:f.view.snapshot().textures,score:document.querySelector('#garden-score').textContent};});
       assert.equal(stats.plants,640);assert.equal(stats.unique,640);assert.equal(stats.accepted,3);assert.equal(stats.chance,.82);assert.equal(stats.seenCount,'18446744073709551615');
-      assert.equal(stats.bakes,5);assert.equal(stats.frames,841);assert.equal(stats.score,'Score: 0');report.push({page:name,...stats});
+      assert.equal(stats.bakes,5);assert.equal(stats.frames,844);assert.equal(stats.score,'Score: 0');report.push({page:name,...stats});
       await page.evaluate(()=>{const f=__competition;Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));__competitionNow+=3600000;
         Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));delete document.hidden;f.app.stop();});
       assert.equal(await page.evaluate(()=>__competition.calls),6);assert.equal(await page.evaluate(()=>__competition.model.competitionSnapshot().remainingMs),0);

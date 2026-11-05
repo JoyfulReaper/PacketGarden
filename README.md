@@ -84,6 +84,15 @@ explicitly historical.
 
 ## Living garden
 
+**Traffic-Fed Blooms** are the first Living Ecology slice. After normal TCPNoise
+flower placement and competition fail in a genuinely full garden, one independent
+20% roll may give a uniformly selected mature ordinary flower a tiny secondary
+blossom for 12 seconds. The source keeps its identity, age, color, provenance and
+lifespan; the event remains dropped in Recent activity. A separate 15-second
+cooldown, a three-effect cap and immediate source/visibility cleanup bound the
+reaction. No extra growth, sound, drops or points are generated. See
+[behavior, diagnostics and verification](docs/PIXI-LIVE.md#traffic-fed-blooms-2026-11-05).
+
 The whole garden scales to the window and retains **32 × 20 cells**, with at most
 **640 specimens**. Shared renderer-neutral models own placement, competition,
 lifecycles, grass, water, mutations, wildlife and interactions. Incoming growth

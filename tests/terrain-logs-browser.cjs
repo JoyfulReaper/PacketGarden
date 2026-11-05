@@ -122,7 +122,7 @@ async function run(){
           if(f.view.terrainViews.size||f.model.terrain.byCell.size||!sprites.every(s=>s.destroyed))throw Error('Log ownership');}
         return{bakes,bakesAfter:f.bakes.length,frames,streams:f.streams,geometryDelta:f.geometry-geometry,
           backing:[f.bakes[1].source.pixelWidth,f.bakes[1].source.pixelHeight],active:f.view.terrainViews.size};});
-      assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,841);assert.equal(resources.streams,1);
+      assert.equal(resources.bakes,5);assert.equal(resources.bakesAfter,5);assert.equal(resources.frames,844);assert.equal(resources.streams,1);
       assert.equal(resources.geometryDelta,0);assert.equal(resources.active,0);assert.deepEqual(resources.backing,[2048,1728]);Object.assign(report.resources.at(-1),resources);
       if(name==='diagnostic'){
         await page.locator('#seed-logs-full').click();await page.locator('#force-log').click();await jump(2000);

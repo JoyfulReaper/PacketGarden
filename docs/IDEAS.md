@@ -32,6 +32,21 @@ until four tiny idiots suddenly have a territorial dispute and then leave.
 
 ## Current presentation baseline (implemented)
 
+### Living Ecology: Traffic-Fed Blooms (implemented)
+
+Continued activity can now briefly feed an existing flower after the garden has
+rejected a flower placement at saturation. This is a secondary response to the
+same real event: one independent 20% roll, a uniform mature ordinary flower target,
+a 12-second secondary blossom and a global 15-second cooldown. No new specimen or
+connection is represented. The original age, lifecycle and provenance remain
+authoritative; fading, replacement, removal, clear, hidden time and clock gaps
+cancel the overlay. The three-effect ceiling is defensive: normal 12-second
+effects cannot overlap through the 15-second cooldown. Simulated stage previews
+can show three together. No score, rewards, extra activity or sounds are added.
+
+This small slice does not implement broader ecology, reproduction, inherited
+traits or resource accumulation. See [Pixi live notes](PIXI-LIVE.md#traffic-fed-blooms-2026-11-05).
+
 The production homepage now uses PixiJS/WebGL, with development controls at `/pixi-live.html`. The legacy Canvas renderer is retired; `/canvas.html` only redirects to the homepage.
 The Pixi presentation has revised vine, broadleaf, blackthorn, weed and other
 plant artwork, larger specimen sprites, and separated grass tufts. The logical
